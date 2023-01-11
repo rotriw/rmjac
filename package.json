@@ -20,8 +20,10 @@
     "puppeteer": "^19.5.0",
     "source-map-support": "^0.5.21"
   },
+
   "scripts": {
     "test": "node packages/core/test/index.js",
-    "system:mac:mongo": "export PATH=/usr/local/mongodb/bin:$PATH"
+    "system:mac:mongo": "export PATH=/usr/local/mongodb/bin:$PATH",
+    "ui:dev": "cd packages/ui && vite"
   }
 }
