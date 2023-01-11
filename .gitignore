@@ -1,0 +1,8 @@
+node_modules
+**/test/*.ts
+.idea
+**/*.config
+*.config
+*.log
+*.local
+*.error
