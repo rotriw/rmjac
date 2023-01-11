@@ -7,7 +7,9 @@
   "dependencies": {
     "asyncio": "^0.0.2",
     "await-timeout": "^1.1.1",
+    "cordis": "^2.6.0",
     "esbuild": "^0.16.16",
+    "js-sha512": "^0.8.0",
     "koa": "^2.14.1",
     "koa-body": "^6.0.1",
     "koa-bodyparser": "^4.3.0",

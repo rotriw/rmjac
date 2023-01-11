@@ -70,10 +70,7 @@ export class LuoguDataModel {
                 return {
                     status,
                     msg: msgOf,
-                    data: {
-                        TryData: [],
-                        AcceptData: [],
-                    },
+                    data,
                 };
             });
             await browser.close();

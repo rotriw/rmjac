@@ -7,7 +7,7 @@ let UserSchema = new Schema({
     pwdSHA512 :String,
     description :String,
     email :String,
-    ConnectionAccount :Object,
+    ConnectionAccount :Array,
     id :Number,
 });
 
