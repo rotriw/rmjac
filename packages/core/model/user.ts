@@ -1,4 +1,6 @@
 import * as mongoose from "mongoose";
+import {Query, Document, Model} from "mongoose";
+import {Token} from "./token";
 
 let Schema = mongoose.Schema;
 
@@ -10,6 +12,11 @@ export interface UserInterface {
     ConnectionAccount :Array<object>,
     id :number,
 }
+
+interface UserQueryHelpers {
+    checkToken(id: number, token :string): Promise<boolean>;
+}
+
 
 let UserSchema = new Schema<UserInterface>({
     username :String,
@@ -25,6 +32,15 @@ let CounterSchema = new Schema({
     seq: { type: Number, default: 0 }
 });
 
+// @ts-ignore
+UserSchema.query.checkToken = async function (id :number, token :string) : Promise<boolean> {
+    let ts = await Token.findOne({uid: id, token});
+    if (ts !== null) {
+        return true;
+    }
+    return false;
+}
+
 const Counter = mongoose.model('counter', CounterSchema);
 
 UserSchema.pre('save', function (next) {
@@ -37,4 +53,4 @@ UserSchema.pre('save', function (next) {
     });
 });
 
-export const User = mongoose.model<UserInterface>('UserList', UserSchema);
+export const User = mongoose.model<UserInterface, Model<UserInterface, UserQueryHelpers>>('UserList', UserSchema);

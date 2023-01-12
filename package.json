@@ -2,7 +2,7 @@
   "name": "rmjac",
   "version": "1.0.0",
   "main": "index.js",
-  "license": "MIT",
+  "license": "AGPL3.0",
   "private": true,
   "dependencies": {
     "asyncio": "^0.0.2",
