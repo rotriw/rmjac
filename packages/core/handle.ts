@@ -2,14 +2,18 @@ import Koa from 'koa';
 import KoaBody from 'koa-body';
 import KoaBodyParser from 'koa-bodyparser';
 import KoaRouter from 'koa-router';
+// import cors from 'koa2-cors';
 import _ from 'lodash';
 
 export const app = new Koa();
 const router = new KoaRouter();
 
+const cors = require('koa2-cors');
+app.use(cors());
 app.use(KoaBody());
 app.use(KoaBodyParser());
 app.use(router.routes());
+
 
 interface KoaContext extends Koa.Context {
 }
@@ -61,4 +65,5 @@ export function Route(name :string, link :string, Handler) {
 
 export function apply(config :any) {
     app.listen(config?.port || 8000);
+
 }

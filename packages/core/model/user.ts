@@ -1,6 +1,7 @@
 import * as mongoose from "mongoose";
 import {Query, Document, Model} from "mongoose";
 import {Token} from "./token";
+import {Counter} from "./counter";
 
 let Schema = mongoose.Schema;
 
@@ -27,11 +28,6 @@ let UserSchema = new Schema<UserInterface>({
     id :Number,
 });
 
-let CounterSchema = new Schema({
-    _id: { type: String, required: true },
-    seq: { type: Number, default: 0 }
-});
-
 // @ts-ignore
 UserSchema.query.checkToken = async function (id :number, token :string) : Promise<boolean> {
     let ts = await Token.findOne({uid: id, token});
@@ -40,9 +36,6 @@ UserSchema.query.checkToken = async function (id :number, token :string) : Promi
     }
     return false;
 }
-
-const Counter = mongoose.model('counter', CounterSchema);
-
 UserSchema.pre('save', function (next) {
     let doc = this;
     Counter.findByIdAndUpdate({ _id: 'user' }, { $inc: { seq: 1 } }, { new: true, upsert: true }, function (error, counter) {

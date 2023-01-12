@@ -10,8 +10,64 @@ import {
     Group,
     Button,
 } from '@mantine/core';
+import {useForm} from "@mantine/form";
+import axios from "axios";
+import React from "react";
+import {IconCheck, IconX} from "@tabler/icons";
+import {showNotification, updateNotification} from "@mantine/notifications";
+
+
+let notiID = 0;
+async function goLogin(baseurl :string, username :string, password :string) {
+    notiID ++;
+    let notificationMsg = {
+        id: `login-data-${notiID}`,
+        disallowClose: false,
+        onClose: () => console.log('unmounted'),
+        onOpen: () => console.log('mounted'),
+        title: `登录请求 页面提交ID:${notiID}`,
+        message: (<p>正在验证您的信息。</p>),
+        color: 'blue',
+        icon: <IconCheck />,
+        className: 'login-notification-class',
+        loading: true,
+        autoClose: false,
+    };
+    showNotification(notificationMsg);
+    axios.post(`${baseurl}login`, {
+        'operation': 'check',
+        username,
+        password
+    }).then((data) => {
+        console.log(data);
+        notificationMsg.loading = false;
+        notificationMsg.color = data.data.status === 'success' ? 'green' : 'red';
+        if (data.data.status === 'success') {
+            notificationMsg.message = (<p>Done! {data.data.msg} </p>);
+            localStorage.setItem('token', data.data.token);
+            localStorage.setItem('setting-user-login', 'true');
+        } else {
+            notificationMsg.message = (<p>{data.data.error || data.data.msg}</p>);
+        }
+        updateNotification(notificationMsg);
+    }).catch(err => {
+        console.log(err);
+        notificationMsg.loading = false;
+        notificationMsg.icon = <IconX />;
+        notificationMsg.color = 'red';
+        notificationMsg.message = (<p>error, open console log.</p>);
+
+    });
+}
 
 export function LoginHandler() {
+    const form = useForm({
+        initialValues: {
+            username: '',
+            password: '',
+        },
+
+    });
     return (
         <Container size={420} my={40}>
             <Title
@@ -28,9 +84,23 @@ export function LoginHandler() {
             </Text>
 
             <Paper withBorder shadow="md" p={30} mt={30} radius="md">
-                <TextInput label="用户名" placeholder="" required />
-                <PasswordInput label="密码" placeholder="" required mt="md" />
-                <Button fullWidth mt="xl">
+                <TextInput label="用户名"
+                           placeholder=""
+                           value={form.values.username}
+                           onChange={(event) => form.setFieldValue('username', event.currentTarget.value)}
+
+                           required />
+                <PasswordInput label="密码"
+                               placeholder=""
+                               value={form.values.password}
+                               onChange={(event) => form.setFieldValue('password', event.currentTarget.value)}
+                               required
+                               mt="md" />
+                <Button
+                    fullWidth
+                    mt="xl"
+                    onClick={async () => await goLogin('http://localhost:8000/', form.values.username, form.values.password)}
+                >
                     登录
                 </Button>
             </Paper>
