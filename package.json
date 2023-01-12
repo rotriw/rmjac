@@ -7,6 +7,7 @@
   "dependencies": {
     "asyncio": "^0.0.2",
     "await-timeout": "^1.1.1",
+    "axios": "^1.2.2",
     "cordis": "^2.6.0",
     "esbuild": "^0.16.16",
     "js-sha512": "^0.8.0",
@@ -18,12 +19,13 @@
     "mongodb": "^4.13.0",
     "mongoose": "^6.8.3",
     "puppeteer": "^19.5.0",
-    "source-map-support": "^0.5.21"
+    "source-map-support": "^0.5.21",
+    "uuid": "^9.0.0"
   },
-
   "scripts": {
     "test": "node packages/core/test/index.js",
     "system:mac:mongo": "export PATH=/usr/local/mongodb/bin:$PATH",
-    "ui:dev": "cd packages/ui && vite"
+    "ui:dev": "cd packages/ui && vite",
+    "debug": "node entry/index.js"
   }
 }

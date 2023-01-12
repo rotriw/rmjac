@@ -14,7 +14,7 @@ app.use(router.routes());
 interface KoaContext extends Koa.Context {
 }
 
-function handle(ctx :KoaContext, Handler) {
+async function handle(ctx :KoaContext, Handler) {
     const body = ctx.request.body;
     const method = ctx.method.toLowerCase();
     let operation = '';
@@ -34,12 +34,17 @@ function handle(ctx :KoaContext, Handler) {
             ] : [], 'after',
         ]
         let cur = 0, length = steps.length;
+        ctx.body = '';
         while (cur < length) {
             let step = steps[cur];
             cur ++;
             console.log(step);
             if (typeof h[step] === 'function') {
-                h[step](args);
+                let value = await h[step](args);
+                if (value?.status) {
+                    ctx.body += JSON.stringify(value);
+                    ctx.response.status = value.code || 200;
+                }
             }
         }
     } catch(err) {
@@ -49,8 +54,8 @@ function handle(ctx :KoaContext, Handler) {
 }
 
 export function Route(name :string, link :string, Handler) {
-    router.all(link, (ctx, next) => {
-        handle(ctx, Handler);
+    router.all(link, async (ctx, next) => {
+        await handle(ctx, Handler);
     });
 }
 

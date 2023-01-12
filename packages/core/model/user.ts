@@ -2,7 +2,16 @@ import * as mongoose from "mongoose";
 
 let Schema = mongoose.Schema;
 
-let UserSchema = new Schema({
+export interface UserInterface {
+    username :string,
+    pwdSHA512 :string,
+    description :string,
+    email :string,
+    ConnectionAccount :Array<object>,
+    id :number,
+}
+
+let UserSchema = new Schema<UserInterface>({
     username :String,
     pwdSHA512 :String,
     description :String,
@@ -28,4 +37,4 @@ UserSchema.pre('save', function (next) {
     });
 });
 
-export const User = mongoose.model('UserList', UserSchema);
+export const User = mongoose.model<UserInterface>('UserList', UserSchema);
