@@ -80,7 +80,7 @@ export class RegisterHandler {
         if (finds !== null) {
             return ;
         }
-        user.save();
+        await user.save();
     }
 }
 

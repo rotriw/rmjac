@@ -5,6 +5,9 @@ import {useToggle} from "@mantine/hooks";
 import React from "react";
 import {HeaderShowNew} from "./template/header";
 import {LoginHandler} from "./template/login";
+import {HomePage} from "./template/Home";
+import {NewProblem} from "./template/newproblem";
+import {NavigationProgress} from "@mantine/nprogress";
 
 export default function App() {
     let mainLinks = [];
@@ -17,12 +20,10 @@ export default function App() {
     } else {
         mainLinks = [
             {link: '/', label: '主页'},
-            {link: '/list', label: '题单'},
-            {link: '/userMain', label: '个人中心'},
             {link: '/logout', label: '退出登录'},
         ];
     }
-    mainLinks.push({link: '/about', label: '关于'});
+    // mainLinks.push({link: '/about', label: '关于'});
     const [ colorScheme, toggleColorScheme ] = useToggle(localStorage.getItem(`bgColor`) === 'dark' ? [ 'dark', 'light'] : ['light', 'dark']);
 
     return (
@@ -30,11 +31,15 @@ export default function App() {
             <Router>
                 <MantineProvider withGlobalStyles withNormalizeCSS theme={{primaryColor: 'indigo', colorScheme: colorScheme as ColorScheme, }}>
                     <NotificationsProvider>
+
+                        <NavigationProgress />
                         <HeaderShowNew links={mainLinks} colorScheme={toggleColorScheme} colorSchemeData={colorScheme}></HeaderShowNew>
 
                         <Routes>
-                            {/*<Route path='' element={ <HomePage LoginStatus={localStorage.getItem('setting-user-login') === 'true'} /> } />*/}
+                            <Route path='' element={ <HomePage LoginStatus={localStorage.getItem('setting-user-login') === 'true'} /> } />
                             <Route path='/login' element={ <LoginHandler />} />
+                            <Route path='/new' element={ <NewProblem />} />
+                            <Route path='/view/:id' element={ <NewProblem />} />
                         </Routes>
                     </NotificationsProvider>
                 </MantineProvider>

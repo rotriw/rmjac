@@ -31,7 +31,7 @@ interface ListHelpers {
 
 //@ts-ignore
 ProblemListSchema.query.UserData = async function(id :number) {
-    return await this.find({viewUser:{$elemMatch:{$eq: id}}}, {listName : 1, problemList : 1});
+    return await this.find({viewUser:{$elemMatch:{$eq: id}}});
 }
 
 //@ts-ignore

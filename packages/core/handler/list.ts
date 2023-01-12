@@ -53,7 +53,9 @@ export class ListMangerHandler {
                 error: `can't access ${id} token.`
             }
         }
+        console.log('qwq');
         let data = await ProblemList.find().UserData(id);
+        console.log('qwq2');
         return {
             status: 'success',
             code: 200,

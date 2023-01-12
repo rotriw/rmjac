@@ -26,7 +26,7 @@ async function goLogin(baseurl :string, username :string, password :string) {
         onClose: () => console.log('unmounted'),
         onOpen: () => console.log('mounted'),
         title: `登录请求 页面提交ID:${notiID}`,
-        message: (<p>正在验证您的信息。</p>),
+        message: (<div>正在验证您的信息。</div>),
         color: 'blue',
         icon: <IconCheck />,
         className: 'login-notification-class',
@@ -43,11 +43,12 @@ async function goLogin(baseurl :string, username :string, password :string) {
         notificationMsg.loading = false;
         notificationMsg.color = data.data.status === 'success' ? 'green' : 'red';
         if (data.data.status === 'success') {
-            notificationMsg.message = (<p>Done! {data.data.msg} </p>);
+            notificationMsg.message = (<div>Done! {data.data.msg} 请刷新以来更新。</div>);
             localStorage.setItem('token', data.data.token);
+            localStorage.setItem('uid', data.data.uid);
             localStorage.setItem('setting-user-login', 'true');
         } else {
-            notificationMsg.message = (<p>{data.data.error || data.data.msg}</p>);
+            notificationMsg.message = (<div>{data.data.error || data.data.msg}</div>);
         }
         updateNotification(notificationMsg);
     }).catch(err => {
@@ -55,7 +56,7 @@ async function goLogin(baseurl :string, username :string, password :string) {
         notificationMsg.loading = false;
         notificationMsg.icon = <IconX />;
         notificationMsg.color = 'red';
-        notificationMsg.message = (<p>error, open console log.</p>);
+        notificationMsg.message = (<div>error, open console log.</div>);
 
     });
 }

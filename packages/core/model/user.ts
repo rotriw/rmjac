@@ -38,7 +38,7 @@ UserSchema.query.checkToken = async function (id :number, token :string) : Promi
 }
 UserSchema.pre('save', function (next) {
     let doc = this;
-    Counter.findByIdAndUpdate({ _id: 'user' }, { $inc: { seq: 1 } }, { new: true, upsert: true }, function (error, counter) {
+     Counter.findByIdAndUpdate({ _id: 'user' }, { $inc: { seq: 1 } }, { new: true, upsert: true }, function (error, counter) {
         if (error)
             return next(error);
         doc.id = counter.seq;
