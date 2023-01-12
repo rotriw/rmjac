@@ -1,5 +1,6 @@
 import * as puppeteer from "puppeteer";
 import Timeout from 'await-timeout';
+import axios from "axios";
 
 export class LuoguDataModel {
      async LuoguUserAccept(userid :number, cookie :string, privateStatus :boolean, awaitTime :number = 300) :Promise<any> {
@@ -85,5 +86,15 @@ export class LuoguDataModel {
                 },
             };
         }
+    }
+
+    async getProblemName(pid :string) {
+        let data = await axios({
+          headers: {
+              'x-luogu-type': 'content-only'
+          },
+          url: `https://www.luogu.com.cn/problem/${pid}`
+        });
+        console.log(data.data.currentTitle);
     }
 };
