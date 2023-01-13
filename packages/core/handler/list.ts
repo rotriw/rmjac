@@ -66,6 +66,28 @@ export class ListMangerHandler {
     @param('id')
     @param('token')
     @param('pid')
+    async postDetail(id :number, token :string, pid :number) {
+        let us = await User.find().checkToken(id, token);
+        if (us === false) {
+            return {
+                status: 'failed',
+                code: 403,
+                error: `can't access ${id} token.`
+            }
+        }
+        console.log('qwq');
+        let data :object = await ProblemList.findOne({id: pid}).exec();
+        console.log('qwq6');
+        return {
+            status: 'success',
+            code: 200,
+            data
+        }
+    }
+
+    @param('id')
+    @param('token')
+    @param('pid')
     @param('problem')
     async postUpdateproblem(id :number, token :string, pid :number, problem :Array<string>) {
         let us = await User.find().checkToken(id, token);

@@ -4,10 +4,11 @@ import { NotificationsProvider } from '@mantine/notifications';
 import {useToggle} from "@mantine/hooks";
 import React from "react";
 import {HeaderShowNew} from "./template/header";
-import {LoginHandler} from "./template/login";
-import {HomePage} from "./template/Home";
-import {NewProblem} from "./template/newproblem";
+import {LoginHandler} from "./pages/login";
+import {HomePage} from "./pages/home";
+import {NewProblem} from "./pages/newproblem";
 import {NavigationProgress} from "@mantine/nprogress";
+import {ViewProblem} from "./pages/viewproblem";
 
 export default function App() {
     let mainLinks = [];
@@ -31,15 +32,14 @@ export default function App() {
             <Router>
                 <MantineProvider withGlobalStyles withNormalizeCSS theme={{primaryColor: 'indigo', colorScheme: colorScheme as ColorScheme, }}>
                     <NotificationsProvider>
-
                         <NavigationProgress />
                         <HeaderShowNew links={mainLinks} colorScheme={toggleColorScheme} colorSchemeData={colorScheme}></HeaderShowNew>
-
                         <Routes>
                             <Route path='' element={ <HomePage LoginStatus={localStorage.getItem('setting-user-login') === 'true'} /> } />
                             <Route path='/login' element={ <LoginHandler />} />
                             <Route path='/new' element={ <NewProblem />} />
-                            <Route path='/view/:id' element={ <NewProblem />} />
+
+                            <Route path='/view/:id' element={<ViewProblem />} />
                         </Routes>
                     </NotificationsProvider>
                 </MantineProvider>

@@ -1,15 +1,29 @@
-import {Button, Card, Container, Grid, Group, Input, MultiSelect, Text, Textarea} from "@mantine/core";
-import {ProblemList} from "../component/ProblemList";
+import {
+    Button,
+    Card,
+    Container,
+    Grid,
+    Group,
+    Input,
+    Modal,
+    MultiSelect,
+    Text,
+    Textarea,
+    useMantineTheme
+} from "@mantine/core";
+import {ShowList} from "../component/ShowList";
 import React, {useState} from "react";
 import {useForm} from "@mantine/form";
-import {IconCheck, IconX} from "@tabler/icons";
+import {IconCheck, IconCircleCheck, IconX, IconChecks} from "@tabler/icons";
 import {showNotification, updateNotification} from "@mantine/notifications";
 import axios from "axios";
+import {DescriptionEditor} from "../component/DescriptionEditor";
 // import {AlignRightControl} from "@mantine/tiptap/lib/controls";
 
 let notiID = 0;
 
-async function goNew(baseurl :string, id :string | null, token :string | null, title :string, viewUser :Array<string>, manageUser :Array<string>, description :string, problems :Array<string>) {
+
+async function goNew(baseurl :string, id :string | null, token :string | null, title :string, viewUser :Array<string>, manageUser :Array<string>, description :string, problems :Array<string>, setNotify :Function) {
     notiID ++;
     let notificationMsg = {
         id: `new-data-${notiID}`,
@@ -43,6 +57,7 @@ async function goNew(baseurl :string, id :string | null, token :string | null, t
         } else {
             notificationMsg.message = (<div>{data.data.error || data.data.msg}</div>);
         }
+        setNotify(true);
         updateNotification(notificationMsg);
     }).catch(err => {
         console.log(err);
@@ -56,7 +71,8 @@ async function goNew(baseurl :string, id :string | null, token :string | null, t
 
 export function NewProblem() {
     const [data, setData] = useState([]);
-
+    const [notify, setNotify] = useState(false);
+    const theme = useMantineTheme();
     const form = useForm({
         initialValues: {
             title: '',
@@ -66,8 +82,15 @@ export function NewProblem() {
             problems: [''],
         },
     });
+
+    let description = '';
+    function setDes(value :any) {
+        description = value;
+    }
+
     return (<Container>
         <h2>新建一个题单</h2>
+
         <Input.Wrapper
             id="input-demo"
             withAsterisk
@@ -127,22 +150,42 @@ export function NewProblem() {
             //     return item;
             // }}
         />
-        <Textarea
-            placeholder="描述"
-            label="支持markdown"
-            value={form.values.description}
-            autosize
-            minRows={4}
-            maxRows={8}
-            onChange={(event)=> {form.setFieldValue('description', event.currentTarget.value)}}
-        />
+        <div style={{padding: '7px'}}></div>
+        <Input.Wrapper label='描述' description='填写您的简介'>
+            <div style={{padding: '2px'}}></div>
+            <DescriptionEditor value={description} setValue={setDes} />
+        </Input.Wrapper>
         <div style={{padding: '3px'}}></div>
         <div style={{width: '100%', textAlign: 'right'}}><Button fullWidth onClick={() => {
+            console.log(description);
             goNew('http://localhost:8000/', localStorage.getItem('uid'), localStorage.getItem('token'),
-                form.values.title, form.values.viewUser, form.values.manageUser, form.values.description,
-                form.values.problems);
+                form.values.title, form.values.viewUser, form.values.manageUser, description,
+                form.values.problems, setNotify);
         }
         }>创建 + </Button></div>
 
+        <Modal
+            opened={notify}
+            onClose={() => setNotify(false)}
+            withCloseButton={false}
+            centered
+
+        >
+            <div style={{textAlign: 'center', display: 'inline-block', width: '100%'}}>
+                <div style={{borderRadius: '99999px', backgroundColor:  theme.colorScheme === 'dark' ? '#8CE99A20' : '#D3F9D8', marginLeft: 'auto', marginRight: 'auto', width: '60px', height: '60px', justifyContent: 'center', alignItems: 'center', display: 'flex'}}>
+                    <IconCheck stroke={1.5} size={'35px'} color={theme.colorScheme === 'dark' ? '#B2F2BB75' : '#69DB7C'} />
+                </div>
+                <div style={{padding: '0px'}}></div>
+                <h3>创建成功</h3>
+                <Grid>
+                    <Grid.Col span={6} >
+                        <Button variant="light" fullWidth>返回主页</Button>
+                    </Grid.Col>
+                    <Grid.Col span={6}>
+                        <Button fullWidth>前往该题单</Button>
+                    </Grid.Col>
+                </Grid>
+            </div>
+        </Modal>
     </Container>)
 }

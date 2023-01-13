@@ -1,16 +1,16 @@
 import React, {useEffect, useState} from "react";
 import {Badge, Card, Container, Grid, Text, Group, Button} from "@mantine/core";
 import axios from "axios";
-import {ProblemList} from "../component/ProblemList";
+import {ShowList} from "../component/ShowList";
 import {Link} from "react-router-dom";
 import {completeNavigationProgress, NavigationProgress, setNavigationProgress} from "@mantine/nprogress";
 
 
 let times = 0;
+let used = false;
 
-async function InitPage(setData :Function) {
+async function InitPage(setData :Function, setOK :Function) {
     let baseurl = `http://localhost:8000/`;
-    console.log('qwqxw');
     setNavigationProgress(50);
     let data = await axios.post(`${baseurl}list`, {
         'operation': 'show',
@@ -18,19 +18,18 @@ async function InitPage(setData :Function) {
         'token': localStorage.getItem('token'),
     });
     completeNavigationProgress();
-    ok = true;
+    setOK(true);
     console.log('qwqx');
     setData(data.data.data);
     console.log(data.data.data);
 }
 
-let used = false, ok = false;
 
 export function HomePage({LoginStatus} :any) {
-    console.log('qwq');
     const [data, setData] = useState([]);
+    const [ok, setOK] = useState(false);
     useEffect(() => {
-        InitPage(setData);
+        InitPage(setData, setOK);
     }, []);
 
     if (LoginStatus === true && ok) {
@@ -46,7 +45,7 @@ export function HomePage({LoginStatus} :any) {
                                     <Text weight={500}>我可以查看的</Text>
                                 </Group>
                             </Card.Section>
-                            <ProblemList data={data} />
+                            <ShowList data={data} />
                         </Card>
                     </Grid.Col>
                 </Grid>
