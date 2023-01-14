@@ -61,7 +61,7 @@ async function goLogin(baseurl :string, username :string, password :string) {
     });
 }
 
-export function LoginHandler() {
+export function LoginHandler({}) {
     const form = useForm({
         initialValues: {
             username: '',
@@ -100,7 +100,7 @@ export function LoginHandler() {
                 <Button
                     fullWidth
                     mt="xl"
-                    onClick={async () => await goLogin('http://localhost:8000/', form.values.username, form.values.password)}
+                    onClick={async () => await goLogin(window.RMJ.baseurl, form.values.username, form.values.password)}
                 >
                     登录
                 </Button>

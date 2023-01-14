@@ -9,6 +9,17 @@ import {HomePage} from "./pages/home";
 import {NewProblem} from "./pages/newproblem";
 import {NavigationProgress} from "@mantine/nprogress";
 import {ViewProblem} from "./pages/viewproblem";
+import {UMain} from "./pages/umain";
+
+declare global {
+    interface Window {
+        RMJ?: any;
+    }
+}
+
+window.RMJ = {
+    baseurl: 'http://localhost:8000/'
+}
 
 export default function App() {
     let mainLinks = [];
@@ -21,12 +32,10 @@ export default function App() {
     } else {
         mainLinks = [
             {link: '/', label: '主页'},
-            {link: '/logout', label: '退出登录'},
+            {link: '/umain', label: '个人中心'},
         ];
     }
-    // mainLinks.push({link: '/about', label: '关于'});
     const [ colorScheme, toggleColorScheme ] = useToggle(localStorage.getItem(`bgColor`) === 'dark' ? [ 'dark', 'light'] : ['light', 'dark']);
-
     return (
         <>
             <Router>
@@ -38,8 +47,11 @@ export default function App() {
                             <Route path='' element={ <HomePage LoginStatus={localStorage.getItem('setting-user-login') === 'true'} /> } />
                             <Route path='/login' element={ <LoginHandler />} />
                             <Route path='/new' element={ <NewProblem />} />
-
-                            <Route path='/view/:id' element={<ViewProblem />} />
+                            <Route path='/umain' element={ <UMain />} />
+                            <Route path='/umain/:set' element={ <UMain />} />
+                            <Route path='/view/:id' element={<ViewProblem/>} />
+                            <Route path='/view/:id/:page' element={<ViewProblem/>} />
+                            <Route path='/view/:id/:page/fastview/:viewed' element={<ViewProblem/>} />
                         </Routes>
                     </NotificationsProvider>
                 </MantineProvider>

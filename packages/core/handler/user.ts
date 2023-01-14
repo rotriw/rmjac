@@ -53,7 +53,7 @@ export class SignInHandler {
     @param('userid')
     @param('token')
     async postCheckToken(userid :number, token :string) {
-
+        // TODO
     }
 }
 
@@ -84,7 +84,26 @@ export class RegisterHandler {
     }
 }
 
+export class UserAccountHandler {
+
+    @param('id')
+    @param('token')
+    @param('')
+    async postConnectLuogu(id :number, token :string) {
+        let us = await User.find().checkToken(id, token);
+        if (us === false) {
+            return {
+                status: 'failed',
+                code: 403,
+                error: `can't access ${id} token.`
+            }
+        }
+        //TODO
+    }
+}
+
 export function apply(ctx) {
     Route('login', '/login', SignInHandler);
+    Route('umain', '/umain', UserAccountHandler);
     Route('register', '/register', RegisterHandler);
 }

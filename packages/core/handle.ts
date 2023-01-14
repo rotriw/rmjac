@@ -18,12 +18,19 @@ app.use(router.routes());
 interface KoaContext extends Koa.Context {
 }
 
+function transWord(word :string) {
+    const firstLetter = word.charAt(0)
+    const firstLetterCap = firstLetter.toUpperCase()
+    const remainingLetters = word.slice(1)
+    return firstLetterCap + remainingLetters
+}
+
 async function handle(ctx :KoaContext, Handler) {
     const body = ctx.request.body;
     const method = ctx.method.toLowerCase();
     let operation = '';
     if (method === 'post' && body?.operation !== '') {
-        operation = _.capitalize(body.operation);
+        operation = transWord(body.operation);
     }
     const h = new Handler();
     const args = {};

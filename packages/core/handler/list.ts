@@ -89,7 +89,7 @@ export class ListMangerHandler {
     @param('token')
     @param('pid')
     @param('problem')
-    async postUpdateproblem(id :number, token :string, pid :number, problem :Array<string>) {
+    async postUpdateProblem(id :number, token :string, pid :number, problem :Array<string>) {
         let us = await User.find().checkToken(id, token);
         if (us === false) {
             return {
@@ -99,6 +99,7 @@ export class ListMangerHandler {
             }
         }
         console.log(await ProblemList.find().checkPerm(id, pid));
+        console.log('test');
         if ((await ProblemList.find().checkPerm(id, pid)) == false) {
             return {
                 status: 'failed',

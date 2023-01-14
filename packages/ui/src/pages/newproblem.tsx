@@ -18,6 +18,7 @@ import {IconCheck, IconCircleCheck, IconX, IconChecks} from "@tabler/icons";
 import {showNotification, updateNotification} from "@mantine/notifications";
 import axios from "axios";
 import {DescriptionEditor} from "../component/DescriptionEditor";
+import {Link, NavLink} from "react-router-dom";
 // import {AlignRightControl} from "@mantine/tiptap/lib/controls";
 
 let notiID = 0;
@@ -30,7 +31,7 @@ async function goNew(baseurl :string, id :string | null, token :string | null, t
         disallowClose: false,
         onClose: () => console.log('unmounted'),
         onOpen: () => console.log('mounted'),
-        title: `登录请求 页面提交ID:${notiID}`,
+        title: `创建请求 页面提交ID:${notiID}`,
         message: (<div>正在提交您的信息。</div>),
         color: 'indigo',
         icon: <IconCheck />,
@@ -58,6 +59,8 @@ async function goNew(baseurl :string, id :string | null, token :string | null, t
             notificationMsg.message = (<div>{data.data.error || data.data.msg}</div>);
         }
         setNotify(true);
+        notificationMsg.autoClose = true;
+
         updateNotification(notificationMsg);
     }).catch(err => {
         console.log(err);
@@ -69,28 +72,32 @@ async function goNew(baseurl :string, id :string | null, token :string | null, t
     });
 }
 
+let description = '';
+function setDes(value :any) {
+    description = value;
+}
+
 export function NewProblem() {
     const [data, setData] = useState([]);
+    const [noc, setNoc] = useState([]);
     const [notify, setNotify] = useState(false);
     const theme = useMantineTheme();
     const form = useForm({
         initialValues: {
             title: '',
-            viewUser: [''],
-            manageUser: [''],
+            viewUser: [],
+            manageUser: [],
+            viewUserSearch: '',
+            manageUserSearch: '',
+            problemsSearch: '',
             description: '',
-            problems: [''],
+            problems: [],
         },
     });
 
-    let description = '';
-    function setDes(value :any) {
-        description = value;
-    }
 
     return (<Container>
         <h2>新建一个题单</h2>
-
         <Input.Wrapper
             id="input-demo"
             withAsterisk
@@ -104,51 +111,111 @@ export function NewProblem() {
         <MultiSelect
             label="可查看用户uid"
             description="填写可查看用户uid（必须为数字序列）在v1.0版本前请务必添加自己。"
-            data={data}
+            data={form.values.viewUser}
             placeholder=""
             searchable
-            onChange={(value)=> {form.setFieldValue('viewUser', value)}}
+            searchValue={form.values.viewUserSearch}
+            value={form.values.viewUser}
+            onChange={(value)=> {form.setFieldValue('viewUser', value as never)}}
+            onSearchChange={(value) => {
+                    let len = value.length, now = '';
+                    let c = form.values.viewUser;
+                    for (let i = 0; i < len; i ++ ) {
+                        if (value[i] === ',' || (value[i] === ' ' && now !== '')) {
+                            if (now !== ' ' && now !== '')
+                                c.push(now as never);
+                            now = '';
+                        } else {
+                            if (value[i] !== '')
+                                now += value[i];
+                        }
+                    }
+                    form.setFieldValue('viewUser', c);
+                    form.setFieldValue('viewUserSearch', now);
+                }
+            }
             creatable
             getCreateLabel={(query) => `${query}`}
-            // onCreate={(query) => {
-            //     const item = { value: query, label: query };
-            //     setData((current) => {
-            //         return [...current, item];
-            //     });
-            //     return item;
-            // }}
+            onCreate={(query) => {
+                const item = { value: query, label: query };
+                // @ts-ignore
+                form.setFieldValue('viewUser', (current: string[]) => {
+                    return [...current, item];
+                });
+                return item;
+            }}
         />
         <MultiSelect
-            label="可管理用户"
-            data={data}
+            label="可管理用户uid"
+            data={form.values.manageUser}
             description="填写可管理用户uid（必须为数字序列）在v1.0版本前请务必添加自己。"
+            searchValue={form.values.manageUserSearch}
             searchable
-            onChange={(value)=> {form.setFieldValue('mangeUser', value)}}
+            value={form.values.manageUser}
+            onChange={(value)=> {form.setFieldValue('manageUser', value as never)}}
+            onSearchChange={(value) => {
+                let len = value.length, now = '';
+                let c = form.values.manageUser;
+                for (let i = 0; i < len; i ++ ) {
+                    if (value[i] === ',' || (value[i] === ' ' && now !== '')) {
+                        if (now !== ' ' && now !== '')
+                            c.push(now as never);
+                        now = '';
+                    } else {
+                        if (value[i] !== '')
+                            now += value[i];
+                    }
+                }
+                form.setFieldValue('manageUser', c);
+                form.setFieldValue('manageUserSearch', now);
+            }
+            }
             creatable
             getCreateLabel={(query) => `${query}`}
-            // onCreate={(query) => {
-            //     const item = { value: query, label: query };
-            //     setData((current) => {
-            //         return [...current, item];
-            //     });
-            //     return item;
-            // }}
+            onCreate={(query) => {
+                const item = { value: query, label: query };
+                // @ts-ignore
+                form.setFieldValue('manageUser', (current: string[]) => {
+                    return [...current, item];
+                });
+                return item;
+            }}
         />
         <MultiSelect
             label="题目列表"
-            data={data}
+            data={form.values.problems}
             description="填写题目ID。该部分将进行修改更符合操作顺序。要不然写不完了。（TODO）"
             searchable
-            onChange={(value)=> {form.setFieldValue('problems', value)}}
+            searchValue={form.values.problemsSearch}
+            value={form.values.problems}
+            onChange={(value)=> {form.setFieldValue('problems', value as never)}}
+            onSearchChange={(value) => {
+                let len = value.length, now = '';
+                let c = form.values.problems;
+                for (let i = 0; i < len; i ++ ) {
+                    if (value[i] === ',' || (value[i] === ' ' && now !== '')) {
+                        if (now !== ' ' && now !== '')
+                            c.push(now as never);
+                        now = '';
+                    } else {
+                        if (value[i] !== '')
+                            now += value[i];
+                    }
+                }
+                form.setFieldValue('problems', c);
+                form.setFieldValue('problemsSearch', now);
+            }
+            }
             creatable
             getCreateLabel={(query) => `${query}`}
-            // onCreate={(query) => {
-            //     const item = { value: query, label: query };
-            //     setData((current) => {
-            //         return [...current, item];
-            //     });
-            //     return item;
-            // }}
+            onCreate={(query) => {
+                const item = { value: query, label: query };
+                // @ts-ignore
+                form.setFieldValue('problems', (current: string[]) => {
+                    return [...current, item];
+                });
+                return item;
+            }}
         />
         <div style={{padding: '7px'}}></div>
         <Input.Wrapper label='描述' description='填写您的简介'>
@@ -158,7 +225,7 @@ export function NewProblem() {
         <div style={{padding: '3px'}}></div>
         <div style={{width: '100%', textAlign: 'right'}}><Button fullWidth onClick={() => {
             console.log(description);
-            goNew('http://localhost:8000/', localStorage.getItem('uid'), localStorage.getItem('token'),
+            goNew(window.RMJ.baseurl, localStorage.getItem('uid'), localStorage.getItem('token'),
                 form.values.title, form.values.viewUser, form.values.manageUser, description,
                 form.values.problems, setNotify);
         }
@@ -178,11 +245,8 @@ export function NewProblem() {
                 <div style={{padding: '0px'}}></div>
                 <h3>创建成功</h3>
                 <Grid>
-                    <Grid.Col span={6} >
-                        <Button variant="light" fullWidth>返回主页</Button>
-                    </Grid.Col>
-                    <Grid.Col span={6}>
-                        <Button fullWidth>前往该题单</Button>
+                    <Grid.Col span={12} >
+                       <NavLink to={'/'} style={{textDecoration: 'none'}}><Button variant="light" fullWidth>返回主页</Button></NavLink>
                     </Grid.Col>
                 </Grid>
             </div>

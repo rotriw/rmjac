@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from "react";
-import {Badge, Card, Container, Grid, Text, Group, Button} from "@mantine/core";
+import {Badge, Card, Container, Grid, Text, Group, Button, Center, Loader} from "@mantine/core";
 import axios from "axios";
 import {ShowList} from "../component/ShowList";
 import {Link} from "react-router-dom";
@@ -10,8 +10,8 @@ let times = 0;
 let used = false;
 
 async function InitPage(setData :Function, setOK :Function) {
-    let baseurl = `http://localhost:8000/`;
-    setNavigationProgress(50);
+    const baseurl = window.RMJ.baseurl;
+    setNavigationProgress(0);
     let data = await axios.post(`${baseurl}list`, {
         'operation': 'show',
         'id': localStorage.getItem('uid'),
@@ -25,14 +25,15 @@ async function InitPage(setData :Function, setOK :Function) {
 }
 
 
-export function HomePage({LoginStatus} :any) {
+export function HomePage({LoginStatus, baseurl} :any) {
     const [data, setData] = useState([]);
     const [ok, setOK] = useState(false);
+    baseurl = baseurl;
     useEffect(() => {
         InitPage(setData, setOK);
     }, []);
 
-    if (LoginStatus === true && ok) {
+    if (LoginStatus === true && ok ) {
         return (
             <Container>
                 <Grid>
@@ -52,6 +53,8 @@ export function HomePage({LoginStatus} :any) {
             </Container>
         );
     } else {
-        return (<p></p>);
+        return (<Container style={{height: '100%'}}>
+
+        </Container>);
     }
 }
