@@ -27,7 +27,6 @@ export default function App() {
         mainLinks = [
             {link: '/', label: '主页'},
             {link: '/login', label: '登录'},
-            {link: '/list', label: '题单'},
         ];
     } else {
         mainLinks = [
