@@ -9,15 +9,21 @@ import axios from "axios";
 import './showCase.css';
 import {useNavigate} from "react-router-dom";
 import {useParams} from "react-router-dom";
+import {NotFound} from "./404NotFoundView";
+import {NoAccess} from "./NOAccess";
 
 async function changeOrder(data :any, pid :any) {
+    let tdata = [];
+    for (let i = 0; i < data.length; i ++ )
+        tdata.push(data[i].id);
     let back = await axios.post(`${window.RMJ.baseurl}list`, {
         operation: 'updateProblem',
         id: localStorage.getItem('uid'),
         token: localStorage.getItem('token'),
         pid: pid,
-        problem: data
+        problem: tdata
     });
+    window.location.href= tdata.length >= 100 ?`/view/${pid}/fastview` : `/view/${pid}/problems`;
 }
 
 function addDatas(inp :string, cInp :Function, H :any, cH :any) {
@@ -59,6 +65,9 @@ export function ShowCase({problems, page, description, canSetting, pid} :any) {
             </Tabs.Panel>
         );
     } else if (page === 'settings') {
+        if (canSetting === false) {
+            value = (<NoAccess id={pid} />)
+        } else
         value = (<Tabs.Panel value="settings">
             <Input.Wrapper label='添加' description='使用逗号隔开，将自动添加在最后。'>
                 <div style={{marginTop: '2px'}} />
@@ -98,7 +107,8 @@ export function ShowCase({problems, page, description, canSetting, pid} :any) {
         // @ts-ignore
         const showNoStyle = problems.map((item) => (
             <>
-                <span style={{color: 'red', fontWeight: 800}}> NO STATUS </span> {item} <a target='_blank' href={`https://www.luogu.com.cn/problem/${item}`}>href</a> <br />
+                <span style={{color: item.score === 100 ? 'green': item.score > 0 ? 'red' : 'grey', fontWeight: 800}}>    {item.score === 100 ? 'Accepted' : item.score > 0 ? 'ERROR': <>NO STATUS</> }
+                  </span> {item.id} {item.name} <a target='_blank' href={`https://www.luogu.com.cn/problem/${item}`}>href</a> <br />
             </>
         ));
         value = (

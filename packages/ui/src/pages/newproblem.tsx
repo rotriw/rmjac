@@ -29,8 +29,8 @@ async function goNew(baseurl :string, id :string | null, token :string | null, t
     let notificationMsg = {
         id: `new-data-${notiID}`,
         disallowClose: false,
-        onClose: () => console.log('unmounted'),
-        onOpen: () => console.log('mounted'),
+        onClose: () => {},
+        onOpen: () => {},
         title: `创建请求 页面提交ID:${notiID}`,
         message: (<div>正在提交您的信息。</div>),
         color: 'indigo',
@@ -50,7 +50,6 @@ async function goNew(baseurl :string, id :string | null, token :string | null, t
         manageUser,
         problemList: problems
     }).then((data) => {
-        console.log(data);
         notificationMsg.loading = false;
         notificationMsg.color = data.data.status === 'success' ? 'green' : 'red';
         if (data.data.status === 'success') {
@@ -224,7 +223,6 @@ export function NewProblem() {
         </Input.Wrapper>
         <div style={{padding: '3px'}}></div>
         <div style={{width: '100%', textAlign: 'right'}}><Button fullWidth onClick={() => {
-            console.log(description);
             goNew(window.RMJ.baseurl, localStorage.getItem('uid'), localStorage.getItem('token'),
                 form.values.title, form.values.viewUser, form.values.manageUser, description,
                 form.values.problems, setNotify);

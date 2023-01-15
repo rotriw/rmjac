@@ -79,7 +79,6 @@ export function HeaderShowNew({ links, colorScheme, colorSchemeData }: HeaderSim
     const [opened, { toggle }] = useDisclosure(false);
     const [active, setActive] = useState(links[0].link);
     const { classes, cx } = useStyles();
-    console.log(window.RMJ.baseurl);
     const items = links.map((item) => (
         <NavLink
             key={item.label}

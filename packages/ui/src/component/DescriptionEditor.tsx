@@ -68,7 +68,7 @@ export function DescriptionEditor({value, setValue} :any) {
                 </RichTextEditor.ControlsGroup>
             </RichTextEditor.Toolbar>
 
-            <RichTextEditor.Content  onChange={() => {console.log(editor);setValue(editor)}}/>
+            <RichTextEditor.Content  onChange={() => {setValue(editor)}}/>
         </RichTextEditor>
     );
 }

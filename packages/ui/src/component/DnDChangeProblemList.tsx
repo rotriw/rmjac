@@ -21,22 +21,19 @@ const useStyles = createStyles((theme) => ({
 }));
 
 interface DndTableProps {
-    state :[],
+    state :any[],
     handlers :any,
 }
 
-function eraser(data :any, state :[], handlers :any) {
-    console.log(state);
-    // return ;
+function eraser(data :any, state :any[], handlers :any) {
+
     let len = state.length;
     let v :any = [];
     for (let i = 0; i < len; i ++ ) {
-        console.log(state[i]);
-        console.log(state[i] === data);
         state[i] !== data ? v.push(state[i]) : {};
     }
-    console.log(v);
     handlers.setState(v);
+
 }
 
 export function DndList({ state, handlers }: DndTableProps) {
@@ -44,7 +41,7 @@ export function DndList({ state, handlers }: DndTableProps) {
     const theme = useMantineTheme();
 
     const items = state.map((item, index) => (
-        <Draggable key={item} index={index} draggableId={item}>
+        <Draggable key={item.id} index={index} draggableId={item.id}>
             {(provided) => (
                 <tr className={classes.item} ref={provided.innerRef} {...provided.draggableProps}>
                     <td style={{ width: 40 }}>
@@ -52,10 +49,10 @@ export function DndList({ state, handlers }: DndTableProps) {
                             <IconGripVertical size={18} stroke={1.5} />
                         </div>
                     </td>
-                    <td style={{ width: '15%' }}> {item}</td>
-                    <td>待补充</td>
-                    <td style={{ width: '5%' }}>
-                        <ActionIcon color={'red'} onClick={() => {console.log('qwq');eraser(item, state, handlers)}}>
+                    <td style={{ width: '15%' }}> {item.id}</td>
+                    <td>{item.name}</td>
+                    <td style={{ width: '5%' }} className={'noLeft'}>
+                        <ActionIcon color={'red'} onClick={() => {eraser(item, state, handlers)}}>
                             <IconX stroke={1.5} size={18} />
                         </ActionIcon>
                     </td>
@@ -65,7 +62,7 @@ export function DndList({ state, handlers }: DndTableProps) {
     ));
 
     return (
-        <ScrollArea style={{height: 250, border: theme.colorScheme === 'dark' ? '1px solid #373A40'  : '1px solid #dee2e6'}}>
+        <ScrollArea.Autosize maxHeight={250} style={{ border: theme.colorScheme === 'dark' ? '1px solid #373A40'  : '1px solid #dee2e6'}}>
             <DragDropContext
                 onDragEnd={({ destination, source }) =>
                     handlers.reorder({ from: source.index, to: destination?.index || 0 })
@@ -76,8 +73,8 @@ export function DndList({ state, handlers }: DndTableProps) {
                     <tr style={{borderBottom: theme.colorScheme === 'dark' ? '1px solid #373A40'  : '1px solid #dee2e6'}}>
                         <th style={{ width: 40 }} />
                         <th style={{ width: '15%' }}>题号</th>
-                        <th>其他信息</th>
-                        <th style={{ width: '5%' }}></th>
+                        <th>题目名称</th>
+                        <th style={{ width: '5%' }} className={'noLeft'}></th>
                     </tr>
                     </thead>
                     <Droppable droppableId="dnd-list" direction="vertical" >
@@ -91,6 +88,6 @@ export function DndList({ state, handlers }: DndTableProps) {
                 </Table>
 
             </DragDropContext>
-        </ScrollArea>
+        </ScrollArea.Autosize>
     );
 }

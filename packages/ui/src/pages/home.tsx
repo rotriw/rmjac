@@ -19,9 +19,7 @@ async function InitPage(setData :Function, setOK :Function) {
     });
     completeNavigationProgress();
     setOK(true);
-    console.log('qwqx');
     setData(data.data.data);
-    console.log(data.data.data);
 }
 
 
@@ -43,7 +41,7 @@ export function HomePage({LoginStatus, baseurl} :any) {
                         <Card withBorder style={{padding: '0px'}}>
                             <Card.Section withBorder inheritPadding py="xs" >
                                 <Group position="apart" style={{padding: '16px', paddingBottom: '0px'}}>
-                                    <Text weight={500}>我可以查看的</Text>
+                                    <Text weight={500}>我的题单</Text>
                                 </Group>
                             </Card.Section>
                             <ShowList data={data} />

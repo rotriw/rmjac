@@ -15,13 +15,11 @@ export class SignInHandler {
     @param('password')
     async postCheck(username :string, password :string) {
         let func = async() => { return new Promise(resolve => {
-            console.log('tst');
             User.findOne({username}, function (error, data) {
                 resolve({error, data})
             })
         })};
         let us :any = await func();
-        console.log(us);
         if (us.error != null) {
             return {
                 status: 'failed',
@@ -29,7 +27,6 @@ export class SignInHandler {
                 error: us.error.toString()
             }
         }
-        console.log(us, sha512(password));
         if (sha512(password) === us.data.pwdSHA512) {
             let token = uuidv4();
             let newToken = new Token({
@@ -76,7 +73,6 @@ export class RegisterHandler {
             ConnectionAccount: []
         })
         let finds = await User.findOne({'username': username});
-        console.log(finds);
         if (finds !== null) {
             return ;
         }
@@ -88,8 +84,7 @@ export class UserAccountHandler {
 
     @param('id')
     @param('token')
-    @param('')
-    async postConnectLuogu(id :number, token :string) {
+    async postUpdateLuogu(id :number, token :string) {
         let us = await User.find().checkToken(id, token);
         if (us === false) {
             return {
@@ -98,8 +93,10 @@ export class UserAccountHandler {
                 error: `can't access ${id} token.`
             }
         }
-        //TODO
+        await User.find().updateLuoguData(id, token);
     }
+
+
 }
 
 export function apply(ctx) {

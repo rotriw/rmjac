@@ -1,8 +1,10 @@
 import React, {useEffect} from 'react';
 import { useState } from 'react';
-import {createStyles, Box, Text, Group, Grid, Container, useMantineTheme} from '@mantine/core';
-import { IconListSearch } from '@tabler/icons';
+import {createStyles, Box, Text, Group, Grid, Container, useMantineTheme, Button} from '@mantine/core';
+import {IconCheck, IconListSearch} from '@tabler/icons';
 import {Link, NavLink} from "react-router-dom";
+import axios from "axios";
+import {showNotification, updateNotification} from "@mantine/notifications";
 
 const LINK_HEIGHT = 38;
 const INDICATOR_SIZE = 10;
@@ -57,8 +59,8 @@ export function Table({ links }: TableOfContentsFloatingProps) {
     const { classes, cx } = useStyles();
 
     let ac = 0;
-    const [active, setActive] = useState(0);
     const theme = useMantineTheme();
+    const [active, setActive] = useState(0);
     const items = links.map((item, index) => (
         <NavLink
             to={item.link}
@@ -89,6 +91,40 @@ export function Table({ links }: TableOfContentsFloatingProps) {
     );
 }
 
+async function updateLuogu(id :string | null, token :string | null) {
+    showNotification({
+        id: `new-data`,
+        disallowClose: false,
+        onClose: () => {},
+        onOpen: () => {},
+        title: `已提交更新`,
+        message: (<div>正在获取您的通过情况。</div>),
+        color: 'indigo',
+        icon: <IconCheck />,
+        className: 'login-notification-class',
+        loading: true,
+        autoClose: false,
+    })
+    await axios.post(`${window.RMJ.baseurl}umain`, {
+        'operation': 'updateLuogu',
+        id,
+        token,
+    });
+    updateNotification({
+        id: `new-data`,
+        disallowClose: false,
+        onClose: () => {},
+        onOpen: () => {},
+        title: `已完成更新`,
+        message: (<div>已更新您当前通过情况。</div>),
+        color: 'indigo',
+        icon: <IconCheck />,
+        className: 'login-notification-class',
+        loading: false,
+        autoClose: false,
+    })
+}
+
 
 export function UMain() {
     let links = [
@@ -111,12 +147,19 @@ export function UMain() {
     return (
         <Container>
             <Grid>
-                <Grid.Col span={8}>
-                    qwq
+                <Grid.Col span={12}>
+                    <Button fullWidth onClick={() => {
+                        updateLuogu(localStorage.getItem('uid'), localStorage.getItem('token'));
+                    }}>更新您在洛谷的通过数据</Button>
+                    更新前请您确保已关闭完全隐私权限。<br /><br /><br />
+
+                    <Button color={'red'} fullWidth onClick={() => {
+                        localStorage.setItem('setting-user-login', 'false');window.location.href=`/login`
+                    }}>退出登录 / 重新登录</Button>
                 </Grid.Col>
-                <Grid.Col span={4}>
-                    <Table links={links} ></Table>
-                </Grid.Col>
+                {/*<Grid.Col span={4}>*/}
+                {/*    <Table links={links} ></Table>*/}
+                {/*</Grid.Col>*/}
             </Grid>
         </Container>
     )

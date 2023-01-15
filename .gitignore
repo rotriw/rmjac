@@ -7,3 +7,4 @@ node_modules
 *.local
 *.error
 **/node_modules
+*.local.json

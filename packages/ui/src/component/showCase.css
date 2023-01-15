@@ -1,3 +1,12 @@
 .mantine-ScrollArea-scrollbar {
     z-index: 2
 }
+
+.mantine-Table-root {
+    border-spacing: 0px !important;
+    border-collapse: unset !important;
+}
+
+.noLeft {
+    border-left: 0px !important;
+}

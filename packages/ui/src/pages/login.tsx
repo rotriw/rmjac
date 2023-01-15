@@ -23,8 +23,8 @@ async function goLogin(baseurl :string, username :string, password :string) {
     let notificationMsg = {
         id: `login-data-${notiID}`,
         disallowClose: false,
-        onClose: () => console.log('unmounted'),
-        onOpen: () => console.log('mounted'),
+        onClose: () => {},
+        onOpen: () => {},
         title: `登录请求 页面提交ID:${notiID}`,
         message: (<div>正在验证您的信息。</div>),
         color: 'blue',
@@ -39,14 +39,16 @@ async function goLogin(baseurl :string, username :string, password :string) {
         username,
         password
     }).then((data) => {
-        console.log(data);
         notificationMsg.loading = false;
         notificationMsg.color = data.data.status === 'success' ? 'green' : 'red';
         if (data.data.status === 'success') {
-            notificationMsg.message = (<div>Done! {data.data.msg} 请刷新以来更新。</div>);
+            notificationMsg.message = (<div>Done! {data.data.msg} 请稍等两秒 自动跳转回主页。</div>);
             localStorage.setItem('token', data.data.token);
             localStorage.setItem('uid', data.data.uid);
             localStorage.setItem('setting-user-login', 'true');
+            setTimeout(() => {
+                window.location.href=`/`
+            }, 2000);
         } else {
             notificationMsg.message = (<div>{data.data.error || data.data.msg}</div>);
         }

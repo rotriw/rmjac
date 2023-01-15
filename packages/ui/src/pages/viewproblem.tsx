@@ -20,13 +20,11 @@ async function InitPage(setData: Function, setOK: Function, setS4 :Function, id:
             'pid': id,
         });
         if (data.data.data === null) {
-            console.log('qwww');
             throw data.data.error;
         }
         completeNavigationProgress();
         setOK(true);
         setData(data.data.data);
-        console.log(data.data.data);
     } catch(err) {
         completeNavigationProgress();
         setS4(true);
@@ -53,7 +51,6 @@ export function ViewProblem() {
         InitPage(setData, setOK, setS4, id);
     }, []);
     if (s404) {
-        console.log('wfefsadfsdafas');
         return (
             <NotFound id={id} />
         );

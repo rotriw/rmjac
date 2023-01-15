@@ -36,7 +36,6 @@ async function handle(ctx :KoaContext, Handler) {
     const args = {};
     Object.assign(args, body);
     Object.assign(args, ctx.params);
-    console.log(args);
     try {
         let steps = [
             method,
@@ -49,7 +48,6 @@ async function handle(ctx :KoaContext, Handler) {
         while (cur < length) {
             let step = steps[cur];
             cur ++;
-            console.log(step);
             if (typeof h[step] === 'function') {
                 let value = await h[step](args);
                 if (value?.status) {

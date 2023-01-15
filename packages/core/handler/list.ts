@@ -5,6 +5,7 @@ import {User, UserInterface} from "../model/user";
 
 import {sha512} from "js-sha512";
 import {ProblemList} from "../model/list";
+import {LuoguDataFetch} from "../service/luogu";
 export class ListMangerHandler {
     async get() {
 
@@ -53,9 +54,7 @@ export class ListMangerHandler {
                 error: `can't access ${id} token.`
             }
         }
-        console.log('qwq');
         let data = await ProblemList.find().UserData(id);
-        console.log('qwq2');
         return {
             status: 'success',
             code: 200,
@@ -75,13 +74,29 @@ export class ListMangerHandler {
                 error: `can't access ${id} token.`
             }
         }
-        console.log('qwq');
-        let data :object = await ProblemList.findOne({id: pid}).exec();
-        console.log('qwq6');
+        let data :any = await ProblemList.findOne({id: pid}).exec();
+        let Fetcher = new LuoguDataFetch();
+        let values = await Fetcher.findData(data.problemList);
+        let nData = {
+            listName: data.listName,
+            viewUser: data.viewUser,
+            manageUser: data.manageUser,
+            description: data.description,
+            id: data.id,
+            ver: data.ver,
+            problemList: []
+        };
+        let dataPr = data.problemList;
+        let dats :any = await User.findOne({id}).exec();
+        let accepts = dats.Accepted || {'luogu': {}};
+        for (let i = 0; i < dataPr.length; i ++ ) {
+            nData.problemList.push({'id': dataPr[i], 'name': values[i], 'score': accepts['luogu'][dataPr[i]] || 0});
+        }
+        data.Names = values;
         return {
             status: 'success',
             code: 200,
-            data
+            data: nData,
         }
     }
 
@@ -98,8 +113,6 @@ export class ListMangerHandler {
                 error: `can't access ${id} token.`
             }
         }
-        console.log(await ProblemList.find().checkPerm(id, pid));
-        console.log('test');
         if ((await ProblemList.find().checkPerm(id, pid)) == false) {
             return {
                 status: 'failed',

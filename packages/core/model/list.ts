@@ -36,10 +36,7 @@ ProblemListSchema.query.UserData = async function(id :number) {
 
 //@ts-ignore
 ProblemListSchema.query.checkPerm = async function(id :number, pid :number) {
-    console.log(id, pid);
     let ts = await this.findOne({id: pid});
-    console.log(ts?.manageUser);
-    console.log('qwq');
     if (ts?.manageUser.includes(id)) {
         return true;
     }

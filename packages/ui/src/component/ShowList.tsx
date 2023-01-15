@@ -19,7 +19,6 @@ interface UsersTableProps {
 
 export function ShowList({ data }: UsersTableProps) {
     const theme = useMantineTheme();
-    console.log(data);
     const rows = data.map((item) => (
         <tr key={item.listName}>
             <td>
