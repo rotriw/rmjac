@@ -125,6 +125,33 @@ export class ListMangerHandler {
             status: 'success',
             code: 200,
         }
+	}
+	
+	@param('id')
+    @param('token')
+    @param('pid')
+    @param('title')
+    async postUpdateTitle(id :number, token :string, pid :number, title :string) {
+        let us = await User.find().checkToken(id, token);
+        if (us === false) {
+            return {
+                status: 'failed',
+                code: 403,
+                error: `can't access ${id} token.`
+            }
+        }
+        if ((await ProblemList.find().checkPerm(id, pid)) == false) {
+            return {
+                status: 'failed',
+                code: 403,
+                error: `no access to change.`
+            }
+        }
+        await ProblemList.findOneAndUpdate({id: pid}, {$set: {listName: title}});
+        return {
+            status: 'success',
+            code: 200,
+        }
     }
 }
 

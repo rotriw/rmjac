@@ -55,7 +55,7 @@ UserSchema.query.updateLuoguData = async function (id :number, token :string) : 
     for (let i in ts.ConnectionAccount) {
         if (ts.ConnectionAccount[i].type == 'luogu') {
             let nt = await fetcher.LuoguUserAccept(ts.ConnectionAccount[i].uid, '', false, 100);
-            for (let i = 0; i < nt.data.AcceptData.length; i ++ ) {
+			for (let i = 0; i < nt.data.AcceptData.length; i++) {
                 let ov = oldData.luogu[nt.data.AcceptData[i]];
                 if (ov === undefined || ov <= 1) {
                     oldData.luogu[nt.data.AcceptData[i]] = 100;

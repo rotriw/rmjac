@@ -64,19 +64,30 @@ export class RegisterHandler {
     @param('description')
     @param('invite')
     async post(username :string, password :string, email :string, description :string = '', invite :string) {
-        await connect(global.RMJ.dbURL || 'mongodb://localhost/rmjac');
         const user = new User({
             username,
             pwdSHA512: sha512(password),
             email,
             description,
             ConnectionAccount: []
-        })
+		})
+		if (invite !== '') {
+			return {
+				'status': 'failed',
+				'error': 'wrong invention.',
+			};
+		}
         let finds = await User.findOne({'username': username});
         if (finds !== null) {
-            return ;
+            return {
+				'status': 'failed',
+				'error': 'same username',
+			};
         }
         await user.save();
+		return {
+			'status': 'success',
+		};
     }
 }
 

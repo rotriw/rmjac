@@ -69,6 +69,6 @@ export function Route(name :string, link :string, Handler) {
 }
 
 export function apply(config :any) {
-    app.listen(config?.port || 8000);
+    app.listen(config?.port || 8060);
 
 }

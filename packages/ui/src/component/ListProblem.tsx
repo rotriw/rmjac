@@ -1,3 +1,4 @@
+import { ClassNames } from '@emotion/react';
 import {
     Avatar,
     Badge,
@@ -7,18 +8,35 @@ import {
     ActionIcon,
     Anchor,
     ScrollArea,
-    useMantineTheme, Button,
+	useMantineTheme, Button,
+	createStyles,
+	UnstyledButton
 } from '@mantine/core';
 import {IconPencil, IconTrash, IconArrowUpRight, IconCheck, IconX} from '@tabler/icons';
 import React from "react";
-import {Link} from "react-router-dom";
+import { Link } from "react-router-dom";
+
 
 interface UsersTableProps {
     data: any[];
 }
 
+const useStyles = createStyles((theme) => ({
+
+  control: {
+    width: '100%',
+    padding: `${theme.spacing.xs}px ${theme.spacing.md}px`,
+
+    '&:hover': {
+      backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[0],
+    },
+  },
+
+}));
+
 export function ListProblem({ data }: UsersTableProps) {
-    const theme = useMantineTheme();
+	const theme = useMantineTheme();
+	const { classes } = useStyles();
     const rows = data.map((item) => (
         <tr key={item}>
             <td>
@@ -30,22 +48,13 @@ export function ListProblem({ data }: UsersTableProps) {
 
             </td>
             <td>
-                <Group spacing="sm">
+                <a style={{textDecoration: 'none', color: theme.colors.indigo[5]}} target='_blank' href={`https://www.luogu.com.cn/problem/${item.id}`}>
+                    <Group spacing="sm">
                     <Text size="sm" weight={500}>
-                        {item.id}
-                    </Text>
-                </Group>
-            </td>
-
-            <td>
-                {item.name}
-            </td>
-            <td>
-                <Group spacing={0} position="right">
-                    <a target='_blank' href={`https://www.luogu.com.cn/problem/${item.id}`}><Button leftIcon={<IconArrowUpRight />} variant="outline" size='xs'>
-                        前往
-                    </Button></a>
-                </Group>
+                        {item.id} 
+					{item.name}
+					</Text>
+                </Group></a>
             </td>
         </tr>
     ));
@@ -55,10 +64,12 @@ export function ListProblem({ data }: UsersTableProps) {
             <Table sx={{ minWidth: 600 }} verticalSpacing="xs" striped highlightOnHover  withColumnBorders>
                 <thead>
                 <tr>
-                    <th style={{width: '5%'}}>STATUS</th>
-                    <th style={{width: '15%'}}>题目ID</th>
-                    <th style={{width: '55%'}} >题目名称</th>
-                    <th>操作</th>
+					<th style={{ width: '5%', padding: '0 !important' }}>
+						<UnstyledButton className={classes.control}>
+							状态
+						</UnstyledButton>
+					</th>
+                    <th style={{width: '75%'}}>题目</th>
                 </tr>
                 </thead>
                 <tbody>{rows}</tbody>

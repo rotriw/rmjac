@@ -2,7 +2,8 @@ import {Button, Container, Grid, Input, Tabs, useMantineTheme} from '@mantine/co
 import {IconPhoto, IconMessageCircle, IconSettings, IconChecklist, IconArrowUpRight} from '@tabler/icons';
 import React, {useState} from "react";
 import Markdown from "markdown-to-jsx";
-import {ListProblem} from "./ListProblem";
+import { ListProblem } from "./ListProblem";
+import { ListProblemNew } from "./ListProblemNew";
 import {DndList} from "./DnDChangeProblemList";
 import {getHotkeyHandler, useListState} from "@mantine/hooks";
 import axios from "axios";
@@ -33,7 +34,7 @@ function addDatas(inp :string, cInp :Function, H :any, cH :any) {
     for (let i = 0; i < len; i ++ ) {
         if (inp[i] === ',' || inp[i] === ' ') {
             if (vs !== '') {
-                v.push(vs);
+                v.push({id: vs, name: '暂不爬取，请更新后获取。'});
                 vs = '';
             }
         } else {
@@ -41,7 +42,7 @@ function addDatas(inp :string, cInp :Function, H :any, cH :any) {
         }
     }
     if (vs !== '') {
-        v.push(vs);
+        v.push({id: vs, name: '暂不爬取，请更新后获取。'});
     }
     cH.setState(v);
     cInp('');
@@ -61,7 +62,7 @@ export function ShowCase({problems, page, description, canSetting, pid} :any) {
     if (page === 'problems') {
         value = (
             <Tabs.Panel  value="problems" pt="xs">
-                <ListProblem data={problems} />
+                <ListProblemNew data={problems} />
             </Tabs.Panel>
         );
     } else if (page === 'settings') {
@@ -108,7 +109,7 @@ export function ShowCase({problems, page, description, canSetting, pid} :any) {
         const showNoStyle = problems.map((item) => (
             <>
                 <span style={{color: item.score === 100 ? 'green': item.score > 0 ? 'red' : 'grey', fontWeight: 800}}>    {item.score === 100 ? 'Accepted' : item.score > 0 ? 'ERROR': <>NO STATUS</> }
-                  </span> {item.id} {item.name} <a target='_blank' href={`https://www.luogu.com.cn/problem/${item}`}>href</a> <br />
+                  </span> {item.id} {item.name} <a target='_blank' href={`https://www.luogu.com.cn/problem/${item.id}`}>href</a> <br />
             </>
         ));
         value = (
@@ -122,7 +123,7 @@ export function ShowCase({problems, page, description, canSetting, pid} :any) {
         value = (
             <Tabs.Panel value="description" pt="xs">
                 <Markdown>
-                    {description || '*无简介*'}
+                    {(description || '<p></p>') === '<p></p>' ? '*无简介*' : description}
                 </Markdown>
             </Tabs.Panel>);
     }

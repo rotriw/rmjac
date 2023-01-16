@@ -39,7 +39,13 @@ async function goNew(baseurl :string, id :string | null, token :string | null, t
         loading: true,
         autoClose: false,
     };
-    showNotification(notificationMsg);
+	if (!viewUser.includes(id as string)) {
+		viewUser.push(id as string);
+	}
+	if (!manageUser.includes(id as string)) {
+		manageUser.push(id as string);
+	}
+    // showNotification(notificationMsg);
     axios.post(`${baseurl}list`, {
         'operation': 'create',
         id,
@@ -60,7 +66,7 @@ async function goNew(baseurl :string, id :string | null, token :string | null, t
         setNotify(true);
         notificationMsg.autoClose = true;
 
-        updateNotification(notificationMsg);
+        // updateNotification(notificationMsg);
     }).catch(err => {
         console.log(err);
         notificationMsg.loading = false;
@@ -68,6 +74,7 @@ async function goNew(baseurl :string, id :string | null, token :string | null, t
         notificationMsg.color = 'red';
         notificationMsg.message = (<div>error, open console log.</div>);
 
+        showNotification(notificationMsg);
     });
 }
 
@@ -109,7 +116,7 @@ export function NewProblem() {
         </Input.Wrapper>
         <MultiSelect
             label="可查看用户uid"
-            description="填写可查看用户uid（必须为数字序列）在v1.0版本前请务必添加自己。"
+            description="填写可查看用户uid（必须为数字序列）"
             data={form.values.viewUser}
             placeholder=""
             searchable
@@ -147,7 +154,7 @@ export function NewProblem() {
         <MultiSelect
             label="可管理用户uid"
             data={form.values.manageUser}
-            description="填写可管理用户uid（必须为数字序列）在v1.0版本前请务必添加自己。"
+            description="填写可管理用户uid（必须为数字序列）"
             searchValue={form.values.manageUserSearch}
             searchable
             value={form.values.manageUser}
@@ -183,7 +190,7 @@ export function NewProblem() {
         <MultiSelect
             label="题目列表"
             data={form.values.problems}
-            description="填写题目ID。该部分将进行修改更符合操作顺序。要不然写不完了。（TODO）"
+            description="填写题目ID。可以从洛谷直接复制题单。"
             searchable
             searchValue={form.values.problemsSearch}
             value={form.values.problems}

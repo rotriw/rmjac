@@ -10,6 +10,7 @@ import {NewProblem} from "./pages/newproblem";
 import {NavigationProgress} from "@mantine/nprogress";
 import {ViewProblem} from "./pages/viewproblem";
 import {UMain} from "./pages/umain";
+import { RegisterHandler } from './pages/register';
 
 declare global {
     interface Window {
@@ -18,20 +19,20 @@ declare global {
 }
 
 window.RMJ = {
-    baseurl: 'http://localhost:8000/'
+    baseurl: 'https://api.rmj.ac/'
 }
 
 export default function App() {
     let mainLinks = [];
-    if (localStorage.getItem('setting-user-login') === 'false' || localStorage.getItem('setting-user-login') === undefined) {
+    if (localStorage.getItem('setting-user-login') === 'true') {
         mainLinks = [
             {link: '/', label: '主页'},
-            {link: '/login', label: '登录'},
+            {link: '/umain', label: '个人中心'},
         ];
     } else {
         mainLinks = [
             {link: '/', label: '主页'},
-            {link: '/umain', label: '个人中心'},
+            {link: '/login', label: '登录'},
         ];
     }
     const [ colorScheme, toggleColorScheme ] = useToggle(localStorage.getItem(`bgColor`) === 'dark' ? [ 'dark', 'light'] : ['light', 'dark']);
@@ -45,7 +46,8 @@ export default function App() {
                         <Routes>
                             <Route path='' element={ <HomePage LoginStatus={localStorage.getItem('setting-user-login') === 'true'} /> } />
                             <Route path='/login' element={ <LoginHandler />} />
-                            <Route path='/new' element={ <NewProblem />} />
+                            <Route path='/register' element={ <RegisterHandler />} />
+							<Route path='/new' element={<NewProblem />} />
                             <Route path='/umain' element={ <UMain />} />
                             <Route path='/umain/:set' element={ <UMain />} />
                             <Route path='/view/:id' element={<ViewProblem/>} />

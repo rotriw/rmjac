@@ -1,12 +1,11 @@
 import { RichTextEditor, Link } from '@mantine/tiptap';
-import { useEditor } from '@tiptap/react';
+import { useEditor, Editor } from '@tiptap/react';
 import Highlight from '@tiptap/extension-highlight';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Superscript from '@tiptap/extension-superscript';
 import SubScript from '@tiptap/extension-subscript';
-
 const content = '';
 
 export function DescriptionEditor({value, setValue} :any) {
@@ -25,7 +24,6 @@ export function DescriptionEditor({value, setValue} :any) {
             setValue(editor.getHTML());
         }
     });
-
     return (
         <RichTextEditor editor={editor} >
             <RichTextEditor.Toolbar sticky stickyOffset={0}>
