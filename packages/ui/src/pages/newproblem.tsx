@@ -12,13 +12,15 @@ import {
     useMantineTheme
 } from "@mantine/core";
 import {ShowList} from "../component/ShowList";
-import React, {useState} from "react";
+import React, { useState } from "react";
+import Vditor from "vditor";
 import {useForm} from "@mantine/form";
 import {IconCheck, IconCircleCheck, IconX, IconChecks} from "@tabler/icons";
 import {showNotification, updateNotification} from "@mantine/notifications";
 import axios from "axios";
 import {DescriptionEditor} from "../component/DescriptionEditor";
 import {Link, NavLink} from "react-router-dom";
+import { MarkdownEdit } from "../component/vditor";
 // import {AlignRightControl} from "@mantine/tiptap/lib/controls";
 
 let notiID = 0;
@@ -101,6 +103,7 @@ export function NewProblem() {
         },
     });
 
+	const [vd, setVd] = React.useState<Vditor>();
 
     return (<Container>
         <h2>新建一个题单</h2>
@@ -225,14 +228,14 @@ export function NewProblem() {
         />
         <div style={{padding: '7px'}}></div>
         <Input.Wrapper label='描述' description='填写您的简介'>
-            <div style={{padding: '2px'}}></div>
-            <DescriptionEditor value={description} setValue={setDes} />
+			<div style={{ padding: '2px' }}></div>
+			<MarkdownEdit vd={vd} setVd={setVd}  />
         </Input.Wrapper>
         <div style={{padding: '3px'}}></div>
         <div style={{width: '100%', textAlign: 'right'}}><Button fullWidth onClick={() => {
-            goNew(window.RMJ.baseurl, localStorage.getItem('uid'), localStorage.getItem('token'),
-                form.values.title, form.values.viewUser, form.values.manageUser, description,
-                form.values.problems, setNotify);
+			goNew(window.RMJ.baseurl, localStorage.getItem('uid'), localStorage.getItem('token'),
+               form.values.title, form.values.viewUser, form.values.manageUser, vd?.getValue() as string,
+               form.values.problems, setNotify);
         }
         }>创建 + </Button></div>
 

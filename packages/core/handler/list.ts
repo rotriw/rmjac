@@ -76,7 +76,8 @@ export class ListMangerHandler {
         }
         let data :any = await ProblemList.findOne({id: pid}).exec();
         let Fetcher = new LuoguDataFetch();
-        let values = await Fetcher.findData(data.problemList);
+        let names = await Fetcher.findProblemData(data.problemList);
+        let diff = await Fetcher.findDifficultData(data.problemList);
         let nData = {
             listName: data.listName,
             viewUser: data.viewUser,
@@ -90,9 +91,8 @@ export class ListMangerHandler {
         let dats :any = await User.findOne({id}).exec();
         let accepts = dats.Accepted || {'luogu': {}};
         for (let i = 0; i < dataPr.length; i ++ ) {
-            nData.problemList.push({'id': dataPr[i], 'name': values[i], 'score': accepts['luogu'][dataPr[i]] || 0});
+            nData.problemList.push({'id': dataPr[i], 'name': names[i], 'diff' : diff[i], 'score': accepts['luogu'][dataPr[i]] || 0});
         }
-        data.Names = values;
         return {
             status: 'success',
             code: 200,
@@ -148,6 +148,33 @@ export class ListMangerHandler {
             }
         }
         await ProblemList.findOneAndUpdate({id: pid}, {$set: {listName: title}});
+        return {
+            status: 'success',
+            code: 200,
+        }
+	}
+
+	@param('id')
+    @param('token')
+    @param('pid')
+    @param('description')
+    async postUpdateDescription(id :number, token :string, pid :number, description :string) {
+        let us = await User.find().checkToken(id, token);
+        if (us === false) {
+            return {
+                status: 'failed',
+                code: 403,
+                error: `can't access ${id} token.`
+            }
+        }
+        if ((await ProblemList.find().checkPerm(id, pid)) == false) {
+            return {
+                status: 'failed',
+                code: 403,
+                error: `no access to change.`
+            }
+        }
+        await ProblemList.findOneAndUpdate({id: pid}, {$set: {description: description}});
         return {
             status: 'success',
             code: 200,

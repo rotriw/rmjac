@@ -89,6 +89,12 @@ export function HeaderShowNew({ links, colorScheme, colorSchemeData }: HeaderSim
         </NavLink>
     ));
 
+	async function changeTheme() {
+		colorScheme();
+		await localStorage.setItem(`bgColor`, colorSchemeData === 'dark' ? 'light' : 'dark')
+		let setItemEvent = new Event("changetheme");
+		window.dispatchEvent(setItemEvent);
+	}
 
     return (
         <Header height={60} mb={30}>
@@ -98,7 +104,7 @@ export function HeaderShowNew({ links, colorScheme, colorSchemeData }: HeaderSim
                     {items}
                     <a
                         href='#'
-                        onClick={(event)=>{event.preventDefault();colorScheme();localStorage.setItem(`bgColor`, colorSchemeData === 'dark' ? 'light' : 'dark')}}
+						onClick={(event) => { event.preventDefault();changeTheme()}}
                         className={classes.link}
                     >
                         设为{colorSchemeData === 'dark' ? '亮色' : '暗色'}模式

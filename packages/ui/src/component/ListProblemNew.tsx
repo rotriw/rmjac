@@ -7,13 +7,14 @@ import {
   Group,
   Text,
   Center,
-  TextInput,
+TextInput,
   Badge,
   clsx,
   useMantineTheme,
 } from '@mantine/core';
 import { keys } from '@mantine/utils';
 import { IconSelector, IconChevronDown, IconChevronUp, IconSearch } from '@tabler/icons';
+import { DiffcultBadge } from './difficult';
 
 const useStyles = createStyles((theme) => ({
   th: {
@@ -57,7 +58,8 @@ const useStyles = createStyles((theme) => ({
 interface RowData {
 	score: number,
 	id: string,
-	name: string
+	name: string,
+	diff: number
 }
 
 interface TableSortProps {
@@ -109,7 +111,10 @@ function sortData(
   }
 
   return filterData(
-	[...data].sort((a, b) => {
+	  [...data].sort((a, b) => {
+		if (typeof a[sortBy] === 'undefined') {
+			(a[sortBy] as any) = -1;
+		}
 		if (typeof a[sortBy] === 'number') {
 			return !payload.reversed ? (+b[sortBy] - +a[sortBy]) : (+a[sortBy] - +b[sortBy]);
 		}
@@ -147,7 +152,8 @@ export function ListProblemNew({ data }: TableSortProps) {
     <tr key={row.id}>
       <td>{row.score >= 100 ? <Badge color='green'>AC</Badge> : row.score > 0 ? <Badge color='red'>WA</Badge> : <Badge color='blue'>NO</Badge> }</td>
       <td><a style={{textDecoration: 'none', color: theme.colors.indigo[5]}} href={`https://www.luogu.com.cn/problem/${row.id}`} target={'_blank'}>{row.id} {row.name}</a></td>
-    </tr>
+	  <td><Center><DiffcultBadge diff={row.diff}></DiffcultBadge></Center></td>
+	  </tr>
   ));
 const { classes, cx } = useStyles();
 
@@ -171,7 +177,7 @@ const { classes, cx } = useStyles();
           <tr>
             <Th
               sorted={sortBy === 'score'}
-			  width={'10%'}
+			  width={'14%'}
               reversed={reverseSortDirection}
               onSort={() => setSorting('score')}
             >
@@ -180,10 +186,19 @@ const { classes, cx } = useStyles();
             <Th
               sorted={sortBy === 'id'}
               reversed={reverseSortDirection}
-			  width={'80%'}
+			  width={'70%'}
               onSort={() => setSorting('id')}
             >
               题目
+            </Th>
+			<Th
+              sorted={sortBy === 'diff'}
+			  width={'20%'}
+              reversed={reverseSortDirection}
+              onSort={() => setSorting('diff')}
+			>
+			<Center>难度</Center>	  
+				
             </Th>
           </tr>
         </thead>

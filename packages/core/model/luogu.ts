@@ -49,5 +49,56 @@ export class LuoguDataModel {
             return undefined;
         }
     }
+
+	async getProblemDifficult(pid: string) {
+		try {
+            let data = await axios({
+                headers: {
+                    'x-luogu-type': 'content-only'
+                },
+                url: `https://www.luogu.com.cn/problem/${pid}`
+            });
+            return data.data.currentData.problem.difficulty;
+        } catch (err) {
+            return undefined;
+        }
+	}
+
+	async getPageDifficult(type: string, pageId: number) {
+		try {
+            let data = await axios({
+                headers: {
+                    'x-luogu-type': 'content-only'
+                },
+                url: `https://www.luogu.com.cn/problem/list?page=${pageId}`
+            });
+			return data.data.currentData.problems.result.map(item => Object.assign({}, {
+				diff: item.difficulty,
+				pname: item.title,
+				pid: item.pid,
+			}));
+        } catch (err) {
+            return undefined;
+        }
+	}
+
+	async getPageDifficultWithNoAsync(type: string, pageId: number, recall: Function) {
+		try {
+			let typeCode = type === 'luogu' ? '' : `&type=${type}`;
+            let data = await axios({
+                headers: {
+                    'x-luogu-type': 'content-only'
+                },
+                url: `https://www.luogu.com.cn/problem/list?page=${pageId}${typeCode}`
+            });
+			recall(data.data.currentData.problems.result.map(item => Object.assign({}, {
+				diff: item.difficulty,
+				pname: item.title,
+				pid: item.pid,
+			})));
+        } catch (err) {
+            return undefined;
+        }
+	}
 };
 

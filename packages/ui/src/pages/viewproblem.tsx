@@ -8,6 +8,7 @@ import {NotFound} from "../component/404NotFoundView";
 import { useToggle, getHotkeyHandler } from "@mantine/hooks";
 import { ThemeContext } from "@emotion/react";
 import './viewproblem.css';
+import { DiffcultBadge } from "../component/difficult";
 
 
 let ok = false, s404 = false;
@@ -88,7 +89,7 @@ export function ViewProblem() {
 				}
 		}}><h2 style={{ margin: 0 }}>#{data?.id} - {data?.listName}</h2></a>
 	) : (<Grid  style={{paddingTop: theme.spacing.sm, paddingBottom: theme.spacing.sm}}>
-			<Grid.Col span={4}>
+			<Grid.Col span={5}>
 				<TextInput
 					variant="filled"
 					value={newTitle}
@@ -99,17 +100,12 @@ export function ViewProblem() {
 						])
 					}
 					onBlur={() => {
-						console.log('qwq');
 						if (title === 'change') {
 							updateTitle(newTitle, id, ctitle, data, setData);
 						}
 					}}
 					autoFocus
 					height={theme.headings.sizes.h2 as any} />
-			</Grid.Col>
-			<Grid.Col span={2}>
-				<Button
-					onClick={() => { updateTitle(newTitle, id, ctitle, data, setData) }}>更新标题</Button>
 			</Grid.Col>
 
 	</Grid>);

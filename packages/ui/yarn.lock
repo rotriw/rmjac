@@ -1409,6 +1409,11 @@ delayed-stream@~1.0.0:
   resolved "https://registry.npmmirror.com/delayed-stream/-/delayed-stream-1.0.0.tgz#df3ae199acadfb7d440aaae0b29e2272b24ec619"
   integrity sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==
 
+diff-match-patch@^1.0.5:
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/diff-match-patch/-/diff-match-patch-1.0.5.tgz#abb584d5f10cd1196dfc55aa03701592ae3f7b37"
+  integrity sha512-IayShXAgj/QMXgB0IWmKx+rOPuGMhqm5w6jvFxmVenXKIzRqTAAsbBPT3kWQeGANj3jGgvcvv4yK6SxqYmikgw==
+
 dir-glob@^3.0.1:
   version "3.0.1"
   resolved "https://registry.npmmirror.com/dir-glob/-/dir-glob-3.0.1.tgz#56dbf73d992a4a93ba1584f4534063fd2e41717f"
@@ -3128,6 +3133,13 @@ use-sync-external-store@^1.0.0:
   version "1.2.0"
   resolved "https://registry.npmmirror.com/use-sync-external-store/-/use-sync-external-store-1.2.0.tgz#7dbefd6ef3fe4e767a0cf5d7287aacfb5846928a"
   integrity sha512-eEgnFxGQ1Ife9bzYs6VLi8/4X6CObHMw9Qr9tPY43iKwsPw8xE8+EFsf/2cFZ5S3esXgpWgtSCtLNS41F+sKPA==
+
+vditor@^3.9.0:
+  version "3.9.0"
+  resolved "https://registry.yarnpkg.com/vditor/-/vditor-3.9.0.tgz#05f8444c4510f59caaaadb81517f1530f7c5dea2"
+  integrity sha512-CLLtrexUY/LGN1Lp1iu242Uq9GuNP98UTXFRY9hjTNFkpVH9L4M3jrQ9yIZ711zYwsl78GxKeskuU7WieA96ow==
+  dependencies:
+    diff-match-patch "^1.0.5"
 
 vite@^4.0.0:
   version "4.0.4"

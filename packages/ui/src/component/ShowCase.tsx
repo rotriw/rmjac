@@ -5,13 +5,15 @@ import Markdown from "markdown-to-jsx";
 import { ListProblem } from "./ListProblem";
 import { ListProblemNew } from "./ListProblemNew";
 import {DndList} from "./DnDChangeProblemList";
-import {getHotkeyHandler, useListState} from "@mantine/hooks";
+import {getHotkeyHandler, useListState, useToggle} from "@mantine/hooks";
+import Vditor from "vditor";
 import axios from "axios";
 import './showCase.css';
 import {useNavigate} from "react-router-dom";
 import {useParams} from "react-router-dom";
 import {NotFound} from "./404NotFoundView";
 import {NoAccess} from "./NOAccess";
+import { MarkdownEdit } from './vditor';
 
 async function changeOrder(data :any, pid :any) {
     let tdata = [];
@@ -25,6 +27,17 @@ async function changeOrder(data :any, pid :any) {
         problem: tdata
     });
     window.location.href= tdata.length >= 100 ?`/view/${pid}/fastview` : `/view/${pid}/problems`;
+}
+
+async function updateContent(data: any, pid: any) {
+	let back = await axios.post(`${window.RMJ.baseurl}list`, {
+        operation: 'updateDescription',
+        id: localStorage.getItem('uid'),
+        token: localStorage.getItem('token'),
+        pid: pid,
+        description: data
+    });
+	
 }
 
 function addDatas(inp :string, cInp :Function, H :any, cH :any) {
@@ -49,13 +62,20 @@ function addDatas(inp :string, cInp :Function, H :any, cH :any) {
 }
 
 
+function changeD() {
+	let setItemEvent = new Event("openchange");
+	window.dispatchEvent(setItemEvent);
+}
+
 export function ShowCase({problems, page, description, canSetting, pid} :any) {
     const settings = canSetting ? (<Tabs.Tab value="settings">设置</Tabs.Tab>) : (<></>);
     const fastview = problems.length > 100 ? (<Tabs.Tab value="fastview">快速查看</Tabs.Tab>) : (<></>);
     const [state, handlers] = useListState(problems);
     const [input, cInput] = useState('');
     const theme = useMantineTheme();
+	const [showSetDescriptionText, setShowSetDescriptionText] = useToggle(['重新编辑', '更新内容']);
 
+	const [vd, setVd] = React.useState<Vditor>();
     const navigate = useNavigate();
     let value = (<></>);
 
@@ -119,12 +139,10 @@ export function ShowCase({problems, page, description, canSetting, pid} :any) {
                 </div>
           </Container>
         );
-    } else {
+	} else {
         value = (
-            <Tabs.Panel value="description" pt="xs">
-                <Markdown>
-                    {(description || '<p></p>') === '<p></p>' ? '*无简介*' : description}
-                </Markdown>
+			<Tabs.Panel value="description" pt="xs">
+				<MarkdownEdit def={description} vd={vd} setVd={setVd}  openPreview={true} />
             </Tabs.Panel>);
     }
 
@@ -132,9 +150,16 @@ export function ShowCase({problems, page, description, canSetting, pid} :any) {
         <Tabs value={page} onTabChange={(value) => window.location.href=`/view/${pid}/${value}`}  variant="pills"  >
             <Tabs.List>
                 <Tabs.Tab value="description">简介</Tabs.Tab>
-                <Tabs.Tab value="problems">内容</Tabs.Tab>
+				<Tabs.Tab value="problems">内容</Tabs.Tab>
                 {fastview}
-                {settings}
+				{settings}
+				{canSetting && page === 'description' ? (<Button onClick={() => {
+					setShowSetDescriptionText();
+					if (showSetDescriptionText === '更新内容') {
+						updateContent(vd?.getValue(), pid);
+					}
+					changeD();
+				}} variant='outline'>{showSetDescriptionText}</Button>) : (<></>)}
             </Tabs.List>
             {value}
         </Tabs>
