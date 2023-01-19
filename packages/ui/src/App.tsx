@@ -11,6 +11,7 @@ import {NavigationProgress} from "@mantine/nprogress";
 import {ViewProblem} from "./pages/viewproblem";
 import {UMain} from "./pages/umain";
 import { RegisterHandler } from './pages/register';
+import {baseurl} from '../config.json';
 
 declare global {
     interface Window {
@@ -19,7 +20,7 @@ declare global {
 }
 
 window.RMJ = {
-    baseurl: 'https://api.rmj.ac/'
+    baseurl: baseurl
 }
 
 export default function App() {
@@ -52,7 +53,6 @@ export default function App() {
                             <Route path='/umain/:set' element={ <UMain />} />
                             <Route path='/view/:id' element={<ViewProblem/>} />
                             <Route path='/view/:id/:page' element={<ViewProblem/>} />
-                            <Route path='/view/:id/:page/fastview/:viewed' element={<ViewProblem/>} />
                         </Routes>
                     </NotificationsProvider>
                 </MantineProvider>

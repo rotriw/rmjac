@@ -10,7 +10,6 @@ const useStyles = createStyles((theme) => ({
         justifyContent: 'space-between',
         alignItems: 'center',
         height: '100%',
-
     },
 
     root: {
@@ -97,7 +96,7 @@ export function HeaderShowNew({ links, colorScheme, colorSchemeData }: HeaderSim
 	}
 
     return (
-        <Header height={60} mb={30}>
+        <Header height={60} >
             <Container className={classes.header}>
                 <Text weight={800}>RMJ.AC</Text>
                 <Group spacing={5} className={classes.links}>

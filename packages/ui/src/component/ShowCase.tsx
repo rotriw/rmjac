@@ -1,4 +1,15 @@
-import {Button, Container, Grid, Input, Tabs, useMantineTheme} from '@mantine/core';
+import {
+    Button,
+    Container,
+    createStyles,
+    Divider,
+    Grid,
+    Group,
+    Input,
+    Progress,
+    Tabs,
+    useMantineTheme
+} from '@mantine/core';
 import {IconPhoto, IconMessageCircle, IconSettings, IconChecklist, IconArrowUpRight} from '@tabler/icons';
 import React, {useState} from "react";
 import Markdown from "markdown-to-jsx";
@@ -15,6 +26,72 @@ import {NotFound} from "./404NotFoundView";
 import {NoAccess} from "./NOAccess";
 import { MarkdownEdit } from './vditor';
 import { MarkdownShow } from './ShowMarkdown';
+
+
+const useStyles = createStyles((theme) => ({
+    header: {
+        paddingTop: theme.spacing.sm,
+        backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[0],
+        borderBottom: `1px solid ${
+            theme.colorScheme === 'dark' ? 'transparent' : theme.colors.gray[2]
+        }`,
+        marginBottom: 25,
+    },
+
+    mainSection: {
+        paddingBottom: theme.spacing.sm,
+    },
+
+    user: {
+        color: theme.colorScheme === 'dark' ? theme.colors.dark[0] : theme.black,
+        padding: `${theme.spacing.xs}px ${theme.spacing.sm}px`,
+        borderRadius: theme.radius.sm,
+        transition: 'background-color 100ms ease',
+
+        '&:hover': {
+            backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[8] : theme.white,
+        },
+
+        [theme.fn.smallerThan('xs')]: {
+            display: 'none',
+        },
+    },
+
+    burger: {
+        [theme.fn.largerThan('xs')]: {
+            display: 'none',
+        },
+    },
+
+    userActive: {
+        backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[8] : theme.white,
+    },
+
+    tabs: {
+        [theme.fn.smallerThan('sm')]: {
+            display: 'none',
+        },
+    },
+
+    tabsList: {
+        borderBottom: '0 !important',
+    },
+
+    tab: {
+        fontWeight: 500,
+        height: 38,
+        backgroundColor: 'transparent',
+
+        '&:hover': {
+            backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[1],
+        },
+
+        '&[data-active]': {
+            backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.white,
+            borderColor: theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.colors.gray[2],
+        },
+    },
+}));
 
 async function changeOrder(data :any, pid :any) {
     let tdata = [];
@@ -68,31 +145,57 @@ function changeD() {
 	window.dispatchEvent(setItemEvent);
 }
 
-export function ShowCase({problems, page, description, canSetting, pid} :any) {
+export function ShowCase({listName, problems, page, description, canSetting, pid} :any) {
     const settings = canSetting ? (<Tabs.Tab value="settings">设置</Tabs.Tab>) : (<></>);
     const fastview = problems.length > 100 ? (<Tabs.Tab value="fastview">快速查看</Tabs.Tab>) : (<></>);
     const [state, handlers] = useListState(problems);
     const [input, cInput] = useState('');
-    const theme = useMantineTheme();
+    //const theme = useMantineTheme();
+    const { classes, theme, cx } = useStyles();
 	const [showSetDescriptionText, setShowSetDescriptionText] = useToggle(['更新内容']);
 
 	const [vd, setVd] = React.useState<Vditor>();
     const navigate = useNavigate();
     let value = (<></>);
+    let tac: any = [];
+    problems.map((item: any) => {
+        // console.log(item.score);
+        if (tac[item.score])
+            tac[item.score]++;
+        else
+            tac[item.score] = 1;
+    });
 
+    const greenP = (tac[100] || 0) / problems.length * 100;
+    const redP = (tac[1] || 0) / problems.length * 100;
+    const blueP = (tac[0] || 0) / problems.length * 100;
+    let showBar = ((tac[100] || 0) == problems.length) ? (
+        <Progress
+            size={20}
+            sections={[
+                { value: greenP, className: 'allDone', color: 'green', label: 'Done', tooltip: `All Accepted - ${(tac[100] || 0)} ` },
+            ]}
+        />) : (
+        <Progress
+            size={20}
+            sections={[
+                { value: greenP , color: 'green', label: 'AC', tooltip: `Accepted - ${(tac[100] || 0)} ` },
+                { value: redP, color: 'red', label: 'WA', tooltip: `ERROR(WA,TLE,MLE,RE) - ${(tac[1] || 0)}` },
+                { value: blueP, color: 'gray', label: 'NO', tooltip: `No status - ${(tac[0] || 0)}` },
+            ]}
+        />);
     if (page === 'problems') {
         value = (
-            <Tabs.Panel  value="problems" pl="xs" pt="xs">
+            <>
                 <ListProblemNew data={problems} />
-            </Tabs.Panel>
+            </>
         );
     } else if (page === 'settings') {
         if (canSetting === false) {
             value = (<NoAccess id={pid} />)
         } else
 			value = (
-		
-				<Tabs.Panel pl="xs" value="settings">
+				<>
 					<div style={{marginTop: theme.spacing.sm}}></div>
 					<Tabs defaultValue="problem" variant='pills'>
 						<Tabs.List grow>
@@ -134,7 +237,7 @@ export function ShowCase({problems, page, description, canSetting, pid} :any) {
 							<Button fullWidth onClick={() => {changeOrder(state, pid)}}>提交更改</Button>
 						</Tabs.Panel>
 						<Tabs.Panel pl="xs"  value="description" pt="xs">
-							<MarkdownEdit def={description} vd={vd} setVd={setVd}  openPreview={false} />	
+							<MarkdownEdit def={description} vd={vd} setVd={setVd}  openPreview={false} />
 							<div style={{ marginTop: theme.spacing.sm }}></div>
 							<Button onClick={() => {
 									// setShowSetDescriptionText();
@@ -145,8 +248,8 @@ export function ShowCase({problems, page, description, canSetting, pid} :any) {
 								}} >{showSetDescriptionText}</Button>
 						</Tabs.Panel>
 				</Tabs>
-				
-			</Tabs.Panel>);
+
+			</>);
     } else if (page === 'fastview') {
         const {viewed} = useParams();
         // @ts-ignore
@@ -165,21 +268,55 @@ export function ShowCase({problems, page, description, canSetting, pid} :any) {
         );
 	} else {
         value = (
-			<Tabs.Panel pl="xs"  value="description" pt="xs">
-				<MarkdownShow md={description}></MarkdownShow>
-				
-			</Tabs.Panel>);
+			<>
+                <Grid>
+                    <Grid.Col xl={9}>
+                        <MarkdownShow md={description}></MarkdownShow>
+                    </Grid.Col>
+                    <Grid.Col xl={3}>
+                        <span style={{color: theme.colors.gray[6], fontSize: theme.fontSizes.sm, fontWeight: 600}}>通过情况</span> <br />
+                        {showBar}
+                        <Divider my="sm" />
+                        <span style={{color: theme.colors.gray[6], fontSize: theme.fontSizes.sm, fontWeight: 600}}>题单简介</span> <br />
+                        <span style={{color: theme.colors.gray[7], fontSize: theme.fontSizes.xs, fontWeight: 500}}>题单编号：{pid}</span> <br />
+                        <span style={{color: theme.colors.gray[7], fontSize: theme.fontSizes.xs, fontWeight: 500}}>该题单您的权限：{canSetting ? '可编辑' : '仅可查看'}</span> <br />
+
+                    </Grid.Col>
+                </Grid>
+			</>);
     }
 
     return (
-        <Tabs variant="outline" value={page} onTabChange={(value) => window.location.href=`/view/${pid}/${value}`}   >
-            <Tabs.List grow>
-                <Tabs.Tab value="description">简介</Tabs.Tab>
-				<Tabs.Tab value="problems">内容</Tabs.Tab>
-                {fastview}
-				{settings}
-            </Tabs.List>
-            {value}
-        </Tabs>
+        <>
+        <div className={classes.header}>
+        <Container className={classes.mainSection}>
+            <Group position="apart">
+                {listName}
+            </Group>
+        </Container>
+        <Container>
+            <Tabs
+                defaultValue="description"
+                variant="outline"
+                classNames={{
+                    root: classes.tabs,
+                    tabsList: classes.tabsList,
+                    tab: classes.tab,
+                }}
+                value={page}
+                onTabChange={(value) => window.location.href=`/view/${pid}/${value}`}
+            >
+                <Tabs.List>
+                    <Tabs.Tab value="description">简介</Tabs.Tab>
+                    <Tabs.Tab value="problems">内容</Tabs.Tab>
+                    {fastview}
+                    {settings}
+                </Tabs.List>
+            </Tabs>
+        </Container>
+        </div>
+
+            <Container>{value}</Container>
+        </>
     );
 }

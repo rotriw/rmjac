@@ -5,6 +5,7 @@
   "license": "AGPL3.0",
   "private": true,
   "dependencies": {
+    "Logger": "^0.0.0",
     "asyncio": "^0.0.2",
     "await-timeout": "^1.1.1",
     "axios": "^1.2.2",
@@ -17,16 +18,19 @@
     "koa-router": "^12.0.0",
     "koa2-cors": "^2.0.6",
     "lodash": "^4.17.21",
+    "log4js": "^6.7.1",
     "mongodb": "^4.13.0",
     "mongoose": "^6.8.3",
     "puppeteer": "^19.5.0",
     "source-map-support": "^0.5.21",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "yargs": "^17.6.2"
   },
   "scripts": {
     "test": "node packages/core/test/index.js",
     "system:mac:mongo": "export PATH=/usr/local/mongodb/bin:$PATH",
-    "ui:dev": "cd packages/ui && vite",
-    "debug": "node entry/index.js"
+    "ui:dev": "cd packages/ui && npx vite",
+    "start": "node entry/index.js",
+    "debug": "node entry/index.js --debug"
   }
 }

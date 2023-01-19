@@ -9,6 +9,7 @@ import { useToggle, getHotkeyHandler } from "@mantine/hooks";
 import { ThemeContext } from "@emotion/react";
 import './viewproblem.css';
 import { DiffcultBadge } from "../component/difficult";
+import {ShowHeaders} from "../component/viewheader";
 
 
 let ok = false, s404 = false;
@@ -55,6 +56,7 @@ async function updateTitle(newtitle: any, pid :any, ctitle: Function, data :any,
 }
 
 export function ViewProblem() {
+
     const {id, page} = useParams();
     const [data, setData] = useState({
         id: '',
@@ -81,13 +83,13 @@ export function ViewProblem() {
 	const [title, ctitle] = useToggle(['show', 'change']);
 	const [newTitle, setTitle] = useState(data?.listName);
 	const showTitle = title == 'show' ? (
-		<a
+		<><a
 			style={{ paddingTop: theme.spacing.sm, paddingBottom: theme.spacing.md }}
 			onDoubleClick={() => {
 				if (data?.manageUser.includes(Number(uid))) {
 					setTitle(data?.listName); ctitle()
 				}
-		}}><h2 style={{ margin: 0 }}>#{data?.id} - {data?.listName}</h2></a>
+		}}><h2 style={{ margin: 0 }}>{data?.listName}</h2></a></>
 	) : (<Grid  style={{paddingTop: theme.spacing.sm, paddingBottom: theme.spacing.sm}}>
 			<Grid.Col span={5}>
 				<TextInput
@@ -111,48 +113,11 @@ export function ViewProblem() {
 	</Grid>);
     if (ok) {
 		let tac :Array<number> = [];
-		data?.problemList.map((item: any) => {
-			// console.log(item.score);
-			if (tac[item.score])
-				tac[item.score]++;
-			else
-				tac[item.score] = 1;
-		});
-		
-		const greenP = (tac[100] || 0) / data?.problemList.length * 100;
-		const redP = (tac[1] || 0) / data?.problemList.length * 100;
-		const blueP = (tac[0] || 0) / data?.problemList.length * 100;
-		let showBar = ((tac[100] || 0) == data?.problemList.length) ? (
-			<Progress
-				size={20}
-				sections={[
-					{ value: greenP, className: 'allDone', color: 'green', label: 'Done', tooltip: `All Accepted - ${(tac[100] || 0)} ` },
-				]}
-			/>) : (
-			<Progress
-				size={20}
-				sections={[
-					{ value: greenP , color: 'green', label: 'Accepted', tooltip: `Accepted - ${(tac[100] || 0)} ` },
-					{ value: redP, color: 'red', label: 'ERROR', tooltip: `ERROR(WA,TLE,MLE,RE) - ${(tac[1] || 0)}` },
-					{ value: blueP, color: 'gray', label: 'No status', tooltip: `No status - ${(tac[0] || 0)}` },
-				]}
-			/>);
+
 		return (
-			<Container>
-				{showTitle}
-				<div style={{ marginTop: theme.spacing.sm }} />
-				<Popover width={200} position="bottom" withArrow shadow="md">
-					<Popover.Target>
-						<Badge color='green' radius='sm' size='lg' variant="filled">通过情况</Badge>
-					</Popover.Target>
-					<Popover.Dropdown>
-						{showBar}
-					</Popover.Dropdown>
-				</Popover>
-				<div style={{ marginTop: theme.spacing.sm }} />
-				<div style={{ marginTop: theme.spacing.sm }} />
-				<ShowCase pid={id} page={page || 'description'} description={data?.description} problems={data?.problemList} canSetting={data?.manageUser.includes(Number(uid))} />
-			</Container>);
+			<div>
+				<ShowCase listName={showTitle} pid={id} page={page || 'description'} description={data?.description} problems={data?.problemList} canSetting={data?.manageUser.includes(Number(uid))} />
+			</div>);
     } else {
         return (
             <Container style={{height: '100%'}}>

@@ -8,3 +8,5 @@ node_modules
 *.error
 **/node_modules
 *.local.json
+*/*.out
+*/config.json

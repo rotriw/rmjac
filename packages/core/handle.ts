@@ -2,6 +2,7 @@ import Koa from 'koa';
 import KoaBody from 'koa-body';
 import KoaBodyParser from 'koa-bodyparser';
 import KoaRouter from 'koa-router';
+import * as log4js from "log4js";
 // import cors from 'koa2-cors';
 import _ from 'lodash';
 
@@ -68,7 +69,9 @@ export function Route(name :string, link :string, Handler) {
     });
 }
 
-export function apply(config :any) {
-    app.listen(config?.port || 8060);
-
+export async function apply() {
+    let handleLogger = log4js.getLogger("handler");
+    handleLogger.level = global.RMJ.loglevel;
+    await app.listen(global.RMJ.port);
+    handleLogger.info(`Backend listen :${global.RMJ.port}`);
 }
