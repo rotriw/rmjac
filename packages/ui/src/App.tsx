@@ -39,7 +39,7 @@ export default function App() {
     return (
         <>
             <Router>
-                <MantineProvider withGlobalStyles withNormalizeCSS theme={{primaryColor: 'indigo', colorScheme: colorScheme as ColorScheme, }}>
+                <MantineProvider  withCSSVariables withGlobalStyles withNormalizeCSS theme={{primaryColor: 'indigo', colorScheme: colorScheme as ColorScheme, }}>
                     <NotificationsProvider>
                         <NavigationProgress />
                         <HeaderShowNew links={mainLinks} colorScheme={toggleColorScheme} colorSchemeData={colorScheme}></HeaderShowNew>

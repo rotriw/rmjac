@@ -1,4 +1,4 @@
-import {Center, Badge, Button, Progress, Container, Grid, Loader, TextInput, UnstyledButton, useMantineTheme} from "@mantine/core";
+import {Center, Popover, Badge, Button, Progress, Container, Grid, Loader, TextInput, UnstyledButton, useMantineTheme} from "@mantine/core";
 import { useParams } from 'react-router';
 import React, {useEffect, useState} from "react";
 import axios from "axios";
@@ -140,11 +140,17 @@ export function ViewProblem() {
 		return (
 			<Container>
 				{showTitle}
-				<Badge radius='sm' size='lg' variant="dot">隐私保护</Badge>
-			
-				<div style={{ padding: 3 }} />
-				{showBar}
-				<div style={{ padding: 3 }} />
+				<div style={{ marginTop: theme.spacing.sm }} />
+				<Popover width={200} position="bottom" withArrow shadow="md">
+					<Popover.Target>
+						<Badge color='green' radius='sm' size='lg' variant="filled">通过情况</Badge>
+					</Popover.Target>
+					<Popover.Dropdown>
+						{showBar}
+					</Popover.Dropdown>
+				</Popover>
+				<div style={{ marginTop: theme.spacing.sm }} />
+				<div style={{ marginTop: theme.spacing.sm }} />
 				<ShowCase pid={id} page={page || 'description'} description={data?.description} problems={data?.problemList} canSetting={data?.manageUser.includes(Number(uid))} />
 			</Container>);
     } else {

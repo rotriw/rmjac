@@ -11,9 +11,10 @@ TextInput,
   Badge,
   clsx,
   useMantineTheme,
+  BackgroundImage,
 } from '@mantine/core';
 import { keys } from '@mantine/utils';
-import { IconSelector, IconChevronDown, IconChevronUp, IconSearch } from '@tabler/icons';
+import { IconSelector, IconChevronDown, IconChevronUp, IconSearch, IconCheck, IconX, IconAlignBoxLeftTop } from '@tabler/icons';
 import { DiffcultBadge } from './difficult';
 
 const useStyles = createStyles((theme) => ({
@@ -72,21 +73,24 @@ interface ThProps {
   sorted: boolean;
 	width: string | number;
   onSort(): void;
+	withSort: boolean;
 }
 
-function Th({ children, reversed, sorted, onSort, width }: ThProps) {
+function Th({ children, reversed, sorted, onSort, width, withSort }: ThProps) {
   const { classes } = useStyles();
   const Icon = sorted ? (reversed ? IconChevronUp : IconChevronDown) : IconSelector;
   return (
     <th className={classes.th} style={{width: width}}>
-      <UnstyledButton onClick={onSort} className={classes.control}>
+      <UnstyledButton onClick={withSort ? onSort : ()=>{}} className={classes.control}>
         <Group position="apart">
           <Text weight={500} size="sm" >
             {children}
-          </Text>
-          <Center className={classes.icon}>
-            <Icon size={14} stroke={1.5} />
+		  </Text>
+			{withSort ? (
+		<Center className={classes.icon}>
+            <Icon size={12} stroke={1.5} />
           </Center>
+		) : (<></>)}
         </Group>
       </UnstyledButton>
     </th>
@@ -94,10 +98,20 @@ function Th({ children, reversed, sorted, onSort, width }: ThProps) {
 }
 
 function filterData(data: RowData[], search: string) {
-  const query = search.toLowerCase().trim();
-  return data.filter((item) =>
-	  keys(data[0]).some((key) => typeof item[key] === 'string' && (item[key] as string).toLowerCase().includes(query))
-  );
+	const query = search.toLowerCase().trim();
+	let res = data.filter((item) =>
+		keys(data[0]).some((key) => typeof item[key] === 'string' && (item[key] as string).toLowerCase().includes(query))
+	);
+	if (search.includes(':ac')) {
+		data.filter((item) => item.score === 100).map(item => res.push(item));
+	}
+	if (search.includes(':wa')) {
+		data.filter((item) => item.score === 1).map(item => res.push(item));
+	}
+	if (search.includes(':no')) {
+		data.filter((item) => item.score === 0).map(item => res.push(item));
+	}
+  return res;
 }
 
 function sortData(
@@ -149,8 +163,10 @@ export function ListProblemNew({ data }: TableSortProps) {
   };
 
   const rows = sortedData.map((row) => (
-    <tr key={row.id}>
-      <td>{row.score >= 100 ? <Badge color='green'>AC</Badge> : row.score > 0 ? <Badge color='red'>WA</Badge> : <Badge color='blue'>NO</Badge> }</td>
+	  <tr key={row.id} style={{
+		//   backgroundColor: row.score >= 100 ? theme.colors.green[0] : row.score > 0 ? theme.colors.red[0] : theme.colors.indigo[0],
+	  }}>
+      <td>{row.score >= 100 ? <Text size={14} weight={800} color='green'>AC</Text> : row.score > 0 ? <Text size={14} weight={800} color='red'>WA</Text>  : <Text size={14} weight={800} color='indigo'>NO</Text>}</td>
       <td><a style={{textDecoration: 'none', color: theme.colors.indigo[5]}} href={`https://www.luogu.com.cn/problem/${row.id}`} target={'_blank'}>{row.id} {row.name}</a></td>
 	  <td><Center><DiffcultBadge diff={row.diff}></DiffcultBadge></Center></td>
 	  </tr>
@@ -177,17 +193,19 @@ const { classes, cx } = useStyles();
           <tr>
             <Th
               sorted={sortBy === 'score'}
-			  width={'14%'}
+			  width={'9%'}
               reversed={reverseSortDirection}
               onSort={() => setSorting('score')}
+			  withSort={false}
             >
-				得分
+				状态
             </Th>
             <Th
               sorted={sortBy === 'id'}
               reversed={reverseSortDirection}
-			  width={'70%'}
+			  width={'71%'}
               onSort={() => setSorting('id')}
+			  withSort={true}
             >
               题目
             </Th>
@@ -196,6 +214,7 @@ const { classes, cx } = useStyles();
 			  width={'20%'}
               reversed={reverseSortDirection}
               onSort={() => setSorting('diff')}
+			  withSort={true}
 			>
 			<Center>难度</Center>	  
 				

@@ -14,6 +14,7 @@ import {useParams} from "react-router-dom";
 import {NotFound} from "./404NotFoundView";
 import {NoAccess} from "./NOAccess";
 import { MarkdownEdit } from './vditor';
+import { MarkdownShow } from './ShowMarkdown';
 
 async function changeOrder(data :any, pid :any) {
     let tdata = [];
@@ -37,7 +38,7 @@ async function updateContent(data: any, pid: any) {
         pid: pid,
         description: data
     });
-	
+	alert('更新简介成功。');
 }
 
 function addDatas(inp :string, cInp :Function, H :any, cH :any) {
@@ -73,7 +74,7 @@ export function ShowCase({problems, page, description, canSetting, pid} :any) {
     const [state, handlers] = useListState(problems);
     const [input, cInput] = useState('');
     const theme = useMantineTheme();
-	const [showSetDescriptionText, setShowSetDescriptionText] = useToggle(['重新编辑', '更新内容']);
+	const [showSetDescriptionText, setShowSetDescriptionText] = useToggle(['更新内容']);
 
 	const [vd, setVd] = React.useState<Vditor>();
     const navigate = useNavigate();
@@ -81,7 +82,7 @@ export function ShowCase({problems, page, description, canSetting, pid} :any) {
 
     if (page === 'problems') {
         value = (
-            <Tabs.Panel  value="problems" pt="xs">
+            <Tabs.Panel  value="problems" pl="xs" pt="xs">
                 <ListProblemNew data={problems} />
             </Tabs.Panel>
         );
@@ -89,40 +90,63 @@ export function ShowCase({problems, page, description, canSetting, pid} :any) {
         if (canSetting === false) {
             value = (<NoAccess id={pid} />)
         } else
-        value = (<Tabs.Panel value="settings">
-            <Input.Wrapper label='添加' description='使用逗号隔开，将自动添加在最后。'>
-                <div style={{marginTop: '2px'}} />
-                <Grid>
-                    <Grid.Col span={10}>
-                        <Input
-                            style={{marginTop: '0px'}}
-                            icon={<IconChecklist />}
-                            placeholder="题目ID"
-                            value = {input}
-                            onChange={(event) => {cInput(event.currentTarget.value)}}
-                            onKeyDown={getHotkeyHandler([
-                                ['Enter', () => {addDatas(input, cInput, state, handlers)}],
-                            ])}
-                        />
-                    </Grid.Col>
-                    <Grid.Col span={2}>
-                        <Button style={{height: '36px'}} onClick={()=> {
-                            addDatas(input, cInput, state, handlers);
-                        }} fullWidth>添加</Button>
-                    </Grid.Col>
-                </Grid>
-            </Input.Wrapper>
-            <Input.Wrapper label='调整顺序' description='调整您的题目顺序'>
-                <div style={{padding: '4px'}} />
-                <Button color='red' variant='light' style={{height: '36px'}} onClick={()=> {
-                    handlers.setState([])
-                }} fullWidth>重置</Button>
-                <div style={{padding: '4px'}} />
-                <DndList state={state} handlers={handlers}></DndList>
-            </Input.Wrapper>
-            <div style={{marginTop: '15px'}} />
-            <Button fullWidth onClick={() => {changeOrder(state, pid)}}>提交更改</Button>
-        </Tabs.Panel>);
+			value = (
+		
+				<Tabs.Panel pl="xs" value="settings">
+					<div style={{marginTop: theme.spacing.sm}}></div>
+					<Tabs defaultValue="problem" variant='pills'>
+						<Tabs.List grow>
+							<Tabs.Tab value="problem">题目管理</Tabs.Tab>
+							<Tabs.Tab value="description">描述管理</Tabs.Tab>
+						</Tabs.List>
+						<Tabs.Panel pl="xs"  value="problem" pt="xs">
+							<Input.Wrapper label='添加' description='使用逗号隔开，将自动添加在最后。'>
+								<div style={{marginTop: '2px'}} />
+								<Grid>
+									<Grid.Col span={10}>
+										<Input
+											style={{marginTop: '0px'}}
+											icon={<IconChecklist />}
+											placeholder="题目ID"
+											value = {input}
+											onChange={(event) => {cInput(event.currentTarget.value)}}
+											onKeyDown={getHotkeyHandler([
+												['Enter', () => {addDatas(input, cInput, state, handlers)}],
+											])}
+										/>
+									</Grid.Col>
+									<Grid.Col span={2}>
+										<Button style={{height: '36px'}} onClick={()=> {
+											addDatas(input, cInput, state, handlers);
+										}} fullWidth>添加</Button>
+									</Grid.Col>
+								</Grid>
+							</Input.Wrapper>
+							<Input.Wrapper label='调整顺序' description='调整您的题目顺序'>
+								<div style={{padding: '4px'}} />
+								<Button color='red' variant='light' style={{height: '36px'}} onClick={()=> {
+									handlers.setState([])
+								}} fullWidth>重置</Button>
+								<div style={{padding: '4px'}} />
+								<DndList state={state} handlers={handlers}></DndList>
+							</Input.Wrapper>
+							<div style={{marginTop: '15px'}} />
+							<Button fullWidth onClick={() => {changeOrder(state, pid)}}>提交更改</Button>
+						</Tabs.Panel>
+						<Tabs.Panel pl="xs"  value="description" pt="xs">
+							<MarkdownEdit def={description} vd={vd} setVd={setVd}  openPreview={false} />	
+							<div style={{ marginTop: theme.spacing.sm }}></div>
+							<Button onClick={() => {
+									// setShowSetDescriptionText();
+									if (showSetDescriptionText === '更新内容') {
+										updateContent(vd?.getValue(), pid);
+									}
+									// changeD();
+								}} >{showSetDescriptionText}</Button>
+						</Tabs.Panel>
+				</Tabs>
+				
+			</Tabs.Panel>);
     } else if (page === 'fastview') {
         const {viewed} = useParams();
         // @ts-ignore
@@ -141,25 +165,19 @@ export function ShowCase({problems, page, description, canSetting, pid} :any) {
         );
 	} else {
         value = (
-			<Tabs.Panel value="description" pt="xs">
-				<MarkdownEdit def={description} vd={vd} setVd={setVd}  openPreview={true} />
-            </Tabs.Panel>);
+			<Tabs.Panel pl="xs"  value="description" pt="xs">
+				<MarkdownShow md={description}></MarkdownShow>
+				
+			</Tabs.Panel>);
     }
 
     return (
-        <Tabs value={page} onTabChange={(value) => window.location.href=`/view/${pid}/${value}`}  variant="pills"  >
-            <Tabs.List>
+        <Tabs variant="outline" value={page} onTabChange={(value) => window.location.href=`/view/${pid}/${value}`}   >
+            <Tabs.List grow>
                 <Tabs.Tab value="description">简介</Tabs.Tab>
 				<Tabs.Tab value="problems">内容</Tabs.Tab>
                 {fastview}
 				{settings}
-				{canSetting && page === 'description' ? (<Button onClick={() => {
-					setShowSetDescriptionText();
-					if (showSetDescriptionText === '更新内容') {
-						updateContent(vd?.getValue(), pid);
-					}
-					changeD();
-				}} variant='outline'>{showSetDescriptionText}</Button>) : (<></>)}
             </Tabs.List>
             {value}
         </Tabs>
