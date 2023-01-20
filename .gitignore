@@ -11,3 +11,5 @@ node_modules
 */*.out
 */config.json
 packages/ui/config.json
+./config.json
+config.json
