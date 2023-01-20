@@ -270,11 +270,12 @@ export function ShowCase({listName, problems, page, description, canSetting, pid
         value = (
 			<>
                 <Grid>
-                    <Grid.Col xl={9}>
+                    <Grid.Col md={9} lg={9} xl={9}>
                         <MarkdownShow md={description}></MarkdownShow>
                     </Grid.Col>
-                    <Grid.Col xl={3}>
-                        <span style={{color: theme.colors.gray[6], fontSize: theme.fontSizes.sm, fontWeight: 600}}>通过情况</span> <br />
+                    <Grid.Col md={3} lg={3} xl={3}>
+						<span style={{ color: theme.colors.gray[6], fontSize: theme.fontSizes.sm, fontWeight: 600 }}>通过情况</span>
+						<div style={{marginTop: theme.spacing.sm}}></div>
                         {showBar}
                         <Divider my="sm" />
                         <span style={{color: theme.colors.gray[6], fontSize: theme.fontSizes.sm, fontWeight: 600}}>题单简介</span> <br />

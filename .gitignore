@@ -10,3 +10,4 @@ node_modules
 *.local.json
 */*.out
 */config.json
+packages/ui/config.json
