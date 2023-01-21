@@ -3,10 +3,10 @@ import {LuoguDataModel} from "../model/luogu";
 
 export class LuoguDataFetch {
     async findProblemData(problemData :string[]) {
-        let data = global.RMJ.LuoguProblems.data;
-        let len = problemData.length;
-        let res = [];
-        let LuoguData = new LuoguDataModel();
+        const data = global.RMJ.LuoguProblems.data;
+        const len = problemData.length;
+        const res = [];
+        const LuoguData = new LuoguDataModel();
         for (let i = 0; i < len; i ++ ) {
             if (data[problemData[i]] === undefined) {
                 await global.RMJ.LuoguProblems.uploadProblem(problemData[i], await LuoguData.getProblemName(problemData[i]));
@@ -17,10 +17,10 @@ export class LuoguDataFetch {
 	}
 	
 	async findDifficultData(problemData :string[]) {
-        let data = global.RMJ.LuoguProblems.diff;
-        let len = problemData.length;
-        let res = [];
-        let LuoguData = new LuoguDataModel();
+        const data = global.RMJ.LuoguProblems.diff;
+        const len = problemData.length;
+        const res = [];
+        const LuoguData = new LuoguDataModel();
         for (let i = 0; i < len; i ++ ) {
             if (data[problemData[i]] === undefined) {
                 await global.RMJ.LuoguProblems.uploadDiff(problemData[i], await LuoguData.getProblemDifficult(problemData[i]));
@@ -31,7 +31,7 @@ export class LuoguDataFetch {
 	}
 	
 	async updateApageData(type :string, pageFrom :number, pageTo :number) {
-        let LuoguData = new LuoguDataModel();
+        const LuoguData = new LuoguDataModel();
 		for (let i = pageFrom; i <= pageTo; i++) {
 			console.log(`[Update]Page${i} called.`);
 			if (i % 3 == 1) {
@@ -45,7 +45,7 @@ export class LuoguDataFetch {
 				await setTimeout(()=>{}, 2000);
 				continue;
 			}
-			let j = await LuoguData.getPageDifficult(type, i);
+			const j = await LuoguData.getPageDifficult(type, i);
 			j.map(item => {
 				global.RMJ.LuoguProblems.uploadDiff(item.pid, item.diff);
 			});

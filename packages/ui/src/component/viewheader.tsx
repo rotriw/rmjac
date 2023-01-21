@@ -31,7 +31,7 @@ const useStyles = createStyles((theme) => ({
         borderBottom: `1px solid ${
             theme.colorScheme === 'dark' ? 'transparent' : theme.colors.gray[2]
         }`,
-        marginBottom: 120,
+        marginBottom: 25,
     },
 
     mainSection: {
@@ -92,9 +92,10 @@ const useStyles = createStyles((theme) => ({
 interface HeaderTabsProps {
     tabs: string[];
     headerName: string,
+    description: string
 }
 
-export function ShowHeaders({ tabs, headerName }: HeaderTabsProps) {
+export function ShowHeaders({ tabs, headerName, description }: HeaderTabsProps) {
     const { classes, theme, cx } = useStyles();
     const [opened, { toggle }] = useDisclosure(false);
     const [userMenuOpened, setUserMenuOpened] = useState(false);
@@ -108,13 +109,15 @@ export function ShowHeaders({ tabs, headerName }: HeaderTabsProps) {
         <div className={classes.header}>
             <Container className={classes.mainSection}>
                 <Group position="apart">
-                    {headerName}
+                    <h3>{headerName}</h3>
+                    <Text fw={500} color={theme.colors.gray[7]}>{description}</Text>
                 </Group>
             </Container>
             <Container>
                 <Tabs
                     defaultValue="description"
                     variant="outline"
+
                     classNames={{
                         root: classes.tabs,
                         tabsList: classes.tabsList,

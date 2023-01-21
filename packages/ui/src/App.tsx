@@ -1,5 +1,12 @@
-import {MantineProvider, Text, useMantineColorScheme, useMantineTheme, ColorScheme, } from '@mantine/core';
-import {BrowserRouter as Router, Routes, Route, useNavigate, useLocation} from 'react-router-dom';
+import {
+    MantineProvider,
+    Text,
+    useMantineColorScheme,
+    useMantineTheme,
+    ColorScheme,
+    Footer,
+} from '@mantine/core';
+import {BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Navigate} from 'react-router-dom';
 import { NotificationsProvider } from '@mantine/notifications';
 import {useToggle} from "@mantine/hooks";
 import React from "react";
@@ -12,6 +19,7 @@ import {ViewProblem} from "./pages/viewproblem";
 import {UMain} from "./pages/umain";
 import { RegisterHandler } from './pages/register';
 import {baseurl} from '../config.json';
+import {FooterR} from "./template/footer";
 
 declare global {
     interface Window {
@@ -22,6 +30,17 @@ declare global {
 window.RMJ = {
     baseurl: baseurl
 }
+
+let footerData = [
+    {
+        "title": "开源",
+        "links": [
+        {
+            "label": "Github",
+            "link": "https://github.com/rotriw/rmjac"
+        },]
+    },
+]
 
 export default function App() {
     let mainLinks = [];
@@ -53,8 +72,13 @@ export default function App() {
                             <Route path='/umain/:set' element={ <UMain />} />
                             <Route path='/view/:id' element={<ViewProblem/>} />
                             <Route path='/view/:id/:page' element={<ViewProblem/>} />
+                            <Route
+                                path="/umain/"
+                                element={<Navigate to="/umain/account" replace />}
+                            />
                         </Routes>
                     </NotificationsProvider>
+                    <FooterR data={footerData} colorScheme={toggleColorScheme} colorSchemeData={colorScheme}  />
                 </MantineProvider>
             </Router>
         </>

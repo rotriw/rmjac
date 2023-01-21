@@ -1,10 +1,13 @@
 import React, {useEffect} from 'react';
 import { useState } from 'react';
-import {createStyles, Box, Text, Group, Grid, Container, useMantineTheme, Button} from '@mantine/core';
+import {createStyles, Box, Text, Group, Grid, Container, useMantineTheme, Button, Input} from '@mantine/core';
 import {IconCheck, IconListSearch} from '@tabler/icons';
 import {Link, NavLink} from "react-router-dom";
 import axios from "axios";
 import {showNotification, updateNotification} from "@mantine/notifications";
+import {ShowHeaders} from "../component/viewheader";
+import {useToggle} from "@mantine/hooks";
+import {ConnectAccount} from "../component/connectAccount";
 
 const LINK_HEIGHT = 38;
 const INDICATOR_SIZE = 10;
@@ -19,12 +22,11 @@ const useStyles = createStyles((theme) => ({
         lineHeight: `${LINK_HEIGHT}px`,
         fontSize: theme.fontSizes.sm,
         height: LINK_HEIGHT,
-        borderTopRightRadius: theme.radius.sm,
-        borderBottomRightRadius: theme.radius.sm,
-        borderLeft: `2px solid ${
+        borderTopLeftRadius: theme.radius.sm,
+        borderBottomLeftRadius: theme.radius.sm,
+        borderRight: `2px solid ${
             theme.colorScheme === 'dark' ? theme.colors.dark[4] : theme.colors.gray[2]
         }`,
-
         '&:hover': {
             backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[0],
         },
@@ -32,6 +34,7 @@ const useStyles = createStyles((theme) => ({
 
     linkActive: {
         fontWeight: 500,
+        // backgroundColor: theme.colors.indigo[0],
         color: theme.colors[theme.primaryColor][theme.colorScheme === 'dark' ? 3 : 7],
     },
 
@@ -47,7 +50,7 @@ const useStyles = createStyles((theme) => ({
         width: INDICATOR_SIZE,
         borderRadius: INDICATOR_SIZE,
         position: 'absolute',
-        left: -INDICATOR_SIZE / 2 + 1,
+        right: -INDICATOR_SIZE / 2 + 1,
     },
 }));
 
@@ -91,43 +94,20 @@ export function Table({ links }: TableOfContentsFloatingProps) {
     );
 }
 
-async function updateLuogu(id :string | null, token :string | null) {
-    showNotification({
-        id: `new-data`,
-        disallowClose: false,
-        onClose: () => {},
-        onOpen: () => {},
-        title: `已提交更新`,
-        message: (<div>正在获取您的通过情况。</div>),
-        color: 'indigo',
-        icon: <IconCheck />,
-        className: 'login-notification-class',
-        loading: true,
-        autoClose: false,
-    })
+async function updateLuogu(id :string | null, token :string | null, setLoad :() => void) {
+
     await axios.post(`${window.RMJ.baseurl}umain`, {
         'operation': 'updateLuogu',
         id,
         token,
     });
-    updateNotification({
-        id: `new-data`,
-        disallowClose: false,
-        onClose: () => {},
-        onOpen: () => {},
-        title: `已完成更新`,
-        message: (<div>已更新您当前通过情况。</div>),
-        color: 'indigo',
-        icon: <IconCheck />,
-        className: 'login-notification-class',
-        loading: false,
-        autoClose: false,
-    })
+    setLoad();
 }
 
 
 export function UMain() {
-    let links = [
+    const [loadding, setload] = useToggle([false, true]);
+    const links = [
         {
             "label": "账号&绑定",
             "link": "/umain/account",
@@ -138,29 +118,38 @@ export function UMain() {
             "link": "/umain/env",
             "order": 1
         },
-        {
-            "label": "帮助",
-            "link": "/umain/help",
-            "order": 1
-        },
     ]
     return (
-        <Container>
-            <Grid>
-                <Grid.Col span={12}>
-                    <Button fullWidth onClick={() => {
-                        updateLuogu(localStorage.getItem('uid'), localStorage.getItem('token'));
-                    }}>更新您在洛谷的通过数据</Button>
-                    更新前请您确保已关闭完全隐私权限。<br /><br /><br />
-
-                    <Button color={'red'} fullWidth onClick={() => {
-                        localStorage.setItem('setting-user-login', 'false');window.location.href=`/login`
-                    }}>退出登录 / 重新登录</Button>
-                </Grid.Col>
-                {/*<Grid.Col span={4}>*/}
-                {/*    <Table links={links} ></Table>*/}
-                {/*</Grid.Col>*/}
-            </Grid>
-        </Container>
+        <>
+            <ShowHeaders  headerName={'个人中心'} description={`UID: ${localStorage.getItem('uid')}`} tabs={[]}/>
+            <Container>
+                <Grid>
+                    <Grid.Col span={3}>
+                        <Table links={links} ></Table>
+                    </Grid.Col>
+                    <Grid.Col span={1}>
+                    </Grid.Col>
+                    <Grid.Col span={8}>
+                        <Input.Wrapper label={'更新数据'} description={'更新前请您确保已关闭完全隐私权限。'}>
+                            <div style={{marginTop: 8}} />
+                            <Button
+                                loading={loadding}
+                                onClick={() => {
+                                    setload();updateLuogu(localStorage.getItem('uid'), localStorage.getItem('token'), setload);
+                            }}>更新</Button>
+                        </Input.Wrapper>
+                        <br />
+                        <Input.Wrapper label={'退出登录'}  description={'重设您的登陆状态，并跳转回登录页。'}>
+                            <div style={{marginTop: 2}} />
+                            <Button color={'red'} onClick={() => {
+                                localStorage.setItem('setting-user-login', 'false');window.location.href=`/login`
+                            }}>退出登录 / 重新登录</Button>
+                        </Input.Wrapper>
+                        <br />
+                        <ConnectAccount data={[{'type': 'luogu', 'UID': '先不急 还没写'}]} />
+                    </Grid.Col>
+                </Grid>
+            </Container>
+        </>
     )
 }

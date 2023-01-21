@@ -1,11 +1,11 @@
 import * as mongoose from 'mongoose';
 import {Model} from 'mongoose';
 import {Counter} from "./counter";
-import {Token} from "./token";
+// import {Token} from "./token";
 
-let Schema = mongoose.Schema;
+const Schema = mongoose.Schema;
 
-interface ProblemListInterface {
+export interface ProblemListInterface {
     listName :string,
     viewUser :Array<number>,
     manageUser :Array<number>,
@@ -15,7 +15,7 @@ interface ProblemListInterface {
     ver :string,
 }
 
-let ProblemListSchema = new Schema({
+const ProblemListSchema = new Schema({
     listName :String,
     viewUser :[Number],
     manageUser :[Number],
@@ -29,14 +29,14 @@ interface ListHelpers {
     checkPerm(id: number, pid :number): Promise<boolean>;
 }
 
-//@ts-ignore
-ProblemListSchema.query.UserData = async function(id :number) {
+
+ProblemListSchema.query['UserData'] = async function(id :number) {
     return await this.find({viewUser:{$elemMatch:{$eq: id}}});
 }
 
-//@ts-ignore
-ProblemListSchema.query.checkPerm = async function(id :number, pid :number) {
-    let ts = await this.findOne({id: pid});
+
+ProblemListSchema.query['checkPerm'] = async function(id :number, pid :number) {
+    const ts = await this.findOne({id: pid});
     if (ts?.manageUser.includes(id)) {
         return true;
     }
@@ -44,11 +44,10 @@ ProblemListSchema.query.checkPerm = async function(id :number, pid :number) {
 }
 
 ProblemListSchema.pre('save', function (next) {
-    let doc = this;
     Counter.findByIdAndUpdate({ _id: 'problemList' }, { $inc: { seq: 1 } }, { new: true, upsert: true }, function (error, counter) {
         if (error)
             return next(error);
-        doc.id = counter.seq;
+        this.id = counter.seq;
         next();
     });
 });

@@ -1,6 +1,6 @@
 import * as mongoose from 'mongoose';
 
-let Schema = mongoose.Schema;
+const Schema = mongoose.Schema;
 
 interface Token {
     uid: number,
@@ -8,7 +8,7 @@ interface Token {
     token :string,
 }
 
-let TokenSchema = new Schema<Token>({
+const TokenSchema = new Schema<Token>({
     uid: Number,
     expire: Number,
     token :String,

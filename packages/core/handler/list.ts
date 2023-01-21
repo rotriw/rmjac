@@ -2,13 +2,11 @@
 import { Route } from "../handle"
 import { param } from "../utils/decorate"
 import {User, UserInterface} from "../model/user";
-
-import {sha512} from "js-sha512";
-import {ProblemList} from "../model/list";
+import {ProblemList, ProblemListInterface} from "../model/list";
 import {LuoguDataFetch} from "../service/luogu";
 export class ListMangerHandler {
     async get() {
-
+        return ;
     }
     @param('id')
     @param('token')
@@ -20,7 +18,7 @@ export class ListMangerHandler {
     async postCreate(id :number, token :string, title :string, description :string,
      viewUser :Array<string>, manageUser :Array<string>,
      problemList :Array<string>) {
-        let us = await User.find().checkToken(id, token);
+        const us = await User.find().checkToken(id, token);
         if (us === false) {
             return {
                 status: 'failed',
@@ -28,14 +26,14 @@ export class ListMangerHandler {
                 error: `can't access ${id} token.`
             }
         }
-        let newList = new ProblemList({
+        const newList = new ProblemList({
             listName: title,
             viewUser,
             manageUser,
             problemList,
             description
         });
-        let res = await newList.save();
+        await newList.save();
         return {
             status: 'success',
             code: 200,
@@ -46,7 +44,7 @@ export class ListMangerHandler {
     @param('id')
     @param('token')
     async postShow(id :number, token :string) {
-        let us = await User.find().checkToken(id, token);
+        const us = await User.find().checkToken(id, token);
         if (us === false) {
             return {
                 status: 'failed',
@@ -54,7 +52,7 @@ export class ListMangerHandler {
                 error: `can't access ${id} token.`
             }
         }
-        let data = await ProblemList.find().UserData(id);
+        const data = await ProblemList.find().UserData(id);
         return {
             status: 'success',
             code: 200,
@@ -66,7 +64,7 @@ export class ListMangerHandler {
     @param('token')
     @param('pid')
     async postDetail(id :number, token :string, pid :number) {
-        let us = await User.find().checkToken(id, token);
+        const us = await User.find().checkToken(id, token);
         if (us === false) {
             return {
                 status: 'failed',
@@ -74,11 +72,11 @@ export class ListMangerHandler {
                 error: `can't access ${id} token.`
             }
         }
-        let data :any = await ProblemList.findOne({id: pid}).exec();
-        let Fetcher = new LuoguDataFetch();
-        let names = await Fetcher.findProblemData(data.problemList);
-        let diff = await Fetcher.findDifficultData(data.problemList);
-        let nData = {
+        const data :ProblemListInterface = await ProblemList.findOne({id: pid}).exec();
+        const Fetcher = new LuoguDataFetch();
+        const names = await Fetcher.findProblemData(data.problemList);
+        const diff = await Fetcher.findDifficultData(data.problemList);
+        const nData = {
             listName: data.listName,
             viewUser: data.viewUser,
             manageUser: data.manageUser,
@@ -87,9 +85,9 @@ export class ListMangerHandler {
             ver: data.ver,
             problemList: []
         };
-        let dataPr = data.problemList;
-        let dats :any = await User.findOne({id}).exec();
-        let accepts = dats.Accepted || {'luogu': {}};
+        const dataPr = data.problemList;
+        const dats :UserInterface = await User.findOne({id}).exec();
+        const accepts = dats.Accepted || {'luogu': {}};
         for (let i = 0; i < dataPr.length; i ++ ) {
             nData.problemList.push({'id': dataPr[i], 'name': names[i], 'diff' : diff[i], 'score': accepts['luogu'][dataPr[i]] || 0});
         }
@@ -105,7 +103,7 @@ export class ListMangerHandler {
     @param('pid')
     @param('problem')
     async postUpdateProblem(id :number, token :string, pid :number, problem :Array<string>) {
-        let us = await User.find().checkToken(id, token);
+        const us = await User.find().checkToken(id, token);
         if (us === false) {
             return {
                 status: 'failed',
@@ -126,13 +124,13 @@ export class ListMangerHandler {
             code: 200,
         }
 	}
-	
+
 	@param('id')
     @param('token')
     @param('pid')
     @param('title')
     async postUpdateTitle(id :number, token :string, pid :number, title :string) {
-        let us = await User.find().checkToken(id, token);
+        const us = await User.find().checkToken(id, token);
         if (us === false) {
             return {
                 status: 'failed',
@@ -159,7 +157,7 @@ export class ListMangerHandler {
     @param('pid')
     @param('description')
     async postUpdateDescription(id :number, token :string, pid :number, description :string) {
-        let us = await User.find().checkToken(id, token);
+        const us = await User.find().checkToken(id, token);
         if (us === false) {
             return {
                 status: 'failed',
@@ -182,6 +180,6 @@ export class ListMangerHandler {
     }
 }
 
-export function apply(ctx) {
+export function apply() {
     Route('list', '/list', ListMangerHandler);
 }

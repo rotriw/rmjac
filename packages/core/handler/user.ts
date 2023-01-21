@@ -1,25 +1,34 @@
 
 import { Route } from "../handle"
 import { param } from "../utils/decorate"
-import {User, UserInterface} from "../model/user";
-import {connect} from "mongoose";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import {User} from "../model/user";
 import {sha512} from "js-sha512";
 import {Token} from "../model/token";
 import {v4 as uuidv4} from 'uuid';
 
+interface LoginBackData {
+    error: Error,
+    data: {
+        id: string,
+        pwdSHA512: string,
+    },
+}
+
 export class SignInHandler {
     async get() {
-
+        return ;
     }
     @param('username')
     @param('password')
     async postCheck(username :string, password :string) {
-        let func = async() => { return new Promise(resolve => {
-            User.findOne({username}, function (error, data) {
-                resolve({error, data})
+        const func = async (): Promise<LoginBackData> => {
+            return new Promise(resolve => {
+                User.findOne({username}, function (error, data) {
+                    resolve({error, data})
+                })
             })
-        })};
-        let us :any = await func();
+        }, us: LoginBackData = await func();
         if (us.error != null) {
             return {
                 status: 'failed',
@@ -28,8 +37,8 @@ export class SignInHandler {
             }
         }
         if (sha512(password) === us.data.pwdSHA512) {
-            let token = uuidv4();
-            let newToken = new Token({
+            const token = uuidv4();
+            const newToken = new Token({
                 uid: us.data.id,
                 token: token
             })
@@ -47,14 +56,10 @@ export class SignInHandler {
         }
     }
 
-    @param('userid')
-    @param('token')
-    async postCheckToken(userid :number, token :string) {
-        // TODO
-    }
 }
 
 export class RegisterHandler {
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     async get() {
 
     }
@@ -63,7 +68,7 @@ export class RegisterHandler {
     @param('email')
     @param('description')
     @param('invite')
-    async post(username :string, password :string, email :string, description :string = '', invite :string) {
+    async post(username :string, password :string, email :string, description  = '', invite :string) {
         const user = new User({
             username,
             pwdSHA512: sha512(password),
@@ -77,7 +82,7 @@ export class RegisterHandler {
 				'error': 'wrong invention.',
 			};
 		}
-        let finds = await User.findOne({'username': username});
+        const finds = await User.findOne({'username': username});
         if (finds !== null) {
             return {
 				'status': 'failed',
@@ -96,7 +101,7 @@ export class UserAccountHandler {
     @param('id')
     @param('token')
     async postUpdateLuogu(id :number, token :string) {
-        let us = await User.find().checkToken(id, token);
+        const us = await User.find().checkToken(id, token);
         if (us === false) {
             return {
                 status: 'failed',
@@ -110,7 +115,7 @@ export class UserAccountHandler {
 
 }
 
-export function apply(ctx) {
+export function apply() {
     Route('login', '/login', SignInHandler);
     Route('umain', '/umain', UserAccountHandler);
     Route('register', '/register', RegisterHandler);

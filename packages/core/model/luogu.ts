@@ -1,23 +1,28 @@
-import * as puppeteer from "puppeteer";
-import Timeout from 'await-timeout';
 import axios from "axios";
-import * as fs from "fs";
+
+interface Return {
+    status: 'success' | 'failed',
+    msg?: '',
+    data: {
+        TryData: Array<string>,
+        AcceptData: Array<string>,
+    },
+}
 
 export class LuoguDataModel {
-     async LuoguUserAccept(userid :number, cookie :string, privateStatus :boolean, awaitTime :number = 300) :Promise<any> {
+     async LuoguUserAccept(userid :number, cookie :string, privateStatus :boolean) :Promise<Return> {
         try {
-			let fetchData = await axios({
+			const fetchData = await axios({
 				'method': 'get',
 				'headers': {
 					'x-luogu-type': 'content-only',
 				},
 				'url': `https://www.luogu.com.cn/user/${userid}`
 			}) as any;
-			let data = {
+			const data = {
 				TryData: [],
 				AcceptData: [],
 			}
-			
 			fetchData.data.currentData.passedProblems.map(item => data.AcceptData.push(item.pid));
 			fetchData.data.currentData.submittedProblems.map(item => data.TryData.push(item.pid));
 			return {
@@ -38,7 +43,7 @@ export class LuoguDataModel {
 
     async getProblemName(pid :string) {
         try {
-            let data = await axios({
+            const data = await axios({
                 headers: {
                     'x-luogu-type': 'content-only'
                 },
@@ -52,7 +57,7 @@ export class LuoguDataModel {
 
 	async getProblemDifficult(pid: string) {
 		try {
-            let data = await axios({
+            const data = await axios({
                 headers: {
                     'x-luogu-type': 'content-only'
                 },
@@ -66,7 +71,7 @@ export class LuoguDataModel {
 
 	async getPageDifficult(type: string, pageId: number) {
 		try {
-            let data = await axios({
+            const data = await axios({
                 headers: {
                     'x-luogu-type': 'content-only'
                 },
@@ -82,10 +87,11 @@ export class LuoguDataModel {
         }
 	}
 
+    // eslint-disable-next-line @typescript-eslint/ban-types
 	async getPageDifficultWithNoAsync(type: string, pageId: number, recall: Function) {
 		try {
-			let typeCode = type === 'luogu' ? '' : `&type=${type}`;
-            let data = await axios({
+			const typeCode = type === 'luogu' ? '' : `&type=${type}`;
+            const data = await axios({
                 headers: {
                     'x-luogu-type': 'content-only'
                 },
@@ -100,5 +106,5 @@ export class LuoguDataModel {
             return undefined;
         }
 	}
-};
+}
 

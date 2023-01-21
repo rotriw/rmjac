@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import {createStyles, Header, Container, Group, Burger, Button, Paper, Transition, Text} from '@mantine/core';
+import {
+    createStyles,
+    Header,
+    Container,
+    Group,
+    Burger,
+    Button,
+    Paper,
+    Transition,
+    Text,
+    useMantineTheme
+} from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {Link, NavLink} from "react-router-dom";
 import {IconMoon, IconSun} from "@tabler/icons";
@@ -78,6 +89,7 @@ export function HeaderShowNew({ links, colorScheme, colorSchemeData }: HeaderSim
     const [opened, { toggle }] = useDisclosure(false);
     const [active, setActive] = useState(links[0].link);
     const { classes, cx } = useStyles();
+    const theme = useMantineTheme();
     const items = links.map((item) => (
         <NavLink
             key={item.label}
@@ -101,27 +113,27 @@ export function HeaderShowNew({ links, colorScheme, colorSchemeData }: HeaderSim
                 <Text weight={800}>RMJ.AC</Text>
                 <Group spacing={5} className={classes.links}>
                     {items}
-                    <a
-                        href='#'
-						onClick={(event) => { event.preventDefault();changeTheme()}}
-                        className={classes.link}
-                    >
-                        设为{colorSchemeData === 'dark' ? '亮色' : '暗色'}模式
-                    </a>
+                    {/*<a*/}
+                    {/*    href='#'*/}
+					{/*	onClick={(event) => { event.preventDefault();changeTheme()}}*/}
+                    {/*    className={classes.link}*/}
+                    {/*>*/}
+                    {/*    设为{colorSchemeData === 'dark' ? '亮色' : '暗色'}模式*/}
+                    {/*</a>*/}
                 </Group>
                 <Burger opened={opened} onClick={toggle} className={classes.burger} size="sm" />
                 <Transition transition="pop-top-right" duration={200} mounted={opened}>
                     {(styles) => (
                         <Paper className={classes.dropdown} withBorder style={styles}>
                             {items}
-                            <a
-                                href='#'
-                                key='qwq'
-                                onClick={(event)=>{event.preventDefault();colorScheme();localStorage.setItem(`bgColor`, colorSchemeData === 'dark' ? 'light' : 'dark')}}
-                                className={classes.link}
-                            >
-                                设为{colorSchemeData === 'dark' ? '亮色' : '暗色'}模式
-                            </a>
+                            {/*<a*/}
+                            {/*    href='#'*/}
+                            {/*    key='qwq'*/}
+                            {/*    onClick={(event)=>{event.preventDefault();colorScheme();localStorage.setItem(`bgColor`, colorSchemeData === 'dark' ? 'light' : 'dark')}}*/}
+                            {/*    className={classes.link}*/}
+                            {/*>*/}
+                            {/*    设为{colorSchemeData === 'dark' ? '亮色' : '暗色'}模式*/}
+                            {/*</a>*/}
                         </Paper>
                     )}
                 </Transition>

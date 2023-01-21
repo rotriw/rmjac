@@ -1,11 +1,11 @@
 import * as mongoose from "mongoose";
-import {Query, Document, Model} from "mongoose";
+import {Model} from "mongoose";
 import {Token} from "./token";
 import {Counter} from "./counter";
-import {LuoguDataFetch} from "../service/luogu";
+// import {LuoguDataFetch} from "../service/luogu";
 import {LuoguDataModel} from "./luogu";
 
-let Schema = mongoose.Schema;
+const Schema = mongoose.Schema;
 
 export interface UserInterface {
     username :string,
@@ -13,7 +13,7 @@ export interface UserInterface {
     description :string,
     email :string,
     ConnectionAccount :Array<any>,
-    Accepted :any,
+    Accepted :Array<string>,
     id :number,
 }
 
@@ -23,7 +23,7 @@ interface UserQueryHelpers {
 }
 
 
-let UserSchema = new Schema<UserInterface>({
+const UserSchema = new Schema<UserInterface>({
     username :String,
     pwdSHA512 :String,
     description :String,
@@ -33,36 +33,34 @@ let UserSchema = new Schema<UserInterface>({
     id :Number,
 });
 
-// @ts-ignore
-UserSchema.query.checkToken = async function (id :number, token :string) : Promise<boolean> {
-    let ts = await Token.findOne({uid: id, token});
+UserSchema.query['checkToken'] = async function (id :number, token :string) : Promise<boolean> {
+    const ts = await Token.findOne({uid: id, token});
     if (ts !== null) {
         return true;
     }
     return false;
 }
 
-// @ts-ignore
-UserSchema.query.updateLuoguData = async function (id :number, token :string) : Promise<boolean> {
-    let ts = await User.findOne({id, token}).exec();
+UserSchema.query['updateLuoguData'] = async function (id :number, token :string) : Promise<void> {
+    const ts = await User.findOne({id, token}).exec();
     let oldData :any = {};
     if (ts.Accepted === undefined) {
         oldData = {'luogu': {}};
     } else {
         oldData = ts.Accepted;
     }
-    let fetcher = new LuoguDataModel();
-    for (let i in ts.ConnectionAccount) {
+    const fetcher = new LuoguDataModel();
+    for (const i in ts.ConnectionAccount) {
         if (ts.ConnectionAccount[i].type == 'luogu') {
-            let nt = await fetcher.LuoguUserAccept(ts.ConnectionAccount[i].uid, '', false, 100);
+            const nt = await fetcher.LuoguUserAccept(ts.ConnectionAccount[i].uid, '', false);
 			for (let i = 0; i < nt.data.AcceptData.length; i++) {
-                let ov = oldData.luogu[nt.data.AcceptData[i]];
+                const ov = oldData.luogu[nt.data.AcceptData[i]];
                 if (ov === undefined || ov <= 1) {
                     oldData.luogu[nt.data.AcceptData[i]] = 100;
                 }
             }
             for (let i = 0; i < nt.data.TryData.length; i ++ ) {
-                let ov = oldData.luogu[nt.data.TryData[i]];
+                const ov = oldData.luogu[nt.data.TryData[i]];
                 if (ov === undefined || ov <= 0) {
                     oldData.luogu[nt.data.TryData[i]] = 1;
                 }
@@ -72,11 +70,10 @@ UserSchema.query.updateLuoguData = async function (id :number, token :string) : 
     await User.findOneAndUpdate({id}, {$set: {Accepted: oldData}});
 }
 UserSchema.pre('save', function (next) {
-    let doc = this;
      Counter.findByIdAndUpdate({ _id: 'user' }, { $inc: { seq: 1 } }, { new: true, upsert: true }, function (error, counter) {
         if (error)
             return next(error);
-        doc.id = counter.seq;
+        this.id = counter.seq;
         next();
     });
 });

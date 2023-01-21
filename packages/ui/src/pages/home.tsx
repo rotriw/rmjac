@@ -34,7 +34,7 @@ export function HomePage({LoginStatus, baseurl} :any) {
 
     if (LoginStatus === true && ok ) {
         return (
-            <Container>
+            <Container mt={20}>
                 <Grid>
                     <Grid.Col span={12}>
                         {/* <div style={{padding: '5px'}}></div> */}
@@ -59,6 +59,11 @@ export function HomePage({LoginStatus, baseurl} :any) {
                 </Grid>
             </Container>
         );
+    } else if (LoginStatus === false) {
+        return (<Container style={{height: '100%'}}>
+            <br />
+            <Center>Login First.</Center>
+        </Container>);
     } else {
         return (<Container style={{height: '100%'}}>
 			<Center>Loading...</Center>

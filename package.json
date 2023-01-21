@@ -5,12 +5,16 @@
   "license": "AGPL3.0",
   "private": true,
   "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.48.3-alpha.6",
+    "@typescript-eslint/parser": "^5.48.3-alpha.6",
     "Logger": "^0.0.0",
     "asyncio": "^0.0.2",
     "await-timeout": "^1.1.1",
     "axios": "^1.2.2",
     "cordis": "^2.6.0",
     "esbuild": "^0.16.16",
+    "eslint": "^8.32.0",
+    "eslint-plugin-react": "^7.32.1",
     "js-sha512": "^0.8.0",
     "koa": "^2.14.1",
     "koa-body": "^6.0.1",
@@ -31,6 +35,9 @@
     "system:mac:mongo": "export PATH=/usr/local/mongodb/bin:$PATH",
     "ui:dev": "cd packages/ui && npx vite",
     "start": "node entry/index.js",
-    "debug": "node entry/index.js --debug"
+    "debug": "node entry/index.js --debug",
+    "lint:core": "cd packages/core && npx eslint . --ext .ts",
+    "lint:core:fix": "cd packages/core && npx eslint . --ext .ts --fix"
+
   }
 }
