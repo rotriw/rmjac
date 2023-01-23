@@ -10,7 +10,15 @@ import {
     Tabs,
     useMantineTheme
 } from '@mantine/core';
-import {IconPhoto, IconMessageCircle, IconSettings, IconChecklist, IconArrowUpRight} from '@tabler/icons';
+import {
+    IconPhoto,
+    IconMessageCircle,
+    IconSettings,
+    IconChecklist,
+    IconArrowUpRight,
+    IconCheck,
+    IconX
+} from '@tabler/icons';
 import React, {useState} from "react";
 import Markdown from "markdown-to-jsx";
 import { ListProblem } from "./ListProblem";
@@ -145,7 +153,7 @@ function changeD() {
 	window.dispatchEvent(setItemEvent);
 }
 
-export function ShowCase({listName, problems, page, description, canSetting, pid} :any) {
+export function ShowCase({listName, problems, page, description, canSetting, pid, Perm} :any) {
     const settings = canSetting ? (<Tabs.Tab value="settings">设置</Tabs.Tab>) : (<></>);
     const fastview = problems.length > 100 ? (<Tabs.Tab value="fastview">快速查看</Tabs.Tab>) : (<></>);
     const [state, handlers] = useListState(problems);
@@ -280,7 +288,18 @@ export function ShowCase({listName, problems, page, description, canSetting, pid
                         <Divider my="sm" />
                         <span style={{color: theme.colors.gray[6], fontSize: theme.fontSizes.sm, fontWeight: 600}}>题单简介</span> <br />
                         <span style={{color: theme.colors.gray[7], fontSize: theme.fontSizes.xs, fontWeight: 500}}>题单编号：{pid}</span> <br />
-                        <span style={{color: theme.colors.gray[7], fontSize: theme.fontSizes.xs, fontWeight: 500}}>该题单您的权限：{canSetting ? '可编辑' : '仅可查看'}</span> <br />
+                        <span style={{color: theme.colors.gray[7], fontSize: theme.fontSizes.xs, fontWeight: 500}}>该题单您的权限：
+                            <br />
+                            <span style={{fontWeight: 500}}>
+                                查看该题单：{Perm.includes('view') ? <IconCheck color={'green'} size={10} /> : <IconX color={'red'} size={10} /> }<br />
+                                修改题单标题：{Perm.includes('title') ? <IconCheck color={'green'} size={10} /> : <IconX color={'red'} size={10} /> }<br />
+                                删除题单：{Perm.includes('delete') ? <IconCheck color={'green'} size={10} /> : <IconX color={'red'} size={10} /> }<br />
+                                修改题单内容：{Perm.includes('problem') ? <IconCheck color={'green'} size={10} /> : <IconX color={'red'} size={10} /> }<br />
+                                修改题单简介：{Perm.includes('description') ? <IconCheck color={'green'} size={10} /> : <IconX color={'red'} size={10} /> }<br />
+                            </span>
+                        </span>
+                        <br />
+
 
                     </Grid.Col>
                 </Grid>

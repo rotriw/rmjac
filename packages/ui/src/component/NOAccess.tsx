@@ -40,14 +40,13 @@ const useStyles = createStyles((theme) => ({
     },
 }));
 
-export function NoAccess({id} :any) {
+export function NoAccess({id, perm} :any) {
     const { classes } = useStyles();
 
     return (
         <Container className={classes.root}>
             <div className={classes.label}>403</div>
-            <Title className={classes.title}>您没有编辑#{id}的权限。</Title>
-
+            <Title className={classes.title}>您没有在#{id}的对应 {perm === 'view' ? '查看' : '编辑'} 权限。</Title>
             <Group position="center">
             </Group>
         </Container>

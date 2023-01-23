@@ -4,6 +4,9 @@ import { param } from "../utils/decorate"
 import {User, UserInterface} from "../model/user";
 import {ProblemList, ProblemListInterface} from "../model/list";
 import {LuoguDataFetch} from "../service/luogu";
+import {ListPerm} from "../model/perm";
+
+const ListPERM = new ListPerm();
 export class ListMangerHandler {
     async get() {
         return ;
@@ -14,15 +17,16 @@ export class ListMangerHandler {
     @param('description')
     @param('viewUser')
     @param('manageUser')
+    @param('PERM')
     @param('problemList')
     async postCreate(id :number, token :string, title :string, description :string,
      viewUser :Array<string>, manageUser :Array<string>,
-     problemList :Array<string>) {
+     problemList :Array<string>, PERM :Array<{perm :number}>) {
         const us = await User.find().checkToken(id, token);
         if (us === false) {
             return {
                 status: 'failed',
-                code: 403,
+                code: 200,
                 error: `can't access ${id} token.`
             }
         }
@@ -31,7 +35,9 @@ export class ListMangerHandler {
             viewUser,
             manageUser,
             problemList,
-            description
+            description,
+            PERM,
+
         });
         await newList.save();
         return {
@@ -48,15 +54,23 @@ export class ListMangerHandler {
         if (us === false) {
             return {
                 status: 'failed',
-                code: 403,
+                code: 200,
                 error: `can't access ${id} token.`
             }
         }
         const data = await ProblemList.find().UserData(id);
+        const res = data.map(item => {
+            const it = item as any;
+            return {
+                listName: it.listName,
+                id: it.id,
+                problemListLength: it.problemList.length
+            }
+        });
         return {
             status: 'success',
             code: 200,
-            data
+            data: res
         }
     }
 
@@ -68,14 +82,28 @@ export class ListMangerHandler {
         if (us === false) {
             return {
                 status: 'failed',
-                code: 403,
+                code: 200,
                 error: `can't access ${id} token.`
+            }
+        }
+        const canView = await ProblemList.find().checkPerm(id, pid, 'view');
+        const canSettings = await ProblemList.find().checkPerm(id, pid, 'set');
+        const Perm = await ProblemList.find().getPerm(id, pid);
+        if (!canView) {
+            return {
+                status: 'failed',
+                code: 200,
+                canView,
+                canSettings,
+                Perm,
+                error: `no access to view.`
             }
         }
         const data :ProblemListInterface = await ProblemList.findOne({id: pid}).exec();
         const Fetcher = new LuoguDataFetch();
         const names = await Fetcher.findProblemData(data.problemList);
         const diff = await Fetcher.findDifficultData(data.problemList);
+
         const nData = {
             listName: data.listName,
             viewUser: data.viewUser,
@@ -83,7 +111,10 @@ export class ListMangerHandler {
             description: data.description,
             id: data.id,
             ver: data.ver,
-            problemList: []
+            problemList: [],
+            canView,
+            canSettings,
+            Perm,
         };
         const dataPr = data.problemList;
         const dats :UserInterface = await User.findOne({id}).exec();
@@ -107,15 +138,15 @@ export class ListMangerHandler {
         if (us === false) {
             return {
                 status: 'failed',
-                code: 403,
+                code: 200,
                 error: `can't access ${id} token.`
             }
         }
-        if ((await ProblemList.find().checkPerm(id, pid)) == false) {
+        if ((await ProblemList.find().checkPerm(id, pid, 'problem')) == false) {
             return {
                 status: 'failed',
-                code: 403,
-                error: `no access to change.`
+                code: 200,
+                error: `no access to change problems.`
             }
         }
         await ProblemList.findOneAndUpdate({id: pid}, {$set: {problemList: problem}});
@@ -134,15 +165,15 @@ export class ListMangerHandler {
         if (us === false) {
             return {
                 status: 'failed',
-                code: 403,
+                code: 200,
                 error: `can't access ${id} token.`
             }
         }
-        if ((await ProblemList.find().checkPerm(id, pid)) == false) {
+        if ((await ProblemList.find().checkPerm(id, pid, 'title')) == false) {
             return {
                 status: 'failed',
-                code: 403,
-                error: `no access to change.`
+                code: 200,
+                error: `no access to change title.`
             }
         }
         await ProblemList.findOneAndUpdate({id: pid}, {$set: {listName: title}});
@@ -152,7 +183,7 @@ export class ListMangerHandler {
         }
 	}
 
-	@param('id')
+    @param('id')
     @param('token')
     @param('pid')
     @param('description')
@@ -161,14 +192,14 @@ export class ListMangerHandler {
         if (us === false) {
             return {
                 status: 'failed',
-                code: 403,
+                code: 200,
                 error: `can't access ${id} token.`
             }
         }
-        if ((await ProblemList.find().checkPerm(id, pid)) == false) {
+        if ((await ProblemList.find().checkPerm(id, pid, 'description')) == false) {
             return {
                 status: 'failed',
-                code: 403,
+                code: 200,
                 error: `no access to change.`
             }
         }

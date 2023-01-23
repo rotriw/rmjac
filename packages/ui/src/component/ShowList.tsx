@@ -15,7 +15,7 @@ import React from "react";
 import {Link} from "react-router-dom";
 
 interface UsersTableProps {
-    data: { listName: string; problemList: Array<string>; id: number }[];
+    data: { listName: string; problemListLength: number; id: number }[];
 }
 
 export function ShowList({ data }: UsersTableProps) {
@@ -31,7 +31,7 @@ export function ShowList({ data }: UsersTableProps) {
 					</Link>
 				</Grid.Col>
 				<Grid.Col style={{textAlign: 'right'}} span={2}>
-					{item.problemList.length}题
+					{item.problemListLength}题
 				</Grid.Col>
 			</Grid>
         </Card>

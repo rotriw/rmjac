@@ -1,0 +1,9 @@
+{
+  "name": "core",
+  "version": "0.7.0",
+  "description": "rmj.ac core",
+  "main": "index.js",
+  "author": "smallfang,rotriw",
+  "license": "AGPL3.0 later",
+  "private": false
+}

@@ -11,6 +11,7 @@
     "asyncio": "^0.0.2",
     "await-timeout": "^1.1.1",
     "axios": "^1.2.2",
+    "compare-versions": "^6.0.0-rc.1",
     "cordis": "^2.6.0",
     "esbuild": "^0.16.16",
     "eslint": "^8.32.0",
@@ -38,6 +39,5 @@
     "debug": "node entry/index.js --debug",
     "lint:core": "cd packages/core && npx eslint . --ext .ts",
     "lint:core:fix": "cd packages/core && npx eslint . --ext .ts --fix"
-
   }
 }

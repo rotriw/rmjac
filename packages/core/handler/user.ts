@@ -105,7 +105,7 @@ export class UserAccountHandler {
         if (us === false) {
             return {
                 status: 'failed',
-                code: 403,
+                code: 200,
                 error: `can't access ${id} token.`
             }
         }

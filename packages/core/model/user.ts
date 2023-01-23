@@ -70,10 +70,11 @@ UserSchema.query['updateLuoguData'] = async function (id :number, token :string)
     await User.findOneAndUpdate({id}, {$set: {Accepted: oldData}});
 }
 UserSchema.pre('save', function (next) {
+    const doc = this;
      Counter.findByIdAndUpdate({ _id: 'user' }, { $inc: { seq: 1 } }, { new: true, upsert: true }, function (error, counter) {
         if (error)
             return next(error);
-        this.id = counter.seq;
+        doc.id = counter.seq;
         next();
     });
 });

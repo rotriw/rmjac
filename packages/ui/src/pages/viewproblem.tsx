@@ -10,15 +10,17 @@ import { ThemeContext } from "@emotion/react";
 import './viewproblem.css';
 import { DiffcultBadge } from "../component/difficult";
 import {ShowHeaders} from "../component/viewheader";
+import {NoAccess} from "../component/NOAccess";
 
 
 let ok = false, s404 = false;
 
 async function InitPage(setData: Function, setOK: Function, setS4 :Function, id: string | undefined) {
     let baseurl = window.RMJ.baseurl;
+    let data: any = {};
     try {
         setNavigationProgress(0);
-        let data = await axios.post(`${baseurl}list`, {
+        data = await axios.post(`${baseurl}list`, {
             'operation': 'detail',
             'id': localStorage.getItem('uid'),
             'token': localStorage.getItem('token'),
@@ -27,12 +29,12 @@ async function InitPage(setData: Function, setOK: Function, setS4 :Function, id:
         if (data.data.data === null) {
             throw data.data.error;
         }
-        completeNavigationProgress();
         setOK(true);
         setData(data.data.data);
     } catch(err) {
+
         completeNavigationProgress();
-        setS4(true);
+        // setS4(true);
         return ;
     }
 }
@@ -64,8 +66,13 @@ export function ViewProblem() {
         description: '',
         problemList: [],
         viewUser: [],
-        manageUser: [1]
-
+        Perm: [''],
+        manageUser: [1],
+        PERM: new Map<string, {
+                perm: string
+        }>(),
+        canView: true,
+        canSettings: false,
     });
 
 	const theme = useMantineTheme();
@@ -75,49 +82,52 @@ export function ViewProblem() {
     useEffect(() => {
         InitPage(setData, setOK, setS4, id);
     }, []);
-    if (s404) {
+    if (s404 && data?.canView === undefined) {
         return (
             <NotFound id={id} />
         );
 	}
-	const [title, ctitle] = useToggle(['show', 'change']);
-	const [newTitle, setTitle] = useState(data?.listName);
-	const showTitle = title == 'show' ? (
-		<><a
-			style={{ paddingTop: theme.spacing.sm, paddingBottom: theme.spacing.md }}
-			onDoubleClick={() => {
-				if (data?.manageUser.includes(Number(uid))) {
-					setTitle(data?.listName); ctitle()
-				}
-		}}><h2 style={{ margin: 0 }}>{data?.listName}</h2></a></>
-	) : (<Grid  style={{paddingTop: theme.spacing.sm, paddingBottom: theme.spacing.sm}}>
-			<Grid.Col span={5}>
-				<TextInput
-					variant="filled"
-					value={newTitle}
-					onChange={(event)=>{setTitle(event.currentTarget.value)}}
-					onKeyDown={
-						getHotkeyHandler([
-						['Enter', () => {updateTitle(newTitle, id, ctitle, data, setData)}],
-						])
-					}
-					onBlur={() => {
-						if (title === 'change') {
-							updateTitle(newTitle, id, ctitle, data, setData);
-						}
-					}}
-					autoFocus
-					height={theme.headings.sizes.h2 as any} />
-			</Grid.Col>
 
-	</Grid>);
-    if (ok) {
-		let tac :Array<number> = [];
+    const [title, ctitle] = useToggle(['show', 'change']);
+    const [newTitle, setTitle] = useState(data?.listName || '');
+    if (ok && data?.canView) {
+        const showTitle = title == 'show' ? (
+            <><a
+                style={{ paddingTop: theme.spacing.sm, paddingBottom: theme.spacing.md }}
+                onDoubleClick={() => {
+                    if (data?.manageUser.includes(Number(uid))) {
+                        setTitle(data?.listName); ctitle()
+                    }
+                }}><h2 style={{ margin: 0 }}>{data?.listName}</h2></a></>
+        ) : (<Grid  style={{paddingTop: theme.spacing.sm, paddingBottom: theme.spacing.sm}}>
+            <Grid.Col span={5}>
+                <TextInput
+                    variant="filled"
+                    value={newTitle}
+                    onChange={(event)=>{setTitle(event.currentTarget.value)}}
+                    onKeyDown={
+                        getHotkeyHandler([
+                            ['Enter', () => {updateTitle(newTitle, id, ctitle, data, setData)}],
+                        ])
+                    }
+                    onBlur={() => {
+                        if (title === 'change') {
+                            updateTitle(newTitle, id, ctitle, data, setData);
+                        }
+                    }}
+                    autoFocus
+                    height={theme.headings.sizes.h2 as any} />
+            </Grid.Col>
 
+        </Grid>);
+        console.log(data?.canSettings);
 		return (
 			<div>
-				<ShowCase listName={showTitle} pid={id} page={page || 'description'} description={data?.description} problems={data?.problemList} canSetting={data?.manageUser.includes(Number(uid))} />
+				<ShowCase listName={showTitle} pid={id} page={page || 'description'} description={data?.description} problems={data?.problemList} canSetting={data?.canSettings} Perm={data?.Perm} />
 			</div>);
+    } else if (!data?.canView) {
+        console.log('qwq');
+        return (<NoAccess id={id} perm={'view'}  />);
     } else {
         return (
             <Container style={{height: '100%'}}>
