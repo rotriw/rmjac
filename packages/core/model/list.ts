@@ -3,6 +3,7 @@ import {Model} from 'mongoose';
 import {Counter} from "./counter";
 import {ProblemListEvent} from "../declare/event";
 import {ListPerm} from "./perm";
+import {User} from "./user";
 // import {Token} from "./token";
 
 const Schema = mongoose.Schema;
@@ -42,8 +43,12 @@ interface ListHelpers {
     UserData(id: number): Promise<Array<object>>;
     checkPerm(id: number, pid :number, event :ProblemListEvent | 'set'): Promise<boolean>;
     getPerm(id: number, pid :number): Promise<Array<ProblemListEvent>>;
+    getPermList(pid :number): Promise<Array<{
+        uname: string,
+        id: number,
+        Perm: Array<ProblemListEvent>
+    }>>;
 }
-
 
 ProblemListSchema.query['UserData'] = async function(id :number) {
     return await this.find({viewUser:{$elemMatch:{$eq: id}}});
@@ -66,11 +71,38 @@ ProblemListSchema.query['checkPerm'] = async function(id :number, pid :number, e
                 ListPERM.PERMCheck('user', userPERM.perm) ||
                 ListPERM.PERMCheck('problem', userPERM.perm);
     }
-    if (ListPERM.PERMCheck(event as ProblemListEvent, userPERM.perm)) {
-        return true;
-    } else {
-        return false;
+    return ListPERM.PERMCheck(event as ProblemListEvent, userPERM.perm);
+}
+
+ProblemListSchema.query['getPermList'] = async function (pid :number): Promise<Array<{
+    uname: string,
+    id: number,
+    Perm: Array<ProblemListEvent>
+}>> {
+    const _res = [];
+    const ts = await this.findOne({id: pid});
+    const PERMS :Map<string, {
+        perm: number
+    }> = ts.PERM;
+    for (const i of PERMS.keys()) {
+        const id = i;
+        const Perm = ListPERM.PERMGet(PERMS.get(i).perm);
+        let uname = '';
+        if (i === '0') {
+            uname = 'Public';
+        } else {
+            try {
+                const uData = await User.findOne({id: i}).exec();
+                uname = uData.username;
+            } catch (err) {
+                uname = 'error name';
+            }
+        }
+        _res.push({
+            id, Perm, uname
+        });
     }
+    return _res;
 }
 ProblemListSchema.pre('save', function (next, saveOptions) {
     const doc = this;

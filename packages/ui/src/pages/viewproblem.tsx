@@ -66,13 +66,14 @@ export function ViewProblem() {
         description: '',
         problemList: [],
         viewUser: [],
-        Perm: [''],
+        Perm: [],
         manageUser: [1],
         PERM: new Map<string, {
                 perm: string
         }>(),
         canView: true,
         canSettings: false,
+        PermData: [],
     });
 
 	const theme = useMantineTheme();
@@ -123,7 +124,7 @@ export function ViewProblem() {
         console.log(data?.canSettings);
 		return (
 			<div>
-				<ShowCase listName={showTitle} pid={id} page={page || 'description'} description={data?.description} problems={data?.problemList} canSetting={data?.canSettings} Perm={data?.Perm} />
+				<ShowCase listName={showTitle} pid={id} page={page || 'description'} description={data?.description} problems={data?.problemList} canSetting={data?.canSettings} Perm={data?.Perm} permsData={data?.PermData} />
 			</div>);
     } else if (!data?.canView) {
         console.log('qwq');

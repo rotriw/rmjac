@@ -17,7 +17,7 @@ import {
     IconChecklist,
     IconArrowUpRight,
     IconCheck,
-    IconX
+    IconX, IconTemperatureMinus
 } from '@tabler/icons';
 import React, {useState} from "react";
 import Markdown from "markdown-to-jsx";
@@ -34,6 +34,7 @@ import {NotFound} from "./404NotFoundView";
 import {NoAccess} from "./NOAccess";
 import { MarkdownEdit } from './vditor';
 import { MarkdownShow } from './ShowMarkdown';
+import {PERMControl} from "./PERMControl";
 
 
 const useStyles = createStyles((theme) => ({
@@ -153,7 +154,7 @@ function changeD() {
 	window.dispatchEvent(setItemEvent);
 }
 
-export function ShowCase({listName, problems, page, description, canSetting, pid, Perm} :any) {
+export function ShowCase({listName, problems, page, description, canSetting, pid, Perm, permsData} :any) {
     const settings = canSetting ? (<Tabs.Tab value="settings">设置</Tabs.Tab>) : (<></>);
     const fastview = problems.length > 100 ? (<Tabs.Tab value="fastview">快速查看</Tabs.Tab>) : (<></>);
     const [state, handlers] = useListState(problems);
@@ -206,9 +207,10 @@ export function ShowCase({listName, problems, page, description, canSetting, pid
 				<>
 					<div style={{marginTop: theme.spacing.sm}}></div>
 					<Tabs defaultValue="problem" variant='pills'>
-						<Tabs.List grow>
+						<Tabs.List>
 							<Tabs.Tab value="problem">题目管理</Tabs.Tab>
 							<Tabs.Tab value="description">描述管理</Tabs.Tab>
+                            <Tabs.Tab value="perm">权限管理</Tabs.Tab>
 						</Tabs.List>
 						<Tabs.Panel pl="xs"  value="problem" pt="xs">
 							<Input.Wrapper label='添加' description='使用逗号隔开，将自动添加在最后。'>
@@ -255,6 +257,9 @@ export function ShowCase({listName, problems, page, description, canSetting, pid
 									// changeD();
 								}} >{showSetDescriptionText}</Button>
 						</Tabs.Panel>
+                        <Tabs.Panel pl="xs"  value="perm" pt="xs">
+                            {Perm.includes('user') ? <PERMControl token={localStorage.getItem('token')} id={localStorage.getItem('uid')} pid={pid} data={permsData} /> : <NoAccess id={pid}  />}
+                        </Tabs.Panel>
 				</Tabs>
 
 			</>);

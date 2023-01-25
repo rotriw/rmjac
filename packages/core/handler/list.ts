@@ -17,11 +17,10 @@ export class ListMangerHandler {
     @param('description')
     @param('viewUser')
     @param('manageUser')
-    @param('PERM')
     @param('problemList')
     async postCreate(id :number, token :string, title :string, description :string,
      viewUser :Array<string>, manageUser :Array<string>,
-     problemList :Array<string>, PERM :Array<{perm :number}>) {
+     problemList :Array<string>) {
         const us = await User.find().checkToken(id, token);
         if (us === false) {
             return {
@@ -30,6 +29,11 @@ export class ListMangerHandler {
                 error: `can't access ${id} token.`
             }
         }
+        const PERM = new Map<string, {
+            perm: number
+        }>();
+        PERM.set('0', {perm: 1});
+        PERM.set(id.toString(),{perm: -1});
         const newList = new ProblemList({
             listName: title,
             viewUser,
@@ -37,7 +41,6 @@ export class ListMangerHandler {
             problemList,
             description,
             PERM,
-
         });
         await newList.save();
         return {
@@ -103,7 +106,7 @@ export class ListMangerHandler {
         const Fetcher = new LuoguDataFetch();
         const names = await Fetcher.findProblemData(data.problemList);
         const diff = await Fetcher.findDifficultData(data.problemList);
-
+        const PermData = await ProblemList.find().getPermList(pid);
         const nData = {
             listName: data.listName,
             viewUser: data.viewUser,
@@ -115,6 +118,7 @@ export class ListMangerHandler {
             canView,
             canSettings,
             Perm,
+            PermData
         };
         const dataPr = data.problemList;
         const dats :UserInterface = await User.findOne({id}).exec();
@@ -204,6 +208,39 @@ export class ListMangerHandler {
             }
         }
         await ProblemList.findOneAndUpdate({id: pid}, {$set: {description: description}});
+        return {
+            status: 'success',
+            code: 200,
+        }
+    }
+
+    @param('id')
+    @param('token')
+    @param('pid')
+    @param('perm')
+    async postUpdatePERM(id :number, token :string, pid :number, perm :any) {
+        const us = await User.find().checkToken(id, token);
+        if (us === false) {
+            return {
+                status: 'failed',
+                code: 200,
+                error: `can't access ${id} token.`
+            }
+        }
+        if ((await ProblemList.find().checkPerm(id, pid, 'user')) == false) {
+            return {
+                status: 'failed',
+                code: 200,
+                error: `no access to change problems.`
+            }
+        }
+        const PERM = new Map<string, {
+            perm: number
+        }>();
+        for (const q of perm) {
+            PERM.set(q.id as string, { perm: ListPERM.PERMChange(q.Perm) });
+        }
+        await ProblemList.findOneAndUpdate({id: pid}, {$set: {PERM}});
         return {
             status: 'success',
             code: 200,

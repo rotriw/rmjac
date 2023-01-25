@@ -111,12 +111,37 @@ export class UserAccountHandler {
         }
         await User.find().updateLuoguData(id, token);
     }
+}
 
+export class UserHandler {
 
+    @param('detail')
+    async postUserGet(detail: string) {
+        let us = null;
+        if (!isNaN(parseInt(detail))) {
+            us = await User.findOne({'id': detail}).exec();
+        }
+        us = us || await User.findOne({'username': detail}).exec();
+        if (us === null) {
+            return {
+                status: 'failed',
+                code: 200,
+                error: `can't find your detail`
+            }
+        }
+        return {
+            status: 'success',
+            code: 200,
+            id: us.id,
+            username: us.username
+        }
+    }
 }
 
 export function apply() {
     Route('login', '/login', SignInHandler);
+    Route('user', '/user', UserHandler);
     Route('umain', '/umain', UserAccountHandler);
     Route('register', '/register', RegisterHandler);
 }
+

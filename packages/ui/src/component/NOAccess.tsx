@@ -46,7 +46,7 @@ export function NoAccess({id, perm} :any) {
     return (
         <Container className={classes.root}>
             <div className={classes.label}>403</div>
-            <Title className={classes.title}>您没有在#{id}的对应 {perm === 'view' ? '查看' : '编辑'} 权限。</Title>
+            <Title className={classes.title}>您没有在#{id} {perm === 'view' ? '查看' : perm === 'perm' ? '权限管理' :  '编辑'} 权限。</Title>
             <Group position="center">
             </Group>
         </Container>

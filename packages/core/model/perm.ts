@@ -18,7 +18,15 @@ export class ListPerm {
     PERMGet(PERMNumber :number) :Array<ProblemListEvent> {
         const res = [];
         for (const q in ProblemListEventValue) {
-            ((PERMNumber >> ProblemListEventValue[q]) & 1) ? res.push(q) : console.log(q);
+            ((PERMNumber >> ProblemListEventValue[q]) & 1) ? res.push(q) : {};
+        }
+        return res;
+    }
+
+    PERMChange(PERMArray :Array<ProblemListEvent>) {
+        let res = 0;
+        for (const q of PERMArray) {
+            res = this.PERMAdd(q, res);
         }
         return res;
     }

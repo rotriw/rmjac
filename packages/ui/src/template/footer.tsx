@@ -170,7 +170,7 @@ export function FooterR({ data, colorScheme, colorSchemeData  }: FooterLinksProp
                 </div>
 
                 <Group spacing={0} className={classes.social} position="right" noWrap>
-                    <Text className={classes.grays}>Version: 暂未同步</Text>
+                    <Text className={classes.grays}>Version: 0.7.2</Text>
                 </Group>
             </Container>
         </footer>

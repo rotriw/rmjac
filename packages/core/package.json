@@ -1,6 +1,6 @@
 {
   "name": "core",
-  "version": "0.7.0",
+  "version": "0.7.2",
   "description": "rmj.ac core",
   "main": "index.js",
   "author": "smallfang,rotriw",
