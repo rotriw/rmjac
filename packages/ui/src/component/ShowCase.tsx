@@ -258,7 +258,7 @@ export function ShowCase({listName, problems, page, description, canSetting, pid
 								}} >{showSetDescriptionText}</Button>
 						</Tabs.Panel>
                         <Tabs.Panel pl="xs"  value="perm" pt="xs">
-                            {Perm.includes('user') ? <PERMControl token={localStorage.getItem('token')} id={localStorage.getItem('uid')} pid={pid} data={permsData} /> : <NoAccess id={pid}  />}
+                            {Perm.includes('user') ? <PERMControl token={localStorage.getItem('token') as string} id={localStorage.getItem('uid') as string} pid={pid} data={permsData} /> : <NoAccess id={pid}  />}
                         </Tabs.Panel>
 				</Tabs>
 

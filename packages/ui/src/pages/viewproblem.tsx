@@ -66,14 +66,14 @@ export function ViewProblem() {
         description: '',
         problemList: [],
         viewUser: [],
-        Perm: [],
+        Perm: [''],
         manageUser: [1],
         PERM: new Map<string, {
                 perm: string
         }>(),
         canView: true,
         canSettings: false,
-        PermData: [],
+        PermData: [''],
     });
 
 	const theme = useMantineTheme();
@@ -96,7 +96,7 @@ export function ViewProblem() {
             <><a
                 style={{ paddingTop: theme.spacing.sm, paddingBottom: theme.spacing.md }}
                 onDoubleClick={() => {
-                    if (data?.manageUser.includes(Number(uid))) {
+                    if (data?.Perm.includes('title')) {
                         setTitle(data?.listName); ctitle()
                     }
                 }}><h2 style={{ margin: 0 }}>{data?.listName}</h2></a></>

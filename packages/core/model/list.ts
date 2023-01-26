@@ -58,13 +58,16 @@ const ListPERM = new ListPerm();
 
 ProblemListSchema.query['getPerm'] = async function(id :number, pid :number) {
     const ts = await this.findOne({id: pid});
-    const userPERM = ts.PERM.get(id)  || ts.PERM.get(0);
+    const userPERM = ts.PERM.get(id)  || ts.PERM.get('0');
     return ListPERM.PERMGet(userPERM.perm);
 }
 
 ProblemListSchema.query['checkPerm'] = async function(id :number, pid :number, event :ProblemListEvent | 'set') {
     const ts = await this.findOne({id: pid});
-    const userPERM = ts.PERM.get(id)  || ts.PERM.get(0);
+	let userPERM = ts.PERM.get(id);
+	if (userPERM === undefined) {
+		userPERM = ts.PERM.get('0');
+	}
     if (event === 'set') {
         return ListPERM.PERMCheck('description', userPERM.perm) ||
                 ListPERM.PERMCheck('title', userPERM.perm) ||

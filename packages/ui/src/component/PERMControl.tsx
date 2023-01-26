@@ -85,7 +85,7 @@ async function addData(input :string, cInput :(name :string) => void, perms :any
     }
 }
 
-export async function PERMUpdate(perm :string, id :string, pid :string, token :string) {
+export async function PERMUpdate(perm :any, id :string, pid :string, token :string) {
     const data = await axios.post(`${window.RMJ.baseurl}list`, {
         'operation': 'updatePERM',
         perm, id, pid, token
