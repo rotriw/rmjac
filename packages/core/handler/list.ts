@@ -5,6 +5,7 @@ import {User, UserInterface} from "../model/user";
 import {ProblemList, ProblemListInterface} from "../model/list";
 import {LuoguDataFetch} from "../service/luogu";
 import {ListPerm} from "../model/perm";
+import { ProblemListEvent } from "../declare/event";
 
 const ListPERM = new ListPerm();
 export class ListMangerHandler {
@@ -63,7 +64,11 @@ export class ListMangerHandler {
         }
         const data = await ProblemList.find().UserData(id);
         const res = data.map(item => {
-            const it = item as any;
+            const it = item as {
+                listName: string,
+                id: string,
+                problemList: string[]
+            };
             return {
                 listName: it.listName,
                 id: it.id,
@@ -218,7 +223,10 @@ export class ListMangerHandler {
     @param('token')
     @param('pid')
     @param('perm')
-    async postUpdatePERM(id :number, token :string, pid :number, perm :any) {
+    async postUpdatePERM(id :number, token :string, pid :number, perm :Array<{
+        Perm: ProblemListEvent[],
+        id: string
+    }>) {
         const us = await User.find().checkToken(id, token);
         if (us === false) {
             return {
