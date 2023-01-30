@@ -60,24 +60,26 @@ export default function App() {
         <>
             <Router>
                 <MantineProvider  withCSSVariables withGlobalStyles withNormalizeCSS theme={{primaryColor: 'indigo', colorScheme: colorScheme as ColorScheme, }}>
-                    <NotificationsProvider>
-                        <NavigationProgress />
-                        <HeaderShowNew links={mainLinks} colorScheme={toggleColorScheme} colorSchemeData={colorScheme}></HeaderShowNew>
-                        <Routes>
-                            <Route path='' element={ <HomePage LoginStatus={localStorage.getItem('setting-user-login') === 'true'} /> } />
-                            <Route path='/login' element={ <LoginHandler />} />
-                            <Route path='/register' element={ <RegisterHandler />} />
-							<Route path='/new' element={<NewProblem />} />
-                            <Route path='/umain' element={ <UMain />} />
-                            <Route path='/umain/:set' element={ <UMain />} />
-                            <Route path='/view/:id' element={<ViewProblem/>} />
-                            <Route path='/view/:id/:page' element={<ViewProblem/>} />
-                            <Route
-                                path="/umain/"
-                                element={<Navigate to="/umain/account" replace />}
-                            />
-                        </Routes>
-                    </NotificationsProvider>
+                    <div  style={{minHeight: window.innerHeight - 300}}>
+                            <NotificationsProvider>
+                            <NavigationProgress />
+                            <HeaderShowNew links={mainLinks} colorScheme={toggleColorScheme} colorSchemeData={colorScheme}></HeaderShowNew>
+                            <Routes>
+                                <Route path='' element={ <HomePage LoginStatus={localStorage.getItem('setting-user-login') === 'true'} /> } />
+                                <Route path='/login' element={ <LoginHandler />} />
+                                <Route path='/register' element={ <RegisterHandler />} />
+                                <Route path='/new' element={<NewProblem />} />
+                                <Route path='/umain' element={ <UMain />} />
+                                <Route path='/umain/:set' element={ <UMain />} />
+                                <Route path='/view/:id' element={<ViewProblem/>} />
+                                <Route path='/view/:id/:page' element={<ViewProblem/>} />
+                                <Route
+                                    path="/umain/"
+                                    element={<Navigate to="/umain/account" replace />}
+                                />
+                            </Routes>
+                        </NotificationsProvider>
+                    </div>
                     <FooterR data={footerData} colorScheme={toggleColorScheme} colorSchemeData={colorScheme}  />
                 </MantineProvider>
             </Router>
