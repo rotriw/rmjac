@@ -199,6 +199,9 @@ export function ShowCase({listName, problems, page, description, canSetting, pid
                 <ListProblemNew data={problems} />
             </>
         );
+    } else if(page === 'ranklist') {
+        window.alert("进入榜单页面。");
+        
     } else if (page === 'settings') {
         if (canSetting === false) {
             value = (<NoAccess id={pid} />)
@@ -335,6 +338,7 @@ export function ShowCase({listName, problems, page, description, canSetting, pid
                     <Tabs.Tab value="description">简介</Tabs.Tab>
                     <Tabs.Tab value="problems">内容</Tabs.Tab>
                     {fastview}
+                    <Tabs.Tab value="ranklist">榜单</Tabs.Tab>
                     {settings}
                 </Tabs.List>
             </Tabs>

@@ -1,3 +1,3 @@
 
 
-export type ProblemListEvent = 'view' | 'problem' | 'user' | 'description' | 'delete' | 'title';
+export type ProblemListEvent = 'view' | 'problem' | 'user' | 'description' | 'delete' | 'title' | 'ranked';

@@ -8,6 +8,7 @@ export const ProblemListEventValue = {
     'description': 3,
     'title': 4,
     'delete': 5,
+    'ranked': 6,
 };
 
 export class ListPerm {

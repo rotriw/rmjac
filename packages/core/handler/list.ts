@@ -85,6 +85,30 @@ export class ListMangerHandler {
     @param('id')
     @param('token')
     @param('pid')
+    async postShowRankList(id :number, token :string, pid :number) {
+        const us = await User.find().checkToken(id, token);
+        if(us == false) {
+            return {
+                status: 'failed',
+                code: 200,
+                error: `can't access ${id} token.`
+            }
+        }
+        const isInRankList = await ProblemList.find().checkPerm(id, pid, 'ranked');
+        if(!isInRankList) {
+            return {
+                status: 'failed',
+                code: 200,
+                isInRankList,
+                error: `you are not in the ranklist, please check the perm.`
+            }
+        }
+        
+    }
+
+    @param('id')
+    @param('token')
+    @param('pid')
     async postDetail(id :number, token :string, pid :number) {
         const us = await User.find().checkToken(id, token);
         if (us === false) {
@@ -137,6 +161,7 @@ export class ListMangerHandler {
             data: nData,
         }
     }
+
 
     @param('id')
     @param('token')
