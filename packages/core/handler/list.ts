@@ -5,7 +5,6 @@ import {User, UserInterface} from "../model/user";
 import {ProblemList, ProblemListInterface} from "../model/list";
 import {LuoguDataFetch} from "../service/luogu";
 import {ListPerm} from "../model/perm";
-import { ProblemListEvent } from "../declare/event";
 
 const ListPERM = new ListPerm();
 export class ListMangerHandler {
@@ -64,11 +63,7 @@ export class ListMangerHandler {
         }
         const data = await ProblemList.find().UserData(id);
         const res = data.map(item => {
-            const it = item as {
-                listName: string,
-                id: string,
-                problemList: string[]
-            };
+            const it = item as any;
             return {
                 listName: it.listName,
                 id: it.id,
@@ -88,11 +83,7 @@ export class ListMangerHandler {
     async postDetail(id :number, token :string, pid :number) {
         const us = await User.find().checkToken(id, token);
         if (us === false) {
-            return {
-                status: 'failed',
-                code: 200,
-                error: `can't access ${id} token.`
-            }
+			id = 0;
         }
         const canView = await ProblemList.find().checkPerm(id, pid, 'view');
         const canSettings = await ProblemList.find().checkPerm(id, pid, 'set');
@@ -127,10 +118,18 @@ export class ListMangerHandler {
         };
         const dataPr = data.problemList;
         const dats :UserInterface = await User.findOne({id}).exec();
-        const accepts = dats.Accepted || {'luogu': {}};
-        for (let i = 0; i < dataPr.length; i ++ ) {
-            nData.problemList.push({'id': dataPr[i], 'name': names[i], 'diff' : diff[i], 'score': accepts['luogu'][dataPr[i]] || 0});
-        }
+		try {
+        	const accepts = dats.Accepted || {'luogu': {}};
+			for (let i = 0; i < dataPr.length; i ++ ) {
+				nData.problemList.push({'id': dataPr[i], 'name': names[i], 'diff' : diff[i], 'score': accepts['luogu'][dataPr[i]] || 0});
+			}
+		} catch (err) {
+			const accepts = {'luogu': {}};
+			for (let i = 0; i < dataPr.length; i ++ ) {
+				nData.problemList.push({'id': dataPr[i], 'name': names[i], 'diff' : diff[i], 'score': accepts['luogu'][dataPr[i]] || 0});
+			}
+		}
+        
         return {
             status: 'success',
             code: 200,
@@ -145,11 +144,7 @@ export class ListMangerHandler {
     async postUpdateProblem(id :number, token :string, pid :number, problem :Array<string>) {
         const us = await User.find().checkToken(id, token);
         if (us === false) {
-            return {
-                status: 'failed',
-                code: 200,
-                error: `can't access ${id} token.`
-            }
+			id = 0;
         }
         if ((await ProblemList.find().checkPerm(id, pid, 'problem')) == false) {
             return {
@@ -172,11 +167,7 @@ export class ListMangerHandler {
     async postUpdateTitle(id :number, token :string, pid :number, title :string) {
         const us = await User.find().checkToken(id, token);
         if (us === false) {
-            return {
-                status: 'failed',
-                code: 200,
-                error: `can't access ${id} token.`
-            }
+			id = 0;
         }
         if ((await ProblemList.find().checkPerm(id, pid, 'title')) == false) {
             return {
@@ -199,11 +190,7 @@ export class ListMangerHandler {
     async postUpdateDescription(id :number, token :string, pid :number, description :string) {
         const us = await User.find().checkToken(id, token);
         if (us === false) {
-            return {
-                status: 'failed',
-                code: 200,
-                error: `can't access ${id} token.`
-            }
+			id = 0;
         }
         if ((await ProblemList.find().checkPerm(id, pid, 'description')) == false) {
             return {
@@ -223,17 +210,10 @@ export class ListMangerHandler {
     @param('token')
     @param('pid')
     @param('perm')
-    async postUpdatePERM(id :number, token :string, pid :number, perm :Array<{
-        Perm: ProblemListEvent[],
-        id: string
-    }>) {
+    async postUpdatePERM(id :number, token :string, pid :number, perm :any) {
         const us = await User.find().checkToken(id, token);
         if (us === false) {
-            return {
-                status: 'failed',
-                code: 200,
-                error: `can't access ${id} token.`
-            }
+			id = 0;
         }
         if ((await ProblemList.find().checkPerm(id, pid, 'user')) == false) {
             return {
