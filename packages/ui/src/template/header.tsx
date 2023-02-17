@@ -18,7 +18,7 @@ import {IconMoon, IconSun} from "@tabler/icons";
 const useStyles = createStyles((theme) => ({
     header: {
         display: 'flex',
-        justifyContent: 'space-between',
+        // justifyContent: 'space-between',
         alignItems: 'center',
         height: '100%',
     },
@@ -62,19 +62,19 @@ const useStyles = createStyles((theme) => ({
         padding: '8px 12px',
         borderRadius: theme.radius.sm,
         textDecoration: 'none',
-        color: theme.colorScheme === 'dark' ? theme.colors.dark[0] : theme.colors.gray[7],
+        color: 'white',
         fontSize: theme.fontSizes.sm,
         fontWeight: 500,
 
         '&:hover': {
-            backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[0],
+            backgroundColor: '#71669f',
         },
     },
 
     linkActive: {
         '&, &:hover': {
-            backgroundColor: theme.fn.variant({ variant: 'light', color: theme.primaryColor }).background,
-            color: theme.fn.variant({ variant: 'light', color: theme.primaryColor }).color,
+            backgroundColor: '#71669f',
+            color: '#ffffff',
         },
     },
 }));
@@ -103,24 +103,19 @@ export function HeaderShowNew({ links, colorScheme, colorSchemeData }: HeaderSim
 	async function changeTheme() {
 		colorScheme();
 		await localStorage.setItem(`bgColor`, colorSchemeData === 'dark' ? 'light' : 'dark')
-		let setItemEvent = new Event("changetheme");
+		const setItemEvent = new Event("changetheme");
 		window.dispatchEvent(setItemEvent);
 	}
 
     return (
-        <Header height={60} >
+        <Header height={60} bg={'#8076a3'}>
             <Container className={classes.header}>
-                <Text weight={800}>RMJ.AC</Text>
+                <Text weight={800} color={'white'}>RMJ.AC</Text>
+                <div style={{padding: theme.spacing.sm}} />
                 <Group spacing={5} className={classes.links}>
                     {items}
-                    {/*<a*/}
-                    {/*    href='#'*/}
-					{/*	onClick={(event) => { event.preventDefault();changeTheme()}}*/}
-                    {/*    className={classes.link}*/}
-                    {/*>*/}
-                    {/*    设为{colorSchemeData === 'dark' ? '亮色' : '暗色'}模式*/}
-                    {/*</a>*/}
                 </Group>
+
                 <Burger opened={opened} onClick={toggle} className={classes.burger} size="sm" />
                 <Transition transition="pop-top-right" duration={200} mounted={opened}>
                     {(styles) => (
