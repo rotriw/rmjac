@@ -1,0 +1,21 @@
+{
+    "mongo": "mongodb://xxx",
+    "email": {
+        "from": "xxx@xxx.com"
+    },
+    "smtp": {
+        "xxx": {
+            "host": "xxx",
+            "port": 465,
+            "secure": true,
+            "auth": {
+                "user": "xxx",
+                "pass": "xxx"
+            }
+        }
+    },
+    "salt": {
+        "salt": "a random sequence",
+        "strength": 8
+    }
+}

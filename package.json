@@ -1,0 +1,30 @@
+{
+    "name": "school-hub",
+    "private": true,
+    "version": "0.0.0",
+    "scripts": {
+        "ui:dev": "pnpm --filter ui run dev",
+        "ui:build": "pnpm --filter ui run build",
+        "ui:preview": "pnpm --filter ui run preview",
+        "start": "entry/index.js",
+        "lint": "eslint packages/",
+        "lint:fix": "eslint packages/ --fix"
+    },
+    "author": "GoForceX",
+    "dependencies": {
+        "@typescript-eslint/eslint-plugin": "^5.59.5",
+        "@typescript-eslint/parser": "^5.59.5",
+        "compare-versions": "6.0.0-rc.1",
+        "esbuild": "^0.16.17",
+        "eslint": "^8.40.0",
+        "eslint-plugin-react": "^7.32.2",
+        "install": "^0.13.0",
+        "ioredis": "^5.3.2",
+        "jsx-to-string": "^1.4.0",
+        "lodash": "^4.17.21",
+        "log4js": "^6.9.1",
+        "source-map-support": "^0.5.21",
+        "uuid": "^9.0.0",
+        "yargs": "^17.7.2"
+    }
+}
