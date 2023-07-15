@@ -25,6 +25,17 @@ const useStyles = createStyles((theme) => ({
     },
 }));
 
+export function Blocked() {
+    return (<>
+        <Container>
+            <StandardCard title='提示'>
+                访问已被阻止。<br />
+                权限不足。
+            </StandardCard>
+        </Container>
+    </>);
+}
+
 export function Feedback({ status, title, msg, links }: any) {
     const { classes, cx, theme } = useStyles();
     const link = (

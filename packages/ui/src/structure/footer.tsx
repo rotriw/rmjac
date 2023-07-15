@@ -42,7 +42,7 @@ export function AppFooter({ onThemeChange }: { onThemeChange: () => void }) {
                         <Group spacing='xs' mt={rem('4px')} ml={rem('-2px')}>
                             <Button
                                 onClick={() => {
-                                    location.href = 'https://github.com/rotriw/moon.ts';
+                                    location.href = 'https://github.com/rotriw/rmjac';
                                 }}
                                 leftIcon={<IconBrandGithub size={13} />}
                                 variant='light'
@@ -86,10 +86,10 @@ export function AppFooter({ onThemeChange }: { onThemeChange: () => void }) {
                         </Group>
                         <Space h={45}></Space>
                         <Text color='dimmed' fw={800} size={12.5}>
-                            Moon.ts
+                            Rmj.ac
                         </Text>
                         <Text color='dimmed' fw={800} size={10}>
-                            &copy; Moon.ts</span>
+                            &copy; Rotriw 2023, Rmj.ac ver alpha
                         </Text>
                     </div>
                 </Flex>

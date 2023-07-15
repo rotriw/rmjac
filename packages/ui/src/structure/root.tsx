@@ -18,11 +18,8 @@ interface RootProps {
 export function Root({ onThemeChange, type, children }: RootProps) {
     const { classes, cx, theme } = useStyles();
     // const userState = useAppSelector((state) => state.user);
-    const mainLinks = [
-        { link: '/', label: '主页' },
-        { link: '/login', label: '登录' },
-    ];
-    const location = useLocation();
+    const mainLinks = window?.web?.links || [];
+    const location = type == 'direct' ? {pathname: 'unk '} : useLocation();
     React.useEffect(() => {
         if (window.nowPage === undefined) {
             window.nowPage = location.pathname;
@@ -41,7 +38,7 @@ export function Root({ onThemeChange, type, children }: RootProps) {
             }}
             padding='md'
             footer={<AppFooter onThemeChange={onThemeChange}></AppFooter>}
-            header={<Navbar title='title' links={mainLinks} type={type}></Navbar>}
+            header={<Navbar title={window.web?.title || 'rmj.ac'} links={mainLinks} type={type}></Navbar>}
         >
             {type === 'route' ? <Outlet /> : children}
         </AppShell>

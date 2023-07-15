@@ -25,6 +25,7 @@ import { StandardCard } from '../components/card';
 import { standardSelect } from '../styles/select';
 import { standardTitleColor } from '../styles/color';
 import { alarm } from '../styles/alarm';
+import Cookies from 'js-cookie';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const useStyles = createStyles((theme) => ({
@@ -67,7 +68,6 @@ export default function LoginPage() {
     const registerForm = useForm({
         initialValues: {
             email: '',
-            grade: '2007',
             username: '',
             password: '',
             gender: 'male',
@@ -130,7 +130,7 @@ export default function LoginPage() {
                                         {value.status === 'success'
                                             ? '您的帐号已经准备就绪。即将跳转至登录界面。'
                                             : `错误！${registerError[value.type || ''] || '未知错误'}${registerError[value.param || 'default'] ||
-                                                  ''}`}
+                                        ''}`}
                                         {value.status === 'error' ? <br /> : <></>}
                                         {value.status === 'error' ? '若您还需要知道更多信息请查看控制台。' : ''}
                                     </>
@@ -169,65 +169,7 @@ export default function LoginPage() {
                                 {...registerForm.getInputProps('username')}
                             />
                             <TextInput name='email' required label='邮箱' placeholder='hello@bjbybbs.com' {...registerForm.getInputProps('email')} />
-                            <Select
-                                name='grade'
-                                data={[
-                                    {
-                                        label: `一年级 (${minBirthYear + 11})`,
-                                        value: `${minBirthYear + 11}`,
-                                    },
-                                    {
-                                        label: `二年级 (${minBirthYear + 10})`,
-                                        value: `${minBirthYear + 10}`,
-                                    },
-                                    {
-                                        label: `三年级 (${minBirthYear + 9})`,
-                                        value: `${minBirthYear + 9}`,
-                                    },
-                                    {
-                                        label: `四年级 (${minBirthYear + 8})`,
-                                        value: `${minBirthYear + 8}`,
-                                    },
-                                    {
-                                        label: `五年级 (${minBirthYear + 7})`,
-                                        value: `${minBirthYear + 7}`,
-                                    },
-                                    {
-                                        label: `六年级 (${minBirthYear + 6})`,
-                                        value: `${minBirthYear + 6}`,
-                                    },
-                                    {
-                                        label: `初一年级 (${minBirthYear + 5})`,
-                                        value: `${minBirthYear + 5}`,
-                                    },
-                                    {
-                                        label: `初二年级 (${minBirthYear + 4})`,
-                                        value: `${minBirthYear + 4}`,
-                                    },
-                                    {
-                                        label: `初三年级 (${minBirthYear + 3})`,
-                                        value: `${minBirthYear + 3}`,
-                                    },
-                                    {
-                                        label: `高一年级 (${minBirthYear + 2})`,
-                                        value: `${minBirthYear + 2}`,
-                                    },
-                                    {
-                                        label: `高二年级 (${minBirthYear + 1})`,
-                                        value: `${minBirthYear + 1}`,
-                                    },
-                                    {
-                                        label: `高三年级 (${minBirthYear})`,
-                                        value: `${minBirthYear}`,
-                                    },
-                                ]}
-                                searchable
-                                required
-                                label='年级'
-                                styles={standardSelect}
-                                {...registerForm.getInputProps('grade')}
-                            />
-
+                            
                             <Select
                                 data={[
                                     {
@@ -238,6 +180,10 @@ export default function LoginPage() {
                                         label: '女',
                                         value: 'female',
                                     },
+                                    {
+                                        label: '其他',
+                                        value: 'Other',
+                                    }
                                 ]}
                                 required
                                 label='性别'
@@ -283,7 +229,7 @@ export default function LoginPage() {
 
                         <Group position='apart' mt='xl'>
                             <Anchor component='button' type='button' color='dimmed' onClick={() => toggle()} size='xs'>
-                                已经有账号了? 点这里登录
+                                登录
                             </Anchor>
                             <Button type='submit' radius='xl'>
                                 {upperFirst(type)}
@@ -328,7 +274,7 @@ export default function LoginPage() {
                                         });
                                     }
                                 }, 2000);
-
+                                Cookies.set('token', value.data?.token || '');
                                 localStorage.setItem('token', value.data?.token || '');
                             }
                         })}
@@ -338,8 +284,8 @@ export default function LoginPage() {
                             <TextInput
                                 name='email'
                                 required
-                                label='用户名 / 邮箱 / 学号'
-                                placeholder='hello@bjbybbs.com'
+                                label='用户名 / 邮箱'
+                                placeholder='mail@example.com'
                                 {...loginForm.getInputProps('email')}
                             />
 

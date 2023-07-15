@@ -7,6 +7,8 @@ import KoaStatic from 'awesome-static';
 import * as path from 'path';
 // import KoaConnect from 'koa-connect';
 import { RenderFromPage } from './service/render';
+import { perm } from './declare/perm';
+import { user } from './model/user';
 
 export const app = new Koa();
 const router = new KoaRouter();
@@ -30,9 +32,11 @@ function transWord(word: string) {
 
 export class Handler {
     ctx: KoaContext;
+    id: number;
+    @perm('user', 'view')
     async get() {
         this.ctx.type = 'text/html';
-        this.ctx.body = await RenderFromPage();
+        this.ctx.body = await RenderFromPage(await user.getHeader(this.id));
         return;
     }
 }
@@ -47,6 +51,7 @@ async function handle(ctx: KoaContext, Handler) {
     const h = new Handler();
     const args = {};
     h.ctx = ctx;
+    h.token = ctx.cookies.get('token');
     Object.assign(args, body);
     Object.assign(args, ctx.params);
     Object.assign(args, ctx.request.query);
@@ -64,11 +69,20 @@ async function handle(ctx: KoaContext, Handler) {
         }
     } catch (err) {
         if (['perm', 'validation'].includes(err?.errorType)) {
-            ctx.body = JSON.stringify({
-                status: 'error',
-                type: err?.errorType,
-                param: err?.errorParam
-            });
+            console.log(method);
+            if (method === 'get' && err?.errorType === 'perm') {
+                ctx.type = 'text/html';
+                ctx.body = await RenderFromPage({
+                    type: 'back',
+                    template: 'Blocked',
+                })
+            } else {
+                ctx.body = JSON.stringify({
+                    status: 'error',
+                    type: err?.errorType,
+                    param: err?.errorParam
+                });
+            }
             ctx.response.status = 200;
         } else {
             console.error(err);

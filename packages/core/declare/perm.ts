@@ -121,14 +121,12 @@ export function checkPerm(value: number, model: string, perm: string) {
 }
 
 export function perm(model: string, name: string) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return function(target: any, methodName: string, descriptor: any) {
+    return function(target, methodName: string, descriptor) {
         descriptor.originalMethodPerm = descriptor.value;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        descriptor.value = async function run(args: any) {
+        descriptor.value = async function run(args) {
             let id = args?.id || 0;
             if (id === 0) {
-                id = await token.stripId(args.token);
+                id = await token.stripId(args.token || this.token);
                 if (id === -1) {
                     id = 0;
                 }
@@ -137,12 +135,17 @@ export function perm(model: string, name: string) {
                     id = 0;
                 }
             }
+            this.id = id;
             const defaultValue = permColl[model].default,
                 guestValue = permColl[model].guest;
             let value = 0;
             if (id !== 0) {
                 const dbData = await db.getone('perm', { id });
-                value = (dbData || {})[model] || defaultValue;
+                if (dbData[model] === undefined) {
+                    value = defaultValue;
+                } else {
+                    value = dbData[model];
+                }
             } else {
                 value = guestValue;
             }

@@ -8,9 +8,7 @@ import store from './store/store';
 import { Provider } from 'react-redux';
 import { Notifications } from '@mantine/notifications';
 import * as Direct from './interfaces/interface';
-import DiscussPage from './pages/discuss';
 import './app.css';
-import { DiscussCreatePage } from './pages/discussCreate';
 
 const myCache = createEmotionCache({ key: 'school-hub' });
 
@@ -82,6 +80,7 @@ function App() {
                                 <Routes>
                                     <Route path='' element={<Root type='route' onThemeChange={onThemeChange} />}>
                                         <Route path='' element={<HomePage></HomePage>} />
+                                        <Route path='/login' element={<LoginPage></LoginPage>} />
                                     </Route>
                                 </Routes>
                             </BrowserRouter>

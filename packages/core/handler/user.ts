@@ -6,6 +6,7 @@ import { param } from '../utils/decorate';
 import { ValidationError } from '../declare/error';
 import { token } from '../model/token';
 import { DefaultType, StringType } from '../declare/type';
+import { perm } from '../declare/perm';
 
 function randomString(length: number): string {
     const str = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -20,9 +21,8 @@ class RegisterHandler extends Handler {
     @param('username', new StringType([4, 20]))
     @param('password', DefaultType.String)
     @param('gender', DefaultType.String)
-    @param('grade', DefaultType.Number)
     @param('email', DefaultType.Email)
-    async postCreate(username: string, password: string, gender: string | number, grade: string, email: string) {
+    async postCreate(username: string, password: string, gender: string | number, email: string) {
         try {
             let parsedGender = 0;
             if (typeof gender === 'string') {
@@ -30,7 +30,6 @@ class RegisterHandler extends Handler {
             } else {
                 parsedGender = gender;
             }
-            const numGrade = parseInt(grade);
             const randomSalt = randomString(global.Project.config.salt.strength || 8);
             const configSalt = global.Project.config.salt.salt;
 
@@ -40,7 +39,6 @@ class RegisterHandler extends Handler {
                 pwd: hashedPassword,
                 salt: randomSalt,
                 email,
-                grade: numGrade,
                 gender: parsedGender,
                 gravatarLink: 'default',
                 description: 'default',
@@ -205,14 +203,15 @@ class LoginHandler extends Handler {
         }
     }
 
+    @perm('user', 'view')
     async get() {
         this.ctx.type = 'text/html';
-        this.ctx.body = await RenderFromPage();
+        this.ctx.body = await RenderFromPage(await user.getHeader(this.id));
+        return;
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function apply(ctx) {
+export function apply() {
     Route('SignUp', '/register', RegisterHandler);
     Route('SignUp-Id', '/register/:id', RegisterHandler);
     Route('SignIn', '/login', LoginHandler);

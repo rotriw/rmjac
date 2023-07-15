@@ -2,7 +2,6 @@ import { fetch } from '../interfaces/data';
 
 interface RegisterProp {
     email: string;
-    grade: string;
     username: string;
     password: string;
     gender: string;

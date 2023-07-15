@@ -10,6 +10,6 @@ export async function fetch(handler: string, operation: string, data: any) {
 
 export async function updateNewPageBackEndData(path: string) {
     const datas = await axios.get(`${window.web?.link || ''}${path}?onlyJSON`);
-    window.web = datas;
+    // window.web = datas;
     return ;
 }

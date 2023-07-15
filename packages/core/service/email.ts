@@ -1,7 +1,6 @@
 import { Transporter, createTransport } from 'nodemailer';
 import Mail from 'nodemailer/lib/mailer';
 import verifyTemplate from '../template/verifytemplate.html';
-// import { verify } from '../utils/decorate';
 
 class SMTPConfig {
     host: string;

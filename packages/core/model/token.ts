@@ -94,12 +94,12 @@ export class TokenModel {
         await db.deleteOne('token', { token });
     }
 
-    async revokeUserToken(uid: number) {
-        const token = await db.getall('token', { id: uid }, {});
+    async revokeUserToken(id: number) {
+        const token = await db.getall('token', { id }, {});
         for (const i of token) {
             await rdis.delete('token', i.token);
         }
-        await db.deleteAll('token', { id: uid });
+        await db.deleteAll('token', { id });
     }
 }
 export const token = new TokenModel();
