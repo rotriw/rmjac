@@ -25,12 +25,12 @@ export class RedisService {
 
     async set(model, id, data, expired = -1) {
         if (expired === -1) {
-            await this.redis.set(`${model}-${id}`, JSON.stringify(data));
+            await this.redis.set(`${model}-${id}`, data);
         }
-        await this.redis.set(`${model}-${id}`, JSON.stringify(data), 'EX', expired);
+        await this.redis.set(`${model}-${id}`, data, 'EX', expired);
     }
 
-    async get(model, id) {
+    async get(model, id): Promise<string | null> {
         return await this.redis.get(`${model}-${id}`);
     }
 

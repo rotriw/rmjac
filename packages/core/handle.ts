@@ -33,6 +33,7 @@ function transWord(word: string) {
 export class Handler {
     ctx: KoaContext;
     id: number;
+    token: string;
     @perm('user', 'view')
     async get() {
         this.ctx.type = 'text/html';

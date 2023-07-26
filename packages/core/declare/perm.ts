@@ -124,16 +124,9 @@ export function perm(model: string, name: string) {
     return function(target, methodName: string, descriptor) {
         descriptor.originalMethodPerm = descriptor.value;
         descriptor.value = async function run(args) {
-            let id = args?.id || 0;
-            if (id === 0) {
-                id = await token.stripId(args.token || this.token);
-                if (id === -1) {
-                    id = 0;
-                }
-            } else {
-                if ((await token.check(id, args?.token)) !== true) {
-                    id = 0;
-                }
+            let id = await token.stripId(args.token || this.token);
+            if (id === -1) {
+                id = 0;
             }
             this.id = id;
             const defaultValue = permColl[model].default,
@@ -141,7 +134,7 @@ export function perm(model: string, name: string) {
             let value = 0;
             if (id !== 0) {
                 const dbData = await db.getone('perm', { id });
-                if (dbData[model] === undefined) {
+                if (dbData === null || dbData[model] === undefined) {
                     value = defaultValue;
                 } else {
                     value = dbData[model];
@@ -150,7 +143,7 @@ export function perm(model: string, name: string) {
                 value = guestValue;
             }
             if (checkPerm(value, model, name) === false) {
-                throw new PermError(id, name);
+                throw new PermError(id.toString(), name);
             }
             return await descriptor.originalMethodPerm.apply(this, [args]);
         };

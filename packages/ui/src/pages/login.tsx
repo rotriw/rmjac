@@ -76,7 +76,7 @@ export default function LoginPage() {
 
         validate: {
             email: (val) => {
-                return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(val) ? null : '不符合邮箱规则';
+                return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,10})+$/.test(val) ? null : '不符合邮箱规则';
             },
             username: (val) => {
                 if (val.length < 4) {
@@ -168,7 +168,7 @@ export default function LoginPage() {
                                 placeholder='您的用户名'
                                 {...registerForm.getInputProps('username')}
                             />
-                            <TextInput name='email' required label='邮箱' placeholder='hello@bjbybbs.com' {...registerForm.getInputProps('email')} />
+                            <TextInput name='email' required label='邮箱' placeholder='mail@example.com' {...registerForm.getInputProps('email')} />
                             
                             <Select
                                 data={[
@@ -229,7 +229,7 @@ export default function LoginPage() {
 
                         <Group position='apart' mt='xl'>
                             <Anchor component='button' type='button' color='dimmed' onClick={() => toggle()} size='xs'>
-                                登录
+                                返回登录
                             </Anchor>
                             <Button type='submit' radius='xl'>
                                 {upperFirst(type)}

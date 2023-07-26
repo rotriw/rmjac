@@ -167,13 +167,12 @@ export class UserModel {
         return this.handle((emailData as unknown) as UserSchema);
     }
 
-    /* get user header */
     async getHeader(id: number) {
         const _res = {
             title: 'rmj.ac',
             links: [
                 { link: '/', label: '主页' },
-                { link: '/problem', label: '题库' },
+                { link: '/problem', label: '题目' },
                 { link: '/contest', label: '比赛' },
                 { link: '/worklist', label: '题单' },
                 { link: '/submission', label: '提交记录' },

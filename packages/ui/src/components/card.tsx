@@ -7,7 +7,7 @@ import { PaperProps } from '@mantine/core';
 const useStyles = createStyles((theme) => ({
     standardCard: {
         fontWeight: 700,
-        color: theme.colors.gray[5],
+        color: theme.colors.gray[6],
         fontSize: 12.5,
     },
 }));

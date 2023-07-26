@@ -25,3 +25,5 @@ dist-ssr
 
 config.json
 test*.ts
+
+.yarnrc

@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { createStyles, Badge, Container, Space, Table, Grid } from '@mantine/core';
+import { createStyles, Badge, Container, Space, Table, Text, Grid } from '@mantine/core';
 import React from 'react';
-import { StandardCard } from '../components/card';
+import { NoStyleCard, StandardCard } from '../components/card';
 // import { BlockSuitEditor } from '../components/editor';
 import {IconArrowLeft} from '@tabler/icons-react'
+import { Tab } from '@mantine/core/lib/Tabs/Tab/Tab';
 
 const useStyles = createStyles((theme) => ({
     
@@ -11,33 +12,32 @@ const useStyles = createStyles((theme) => ({
 
 export default function HomePage() {
     const { classes, cx, theme } = useStyles();
-    const rows = (
-        <>
-            <tr>
-                <td>测试公告</td>
-                <td>2023.12.31</td>
-            </tr>
-        </>
-    );
     return (
         <>
             <Container>
                 <Grid>
-                    <Grid.Col sm={12} xs={12} lg={9}>
-                        <StandardCard title='公告列表'>
+                    <Grid.Col sm={12} xs={12} lg={8}>
+                        <NoStyleCard>
+                            <Text fw={700} size={12}>Rmj.ac 现支持以下OJ</Text>
                             <Table>
                                 <thead>
                                     <tr>
-                                        <th style={{ width: '75%' }}>标题</th>
-                                        <th>发布日期</th>
+                                    <th style={{fontSize: 10}}>OJ名称</th>
                                     </tr>
                                 </thead>
-                                <tbody>{rows}</tbody>
+                                <tbody>
+                                    <tr>
+                                    <td>Luogu</td>
+                                    </tr>
+                                    <tr>
+                                    <td>CodeForces</td>
+                                    </tr>
+                                </tbody>
                             </Table>
-                        </StandardCard>
+                        </NoStyleCard>
                     </Grid.Col>
-                    <Grid.Col sm={12} xs={12} lg={3}>
-                        <StandardCard title='还不知道是什么'>996</StandardCard>
+                    <Grid.Col sm={12} xs={12} lg={4}>
+                        <StandardCard title='倒计时'>996</StandardCard>
                     </Grid.Col>
                     <Space h='md' />
                 </Grid>
