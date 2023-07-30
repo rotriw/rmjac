@@ -4,7 +4,8 @@ import * as path from 'path';
 export const templateHTML = {
     RenderHTML: '',
 };
-export let manifest = {};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export let manifest:Record<string, any> = {};
 
 export async function RenderFromPage(datas = {}) {
     Object.assign(datas);

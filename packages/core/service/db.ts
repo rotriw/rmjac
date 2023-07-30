@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Filter, MongoClient, UpdateFilter } from 'mongodb';
+import { Filter, MongoClient, UpdateFilter, Document as MongoDocument } from 'mongodb';
 
 class dbClass {
     url: string;
@@ -14,7 +14,7 @@ class dbClass {
         this.LongTimeDB = new MongoClient(this.url);
     }
 
-    async insert(model: string, data: [any] | object, useLongTime = false) {
+    async insert(model: string, data: any[] | object, useLongTime = false) {
         let insertMore = false;
         if (Array.isArray(data)) {
             insertMore = true;
@@ -22,11 +22,11 @@ class dbClass {
         const client = useLongTime ? this.LongTimeDB : new MongoClient(this.url);
         const database = client.db(this.dbname);
         const coll = database.collection(model);
-        insertMore ? await coll.insertMany(data as [any]) : await coll.insertOne(data);
+        insertMore ? await coll.insertMany(data as any[]) : await coll.insertOne(data);
         if (!useLongTime) client.close();
     }
 
-    async getone(model: string, query: Filter<Document>, options = {}) {
+    async getone(model: string, query: Filter<MongoDocument>, options = {}) {
         const client = new MongoClient(this.url);
         const database = client.db(this.dbname);
         const coll = database.collection(model);
@@ -35,7 +35,7 @@ class dbClass {
         return res as any;
     }
 
-    async getall(model: string, query: Filter<Document>, options = {}) {
+    async getall(model: string, query: Filter<MongoDocument>, options = {}) {
         const client = new MongoClient(this.url);
         const database = client.db(this.dbname);
         const coll = database.collection(model);
@@ -44,7 +44,7 @@ class dbClass {
         return res;
     }
 
-    async update(model: string, where: Filter<Document>, data: any, options = {}) {
+    async update(model: string, where: Filter<MongoDocument>, data: any, options = {}) {
         const client = new MongoClient(this.url);
         const database = client.db(this.dbname);
         const coll = database.collection(model);
@@ -53,7 +53,7 @@ class dbClass {
         return res;
     }
 
-    async change(model: string, where: Filter<Document>, newdata: UpdateFilter<Document>, options = {}) {
+    async change(model: string, where: Filter<MongoDocument>, newdata: UpdateFilter<Document>, options = {}) {
         const client = new MongoClient(this.url);
         const database = client.db(this.dbname);
         const coll = database.collection(model);
@@ -62,7 +62,7 @@ class dbClass {
         return res;
     }
 
-    async deleteOne(model: string, where: Filter<Document>, options = {}) {
+    async deleteOne(model: string, where: Filter<MongoDocument>, options = {}) {
         const client = new MongoClient(this.url);
         const database = client.db(this.dbname);
         const coll = database.collection(model);
@@ -71,7 +71,7 @@ class dbClass {
         return res;
     }
 
-    async deleteAll(model: string, where: Filter<Document>, options = {}) {
+    async deleteAll(model: string, where: Filter<MongoDocument>, options = {}) {
         const client = new MongoClient(this.url);
         const database = client.db(this.dbname);
         const coll = database.collection(model);
@@ -84,18 +84,18 @@ class dbClass {
         const client = new MongoClient(this.url);
         const database = client.db(this.dbname);
         const coll = database.collection(model);
-        const query = {};
+        const query: Record<string, any> = {};
         query[prop] = {'$in': [find]};
         const res = await coll.find(query, options).toArray();
         client.close();
         return res;
     }
 
-    async findOneIn(model: string, prop: string, find: string | number,useLongTime = false, options = {}) {
+    async findOneIn(model: string, prop: string, find: string | number, useLongTime = false, options = {}) {
         const client = useLongTime ? this.LongTimeDB : new MongoClient(this.url);
         const database = client.db(this.dbname);
         const coll = database.collection(model);
-        const query = {};
+        const query: Record<string, any> = {};
         query[prop] = find;
         const res = await coll.findOne(query, options);
         if (!useLongTime) client.close();

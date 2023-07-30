@@ -1,16 +1,22 @@
 export class RError extends Error {
-    public errorType;
+    public errorType = '';
 }
 
 export class ValidationError extends RError {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    constructor(valuename: any, ...args) {
+    constructor(valuename: {
+        name?: string,
+        constructor: {
+            name?: string
+        }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }, ...args: any[]) {
         super(`Validation Error. ${valuename.name || valuename.constructor.name} have not correct validated.`);
 
         Object.assign(this.errorParam, args);
-        this.errorParam.push(valuename.name || valuename.constructor.name);
+        this.errorParam.push((valuename.name || valuename.constructor.name) as unknown as string);
     }
-    public errorParam = [];
+    public errorParam: Array<string> = [];
     public errorType = 'validation';
 }
 
@@ -33,8 +39,8 @@ export class NotFoundError extends RError {
 export class PermError extends RError {
     constructor(id: string, value: string | number) {
         super(`Not Found Error. id:${id} do not have perm ${value}.`);
-        this.errorParam.push(id, value);
+        this.errorParam.push(id, value.toString());
     }
     public errorType = 'perm';
-    public errorParam = [];
+    public errorParam: Array<string> = [];
 }

@@ -4,45 +4,43 @@ export class RedisService {
     redis: Redis;
     url: string;
 
-    constructor(url) {
+    constructor(url: string) {
         this.url = url;
-    }
-
-    async init() {
         this.redis = new Redis(this.url);
     }
 
-    async setjson(model, id, data, expired = -1) {
+    async setjson(model: string, id: string, data: object, expired = -1) {
         if (expired === -1) {
             await this.redis.set(`${model}-${id}`, JSON.stringify(data));
         }
         await this.redis.set(`${model}-${id}`, JSON.stringify(data), 'EX', expired);
     }
 
-    async getjson(model, id) {
+    async getjson(model: string, id: string) {
         return JSON.parse((await this.redis.get(`${model}-${id}`)) || '{}');
     }
 
-    async set(model, id, data, expired = -1) {
+    async set(model: string, id: string, data: string, expired = -1) {
         if (expired === -1) {
             await this.redis.set(`${model}-${id}`, data);
         }
         await this.redis.set(`${model}-${id}`, data, 'EX', expired);
     }
 
-    async get(model, id): Promise<string | null> {
+    async get(model: string, id: string): Promise<string | null> {
         return await this.redis.get(`${model}-${id}`);
     }
 
-    async delete(model, id) {
+    async delete(model: string, id: string) {
         return await this.redis.del(`${model}-${id}`);
     }
 }
 
 const url = global.Project.redis.url || 'redis://127.0.0.1:6379/';
 
-export async function apply() {
-    await rdis.init();
-}
 
 export const rdis = new RedisService(url);
+
+export async function apply() {
+    
+}

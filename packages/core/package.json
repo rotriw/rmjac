@@ -1,5 +1,5 @@
 {
-    "name": "core",
+    "name": "rmjac-core",
     "version": "0.1.0",
     "description": "Project core",
     "main": "index.js",
@@ -39,5 +39,6 @@
     "devDependencies": {
         "@types/ioredis": "^5.0.0",
         "@types/nodemailer": "^6.4.7"
-    }
+    },
+    "exports": "./dist"
 }

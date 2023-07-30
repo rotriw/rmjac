@@ -1,21 +1,22 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Transporter, createTransport } from 'nodemailer';
 import Mail from 'nodemailer/lib/mailer';
 import verifyTemplate from '../template/verifytemplate.html';
 
 class SMTPConfig {
-    host: string;
-    port: number;
-    secure: boolean;
-    auth: {
+    host?: string;
+    port?: number;
+    secure?: boolean;
+    auth?: {
         user: string;
         pass: string;
     };
 }
 
 export class VerifyOverwrite {
-    username: string;
-    link: string;
-    errorlink: string;
+    username?: string;
+    link?: string;
+    errorlink?: string;
 }
 
 export class EmailService {
@@ -34,7 +35,7 @@ export class EmailService {
 
     async init() {
         for (const key in this.configs) {
-            this.transporters.set(key, createTransport(this.configs[key]));
+            this.transporters.set(key, createTransport(this.configs.get('key')));
         }
     }
 
@@ -47,15 +48,13 @@ export class EmailService {
         mailOptions: Mail.Options
     ): Promise<boolean> {
         return new Promise((resolve, reject) => {
-            this.transporters
-                .get(transporter)
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                .sendMail(mailOptions, (err, res) => {
-                    if (err) {
-                        reject(err);
-                    }
-                    resolve(true);
-                });
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            this.transporters?.get(transporter)?.sendMail(mailOptions, (err: any, res: any) => {
+                if (err) {
+                    reject(err);
+                }
+                resolve(true);
+            });
         });
     }
 
@@ -75,9 +74,9 @@ export class EmailService {
         let overwritten = '', subject = '';
         if (type === 'verify') {
             overwritten = verifyTemplate
-                .replace(/<!--USERNAME-->/g, template.username)
-                .replace(/<!--ERRORLINK-->/g, template.errorlink)
-                .replace(/<!--LINK-->/g, template.link);
+                .replace(/<!--USERNAME-->/g, template.username as string)
+                .replace(/<!--ERRORLINK-->/g, template.errorlink as string)
+                .replace(/<!--LINK-->/g, template.link as string);
             subject = '验证您的邮箱';
         }
 

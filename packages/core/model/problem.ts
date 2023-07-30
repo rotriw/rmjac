@@ -67,14 +67,14 @@ export class ProblemModel {
         if (__res === null) {
             return undefined;
         }
-        rdis.set('problem_psid_onlyid', psid, __res.pid, 5000);
+        rdis.set('problem_psid_onlyid', psid, __res.pid as unknown as string, 5000);
         return __res.pid;
     }
 
     async update(pid: number, content: Omit<ProblemSchema, 'pid'>) {
         const __res = await db.findOneIn('problem', 'pid', pid) as unknown as ProblemSchema;
         let psid;
-        for (psid of __res.sourceid) {    
+        for (psid of __res.sourceid || []) {    
             rdis.delete('problem_psid_onlyid', psid);
             rdis.delete('problem_psid_object', psid);
         }
