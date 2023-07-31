@@ -12,6 +12,7 @@ import { Logger } from 'log4js';
 import { runModel } from 'rmjac-config';
 import { RError } from 'rmjac-core/declare/error';
 import * as loggerInit from './logger';
+import * as fs from 'fs';
 
 export const app = new Koa();
 const router = new KoaRouter();
@@ -119,4 +120,14 @@ export async function apply(logger: Logger) {
     await app.listen(runModel.port);
     logger.info(`Backend listen :${runModel.port}`);
     loggerInit.apply(logger);
+    const handlerPath = path.join(__dirname, 'handler');
+    const handlerDir = await fs.readdirSync(handlerPath);
+    for (const pack of handlerDir) {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const runTag = require(path.join(handlerPath, pack));
+        if (typeof runTag.apply === 'function') {
+            runTag.apply(logger);
+            logger.info(`handler ${pack} loaded.`);
+        }
+    }
 }

@@ -12,6 +12,7 @@ export type SMTPConfig = {
 }
 
 export type ConfigFile = {
+    load: string[],
     mongo: string,
     mongon: string,
     email: {
@@ -19,7 +20,7 @@ export type ConfigFile = {
     },
     server?: 'main' | 'edge',
     serverPwd?: string,
-    smtp?: Map<string, SMTPConfig>,
+    smtp?: Record<string, SMTPConfig>,
     redis?: {
         url?: string
     },
@@ -44,7 +45,8 @@ export interface RunModel {
 }
 
 export const config: ConfigFile = {
-    mongo: 'mongo://127.0.0.1:27107',
+    load: ['rmjac-core', 'rmjac-web'],
+    mongo: 'mongodb://127.0.0.1:27107',
     mongon: 'rmjac',
     email: {
         from: 'noreply'
@@ -70,8 +72,9 @@ export const defaultRunModel: RunModel = {
 
 export const runModel: RunModel = defaultRunModel;
 
-export function apply(logger: Logger, run: RunModel) {
-    Object.assign(config, fs.readFileSync(run.config));
+export async function apply(logger: Logger, run: RunModel) {
+    Object.assign(config, JSON.parse(await fs.readFileSync(run.config).toString()));
     Object.assign(runModel, run);
     logger.info('config file loaded.');
+    return config;
 }

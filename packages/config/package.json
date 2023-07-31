@@ -2,11 +2,13 @@
     "name": "rmjac-config",
     "private": true,
     "version": "0.0.0",
+    
     "scripts": {
+        "tsc": "tsc",
+        "tsc:watch": "tsc --watch"
     },
     "author": "smallfang",
     "dependencies": {
 
-    },
-    "exports": "./dist/"
+    }
 }

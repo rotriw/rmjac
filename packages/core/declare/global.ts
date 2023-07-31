@@ -1,4 +1,4 @@
-import { Log4js } from "log4js"
+import { Log4js } from 'log4js'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type GlobalProjectProp = {

@@ -2,9 +2,12 @@
     "name": "rmjac-core",
     "version": "0.1.0",
     "description": "Project core",
-    "main": "index.js",
-    "author": "smallfang,rotriw",
+    "main": "index.ts",
+    "author": "smallfang",
     "private": false,
+    "scripts": {
+        "tsc": "tsc"
+    },
     "dependencies": {
         "@typescript-eslint/eslint-plugin": "^5.48.3-alpha.6",
         "@typescript-eslint/parser": "^5.48.3-alpha.6",
@@ -31,6 +34,5 @@
         "@types/ioredis": "^5.0.0",
         "@types/nodemailer": "^6.4.7",
         "@types/uuid": "^9.0.2"
-    },
-    "exports": "./dist"
+    }
 }

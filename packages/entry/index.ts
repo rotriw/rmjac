@@ -3,7 +3,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as log4js from 'log4js';
-import * as Updated from './update';
+// import * as Updated from './xas';
 import { ConfigFile, RunModel, defaultRunModel } from 'rmjac-config';
 
 const argv: RunModel = require('yargs').alias('c', 'config').alias('l', 'log').alias('d', 'debug').alias('cv', 'current').alias('t', 'test').argv;
@@ -21,11 +21,14 @@ async function RunPackage(packageName: string) {
     const loggerName = packageName.startsWith('rmjac-') ? packageName.slice(6) : packageName;
     const logger = await log4js.getLogger(loggerName);
     logger.level = Run.loglevel;
-    require(packageName).apply(logger, Run);
+    return require(packageName).apply(logger, Run);
 }
 
 async function run() {
-    RunPackage('rmjac-config'); // load config First.
+    const config: ConfigFile = await RunPackage('rmjac-config'); // load config First.
+    for (const pack of config.load) {
+        await RunPackage(pack);
+    }
 }
 
-await run();
+run();

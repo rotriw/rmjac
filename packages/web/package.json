@@ -5,6 +5,10 @@
     "main": "index.js",
     "author": "smallfang,rotriw",
     "private": false,
+    "scripts": {
+        "tsc": "tsc",
+        "tsc:watch": "tsc --watch"
+    },
     "dependencies": {
         "rmjac-core": "*",
         "koa": "^2.14.1",
@@ -21,5 +25,5 @@
         "@types/koa-router": "^7.4.4",
         "@types/nodemailer": "^6.4.7"
     },
-    "exports": "./dist/"
+    "exports": "./handle.ts"
 }

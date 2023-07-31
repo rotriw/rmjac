@@ -3,11 +3,13 @@
     "private": true,
     "version": "0.0.0",
     "scripts": {
-        "ui:dev": "yarn workspace ui run dev",
-        "ui:build": "yarn workspace ui run build",
-        "ui:preview": "yarn workspace ui run preview",
-        "start": "entry/index.js",
+        "ui:dev": "yarn workspace rmjac-ui run dev",
+        "ui:build": "yarn workspace rmjac-ui run build",
+        "ui:preview": "yarn workspace rmjac-ui run preview",
+        "debug": "ts-node packages/entry/index.ts --debug",
+        "start": "ts-node packages/entry/index.ts",
         "lint": "eslint packages/",
+        "tsc:watch": "tsc --watch",
         "lint:fix": "eslint packages/ --fix"
     },
     "author": "smallfang",
@@ -23,15 +25,18 @@
         "jsx-to-string": "^1.4.0",
         "lodash": "^4.17.21",
         "log4js": "^6.9.1",
+        "rmjac-config": "*",
+        "rmjac-core": "*",
         "source-map-support": "^0.5.21",
         "uuid": "^9.0.0",
-        "yargs": "^17.7.2",
-        "rmjac-core": "*",
-        "rmjac-config": "*"
+        "yargs": "^17.7.2"
     },
     "workspaces": [
         "packages/core",
         "packages/ui",
         "packages/**"
-    ]
+    ],
+    "devDependencies": {
+        "npm-run-all": "^4.1.5"
+    }
 }

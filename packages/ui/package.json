@@ -1,5 +1,5 @@
 {
-  "name": "ui",
+  "name": "rmjac-ui",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -62,5 +62,6 @@
     "eslint-plugin-react": "^7.32.2",
     "typescript": "^5.0.2",
     "vite": "^4.2.1"
-  }
+  },
+  "exports": "./index.ts"
 }
