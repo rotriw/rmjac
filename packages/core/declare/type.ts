@@ -78,13 +78,13 @@ export class AnyType extends BasicType {
     }
 }
 
-export function Verify(Types, data) {
+export function Verify(Types: any, data: any) {
     return Types.verify(data);
 }
 
-export function NumberLimitIn(...prop) {
+export function NumberLimitIn(...prop: any[]) {
     return {
-        verify: (data) => {
+        verify: (data: any) => {
             if (typeof data !== 'number') {
                 return false;
             }

@@ -1,0 +1,25 @@
+{
+    "name": "rmjac-web",
+    "version": "0.1.0",
+    "description": "Project web(koa)",
+    "main": "index.js",
+    "author": "smallfang,rotriw",
+    "private": false,
+    "dependencies": {
+        "rmjac-core": "*",
+        "koa": "^2.14.1",
+        "koa-body": "^6.0.1",
+        "koa-bodyparser": "^4.3.0",
+        "koa-connect": "^2.1.0",
+        "koa-router": "^12.0.0",
+        "koa-static": "^5.0.0",
+        "koa2-cors": "^2.0.6"
+    },
+    "devDependencies": {
+        "@types/ioredis": "^5.0.0",
+        "@types/koa-bodyparser": "^4.3.10",
+        "@types/koa-router": "^7.4.4",
+        "@types/nodemailer": "^6.4.7"
+    },
+    "exports": "./dist/"
+}

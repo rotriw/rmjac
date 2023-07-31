@@ -1,16 +1,16 @@
 {
-    "name": "school-hub",
+    "name": "rmjac",
     "private": true,
     "version": "0.0.0",
     "scripts": {
-        "ui:dev": "pnpm --filter ui run dev",
-        "ui:build": "pnpm --filter ui run build",
-        "ui:preview": "pnpm --filter ui run preview",
+        "ui:dev": "yarn workspace ui run dev",
+        "ui:build": "yarn workspace ui run build",
+        "ui:preview": "yarn workspace ui run preview",
         "start": "entry/index.js",
         "lint": "eslint packages/",
         "lint:fix": "eslint packages/ --fix"
     },
-    "author": "GoForceX",
+    "author": "smallfang",
     "dependencies": {
         "@typescript-eslint/eslint-plugin": "^5.59.5",
         "@typescript-eslint/parser": "^5.59.5",
@@ -25,10 +25,13 @@
         "log4js": "^6.9.1",
         "source-map-support": "^0.5.21",
         "uuid": "^9.0.0",
-        "yargs": "^17.7.2"
+        "yargs": "^17.7.2",
+        "rmjac-core": "*",
+        "rmjac-config": "*"
     },
     "workspaces": [
         "packages/core",
-        "packages/ui"
+        "packages/ui",
+        "packages/**"
     ]
 }

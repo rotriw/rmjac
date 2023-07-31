@@ -83,6 +83,17 @@ export function AppFooter({ onThemeChange }: { onThemeChange: () => void }) {
                             >
                                 Change Style
                             </Button>
+
+                            <a><Button
+                                // leftIcon={<IconBrandGithub size={13} />}
+                                variant='light'
+                                color='gray'
+                                radius='xs'
+                                size='xs'
+                                compact
+                            >
+                                版权申诉
+                            </Button></a>
                         </Group>
                         <Space h={45}></Space>
                         <Text color='dimmed' fw={800} size={12.5}>

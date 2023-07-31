@@ -8,24 +8,15 @@
     "dependencies": {
         "@typescript-eslint/eslint-plugin": "^5.48.3-alpha.6",
         "@typescript-eslint/parser": "^5.48.3-alpha.6",
-        "Logger": "^0.0.0",
         "asyncio": "^0.0.2",
         "await-timeout": "^1.1.1",
         "awesome-static": "^1.4.3",
         "axios": "^1.2.2",
         "compare-versions": "^6.0.0-rc.1",
-        "cordis": "^2.6.0",
         "esbuild": "^0.16.16",
         "eslint": "^8.32.0",
         "eslint-plugin-react": "^7.32.1",
         "js-sha512": "^0.8.0",
-        "koa": "^2.14.1",
-        "koa-body": "^6.0.1",
-        "koa-bodyparser": "^4.3.0",
-        "koa-connect": "^2.1.0",
-        "koa-router": "^12.0.0",
-        "koa-static": "^5.0.0",
-        "koa2-cors": "^2.0.6",
         "lodash": "^4.17.21",
         "log4js": "^6.7.1",
         "mongodb": "^5.1.0",
@@ -38,7 +29,8 @@
     },
     "devDependencies": {
         "@types/ioredis": "^5.0.0",
-        "@types/nodemailer": "^6.4.7"
+        "@types/nodemailer": "^6.4.7",
+        "@types/uuid": "^9.0.2"
     },
     "exports": "./dist"
 }

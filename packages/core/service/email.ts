@@ -2,16 +2,7 @@
 import { Transporter, createTransport } from 'nodemailer';
 import Mail from 'nodemailer/lib/mailer';
 import verifyTemplate from '../template/verifytemplate.html';
-
-class SMTPConfig {
-    host?: string;
-    port?: number;
-    secure?: boolean;
-    auth?: {
-        user: string;
-        pass: string;
-    };
-}
+import { config, SMTPConfig } from 'rmjac-config';
 
 export class VerifyOverwrite {
     username?: string;
@@ -91,8 +82,8 @@ export class EmailService {
     }
 }
 
-const from: string = global.Project.config?.email?.from || 'noreply';
-const urls: Map<string, SMTPConfig> = global.Project.config?.smtp;
+const from: string = config.email.from || 'noreply';
+const urls: Map<string, SMTPConfig> = config.smtp as Map<string, SMTPConfig>;
 
 
 export async function apply() {

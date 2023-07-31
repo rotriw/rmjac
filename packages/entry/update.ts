@@ -1,15 +1,15 @@
-import * as fs from "fs";
-import * as path from "path";
-import {compare, compareVersions} from "compare-versions";
-import * as log4js from "log4js";
-import * as _ from "lodash";
+import * as fs from 'fs';
+import * as path from 'path';
+import {compare, compareVersions} from 'compare-versions';
+import * as log4js from 'log4js';
+import * as _ from 'lodash';
 
 
 const loggerUpdated = log4js.getLogger('updated');
 
-async function updatedVersion(from :string, to :string) {
+async function updatedVersion(from: string, to: string) {
     const pathT = path.join(global.Project.core, 'updated');
-    const version = [];
+    const version: string[] = [];
     const UpdatedDir = await fs.readdirSync(pathT);
     for (const pack in UpdatedDir) {
         version.push(_.trim(UpdatedDir[pack].toString(), '.ts'));
@@ -35,10 +35,10 @@ export async function run() {
             try {
                 await updatedVersion(nowVersion, global.Project.CoreJSON.version);
             } catch (err) {
-                loggerUpdated.error(`Updated:error`);
+                loggerUpdated.error('Updated:error');
                 loggerUpdated.error(err);
             }
-            loggerUpdated.info(`Updated done.`);
+            loggerUpdated.info('Updated done.');
         }
         fs.writeFileSync(path.join(global.Project.core, 'version.local'), global.Project.CoreJSON.version)
     } else {

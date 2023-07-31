@@ -4,7 +4,7 @@ import { isNull } from 'lodash';
 import { checkPerm, registerPerm } from '../declare/perm';
 import { perm } from './perm';
 
-export class UserSchema {
+export interface UserSchema {
     id?: number;
     username: string;
     pwd: string;
@@ -182,7 +182,7 @@ export class UserModel {
             _res.links.push({ link: '/login', label: '注册/登录' });
             return _res;
         }
-        if (checkPerm((await perm.getPerm(id) as {user}).user, 'user', 'adminHeader')) {
+        if (checkPerm((await perm.getPerm(id) as {user: number}).user, 'user', 'adminHeader')) {
             _res.links.push({ link: '/admin/dashboard', label: '管理面板' });
         }
         return _res;

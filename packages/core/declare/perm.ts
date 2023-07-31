@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // import _ from 'lodash';
 
 import { token } from '../model/token';
@@ -102,9 +103,18 @@ export const userPerm =
 
 */
 
-const permColl = {};
+export type permProp = {
+    list: string[],
+    explain: string[],
+    guest: number,
+    default: number,
+    engine: BasicPermModel,
+    handler: PermClass
+}
 
-export function registerPerm(name: string, list: Array<string>, explain: Array<string>, defaultvalue: number, guestvalue: number) {
+const permColl: Record<string, permProp> = {};
+
+export function registerPerm(name: string, list: string[], explain: string[], defaultvalue: number, guestvalue: number) {
     const engine = new BasicPermModel(list);
     return (permColl[name] = {
         list,
@@ -121,9 +131,9 @@ export function checkPerm(value: number, model: string, perm: string) {
 }
 
 export function perm(model: string, name: string) {
-    return function(target, methodName: string, descriptor) {
+    return function(target: any, methodName: string, descriptor: any) {
         descriptor.originalMethodPerm = descriptor.value;
-        descriptor.value = async function run(args) {
+        descriptor.value = async function run(args: any) {
             let id = await token.stripId(args.token || this.token);
             if (id === -1) {
                 id = 0;

@@ -14,29 +14,6 @@ export type GlobalProjectProp = {
     service: any,
 }
 
-export type ConfigFile = {
-    mongo: string,
-    mongon: string,
-    email: {
-        from: string
-    }
-    server?: string,
-    serverPwd?: string,
-    smtp?: Record<string, {
-        host: string,
-        port: number,
-        secure: true,
-        auth: {
-            user: string,
-            pass: string
-        }
-    }>,
-    salt: {
-        salt: string,
-        strength: number
-    }
-}
-
 export type PackagesContent = {
     logger: Log4js,
     

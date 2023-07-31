@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Filter, MongoClient, UpdateFilter, Document as MongoDocument } from 'mongodb';
+import { config } from 'rmjac-config';
 
 class dbClass {
     url: string;
@@ -103,9 +104,9 @@ class dbClass {
     }
 }
 
-const url = global.Project.config.mongo;
-const dbname = global.Project.config.mongon || 'bx';
-const options = global.Project.config.mongoconfig || {
+const url = config.mongo;
+const dbname = config.mongon;
+const options = {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 };

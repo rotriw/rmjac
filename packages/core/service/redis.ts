@@ -1,4 +1,5 @@
 import { Redis } from 'ioredis';
+import { config } from 'rmjac-config';
 
 export class RedisService {
     redis: Redis;
@@ -36,11 +37,12 @@ export class RedisService {
     }
 }
 
-const url = global.Project.redis.url || 'redis://127.0.0.1:6379/';
+const url = config.redis?.url || 'redis://127.0.0.1:6379/';
 
 
 export const rdis = new RedisService(url);
 
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 export async function apply() {
-    
+
 }

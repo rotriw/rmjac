@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { createStyles, AppShell, rem } from '@mantine/core';
+import { createStyles, AppShell, rem, Space } from '@mantine/core';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { Navbar } from '../components/navbar';
@@ -40,7 +40,9 @@ export function Root({ onThemeChange, type, children }: RootProps) {
             footer={<AppFooter onThemeChange={onThemeChange}></AppFooter>}
             header={<Navbar title={window.web?.title || 'rmj.ac'} links={mainLinks} type={type}></Navbar>}
         >
+            <Space h={50} />
             {type === 'route' ? <Outlet /> : children}
+            <Space h={50} />
         </AppShell>
     );
 }

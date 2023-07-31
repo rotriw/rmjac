@@ -3,6 +3,8 @@
     "email": {
         "from": "xxx@xxx.com"
     },
+    "server": "main",
+    "serverPwd": "xxxx",
     "smtp": {
         "xxx": {
             "host": "xxx",

@@ -1,0 +1,23 @@
+{
+    "name": "rmjac-entry",
+    "version": "0.1.0",
+    "description": "Project Entry",
+    "main": "index.js",
+    "author": "smallfang",
+    "private": false,
+    "dependencies": {
+        "@typescript-eslint/eslint-plugin": "^5.48.3-alpha.6",
+        "@typescript-eslint/parser": "^5.48.3-alpha.6",
+        "eslint": "^8.32.0",
+        "eslint-plugin-react": "^7.32.1",
+        "lodash": "^4.17.21",
+        "log4js": "^6.7.1",
+        "uuid": "^9.0.0",
+        "yargs": "^17.6.2"
+    },
+    "devDependencies": {
+        "@types/ioredis": "^5.0.0",
+        "@types/nodemailer": "^6.4.7"
+    },
+    "exports": "./dist"
+}

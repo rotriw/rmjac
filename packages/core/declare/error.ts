@@ -1,5 +1,6 @@
 export class RError extends Error {
     public errorType = '';
+    public errorParam: Array<string> | string = [];
 }
 
 export class ValidationError extends RError {

@@ -1,4 +1,4 @@
-import { createStyles, Box, Group, rem, Card, Container, Grid, Space, Text, Badge, Select, Button, useMantineTheme, Loader, Center, NativeSelect } from '@mantine/core';
+import { createStyles, Box, Group, rem, Card, Container, Grid, Space, Text, Badge, Select, Button, useMantineTheme, Loader, Center, NativeSelect, Tooltip } from '@mantine/core';
 import React from 'react';
 import { NoStyleCard, StandardCard } from '../components/card';
 import { IconBrandTelegram, IconCaretDown, IconChevronDown, IconClock, IconDatabase, IconExternalLink, IconHistory, IconLanguageHiragana, IconListSearch, IconMenuOrder, IconSend, IconTransferIn } from '@tabler/icons-react';
@@ -198,7 +198,9 @@ n×n 的正方形区域，使得该区域所有数中的最大值和最小值的
                                         难度
                                     </Text>
                                     <Group position="apart" align="flex-end" spacing={0}>
-                                        <Text size={14} fw={300} color='darkblue'>Luogu/7</Text>
+                                        <Tooltip.Floating label="省选/NOI-" >
+                                            <Text size={14} fw={300} color='darkblue'>Luogu/7</Text>
+                                        </Tooltip.Floating>
                                     </Group>
                                 </Box>
                             </Group>

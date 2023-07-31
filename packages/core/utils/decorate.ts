@@ -2,7 +2,7 @@
 import { ValidationError } from '../declare/error';
 import { DefaultType, Verify } from '../declare/type';
 
-export function param(params, Type: any = DefaultType.Any) {
+export function param(params: any, Type: any = DefaultType.Any) {
     return function(target: any, methodName: string, descriptor: any) {
         if (descriptor.__param === undefined) {
             descriptor.__param = [];
@@ -19,7 +19,7 @@ export function param(params, Type: any = DefaultType.Any) {
             }
             return await descriptor.originalMethodParam.apply(
                 this,
-                descriptor.__param.map((key) => args[key])
+                descriptor.__param.map((key: any) => args[key])
             );
         };
     };
@@ -29,24 +29,24 @@ export function param(params, Type: any = DefaultType.Any) {
 /**
  * @deprecated
  */
-export function verify(param, Type) {
-    return function(target: any, methodName: string, descriptor: any) {
-        if (descriptor.verify === undefined) {
-            descriptor.verify = {};
-            descriptor.originalMethodVerify = descriptor.value;
-            const codes = descriptor.value.toString();
-            const paramList = codes.slice(codes.indexOf('(') + 1, codes.indexOf(')')).split(',');
-            const paramNames = paramList.map((param) => param.trim());
-            descriptor.paramNames = paramNames;
-        }
-        descriptor.verify[descriptor.paramNames.indexOf(param)] = Type || DefaultType[Type?.toString()];
-        descriptor.value = async function run(...args) {
-            for (const i in descriptor.verify) {
-                if (!Verify(descriptor.verify[i], args[i])) {
-                    throw new ValidationError(descriptor.verify[i]);
-                }
-            }
-            return await descriptor.originalMethodVerify.apply(this, args);
-        };
-    };
-}
+// export function verify(param: any, Type: any) {
+//     return function(target: any, methodName: string, descriptor: any) {
+//         if (descriptor.verify === undefined) {
+//             descriptor.verify = {};
+//             descriptor.originalMethodVerify = descriptor.value;
+//             const codes = descriptor.value.toString();
+//             const paramList = codes.slice(codes.indexOf('(') + 1, codes.indexOf(')')).split(',');
+//             const paramNames = paramList.map((param) => param.trim());
+//             descriptor.paramNames = paramNames;
+//         }
+//         descriptor.verify[descriptor.paramNames.indexOf(param)] = Type || DefaultType[Type?.toString()];
+//         descriptor.value = async function run(...args) {
+//             for (const i in descriptor.verify) {
+//                 if (!Verify(descriptor.verify[i], args[i])) {
+//                     throw new ValidationError(descriptor.verify[i]);
+//                 }
+//             }
+//             return await descriptor.originalMethodVerify.apply(this, args);
+//         };
+//     };
+// }

@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState } from 'react';
-import { createStyles, Header, Container, Group, Burger, Transition, Paper } from '@mantine/core';
+import { createStyles, Header, Container, Group, Burger, Navbar as Navs, Transition, Paper, Menu, UnstyledButton, Avatar, rem, Text, Center } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { NavLink } from 'react-router-dom';
 import React from 'react';
+import { IconChevronDown, IconChevronRight, IconDashboard, IconHeart, IconLogout, IconMessage, IconPlayerPause, IconSettings, IconStar, IconSwitchHorizontal, IconTrash } from '@tabler/icons-react';
 
 const useStyles = createStyles((theme) => ({
     header: {
@@ -74,6 +75,24 @@ const useStyles = createStyles((theme) => ({
         },
     },
 
+    user: {
+        color: theme.colorScheme === 'dark' ? 'white' : theme.colors.gray[7],
+        padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+        borderRadius: theme.radius.sm,
+        transition: 'background-color 100ms ease',
+
+        '&:hover': {
+            backgroundColor: theme.fn.lighten(
+                theme.colorScheme === 'dark' ? theme.colors.gray[9] : theme.colors.gray[1],
+                    0.1
+                ),
+            },
+
+        [theme.fn.smallerThan('xs')]: {
+            display: 'none',
+        },
+    },
+
     dropdown: {
         position: 'absolute',
         top: '50px',
@@ -91,11 +110,18 @@ const useStyles = createStyles((theme) => ({
         },
     },
 
+    userActive: {
+        backgroundColor: theme.fn.lighten(
+            theme.colorScheme === 'dark' ? theme.colors.gray[9] : theme.colors.gray[1],
+            0.1
+        ),
+    },
+
     Header: {
         // boxShadow: theme.shadows.sm,
         // border: n
         boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
-        position: 'relative',
+        // position: 'relative',
         zIndex: 1,
         backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[5] : 'white',
     },
@@ -110,6 +136,7 @@ interface HeadersProps {
 export function Navbar({ links, title, type }: HeadersProps) {
     const [opened, { toggle }] = useDisclosure(false);
     const { classes, cx, theme } = useStyles();
+    const [userMenuOpened, setUserMenuOpened] = useState(false);
     
     const items =
         type === 'route'
@@ -124,8 +151,9 @@ export function Navbar({ links, title, type }: HeadersProps) {
                 </a>
             ));
 
+
     return (
-        <Header height={50} mb={0} className={classes.Header} withBorder={false}>
+        <Navs fixed={true}  position={{ top: 0, left: 0 }} height={50} top={'0 !important'}  className={classes.Header} withBorder={false}>
             <Container className={classes.header}>
                 <span className={classes.titleStyle}>{title}</span>
                 <div style={{ padding: '2%' }}></div>
@@ -135,6 +163,38 @@ export function Navbar({ links, title, type }: HeadersProps) {
                 <div style={{ width: '100%', textAlign: 'right' }} className={classes.burger}>
                     <Burger opened={opened} onClick={toggle} className={classes.burger} size='sm' />
                 </div>
+                <div style={{marginLeft: 'auto'}}>
+                    <Menu
+                        width={250}
+                        position="bottom-end"
+                        transitionProps={{ transition: 'pop-top-right' }}
+                        onClose={() => setUserMenuOpened(false)}
+                        onOpen={() => setUserMenuOpened(true)}
+                    >
+                        <Menu.Target>
+                        <UnstyledButton
+                            className={cx(classes.user, { [classes.userActive]: userMenuOpened })}
+                        >
+                            <Group spacing={7}>
+                                <Text weight={500} size="sm" sx={{ lineHeight: 1, color: theme.colorScheme === 'dark' ? 'white' : theme.colors.gray[7] }} mr={3}>
+                                    测试账号
+                                </Text>
+                                <IconChevronDown size={rem(12)} stroke={1.5} />
+                            </Group>
+                        </UnstyledButton>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                            <Menu.Item rightSection={<IconChevronRight size="0.9rem" stroke={1.5} />} icon={<IconDashboard size="0.9rem" stroke={1.5} />}>
+                                个人主页
+                            </Menu.Item>
+                            <Menu.Item rightSection={<IconChevronRight size="0.9rem" stroke={1.5} />} icon={<IconSettings size="0.9rem" stroke={1.5} />}>
+                                账号设置
+                            </Menu.Item>
+                            <Menu.Divider />
+                            <Menu.Item icon={<IconLogout size="0.9rem" stroke={1.5} />} color='red'>退出登录</Menu.Item>
+                        </Menu.Dropdown>
+                    </Menu>
+                </div>
                 <Transition transition='pop-top-right' duration={200} mounted={opened}>
                     {(styles) => (
                         <Paper className={classes.dropdown} withBorder style={styles}>
@@ -143,6 +203,6 @@ export function Navbar({ links, title, type }: HeadersProps) {
                     )}
                 </Transition>
             </Container>
-        </Header>
+        </Navs>
     );
 }
