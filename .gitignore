@@ -27,3 +27,5 @@ config.json
 test*.ts
 
 .yarnrc
+packages/ui/.npmrc
+.npmrc

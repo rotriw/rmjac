@@ -11,6 +11,7 @@ import * as Direct from './interfaces/interface';
 import './app.css';
 import { ProblemViewPage } from './pages/problemView';
 import { SubmissionResultPage } from './pages/submissionResult';
+import { ProblemEditor } from './pages/problemEditor';
 
 const myCache = createEmotionCache({ key: 'rmjac' });
 
@@ -64,6 +65,9 @@ function App() {
                             '#root': {
                                 backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[7] : '#f7f7f7',
                             },
+                            'html, body': {
+                                backgroundColor: theme.colorScheme === 'dark' ? '#2C2E33 !important' : 'white !important',
+                            }
                         }),
                         shadows: {
                             xs: '0 4px 10px rgba(0,0,0,0.05), 0 0 1px rgba(0,0,0,0.1);',
@@ -85,6 +89,7 @@ function App() {
                                         <Route path='login' element={<LoginPage></LoginPage>} />
                                         
                                         <Route path='problem/:id' element={<ProblemViewPage></ProblemViewPage>} />
+                                        <Route path='problem/create' element={<ProblemEditor></ProblemEditor>} />
                                     </Route>
                                 </Routes>
                             </BrowserRouter>

@@ -122,7 +122,7 @@ const useStyles = createStyles((theme) => ({
         // border: n
         boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
         // position: 'relative',
-        zIndex: 1,
+        zIndex: 10,
         backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[5] : 'white',
     },
 }));
@@ -153,7 +153,7 @@ export function Navbar({ links, title, type }: HeadersProps) {
 
 
     return (
-        <Navs fixed={true}  position={{ top: 0, left: 0 }} height={50} top={'0 !important'}  className={classes.Header} withBorder={false}>
+        <Navs fixed={true}  position={{ top: 0, left: 0 }} height={50} top={'0 !important'} className={classes.Header} withBorder={false}>
             <Container className={classes.header}>
                 <span className={classes.titleStyle}>{title}</span>
                 <div style={{ padding: '2%' }}></div>
