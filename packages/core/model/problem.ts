@@ -3,7 +3,17 @@ import { rdis } from '../service/redis';
 
 export interface ProblemContent {
     type: 'html' | 'markdown';
-    content: string;
+    content: {
+        background?: string;
+        statement?: string;
+        inFormer?: string;
+        outFormer?: string;
+        testdata?: {
+            in: string;
+            out: string;
+        }[];
+        hint?: string;
+    };
 }
 
 export interface ProblemSource {
@@ -12,12 +22,13 @@ export interface ProblemSource {
 }
 
 export interface ProblemSchema {
-    sourceid?: [string];
+    sourceid?: string[];
     pid: number;
-    sources?: [ProblemSource];
+    sources?: ProblemSource[];
     content?: ProblemContent;
-    translate?: ProblemContent;
-    tags?: [string];
+    version?: Record<string, ProblemContent>;
+    versionDisplay?: Record<string, string>;
+    tags?: string[];
     timeLimit: number | string;
     memoryLimit: number | string;
     difficult: number | string;

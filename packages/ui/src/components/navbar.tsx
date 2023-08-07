@@ -69,7 +69,7 @@ const useStyles = createStyles((theme) => ({
 
     titleStyle: {
         fontWeight: 700,
-        color: theme.colorScheme === 'dark' ? 'white' : theme.colors.gray[7],
+        color: '#F5A9B8',
         [theme.fn.smallerThan('xs')]: {
             width: '150px',
         },
@@ -155,7 +155,7 @@ export function Navbar({ links, title, type }: HeadersProps) {
     return (
         <Navs fixed={true}  position={{ top: 0, left: 0 }} height={50} top={'0 !important'} className={classes.Header} withBorder={false}>
             <Container className={classes.header}>
-                <span className={classes.titleStyle}>{title}</span>
+                <span className={classes.titleStyle}><span style={{color: '#5BCEFA'}}>Rmj.</span>ac</span>
                 <div style={{ padding: '2%' }}></div>
                 <Group spacing={0} className={classes.links}>
                     {items}

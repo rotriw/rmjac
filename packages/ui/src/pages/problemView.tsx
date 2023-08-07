@@ -69,16 +69,16 @@ export function ProblemViewPage() {
                 <Grid>
                     <Grid.Col span={9}>
                         <NoStyleCard>
-                            <Text size={25} fw={300}>
-                            理想的正方形
+                            <Text size={18} fw={600}>
+                                    直角三角形
                             </Text>
-                            <Text size={11} fw={400}>
-                                Luogu P2216
+                            <Space h={1}></Space>
+                            <Text size={13} fw={300} color={theme.colors.gray[theme.colorScheme === 'dark' ? 4 : 7]}>
+                                洛谷 P2216
                             </Text>
-                            <Space h={5}></Space>
                         </NoStyleCard>
                         <Space h={10}></Space>
-                        <NoStyleCard>
+                        <NoStyleCard>   
                             <Text size={18} fw={600}>
                                 题目背景
                             </Text><Space h={10}></Space>
