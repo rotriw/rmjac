@@ -1,4 +1,20 @@
-import { Button, Container, Input, Space, TextInput, Text, createStyles, Center, Accordion, Group, Grid, Code, Divider, Loader } from '@mantine/core';
+import {
+    Button,
+    Container,
+    Input,
+    Space,
+    TextInput,
+    Text,
+    createStyles,
+    Center,
+    Accordion,
+    Group,
+    Grid,
+    Code,
+    Divider,
+    Loader,
+    Badge, Box, Tooltip, Textarea
+} from '@mantine/core';
 import { useForm } from '@mantine/form';
 import React, { useState } from 'react';
 import { Prism } from '@mantine/prism';
@@ -8,6 +24,7 @@ import { notifications } from '@mantine/notifications';
 import { IconX, IconCheck, IconInfoSmall, IconClock, IconCircle, IconServer, IconArchive, IconLoader, IconLoader2, IconLoader3 } from '@tabler/icons-react';
 import { alarm } from '../styles/alarm';
 import { random } from 'lodash';
+import { io } from 'socket.io-client';
 // import * as MyPromise from 'some-promise-lib';
 
 
@@ -175,6 +192,8 @@ export function SubmissionResultPage() {
     //     origin: { x: randomInRange(0.4, 0.6), y: 0},
     // });
 
+    // const socket = io({'path': '/ws/'});
+    // socket.emit('qwq');
     return (
         <>
             <Container>
@@ -210,7 +229,12 @@ export function SubmissionResultPage() {
                             </Text>
                         </NoStyleCard>
                         <Space h={10}></Space>
-                        <StandardCard title='测试详情'>
+                        <StandardCard title='测试点详情'>
+                            <Badge radius='sm' color={'green'} style={{textTransform: 'none'}} variant={'filled'}>Total</Badge>
+                            &nbsp;
+                            <Badge  radius='sm' color={'green'} style={{textTransform: 'none'}}>Subtask #1</Badge>
+                            &nbsp;
+                            <Space h={10} />
                             <Accordion
                                 variant='contained'
                                 styles={{
@@ -220,7 +244,116 @@ export function SubmissionResultPage() {
                                     },
                                 }}
                             >
-                                {/* <Accordion.Item value='1'>
+                                 <Accordion.Item value='4'>
+                                    <Accordion.Control>
+                                        <Group grow>
+                                            <Text color='dimmed' fw={700} size={13}>
+                                                测试点 #1
+                                            </Text>
+                                            <Text color='green' fw={700} size={13}>
+                                                <div style={{ alignItems: 'center', display: 'flex' }}>
+                                                    <IconCheck stroke={3} width={13} />
+                                                    &nbsp;Accepted{' '}
+                                                </div>
+                                            </Text>
+                                            <Text color='dimmed' fw={700} size={12}>
+                                                56ms
+                                            </Text>
+                                            <Text color='dimmed' fw={700} size={12}>
+                                                780kb
+                                            </Text>
+                                            <Text color='dimmed' fw={700} size={12}>
+                                                10 points
+                                            </Text>
+                                        </Group>
+                                    </Accordion.Control>
+                                    <Accordion.Panel>
+                                        <Text fw={700} size={13}>输入数据</Text>
+                                        <Code block style={{backgroundColor: theme.colorScheme === 'dark' ? 'black' :  'white'}}>
+                                            10 12
+                                        </Code>
+                                        <Space h={10} />
+                                        <Text fw={700} size={13}>输出数据</Text>
+                                        <Code block style={{backgroundColor: theme.colorScheme === 'dark' ? 'black' :  'white'}}>
+                                            22
+                                        </Code>
+                                        <Space h={10} />
+                                        <Text fw={700} size={13} >答案数据</Text>
+                                        <Code block style={{backgroundColor: theme.colorScheme === 'dark' ? 'black' : 'white'}}>
+                                            22
+                                        </Code>
+                                        <Space h={10} />
+                                        <Text fw={700} size={13}>信息</Text>
+                                        <Code block style={{backgroundColor: theme.colorScheme === 'dark' ? 'black' :  'white'}}>
+                                            OK
+                                        </Code>
+                                    </Accordion.Panel>
+                                </Accordion.Item>
+
+                                <Accordion.Item value='2'>
+                                    <Accordion.Control>
+                                        <Group grow>
+                                            <Text color='dimmed' fw={700} size={13}>
+                                                汇总
+                                            </Text>
+                                            <Text color='green' fw={700} size={13}>
+                                                <div style={{ alignItems: 'center', display: 'flex' }}>
+                                                    <IconCheck stroke={3} width={13} />
+                                                    &nbsp;Accepted{' '}
+                                                </div>
+                                            </Text>
+                                            <Text color='dimmed' fw={700} size={12}>
+                                                1200ms
+                                            </Text>
+                                            <Text color='dimmed' fw={700} size={12}>
+                                                900kb
+                                            </Text>
+                                            <Text color='dimmed' fw={700} size={12}>
+                                                10 points
+                                            </Text>
+                                        </Group>
+                                    </Accordion.Control>
+                                    <Accordion.Panel>Colors, fonts, shadows and many other parts are customizable to fit your design needs</Accordion.Panel>
+                                </Accordion.Item>
+                                <Accordion.Item value='1'>
+                                    <Accordion.Control>
+                                        <Group grow>
+                                            <Text color='dimmed' fw={700} size={13}>
+                                                Subtask #1
+                                            </Text>
+                                            <Text color='blue' fw={700} size={13}>
+                                                <div style={{ alignItems: 'center', display: 'flex' }}>
+                                                    <Loader size={10}/>
+                                                    &nbsp;Judging{' '}
+                                                </div>
+                                            </Text>
+                                            <Text color='dimmed' fw={700} size={12}>
+                                                ms
+                                            </Text>
+                                            <Text color='dimmed' fw={700} size={12}>
+                                                77kb
+                                            </Text>
+                                            <Text color='dimmed' fw={700} size={12}>
+                                                10 points
+                                            </Text>
+                                        </Group>
+                                    </Accordion.Control>
+                                    <Accordion.Panel>
+                                        <Center>
+                                            <Text fw={700} size={12}>
+                                                查看具体测试点信息请在上方选择对应Subtask
+                                            </Text></Center>
+                                        <Space h={7} />
+                                        <Accordion
+                                            variant='contained'
+                                            styles={{
+                                                label: {
+                                                    paddingTop: 8,
+                                                    paddingBottom: 8,
+                                                },
+                                            }}
+                                        >
+                                            {/* <Accordion.Item value='1'>
                                     <Accordion.Control>
                                         <Group grow>
                                             <Text color='dimmed' fw={700} size={13}>
@@ -245,59 +378,63 @@ export function SubmissionResultPage() {
                                     </Accordion.Control>
                                     <Accordion.Panel>Colors, fonts, shadows and many other parts are customizable to fit your design needs</Accordion.Panel>
                                 </Accordion.Item>
-                                <Accordion.Item value='2'>
-                                    <Accordion.Control>
-                                        <Group grow>
-                                            <Text color='dimmed' fw={700} size={13}>
-                                                测试点 #2
-                                            </Text>
-                                            <Text color='green' fw={700} size={13}>
-                                                <div style={{ alignItems: 'center', display: 'flex' }}>
-                                                    <IconCheck stroke={3} width={13} />
-                                                    &nbsp;Accepted{' '}
-                                                </div>
-                                            </Text>
-                                            <Text color='dimmed' fw={700} size={12}>
-                                                1200ms
-                                            </Text>
-                                            <Text color='dimmed' fw={700} size={12}>
-                                                900kb
-                                            </Text>
-                                            <Text color='dimmed' fw={700} size={12}>
-                                                10 points
-                                            </Text>
-                                        </Group>
-                                    </Accordion.Control>
-                                    <Accordion.Panel>Colors, fonts, shadows and many other parts are customizable to fit your design needs</Accordion.Panel>
-                                </Accordion.Item> */}
-                                <Accordion.Item value='1'>
-                                    <Accordion.Control>
-                                        <Group grow>
-                                            <Text color='dimmed' fw={700} size={13}>
-                                                测试点 #1
-                                            </Text>
-                                            <Text color='blue' fw={700} size={13}>
-                                                <div style={{ alignItems: 'center', display: 'flex' }}>
-                                                    <Loader size={10}/>
-                                                    &nbsp;Judging{' '}
-                                                </div>
-                                            </Text>
-                                            <Text color='dimmed' fw={700} size={12}>
-                                                ms
-                                            </Text>
-                                            <Text color='dimmed' fw={700} size={12}>
-                                                77kb
-                                            </Text>
-                                            <Text color='dimmed' fw={700} size={12}>
-                                                10 points
-                                            </Text>
-                                        </Group>
-                                    </Accordion.Control>
-                                    <Accordion.Panel>
-                                        
-                                        <Text fw={700} size={12}>
-                                            In
-                                        </Text>
+                                */}
+                                            <Accordion.Item value='3'>
+                                                <Accordion.Control>
+                                                    <Group grow>
+                                                        <Text color='dimmed' fw={700} size={13}>
+                                                            测试点 #1
+                                                        </Text>
+                                                        <Text color='green' fw={700} size={13}>
+                                                            <div style={{ alignItems: 'center', display: 'flex' }}>
+                                                                <IconCheck stroke={3} width={13} />
+                                                                &nbsp;Accepted{' '}
+                                                            </div>
+                                                        </Text>
+                                                        <Text color='dimmed' fw={700} size={12}>
+                                                            1200ms
+                                                        </Text>
+                                                        <Text color='dimmed' fw={700} size={12}>
+                                                            900kb
+                                                        </Text>
+                                                        <Text color='dimmed' fw={700} size={12}>
+                                                            10 points
+                                                        </Text>
+                                                    </Group>
+                                                </Accordion.Control>
+                                                <Accordion.Panel>Colors, fonts, shadows and many other parts are customizable to fit your design needs</Accordion.Panel>
+                                            </Accordion.Item>
+                                            <Accordion.Item value='1'>
+                                                <Accordion.Control>
+                                                    <Group grow>
+                                                        <Text color='dimmed' fw={700} size={13}>
+                                                            测试点 #2
+                                                        </Text>
+                                                        <Text color='blue' fw={700} size={13}>
+                                                            <div style={{ alignItems: 'center', display: 'flex' }}>
+                                                                <Loader size={10}/>
+                                                                &nbsp;Judging{' '}
+                                                            </div>
+                                                        </Text>
+                                                        <Text color='dimmed' fw={700} size={12}>
+                                                            ms
+                                                        </Text>
+                                                        <Text color='dimmed' fw={700} size={12}>
+                                                            77kb
+                                                        </Text>
+                                                        <Text color='dimmed' fw={700} size={12}>
+                                                            10 points
+                                                        </Text>
+                                                    </Group>
+                                                </Accordion.Control>
+                                                <Accordion.Panel>
+
+                                                    <Text fw={700} size={12}>
+                                                        In
+                                                    </Text>
+                                                </Accordion.Panel>
+                                            </Accordion.Item>
+                                        </Accordion>
                                     </Accordion.Panel>
                                 </Accordion.Item>
                             </Accordion>
@@ -311,68 +448,71 @@ export function SubmissionResultPage() {
                     </Grid.Col>
                     <Grid.Col span={3}>
                         <NoStyleCard>
+                            <Center><Text color={theme.colorScheme === 'dark' ? 'white' : theme.colors.gray[7]} fw={700} size={14}>洛谷 P1145</Text></Center>
+                        </NoStyleCard>
+                        <Space h={10} />
+                        <StandardCard title={'提交用户'}>
+                            <Center><Badge w={'75%'} radius='sm' size={19} color={'indigo'} style={{textTransform: 'none'}}>smallfang</Badge></Center>
+                        </StandardCard>
+                        <Space h={10} />
+                        <NoStyleCard>
                             <Group grow>
-                                <Text color='dimmed' fw={700} size={'xs'}>
-                                    提交方向
-                                </Text>
-                                <Text color='blue' fw={700} size={'xs'}>
-                                    洛谷P1001
-                                </Text>
+                                <Box>
+                                    <Text tt="uppercase" fz="xs" c="dimmed" fw={700}>
+                                        时间波峰
+                                    </Text>
+                                    <Group position="apart" align="flex-end" spacing={0}>
+                                        <Text size={14} fw={300} >200ms</Text>
+                                    </Group>
+                                </Box>
+                                <Box>
+                                    <Text tt="uppercase" fz="xs" c="dimmed" fw={700}>
+                                        时间平均
+                                    </Text>
+                                    <Group position="apart" align="flex-end" spacing={0}>
+                                        <Text size={14} fw={300}>150ms</Text>
+                                    </Group>
+                                </Box>
                             </Group>
+                        <Space h={10} />
                             <Group grow>
-                                <Text color='dimmed' fw={700} size={'xs'}>
-                                    提交用户
-                                </Text>
-                                <Text color='blue' fw={700} size={'xs'}>
-                                    用户A
-                                </Text>
+                                <Box>
+                                    <Text tt="uppercase" fz="xs" c="dimmed" fw={700}>
+                                        空间波峰
+                                    </Text>
+                                    <Group position="apart" align="flex-end" spacing={0}>
+                                        <Text size={14} fw={300} >1.0 GB</Text>
+                                    </Group>
+                                </Box>
+                                <Box>
+                                    <Text tt="uppercase" fz="xs" c="dimmed" fw={700}>
+                                        空间平均
+                                    </Text>
+                                    <Group position="apart" align="flex-end" spacing={0}>
+                                        <Text size={14} fw={300}>750 MB</Text>
+                                    </Group>
+                                </Box>
                             </Group>
+                            <Space h={10} />
                             <Group grow>
-                                <Text color='dimmed' fw={700} size={'xs'}>
-                                    内存波峰
-                                </Text>
-                                <Text color='blue' fw={700} size={'xs'}>
-                                    150MB
-                                </Text>
+                                <Box>
+                                    <Text tt="uppercase" fz="xs" c="dimmed" fw={700}>
+                                        代码长度
+                                    </Text>
+                                    <Group position="apart" align="flex-end" spacing={0}>
+                                        <Text size={14} fw={300} > 10KB</Text>
+                                    </Group>
+                                </Box>
                             </Group>
-                            <Group grow>
-                                <Text color='dimmed' fw={700} size={'xs'}>
-                                    内存平均
-                                </Text>
-                                <Text color='blue' fw={700} size={'xs'}>
-                                    75MB
-                                </Text>
-                            </Group>
-                            <Group grow>
-                                <Text color='dimmed' fw={700} size={'xs'}>
-                                    时间波峰
-                                </Text>
-                                <Text color='blue' fw={700} size={'xs'}>
-                                    50s
-                                </Text>
-                            </Group>
-                            <Group grow>
-                                <Text color='dimmed' fw={700} size={'xs'}>
-                                    时间平均
-                                </Text>
-                                <Text color='blue' fw={700} size={'xs'}>
-                                    25s
-                                </Text>
-                            </Group>
+                        </NoStyleCard>
+                        <Space h={10} />
+                        <NoStyleCard>
                             <Group grow>
                                 <Text color='dimmed' fw={700} size={'xs'}>
                                     提交时间
                                 </Text>
                                 <Text color='blue' fw={700} size={'xs'}>
                                     2023.06.14
-                                </Text>
-                            </Group>
-                            <Group grow>
-                                <Text color='dimmed' fw={700} size={'xs'}>
-                                    代码长度
-                                </Text>
-                                <Text color='blue' fw={700} size={'xs'}>
-                                    3.1KB
                                 </Text>
                             </Group>
                             <Space h={5}></Space>

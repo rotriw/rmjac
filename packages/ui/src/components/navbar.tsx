@@ -37,7 +37,7 @@ const useStyles = createStyles((theme) => ({
         paddingLeft: theme.spacing.md,
         paddingRight: theme.spacing.md,
         textDecoration: 'none',
-        color: theme.colorScheme === 'dark' ? theme.white : theme.colors.gray[7],
+        color: theme.colorScheme === 'dark' ? theme.white : theme.colors.gray[5],
         fontWeight: 500,
         fontSize: theme.fontSizes.sm,
 
@@ -63,7 +63,7 @@ const useStyles = createStyles((theme) => ({
 
     linkActive: {
         '&, &:hover': {
-            color: theme.colors.blue[8],
+            color: theme.colors.blue[9],
         },
     },
 
@@ -137,7 +137,7 @@ export function Navbar({ links, title, type }: HeadersProps) {
     const [opened, { toggle }] = useDisclosure(false);
     const { classes, cx, theme } = useStyles();
     const [userMenuOpened, setUserMenuOpened] = useState(false);
-    
+
     const items =
         type === 'route'
             ? links.map((item) => (
@@ -163,6 +163,7 @@ export function Navbar({ links, title, type }: HeadersProps) {
                 <div style={{ width: '100%', textAlign: 'right' }} className={classes.burger}>
                     <Burger opened={opened} onClick={toggle} className={classes.burger} size='sm' />
                 </div>
+                { window.web?.user.status !== 'no' ?
                 <div style={{marginLeft: 'auto'}}>
                     <Menu
                         width={250}
@@ -177,7 +178,7 @@ export function Navbar({ links, title, type }: HeadersProps) {
                         >
                             <Group spacing={7}>
                                 <Text weight={500} size="sm" sx={{ lineHeight: 1, color: theme.colorScheme === 'dark' ? 'white' : theme.colors.gray[7] }} mr={3}>
-                                    测试账号
+                                    {window.web?.user.username}
                                 </Text>
                                 <IconChevronDown size={rem(12)} stroke={1.5} />
                             </Group>
@@ -194,7 +195,7 @@ export function Navbar({ links, title, type }: HeadersProps) {
                             <Menu.Item icon={<IconLogout size="0.9rem" stroke={1.5} />} color='red'>退出登录</Menu.Item>
                         </Menu.Dropdown>
                     </Menu>
-                </div>
+                </div> : <></> }
                 <Transition transition='pop-top-right' duration={200} mounted={opened}>
                     {(styles) => (
                         <Paper className={classes.dropdown} withBorder style={styles}>

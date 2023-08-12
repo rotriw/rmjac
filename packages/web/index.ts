@@ -9,10 +9,12 @@ import { RenderFromPage } from 'rmjac-core/service/render';
 import { perm } from 'rmjac-core/declare/perm';
 import { user } from 'rmjac-core/model/user';
 import { Logger } from 'log4js';
-import { runModel } from 'rmjac-config';
+import { config, runModel } from 'rmjac-config';
 import { RError } from 'rmjac-core/declare/error';
 import * as loggerInit from './logger';
 import * as fs from 'fs';
+import { Server } from 'socket.io';
+import { createServer } from 'http';
 
 export const app = new Koa();
 const router = new KoaRouter();
@@ -24,6 +26,16 @@ app.use(cors());
 app.use(KoaBody());
 app.use(bodyParser());
 app.use(router.routes());
+export const httpServer = createServer(app.callback());
+
+export const io = new Server(httpServer, {
+    cors: {
+        origin: 'https://admin.socket.io',
+        allowedHeaders: '*',
+        credentials: true
+    },
+});
+
 
 type KoaContext = Context;
 
@@ -55,7 +67,7 @@ async function handle(ctx: KoaContext, HandlerClass: any) {
     if (method === 'post' && body?.operation !== '') {
         operation = transWord(body.operation);
     }
-    const h = (new HandlerClass()) as Handler;
+    const h = new HandlerClass() as Handler;
     const args = {};
     h.ctx = ctx;
     h.token = ctx.cookies.get('token') || '';
@@ -82,12 +94,12 @@ async function handle(ctx: KoaContext, HandlerClass: any) {
                 ctx.body = await RenderFromPage({
                     type: 'back',
                     template: 'Blocked',
-                })
+                });
             } else {
                 ctx.body = JSON.stringify({
                     status: 'error',
                     type: tErr?.errorType,
-                    param: tErr?.errorParam
+                    param: tErr?.errorParam,
                 });
             }
             ctx.response.status = 200;
@@ -109,7 +121,7 @@ export function Route(name: string, link: string, Handler: any) {
     });
 }
 
-export async function apply(logger: Logger) {
+export async function applyPrepare(logger: Logger) {
     if (runModel.env === 'prod') {
         await app.use(
             KoaStatic(path.join(__dirname, '..', 'ui', 'dist', 'assets'), {
@@ -117,9 +129,14 @@ export async function apply(logger: Logger) {
             })
         );
     }
-    await app.listen(runModel.port);
-    logger.info(`Backend listen :${runModel.port}`);
     loggerInit.apply(logger);
+    await httpServer.listen(runModel.port);
+    // await app.listen();
+    logger.info(`Backend listen :${runModel.port}`);
+    // Start ws server with ws.
+}
+
+export async function applyAfter(logger: Logger) {
     const handlerPath = path.join(__dirname, 'handler');
     const handlerDir = await fs.readdirSync(handlerPath);
     for (const pack of handlerDir) {

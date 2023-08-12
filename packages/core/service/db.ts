@@ -54,7 +54,7 @@ class dbClass {
         return res;
     }
 
-    async change(model: string, where: Filter<MongoDocument>, newdata: UpdateFilter<Document>, options = {}) {
+    async change(model: string, where: Filter<MongoDocument>, newdata: UpdateFilter<MongoDocument>, options = {}) {
         const client = new MongoClient(this.url);
         const database = client.db(this.dbname);
         const coll = database.collection(model);

@@ -27,6 +27,7 @@
         "log4js": "^6.9.1",
         "rmjac-config": "*",
         "rmjac-core": "*",
+        "rmjac-web": "*",
         "source-map-support": "^0.5.21",
         "uuid": "^9.0.0",
         "yargs": "^17.7.2"

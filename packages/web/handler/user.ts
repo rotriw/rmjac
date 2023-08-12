@@ -1,5 +1,5 @@
 import { sha512 } from 'js-sha512';
-import { Handler, Route } from '../handle';
+import { Handler, Route } from '../';
 import { UserSchema, user } from 'rmjac-core/model/user';
 import { RenderFromPage } from 'rmjac-core/service/render';
 import { param } from 'rmjac-core/utils/decorate';

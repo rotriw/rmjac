@@ -1,0 +1,6 @@
+{
+    "load": ["rmjac-eventbus"],
+    "server": "edge",
+    "serverlink": "http://127.0.0.1:8060/",
+    "serverPwd": "rtqwq"
+}

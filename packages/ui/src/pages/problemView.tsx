@@ -78,22 +78,22 @@ export function ProblemViewPage() {
                             </Text>
                         </NoStyleCard>
                         <Space h={10}></Space>
-                        <NoStyleCard>   
+                        <NoStyleCard>
                             <Text size={18} fw={600}>
                                 题目背景
                             </Text><Space h={10}></Space>
-                            有一个 
+                            有一个
 
-a×b 的整数组成的矩阵，现请你从中找出一个 
+a×b 的整数组成的矩阵，现请你从中找出一个
 
 n×n 的正方形区域，使得该区域所有数中的最大值和最小值的差最小。
                             <Space h={20}></Space>
                             <Text size={18} fw={600}>
                                 题目描述
                             </Text><Space h={10}></Space>
-                            有一个 
+                            有一个
 
-a×b 的整数组成的矩阵，现请你从中找出一个 
+a×b 的整数组成的矩阵，现请你从中找出一个
 
 n×n 的正方形区域，使得该区域所有数中的最大值和最小值的差最小。
                             <Space h={20}></Space>
@@ -206,7 +206,7 @@ n×n 的正方形区域，使得该区域所有数中的最大值和最小值的
                             </Group>
                         </NoStyleCard>
                         <Space h={10}></Space>
-                        <NoStyleCard p={'null'}> 
+                        <NoStyleCard p={'null'}>
                             <Group p='sm' pl={'md'} grow>
                                 <Text color='dimmed' fw={700} size={'xs'}>
                                     历史得分
@@ -230,7 +230,7 @@ n×n 的正方形区域，使得该区域所有数中的最大值和最小值的
                             ]} active={''} />
                         </NoStyleCard>
                         <Space h={10}></Space>
-                        <StandardCard title='分类'> 
+                        <StandardCard title='分类'>
                         <Badge size='sm' radius='xs'>NOIP</Badge>
                         <Space h={5} />
                         <Center><Button size='xs' variant="subtle" color="gray" compact>展开算法标签</Button></Center>

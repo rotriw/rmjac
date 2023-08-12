@@ -177,10 +177,19 @@ export class UserModel {
                 { link: '/worklist', label: '题单' },
                 { link: '/submission', label: '提交记录' },
             ],
+            user: {
+                status: 'no',
+                id: 0,
+                username: '',
+            },
         };
         if (id <= 0) {
             _res.links.push({ link: '/login', label: '注册/登录' });
             return _res;
+        } else {
+            _res.user.status = 'ok';
+            _res.user.id = id;
+            _res.user.username = (await this.getbyId(id)).username;
         }
         if (checkPerm((await perm.getPerm(id) as {user: number}).user, 'user', 'adminHeader')) {
             _res.links.push({ link: '/admin/dashboard', label: '管理面板' });

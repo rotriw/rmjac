@@ -19,6 +19,7 @@ export type ConfigFile = {
         from: string
     },
     server?: 'main' | 'edge',
+    serverlink?: string,
     serverPwd?: string,
     smtp?: Record<string, SMTPConfig>,
     redis?: {
@@ -71,6 +72,8 @@ export const defaultRunModel: RunModel = {
 };
 
 export const runModel: RunModel = defaultRunModel;
+
+export const loaded: string[] = ['rmjac-config'];
 
 export async function apply(logger: Logger, run: RunModel) {
     Object.assign(config, JSON.parse(await fs.readFileSync(run.config).toString()));

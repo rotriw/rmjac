@@ -1,5 +1,5 @@
 import { perm } from 'rmjac-core/declare/perm';
-import { Handler, Route } from '../handle';
+import { Handler, Route } from '../';
 import { user } from 'rmjac-core/model/user';
 import { RenderFromPage } from 'rmjac-core/service/render';
 

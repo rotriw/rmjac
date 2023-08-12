@@ -1,4 +1,4 @@
-import { Handler, Route } from '../handle';
+import { Handler, Route } from '../';
 
 class ProblemPageHandler extends Handler {
 }
