@@ -29,6 +29,7 @@ export interface ProblemSchema {
     version?: Record<string, ProblemContent>;
     versionDisplay?: Record<string, string>;
     tags?: string[];
+    algorithm?: string[];
     timeLimit: number | string;
     memoryLimit: number | string;
     difficult: number | string;
@@ -92,6 +93,7 @@ export class ProblemModel {
         Object.assign(content, {pid});
         await db.update('problem', {pid}, content);
     }
+
 }
 
 export const problem = new ProblemModel();

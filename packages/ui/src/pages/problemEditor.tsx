@@ -126,7 +126,7 @@ export function ProblemEditor() {
     const editorBackGround = useEditor({
         extensions: [
             StarterKit,
-            Mathematics,
+            Mathematics as AnyExtension,
             Underline as AnyExtension,
             Link,
             Superscript as AnyExtension,
@@ -139,7 +139,7 @@ export function ProblemEditor() {
     const editorStateMent = useEditor({
         extensions: [
             StarterKit,
-            Mathematics,
+            Mathematics as AnyExtension,
             Underline as AnyExtension,
             Link,
             Superscript as AnyExtension,
@@ -152,7 +152,7 @@ export function ProblemEditor() {
     const editorInputFormer = useEditor({
         extensions: [
             StarterKit,
-            Mathematics,
+            Mathematics as AnyExtension,
             Underline as AnyExtension,
             Link,
             Superscript as AnyExtension,
@@ -165,7 +165,7 @@ export function ProblemEditor() {
     const editorOutputFormer = useEditor({
         extensions: [
             StarterKit,
-            Mathematics,
+            Mathematics as AnyExtension,
             Underline as AnyExtension,
             Link,
             Superscript as AnyExtension,
@@ -178,7 +178,7 @@ export function ProblemEditor() {
     const editorHint = useEditor({
         extensions: [
             StarterKit,
-            Mathematics,
+            Mathematics as AnyExtension,
             Underline as AnyExtension,
             Link,
             Superscript as AnyExtension,

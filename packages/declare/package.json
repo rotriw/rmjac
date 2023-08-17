@@ -1,0 +1,8 @@
+{
+  "name": "rmjac-declare",
+  "version": "0.1.0",
+  "description": "Project Global Declare.",
+  "main": "index.js",
+  "author": "smallfang",
+  "private": false
+}

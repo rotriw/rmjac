@@ -1,0 +1,69 @@
+export type StandardProblemStatementProp = 'background' | 'statement' | 'inFormer' | 'outFormer' | 'simples' | 'hint' | string;
+
+/*
+* Standard Problem Statement Format.
+* 标准题目陈述格式
+* */
+export interface StandardProblemStatement extends Record<string, Array<string> | string | undefined | Array<{in: string, out: string}>> { // Standard Problem Statement
+    background?: string; // background. / 题目背景 / Only HTML
+    statement?: string; // statement. / 题目描述 / Only HTML
+    inFormer?: string; // In Former. / 输入格式 / Only HTML
+    outFormer?: string; // Out Former. / 输出格式 / Only HTML
+    simples: {
+        in: string; // Simple In / 样例输入 / Texts
+        out: string; // Simple Out / 样例输出 / Texts
+    }[]; // Simples / 样例组 / Texts / Must Required([] if null)
+    hint?: string; // Hint / 提示 / Only HTML
+    showProp: StandardProblemStatementProp[]; // show Prop / 展示的题目格式 /  Must Required([] if null)
+}
+
+
+/*
+* Standard Format / Universal Format.
+* 标准格式 / 全局传输格式
+* */
+export interface Problem { //Standard Problem Schema
+    statement: StandardProblemStatement; // Statement
+    title: string;
+    sources: {
+        platform: string; // 中文
+        pid: string; // 题号
+    }[];
+    tags?: string[]; // events
+    algorithm?: string[]; // 算法标签
+    translate?: StandardProblemStatement; // translate version.
+    allowedPlatform?: {
+        platform: string;
+        pid: string;
+        allowPublic: boolean;
+    }[]; // 可接受的平台及其题目提交位置
+    history?: {
+        score: string;
+    }; // If user login.
+    limit: {
+        time: string;
+        memory: string;
+        difficult: {
+            text: string;
+            color: string;
+            hint: string;
+        }
+    }
+}
+
+/*
+* 英语名称的展示问题 （i18n影响）
+* */
+export const StatementToCNName: Record<string, string | undefined> = {
+    background: '题目背景',
+    statement: '题目描述',
+    inFormer: '输入格式',
+    outFormer: '输出格式',
+    simples: '样例组',
+    hint: '提示',
+    pdf: '题目PDF'
+};
+
+export const PlatformToCNName: Record<string, string | undefined> = {
+    luogu: '洛谷',
+};

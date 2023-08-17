@@ -1,9 +1,47 @@
-import { createStyles, Box, Group, rem, Card, Container, Grid, Space, Text, Badge, Select, Button, useMantineTheme, Loader, Center, NativeSelect, Tooltip } from '@mantine/core';
-import React from 'react';
+import {
+    createStyles,
+    Box,
+    Divider,
+    Group,
+    rem,
+    Card,
+    Container,
+    Grid,
+    Space,
+    Text,
+    Badge,
+    Select,
+    Button,
+    useMantineTheme,
+    Loader,
+    Center,
+    NativeSelect,
+    Tooltip,
+    Tabs, Input, Alert, Menu, Code
+} from '@mantine/core';
+import React, { useState } from 'react';
 import { NoStyleCard, StandardCard } from '../components/card';
-import { IconBrandTelegram, IconCaretDown, IconChevronDown, IconClock, IconDatabase, IconExternalLink, IconHistory, IconLanguageHiragana, IconListSearch, IconMenuOrder, IconSend, IconTransferIn } from '@tabler/icons-react';
+import {
+    IconAlertCircle,
+    IconBrandTelegram,
+    IconCaretDown,
+    IconChevronDown,
+    IconClock,
+    IconDatabase,
+    IconExternalLink,
+    IconHistory,
+    IconLanguageHiragana,
+    IconListSearch,
+    IconMenuOrder,
+    IconSend,
+    IconChevronsDown,
+    IconTransferIn, IconChevronsUp, IconArrowLeft
+} from '@tabler/icons-react';
 import Editor from '@monaco-editor/react';
 import { standardSelect } from '../styles/select';
+import {Prism} from '@mantine/prism';
+import { Problem, StandardProblemStatement } from 'rmjac-declare/problem';
+import { ProblemDescription, ProblemStatementShow, ProblemTitle } from '../components/problem';
 
 const useStyles = createStyles((theme) => ({
     link: {
@@ -61,23 +99,199 @@ export function RightIcons({ links, active }: TableOfContentsProps) {
     );
 }
 
-export function ProblemViewPage() {
-    const theme = useMantineTheme();
+export function ProblemViewPageIn({data, state}: {data: Problem, state: 'view' | 'submit'}) {
+    const [mode, setMode] = useState(state);
+    const LeftGrid = mode === 'view' ? (<>
+        <ProblemStatementShow data={data.statement} />
+    </>) : (<>
+        
+    </>);
+    const RightGrid = (<>
+        <ProblemDescription {...data.limit} />
+    </>);
     return (
         <>
             <Container>
                 <Grid>
                     <Grid.Col span={9}>
-                        <NoStyleCard>
-                            <Text size={18} fw={600}>
-                                    直角三角形
-                            </Text>
-                            <Space h={1}></Space>
-                            <Text size={13} fw={300} color={theme.colors.gray[theme.colorScheme === 'dark' ? 4 : 7]}>
-                                洛谷 P2216
-                            </Text>
-                        </NoStyleCard>
+                        <ProblemTitle setMode={setMode} title='A+B Problem' source={[{platform: 'luogu', pid: 'P1000'}, {platform: 'codeforces', pid: '100A'}]} mode={mode} />
                         <Space h={10}></Space>
+                        {LeftGrid}
+                    </Grid.Col>
+                    <Grid.Col span={3}>
+                        {RightGrid}
+                    </Grid.Col>
+                </Grid>
+            </Container>
+        </>
+    )
+}
+
+export function ProblemViewPage() {
+    const theme = useMantineTheme();
+    const [mode, setMode] = useState('view');
+    return (
+        <>
+            <Container>
+                <Grid>
+                    <Grid.Col span={9}>
+                        <ProblemTitle setMode={setMode} title='A+B Problem' source={[{platform: 'luogu', pid: 'P1000'}, {platform: 'codeforces', pid: '100A'}]} mode={mode} />
+                        <Space h={10}></Space>
+                        <Tabs onTabChange={(item) => {
+                            console.log(item);
+                        }} defaultValue="chat" styles={(theme) => ({
+                                tab: {
+                                    borderBottomWidth: 3,
+                                    fontWeight: 700
+                                },
+                                tabsList: {
+                                    borderBottomWidth: 0,
+                                }
+                        })}>
+                            <NoStyleCard>
+                                
+                                <Tabs.List>
+                                    <Tabs.Tab value="luogu">原版</Tabs.Tab>
+                                    <Tabs.Tab value="cf">翻译</Tabs.Tab>  
+                                    {/* <Tabs.Tab value="chat">直接提交</Tabs.Tab>
+                                    <Tabs.Tab value="gallery">同步提交</Tabs.Tab> */}
+                                    {/*<Tabs.Tab value="settings">存档</Tabs.Tab>*/}
+                                </Tabs.List>
+                            </NoStyleCard>
+                            <Space h={10}/>
+                            {/* <NoStyleCard>
+                                <Tabs.Panel value="gallery">
+                                    <Group>
+                                        <NativeSelect
+                                            data={[
+                                                {
+                                                    label: '洛谷',
+                                                    value: 'Luogu',
+                                                }
+                                            ]}
+                                            label='平台'
+                                            name='platform'
+                                            w={100}
+                                            variant='filled'
+                                            rightSection={<></>}
+                                            rightSectionWidth={1}
+                                        />
+                                        <NativeSelect
+                                            data={[
+                                                {
+                                                    label: 'smallfangddasdfsasdfaslfjadskl',
+                                                    value: '99640',
+                                                },
+                                            ]}
+                                            label='同步帐号'
+                                            name='private'
+                                            variant='filled'
+                                            rightSection={<></>}
+                                            rightSectionWidth={20}
+                                        />
+                                    </Group>
+                                    <Space h={10} />
+                                    <Button size={'xs'} className={'shadowButton'}>同步</Button>
+                                    <Space h={5} />
+                                    <div style={{display: 'none'}}><Divider my="xs" label={'通过提交记录同步'} labelPosition="center" />
+                                    <Space  h={5} />
+                                    <Group>
+                                        <NativeSelect
+                                            data={[
+                                                {
+                                                    label: '洛谷',
+                                                    value: 'Luogu',
+                                                }
+                                            ]}
+                                            label='平台'
+                                            name='platform'
+                                            description={'已通过的提交'}
+                                            w={100}
+                                            variant='filled'
+                                            rightSection={<></>}
+                                            rightSectionWidth={1}
+                                        />
+                                        <Input.Wrapper label="提交记录" description={'RID / link 均可'}>
+                                            <Input w={300} variant={'filled'} placeholder={'数字 / 链接 / 字符串'}  />
+                                        </Input.Wrapper>
+                                    </Group>
+                                    <Space h={10} />
+                                    <Button size={'xs'} className={'shadowButton'}>同步</Button>
+                                    </div>
+                                    <Center style={{ alignItems: 'center', display: 'flex' }}><Text fw={700} color={'dimmed'} size={14} style={{ alignItems: 'center', display: 'flex' }}><IconChevronsDown stroke={2} size={14} ></IconChevronsDown>&nbsp;通过记录同步</Text></Center>
+                                </Tabs.Panel>
+                                <Tabs.Panel value="chat">
+                                    <Group>
+                                        <NativeSelect
+                                            data={[
+                                                {
+                                                    label: 'C++',
+                                                    value: 'cpp',
+                                                },
+                                                {
+                                                    label: 'C',
+                                                    value: 'c',
+                                                },
+                                                {
+                                                    label: 'Java',
+                                                    value: 'java',
+                                                },
+                                            ]}
+                                            label='语言'
+                                            name='language'
+                                            w={100}
+                                            variant='filled'
+                                            rightSection={<></>}
+                                            rightSectionWidth={1}
+                                        />
+                                        <NativeSelect
+                                            data={[
+                                                {
+                                                    label: '洛谷',
+                                                    value: 'Luogu',
+                                                }
+                                            ]}
+                                            label='平台'
+                                            name='platform'
+                                            w={100}
+                                            variant='filled'
+                                            rightSection={<></>}
+                                            rightSectionWidth={1}
+                                        />
+                                        <NativeSelect
+                                            data={[
+                                                {
+                                                    label: '公共帐号',
+                                                    value: 'private',
+                                                },
+                                                {
+                                                    label: 'smallfangddasdfsasdfaslfjadskl',
+                                                    value: '99640',
+                                                },
+                                            ]}
+                                            label='提交账号'
+                                            name='private'
+                                            variant='filled'
+                                            rightSection={<></>}
+                                            rightSectionWidth={20}
+                                        />
+
+                                    </Group>
+                                    <Space h={10} />
+                                    <Alert radius={'md'} icon={<IconAlertCircle size="1rem" />} title="提示" color="red">
+                                        <Text size={12.5} color={theme.colorScheme === 'dark' ? theme.colors.red[0] :  theme.colors.red[8]}>
+                                            您的帐号未配置 / 您可以点击 <span size={12.5} style={{color: theme.colorScheme === 'dark' ? theme.colors.blue[0] :  theme.colors.blue[8]}}>
+                                        这里</span> 进行临时登录。
+                                        </Text>
+                                    </Alert>
+                                    <Space h={5} />
+                                    <Space h={20} />
+                                    <Editor height={300}></Editor>
+                                    <Space h={10} />
+                                    <Button size={'xs'} className={'shadowButton'}>提交代码</Button>
+                                </Tabs.Panel>
+                            </NoStyleCard> */}
+
                         <NoStyleCard>
                             <Text size={18} fw={600}>
                                 题目背景
@@ -89,13 +303,52 @@ a×b 的整数组成的矩阵，现请你从中找出一个
 n×n 的正方形区域，使得该区域所有数中的最大值和最小值的差最小。
                             <Space h={20}></Space>
                             <Text size={18} fw={600}>
-                                题目描述
-                            </Text><Space h={10}></Space>
-                            有一个
-
-a×b 的整数组成的矩阵，现请你从中找出一个
-
-n×n 的正方形区域，使得该区域所有数中的最大值和最小值的差最小。
+                                样例组
+                            </Text><Space h={15}></Space>
+                            <Text size={16} fw={600}>
+                                样例#1
+                            </Text>
+                            <Space h={5}></Space>
+                            <Group grow>
+                                <div>
+                                    <Text size={14} fw={500}>
+                                        输入样例
+                                    </Text><Space h={2}></Space><Code block style={{backgroundColor: theme.colorScheme === 'dark' ? theme.colors?.dark[7] : theme.colors?.gray[1] }}>
+                                    10 12
+                                </Code></div>
+                                <div><Text size={14} fw={500}>
+                                    输出样例
+                                </Text><Space h={2}></Space><Code block style={{backgroundColor: theme.colorScheme === 'dark' ? theme.colors?.dark[7] : theme.colors?.gray[1] }}>
+                                    10 12
+                                </Code></div>
+                            </Group><Space h={15}></Space>
+                            <Text size={16} fw={600}>
+                                样例 #2
+                            </Text>
+                            <Space h={5}></Space>
+                            <Group grow>
+                                <div>
+                                    <Grid>
+                                        <Grid.Col span={10}>
+                                            <Text size={14} fw={500}>
+                                                输入样例
+                                            </Text>
+                                        </Grid.Col>
+                                        <Grid.Col span={2}>
+                                            <Button fullWidth color='indigo' variant='light' compact size='xs'>
+                                                复制
+                                            </Button>
+                                        </Grid.Col>
+                                    </Grid>
+                                    <Space h={4}></Space><Code block style={{backgroundColor: theme.colorScheme === 'dark' ? theme.colors?.dark[7] : theme.colors?.gray[1] }}>
+                                    10 12
+                                </Code></div>
+                                <div><Text size={14} fw={500}>
+                                    输出样例
+                                </Text><Space h={2}></Space><Code block style={{backgroundColor: theme.colorScheme === 'dark' ? theme.colors?.dark[7] : theme.colors?.gray[1] }}>
+                                    10 12
+                                </Code></div>
+                            </Group>
                             <Space h={20}></Space>
                             <Text size={18} fw={600}>
                                 输入格式
@@ -107,104 +360,14 @@ n×n 的正方形区域，使得该区域所有数中的最大值和最小值的
                             一个整数C, 表示A+B
                         </NoStyleCard>
                         <Space h={10}></Space>
-                        <NoStyleCard>
-                            <Text size={18} fw={600}>
-                                提交代码
-                            </Text><Space h={10}></Space>
-                            <Group>
-                            <NativeSelect
-                                data={[
-                                    {
-                                        label: 'C++',
-                                        value: 'cpp',
-                                    },
-                                    {
-                                        label: 'C',
-                                        value: 'c',
-                                    },
-                                    {
-                                        label: 'Java',
-                                        value: 'java',
-                                    },
-                                ]}
-                                label='语言'
-                                name='language'
-                                w={100}
-                                variant='filled'
-                                rightSection={<></>}
-                                rightSectionWidth={1}
-                            />
-                            <NativeSelect
-                                data={[
-                                    {
-                                        label: '洛谷',
-                                        value: 'Luogu',
-                                    }
-                                ]}
-                                label='平台'
-                                name='platform'
-                                w={100}
-                                variant='filled'
-                                rightSection={<></>}
-                                rightSectionWidth={1}
-                            />
-                            <NativeSelect
-                                data={[
-                                    {
-                                        label: '公用账号',
-                                        value: 'public',
-                                    },
-                                    {
-                                        label: '私有账号',
-                                        value: 'private',
-                                    },
-                                ]}
-                                label='方式'
-                                name='language'
-                                w={100}
-                                variant='filled'
-                                rightSection={<></>}
-                                rightSectionWidth={1}
-                            />
-                            </Group>
-                            <Space h={20} />
-                            <Editor loading={<Loader></Loader>} theme={theme.colorScheme === 'dark' ? 'vs-dark' : 'light'} language='cpp' height={500}></Editor>
-                            <Space h={10} />
-                            <Button radius={'xl'} >提交代码</Button>
-                        </NoStyleCard>
+
+                        </Tabs>
+
+
                     </Grid.Col>
                     <Grid.Col span={3}>
 
-                    <NoStyleCard>
-                            <Group grow>
-                                <Box>
-                                    <Text tt="uppercase" fz="xs" c="dimmed" fw={700}>
-                                        时间限制
-                                    </Text>
-                                    <Group position="apart" align="flex-end" spacing={0}>
-                                        <Text size={14} fw={300} >1.0s~3.0s</Text>
-                                    </Group>
-                                </Box>
-                                <Box>
-                                    <Text tt="uppercase" fz="xs" c="dimmed" fw={700}>
-                                        空间限制
-                                    </Text>
-                                    <Group position="apart" align="flex-end" spacing={0}>
-                                        <Text size={14} fw={300}>1GB</Text>
-                                    </Group>
-                                </Box>
-                                <Box>
-                                    <Text tt="uppercase" fz="xs" c="dimmed" fw={700}>
-                                        难度
-                                    </Text>
-                                    <Group position="apart" align="flex-end" spacing={0}>
-                                        <Tooltip.Floating label="省选/NOI-" >
-                                            <Text size={14} fw={300} color='darkblue'>Luogu/7</Text>
-                                        </Tooltip.Floating>
-                                    </Group>
-                                </Box>
-                            </Group>
-                        </NoStyleCard>
+                    
                         <Space h={10}></Space>
                         <NoStyleCard p={'null'}>
                             <Group p='sm' pl={'md'} grow>
@@ -218,15 +381,7 @@ n×n 的正方形区域，使得该区域所有数中的最大值和最小值的
 
                             <RightIcons links={[
                                     {label: <div style={{alignItems: 'center', display: 'flex'}}><IconHistory size={15} stroke={1.5}></IconHistory>&nbsp;历史提交</div>, keys:'send', order: 1, link: '#'},
-                                ]} active={''} />
-                        </NoStyleCard>
-                        <Space h={10}></Space>
-                        <NoStyleCard p={'null'}>
-                            <RightIcons links={[
-                                {label: <div style={{alignItems: 'center', display: 'flex'}}><IconBrandTelegram size={15} stroke={1.5}></IconBrandTelegram>&nbsp;远程提交</div>, keys:'send', order: 1, link: '#'},
-                                {label: <div style={{alignItems: 'center', display: 'flex'}}><IconExternalLink size={15} stroke={1.5}></IconExternalLink>&nbsp;原题连接</div>, order: 1, keys:'re',  link: '#'},
-                                {label: <div style={{alignItems: 'center', display: 'flex'}}><IconTransferIn size={15} stroke={1.5}></IconTransferIn>&nbsp;保存至题单</div>, order: 1, keys:'save',  link: '#'},
-                                {label: <div style={{alignItems: 'center', display: 'flex'}}><IconLanguageHiragana size={15} stroke={1.5}></IconLanguageHiragana>&nbsp;查看翻译</div>, order: 1, keys:'save',  link: '#'},
+                                    {label: <div style={{alignItems: 'center', display: 'flex'}}><IconExternalLink size={15} stroke={1.5}></IconExternalLink>&nbsp;原题链接</div>, order: 1, keys:'re',  link: '#'},
                             ]} active={''} />
                         </NoStyleCard>
                         <Space h={10}></Space>

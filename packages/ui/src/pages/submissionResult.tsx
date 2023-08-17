@@ -244,7 +244,7 @@ export function SubmissionResultPage() {
                                     },
                                 }}
                             >
-                                 <Accordion.Item value='4'>
+                                <Accordion.Item value='4'>
                                     <Accordion.Control>
                                         <Group grow>
                                             <Text color='dimmed' fw={700} size={13}>

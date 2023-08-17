@@ -8,3 +8,18 @@
 .rmjac-Container-root {
     max-width: 75% !important;
 }
+
+.shadowButton:hover {
+    animation: dynamics 2s ease infinite;
+    -webkit-animation: dynamics 2s ease infinite;
+    -moz-animation: dynamics 2s ease infinite;
+    box-shadow: rgba(51, 154, 240, 10) 0px 0px 20px;
+}
+
+.shadowButton:active {
+    box-shadow: rgba(51, 154, 240, 10) 0px 0px 20px;
+}
+
+.shadowButton {
+    transition: all 0.1s ease-in-out;
+}
