@@ -25,9 +25,8 @@ export interface ProblemSchema {
     sourceid?: string[];
     pid: number;
     sources?: ProblemSource[];
-    content?: ProblemContent;
+    defaultVersion?: string;
     version?: Record<string, ProblemContent>;
-    versionDisplay?: Record<string, string>;
     tags?: string[];
     algorithm?: string[];
     timeLimit: number | string;

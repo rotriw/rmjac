@@ -19,7 +19,7 @@ import {
     Tooltip,
     Tabs, Input, Alert, Menu, Code
 } from '@mantine/core';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NoStyleCard, StandardCard } from '../components/card';
 import {
     IconAlertCircle,
@@ -38,10 +38,13 @@ import {
     IconTransferIn, IconChevronsUp, IconArrowLeft
 } from '@tabler/icons-react';
 import Editor from '@monaco-editor/react';
-import { standardSelect } from '../styles/select';
+import { standardSelect, standardTab } from '../styles/select';
 import {Prism} from '@mantine/prism';
-import { Problem, StandardProblemStatement } from 'rmjac-declare/problem';
-import { ProblemDescription, ProblemStatementShow, ProblemTitle } from '../components/problem';
+import { PlatformToCNName, Problem, StandardProblemStatement } from 'rmjac-declare/problem';
+import { DirectProblemSubmit, ProblemDescription, ProblemStatementShow, ProblemTitle, SyncProblemSubmit } from '../components/problem';
+import { useParams } from 'react-router-dom';
+import { handleProblem } from '../handlers/problemHandler';
+import { toast } from 'react-hot-toast';
 
 const useStyles = createStyles((theme) => ({
     link: {
@@ -99,291 +102,89 @@ export function RightIcons({ links, active }: TableOfContentsProps) {
     );
 }
 
-export function ProblemViewPageIn({data, state}: {data: Problem, state: 'view' | 'submit'}) {
+interface ProblemViewPage {
+    data: Problem;
+    islogin: boolean; 
+    state: 'view' | 'submit';
+}
+
+
+export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
     const [mode, setMode] = useState(state);
+    const [submit, setSubmitMode] = useState('direct');
+    const [statement, setStatement] = useState(data.version[data.defaultVersion]);
+    const statementVersion = Object.keys(data.version).map((item, index) => {
+        if (item !== data.defaultVersion)
+            return (<Tabs.Tab key={item} value={item}>{PlatformToCNName[item] || item}</Tabs.Tab>)
+        else
+            return (<></>); {/* deepscan-disable-line */}
+    })
+    console.log(statementVersion);
     const LeftGrid = mode === 'view' ? (<>
-        <ProblemStatementShow data={data.statement} />
+        <Tabs onTabChange={(item) => {
+            setStatement(data.version[item as string])
+        }} defaultValue={data.defaultVersion} styles={standardTab}>
+            <NoStyleCard>
+                <Tabs.List>
+                    <Tabs.Tab value={data.defaultVersion}>{PlatformToCNName[data.defaultVersion] || data.defaultVersion}</Tabs.Tab>
+                    {statementVersion}
+                </Tabs.List>
+            </NoStyleCard>
+            <Space h={10}/>
+            <ProblemStatementShow data={statement} />
+        </Tabs>
     </>) : (<>
-        
+        <Tabs onTabChange={(item) => {
+            setSubmitMode(item as string)
+        }} value={submit} styles={standardTab}>
+            <NoStyleCard>
+                <Tabs.List>
+                    <Tabs.Tab value="direct">直接提交</Tabs.Tab>
+                    <Tabs.Tab value="sync">同步提交</Tabs.Tab>      
+                </Tabs.List>
+            </NoStyleCard>
+            <Space h={10}/>
+            <NoStyleCard>
+                <DirectProblemSubmit />
+                <SyncProblemSubmit />
+            </NoStyleCard>
+        </Tabs>
     </>);
     const RightGrid = (<>
         <ProblemDescription {...data.limit} />
+        <Space h={10} />
+        {islogin ? <NoStyleCard p={'null'}>
+            <Group p='sm' pl={'md'} grow>
+                <Text color='dimmed' fw={700} size={'xs'}>
+                    历史得分
+                </Text>
+                <Text color='green' fw={700} size={'xs'}>
+                    100
+                </Text>
+            </Group>
+
+            <RightIcons links={[
+                    {label: <div style={{alignItems: 'center', display: 'flex'}}><IconHistory size={15} stroke={1.5}></IconHistory>&nbsp;历史提交</div>, keys:'send', order: 1, link: '#'},
+                    {label: <div style={{alignItems: 'center', display: 'flex'}}><IconExternalLink size={15} stroke={1.5}></IconExternalLink>&nbsp;原题链接</div>, order: 1, keys:'re',  link: '#'}, //alot of origin how to choose?
+            ]} active={''} />
+        </NoStyleCard> : <NoStyleCard p={'null'}>
+
+            <RightIcons links={[
+                    {label: <div style={{alignItems: 'center', display: 'flex'}}><IconExternalLink size={15} stroke={1.5}></IconExternalLink>&nbsp;原题链接</div>, order: 1, keys:'re',  link: '#'}, //alot of origin how to choose?
+            ]} active={''} />
+        </NoStyleCard>}
     </>);
     return (
         <>
             <Container>
                 <Grid>
                     <Grid.Col span={9}>
-                        <ProblemTitle setMode={setMode} title='A+B Problem' source={[{platform: 'luogu', pid: 'P1000'}, {platform: 'codeforces', pid: '100A'}]} mode={mode} />
+                        <ProblemTitle setMode={setMode} title={data.title} source={data.sources} mode={mode} />
                         <Space h={10}></Space>
                         {LeftGrid}
                     </Grid.Col>
                     <Grid.Col span={3}>
                         {RightGrid}
-                    </Grid.Col>
-                </Grid>
-            </Container>
-        </>
-    )
-}
-
-export function ProblemViewPage() {
-    const theme = useMantineTheme();
-    const [mode, setMode] = useState('view');
-    return (
-        <>
-            <Container>
-                <Grid>
-                    <Grid.Col span={9}>
-                        <ProblemTitle setMode={setMode} title='A+B Problem' source={[{platform: 'luogu', pid: 'P1000'}, {platform: 'codeforces', pid: '100A'}]} mode={mode} />
-                        <Space h={10}></Space>
-                        <Tabs onTabChange={(item) => {
-                            console.log(item);
-                        }} defaultValue="chat" styles={(theme) => ({
-                                tab: {
-                                    borderBottomWidth: 3,
-                                    fontWeight: 700
-                                },
-                                tabsList: {
-                                    borderBottomWidth: 0,
-                                }
-                        })}>
-                            <NoStyleCard>
-                                
-                                <Tabs.List>
-                                    <Tabs.Tab value="luogu">原版</Tabs.Tab>
-                                    <Tabs.Tab value="cf">翻译</Tabs.Tab>  
-                                    {/* <Tabs.Tab value="chat">直接提交</Tabs.Tab>
-                                    <Tabs.Tab value="gallery">同步提交</Tabs.Tab> */}
-                                    {/*<Tabs.Tab value="settings">存档</Tabs.Tab>*/}
-                                </Tabs.List>
-                            </NoStyleCard>
-                            <Space h={10}/>
-                            {/* <NoStyleCard>
-                                <Tabs.Panel value="gallery">
-                                    <Group>
-                                        <NativeSelect
-                                            data={[
-                                                {
-                                                    label: '洛谷',
-                                                    value: 'Luogu',
-                                                }
-                                            ]}
-                                            label='平台'
-                                            name='platform'
-                                            w={100}
-                                            variant='filled'
-                                            rightSection={<></>}
-                                            rightSectionWidth={1}
-                                        />
-                                        <NativeSelect
-                                            data={[
-                                                {
-                                                    label: 'smallfangddasdfsasdfaslfjadskl',
-                                                    value: '99640',
-                                                },
-                                            ]}
-                                            label='同步帐号'
-                                            name='private'
-                                            variant='filled'
-                                            rightSection={<></>}
-                                            rightSectionWidth={20}
-                                        />
-                                    </Group>
-                                    <Space h={10} />
-                                    <Button size={'xs'} className={'shadowButton'}>同步</Button>
-                                    <Space h={5} />
-                                    <div style={{display: 'none'}}><Divider my="xs" label={'通过提交记录同步'} labelPosition="center" />
-                                    <Space  h={5} />
-                                    <Group>
-                                        <NativeSelect
-                                            data={[
-                                                {
-                                                    label: '洛谷',
-                                                    value: 'Luogu',
-                                                }
-                                            ]}
-                                            label='平台'
-                                            name='platform'
-                                            description={'已通过的提交'}
-                                            w={100}
-                                            variant='filled'
-                                            rightSection={<></>}
-                                            rightSectionWidth={1}
-                                        />
-                                        <Input.Wrapper label="提交记录" description={'RID / link 均可'}>
-                                            <Input w={300} variant={'filled'} placeholder={'数字 / 链接 / 字符串'}  />
-                                        </Input.Wrapper>
-                                    </Group>
-                                    <Space h={10} />
-                                    <Button size={'xs'} className={'shadowButton'}>同步</Button>
-                                    </div>
-                                    <Center style={{ alignItems: 'center', display: 'flex' }}><Text fw={700} color={'dimmed'} size={14} style={{ alignItems: 'center', display: 'flex' }}><IconChevronsDown stroke={2} size={14} ></IconChevronsDown>&nbsp;通过记录同步</Text></Center>
-                                </Tabs.Panel>
-                                <Tabs.Panel value="chat">
-                                    <Group>
-                                        <NativeSelect
-                                            data={[
-                                                {
-                                                    label: 'C++',
-                                                    value: 'cpp',
-                                                },
-                                                {
-                                                    label: 'C',
-                                                    value: 'c',
-                                                },
-                                                {
-                                                    label: 'Java',
-                                                    value: 'java',
-                                                },
-                                            ]}
-                                            label='语言'
-                                            name='language'
-                                            w={100}
-                                            variant='filled'
-                                            rightSection={<></>}
-                                            rightSectionWidth={1}
-                                        />
-                                        <NativeSelect
-                                            data={[
-                                                {
-                                                    label: '洛谷',
-                                                    value: 'Luogu',
-                                                }
-                                            ]}
-                                            label='平台'
-                                            name='platform'
-                                            w={100}
-                                            variant='filled'
-                                            rightSection={<></>}
-                                            rightSectionWidth={1}
-                                        />
-                                        <NativeSelect
-                                            data={[
-                                                {
-                                                    label: '公共帐号',
-                                                    value: 'private',
-                                                },
-                                                {
-                                                    label: 'smallfangddasdfsasdfaslfjadskl',
-                                                    value: '99640',
-                                                },
-                                            ]}
-                                            label='提交账号'
-                                            name='private'
-                                            variant='filled'
-                                            rightSection={<></>}
-                                            rightSectionWidth={20}
-                                        />
-
-                                    </Group>
-                                    <Space h={10} />
-                                    <Alert radius={'md'} icon={<IconAlertCircle size="1rem" />} title="提示" color="red">
-                                        <Text size={12.5} color={theme.colorScheme === 'dark' ? theme.colors.red[0] :  theme.colors.red[8]}>
-                                            您的帐号未配置 / 您可以点击 <span size={12.5} style={{color: theme.colorScheme === 'dark' ? theme.colors.blue[0] :  theme.colors.blue[8]}}>
-                                        这里</span> 进行临时登录。
-                                        </Text>
-                                    </Alert>
-                                    <Space h={5} />
-                                    <Space h={20} />
-                                    <Editor height={300}></Editor>
-                                    <Space h={10} />
-                                    <Button size={'xs'} className={'shadowButton'}>提交代码</Button>
-                                </Tabs.Panel>
-                            </NoStyleCard> */}
-
-                        <NoStyleCard>
-                            <Text size={18} fw={600}>
-                                题目背景
-                            </Text><Space h={10}></Space>
-                            有一个
-
-a×b 的整数组成的矩阵，现请你从中找出一个
-
-n×n 的正方形区域，使得该区域所有数中的最大值和最小值的差最小。
-                            <Space h={20}></Space>
-                            <Text size={18} fw={600}>
-                                样例组
-                            </Text><Space h={15}></Space>
-                            <Text size={16} fw={600}>
-                                样例#1
-                            </Text>
-                            <Space h={5}></Space>
-                            <Group grow>
-                                <div>
-                                    <Text size={14} fw={500}>
-                                        输入样例
-                                    </Text><Space h={2}></Space><Code block style={{backgroundColor: theme.colorScheme === 'dark' ? theme.colors?.dark[7] : theme.colors?.gray[1] }}>
-                                    10 12
-                                </Code></div>
-                                <div><Text size={14} fw={500}>
-                                    输出样例
-                                </Text><Space h={2}></Space><Code block style={{backgroundColor: theme.colorScheme === 'dark' ? theme.colors?.dark[7] : theme.colors?.gray[1] }}>
-                                    10 12
-                                </Code></div>
-                            </Group><Space h={15}></Space>
-                            <Text size={16} fw={600}>
-                                样例 #2
-                            </Text>
-                            <Space h={5}></Space>
-                            <Group grow>
-                                <div>
-                                    <Grid>
-                                        <Grid.Col span={10}>
-                                            <Text size={14} fw={500}>
-                                                输入样例
-                                            </Text>
-                                        </Grid.Col>
-                                        <Grid.Col span={2}>
-                                            <Button fullWidth color='indigo' variant='light' compact size='xs'>
-                                                复制
-                                            </Button>
-                                        </Grid.Col>
-                                    </Grid>
-                                    <Space h={4}></Space><Code block style={{backgroundColor: theme.colorScheme === 'dark' ? theme.colors?.dark[7] : theme.colors?.gray[1] }}>
-                                    10 12
-                                </Code></div>
-                                <div><Text size={14} fw={500}>
-                                    输出样例
-                                </Text><Space h={2}></Space><Code block style={{backgroundColor: theme.colorScheme === 'dark' ? theme.colors?.dark[7] : theme.colors?.gray[1] }}>
-                                    10 12
-                                </Code></div>
-                            </Group>
-                            <Space h={20}></Space>
-                            <Text size={18} fw={600}>
-                                输入格式
-                            </Text><Space h={10}></Space>
-                            一行两个整数A, B<Space h={20}></Space>
-                            <Text size={18} fw={600}>
-                                输出格式
-                            </Text><Space h={10}></Space>
-                            一个整数C, 表示A+B
-                        </NoStyleCard>
-                        <Space h={10}></Space>
-
-                        </Tabs>
-
-
-                    </Grid.Col>
-                    <Grid.Col span={3}>
-
-                    
-                        <Space h={10}></Space>
-                        <NoStyleCard p={'null'}>
-                            <Group p='sm' pl={'md'} grow>
-                                <Text color='dimmed' fw={700} size={'xs'}>
-                                    历史得分
-                                </Text>
-                                <Text color='green' fw={700} size={'xs'}>
-                                    100
-                                </Text>
-                            </Group>
-
-                            <RightIcons links={[
-                                    {label: <div style={{alignItems: 'center', display: 'flex'}}><IconHistory size={15} stroke={1.5}></IconHistory>&nbsp;历史提交</div>, keys:'send', order: 1, link: '#'},
-                                    {label: <div style={{alignItems: 'center', display: 'flex'}}><IconExternalLink size={15} stroke={1.5}></IconExternalLink>&nbsp;原题链接</div>, order: 1, keys:'re',  link: '#'},
-                            ]} active={''} />
-                        </NoStyleCard>
                         <Space h={10}></Space>
                         <StandardCard title='分类'>
                         <Badge size='sm' radius='xs'>NOIP</Badge>
@@ -394,5 +195,50 @@ n×n 的正方形区域，使得该区域所有数中的最大值和最小值的
                 </Grid>
             </Container>
         </>
-    );
+    )
+}
+
+export function ProblemViewPage() {
+    const param = useParams();
+    const [pdata, setPdata] = useState<Problem>({
+        version: {
+            'default': {
+                simples: [],
+                showProp: ['loading'],
+                loading: 'loading..'
+            },
+            'ver2': {
+                simples: [{in: '无输入内容', out: 'Hello world!\nHere is rmj.ac'}],
+                statement: '题目描述。',
+                showProp: ['statement', 'simples'],
+            }
+        },
+        defaultVersion: 'default',
+        title: 'Loading...',
+        sources: [],
+        limit: {
+            time: '-',
+            memory: '-',
+            difficult: {
+                text: '-',
+                color: '',
+                hint: ''
+            }
+        }
+
+    });
+    const pid = param.pid || '';
+    useEffect(() => {
+        try {
+            handleProblem(pid as string).then((res: any) => {
+            if (res.status === 'success') {
+                setPdata(pdata);
+            } else {
+                toast.error('题目查询错误。');
+            }
+        }) } catch(err) {
+            toast.error('题目查询错误。');
+        }
+    }, [pid]);
+    return (<ProblemViewPageIn data={pdata as unknown as Problem} state='view' islogin={window.web?.user?.status === 'ok'} />)
 }

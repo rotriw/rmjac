@@ -6,6 +6,7 @@ import { Navbar } from '../components/navbar';
 import React from 'react';
 import { AppFooter } from '../structure/footer';
 import { updateNewPageBackEndData } from '../interfaces/data';
+import { Toaster } from 'react-hot-toast';
 
 const useStyles = createStyles((theme) => ({}));
 
@@ -40,6 +41,18 @@ export function Root({ onThemeChange, type, children }: RootProps) {
             footer={<AppFooter onThemeChange={onThemeChange}></AppFooter>}
             header={<Navbar title={window.web?.title || 'rmj.ac'} links={mainLinks} type={type}></Navbar>}
         >
+        <Toaster
+            position="top-center"
+            toastOptions={{
+                className: '',
+                style: {
+                    fontSize: 14,
+                    fontWeight: 600,
+                    background: theme.colorScheme === 'dark' ? '#363636' : 'white',
+                    color: theme.colorScheme === 'dark' ? '#fff' : '#363636',
+                },
+            }}
+        />
             <Space h={50} />
             {type === 'route' ? <Outlet /> : children}
             <Space h={50} />

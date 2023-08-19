@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MantineProvider, ColorScheme, createEmotionCache } from '@mantine/core';
+import { MantineProvider, ColorScheme, createEmotionCache, useMantineTheme } from '@mantine/core';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Root } from './structure/root';
 import HomePage from './pages/home';
@@ -67,13 +67,14 @@ function App() {
                             },
                             'html, body': {
                                 backgroundColor: theme.colorScheme === 'dark' ? '#2C2E33 !important' : 'white !important',
-                            }
+                            },
                         }),
                         shadows: {
                             xs: '0 4px 10px rgba(0,0,0,0.05), 0 0 1px rgba(0,0,0,0.1);',
                         },
                     }}
                 >
+                    
                     {window?.web?.type === 'back' ? (
                         <Root onThemeChange={onThemeChange} type='direct'>
                             {// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -87,8 +88,8 @@ function App() {
                                     <Route path='' element={<Root type='route' onThemeChange={onThemeChange} />}>
                                         <Route path='' element={<SubmissionResultPage></SubmissionResultPage>} />
                                         <Route path='login' element={<LoginPage></LoginPage>} />
-                                        
-                                        <Route path='problem/:id' element={<ProblemViewPage></ProblemViewPage>} />
+
+                                        <Route path='problem/:pid' element={<ProblemViewPage></ProblemViewPage>} />
                                         <Route path='problem/create' element={<ProblemEditor></ProblemEditor>} />
                                     </Route>
                                 </Routes>

@@ -26,6 +26,7 @@ import { standardSelect } from '../styles/select';
 import { standardTitleColor } from '../styles/color';
 import { alarm } from '../styles/alarm';
 import Cookies from 'js-cookie';
+import { toast } from 'react-hot-toast';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const useStyles = createStyles((theme) => ({
@@ -123,24 +124,11 @@ export default function LoginPage() {
                     <form
                         onSubmit={registerForm.onSubmit(async (data) => {
                             const value = await handleRegister(data);
-                            notifications.show({
-                                title: value.status === 'success' ? '🎉 All Done! ' : '注册失败',
-                                message: (
-                                    <>
-                                        {value.status === 'success'
-                                            ? '您的帐号已经准备就绪。即将跳转至登录界面。'
-                                            : `错误！${registerError[value.type || ''] || '未知错误'}${registerError[value.param || 'default'] ||
-                                        ''}`}
-                                        {value.status === 'error' ? <br /> : <></>}
-                                        {value.status === 'error' ? '若您还需要知道更多信息请查看控制台。' : ''}
-                                    </>
-                                ),
-                                color: value.status === 'error' ? 'red' : 'green',
-                                icon: value.status === 'error' ? <IconX /> : <IconCheck />,
-                                withCloseButton: false,
-
-                                styles: alarm(value.status),
-                            });
+                            if (value.status === 'success') {
+                                toast.success('🎉 All Done! 您的帐号已经准备就绪。');
+                            } else {
+                                toast.error(`${registerError[value.type || ''] || '未知错误'}${registerError[value.param || 'default'] ||''} `)
+                            }
                             console.info('技术参数');
                             console.info(value);
                             if (value.status === 'success') {
@@ -148,12 +136,7 @@ export default function LoginPage() {
                                     if (window.web?.disableJump !== true) {
                                         location.href = '/login';
                                     } else {
-                                        notifications.show({
-                                            title: '通知',
-                                            message: '跳转请求已忽略。',
-                                            color: 'blue',
-                                            icon: <IconInfoSmall />,
-                                        });
+                                        toast.success('已忽略请求。');
                                     }
                                 }, 2000);
                             }
@@ -243,22 +226,11 @@ export default function LoginPage() {
                             // if (!value.data || value.data?.token) {
                             //     value.status === 'error';
                             // }
-                            notifications.show({
-                                title: value.status === 'success' ? '' : '登录失败',
-                                message: (
-                                    <>
-                                        {value.status === 'success'
-                                            ? '欢迎回来！即将返回首页。'
-                                            : `错误！${loginError[value.type || ''] || '未知错误'}${loginError[value.param || 'default'] || ''}。`}
-                                        {value.status === 'error' ? <br /> : <></>}
-                                        {value.status === 'error' ? '若您还需要知道更多信息请查看控制台。' : ''}
-                                    </>
-                                ),
-                                color: value.status === 'error' ? 'red' : 'green',
-                                icon: value.status === 'error' ? <IconX /> : <IconCheck />,
-                                withCloseButton: false,
-                                styles: alarm(value.status),
-                            });
+                            if (value.status === 'success') {
+                                toast.success('欢迎回来！即将返回首页。');
+                            } else {
+                                toast.error(`${loginError[value.type || ''] || '未知错误'}${loginError[value.param || 'default'] || ''}`);
+                            }
                             console.info('技术参数');
                             console.info(value);
                             if (value.status === 'success') {
@@ -266,12 +238,8 @@ export default function LoginPage() {
                                     if (window.web?.disableJump !== true) {
                                         location.href = '/';
                                     } else {
-                                        notifications.show({
-                                            title: '通知',
-                                            message: '跳转请求已忽略。',
-                                            color: 'blue',
-                                            icon: <IconInfoSmall />,
-                                        });
+                                        toast.success('已忽略。');
+                            
                                     }
                                 }, 2000);
                                 Cookies.set('token', value.data?.token || '');

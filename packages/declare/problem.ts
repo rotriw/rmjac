@@ -23,7 +23,8 @@ export interface StandardProblemStatement extends Record<string, Array<string> |
 * 标准格式 / 全局传输格式
 * */
 export interface Problem { //Standard Problem Schema
-    statement: StandardProblemStatement; // Statement
+    version: Record<string, StandardProblemStatement>; // Statement
+    defaultVersion: string; // default
     title: string;
     sources: {
         platform: string; // 中文
@@ -36,7 +37,7 @@ export interface Problem { //Standard Problem Schema
         platform: string;
         pid: string;
         allowPublic: boolean;
-    }[]; // 可接受的平台及其题目提交位置
+    }[]; // 可接受提交的平台及其题目提交位置
     history?: {
         score: string;
     }; // If user login.

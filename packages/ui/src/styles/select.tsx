@@ -11,3 +11,14 @@ export const standardSelect = (theme: MantineTheme) => ({
         '&[data-hovered]': {},
     },
 });
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const standardTab = (theme: MantineTheme) => ({
+    tab: {
+        borderBottomWidth: 3,
+        fontWeight: 700
+    },
+    tabsList: {
+        borderBottomWidth: 0,
+    }
+})
