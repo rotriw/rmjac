@@ -9,7 +9,7 @@ import { RenderFromPage } from 'rmjac-core/service/render';
 import { perm } from 'rmjac-core/declare/perm';
 import { user } from 'rmjac-core/model/user';
 import { Logger } from 'log4js';
-import { config, runModel } from 'rmjac-config';
+import { runModel } from 'rmjac-config';
 import { RError } from 'rmjac-core/declare/error';
 import * as loggerInit from './logger';
 import * as fs from 'fs';

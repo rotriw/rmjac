@@ -1,50 +1,27 @@
 import {
     createStyles,
     Box,
-    Divider,
     Group,
-    rem,
-    Card,
     Container,
     Grid,
     Space,
     Text,
-    Badge,
-    Select,
-    Button,
-    useMantineTheme,
-    Loader,
-    Center,
-    NativeSelect,
-    Tooltip,
-    Tabs, Input, Alert, Menu, Code
+    Tabs
 } from '@mantine/core';
 import React, { useEffect, useState } from 'react';
-import { NoStyleCard, StandardCard } from '../components/card';
+import { NoStyleCard } from '../components/card';
 import {
-    IconAlertCircle,
-    IconBrandTelegram,
-    IconCaretDown,
-    IconChevronDown,
-    IconClock,
-    IconDatabase,
     IconExternalLink,
-    IconHistory,
-    IconLanguageHiragana,
-    IconListSearch,
-    IconMenuOrder,
-    IconSend,
-    IconChevronsDown,
-    IconTransferIn, IconChevronsUp, IconArrowLeft
+    IconHistory
 } from '@tabler/icons-react';
-import Editor from '@monaco-editor/react';
-import { standardSelect, standardTab } from '../styles/select';
-import {Prism} from '@mantine/prism';
-import { PlatformToCNName, Problem, StandardProblemStatement } from 'rmjac-declare/problem';
-import { DirectProblemSubmit, ProblemDescription, ProblemStatementShow, ProblemTitle, SyncProblemSubmit } from '../components/problem';
+import { PlatformToCNName, Problem } from 'rmjac-declare/problem';
+import { DirectProblemSubmit, ProblemDescription, ProblemStatementShow, ProblemTitle, SyncProblemSubmit, TagCard } from '../components/problem';
 import { useParams } from 'react-router-dom';
 import { handleProblem } from '../handlers/problemHandler';
 import { toast } from 'react-hot-toast';
+import 'katex/dist/katex.min.css';
+import renderMathInElement from 'katex/contrib/auto-render';
+import { standardTab } from '../styles/select';
 
 const useStyles = createStyles((theme) => ({
     link: {
@@ -113,16 +90,31 @@ export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
     const [mode, setMode] = useState(state);
     const [submit, setSubmitMode] = useState('direct');
     const [statement, setStatement] = useState(data.version[data.defaultVersion]);
-    const statementVersion = Object.keys(data.version).map((item, index) => {
+    const statementVersion = Object.keys(data.version).map((item) => {
         if (item !== data.defaultVersion)
             return (<Tabs.Tab key={item} value={item}>{PlatformToCNName[item] || item}</Tabs.Tab>)
         else
             return (<></>); {/* deepscan-disable-line */}
     })
-    console.log(statementVersion);
+    useEffect(() => {
+        // console.log('done');
+        renderMathInElement(document.body, {
+            // customised options
+            // • auto-render specific keys, e.g.:
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false},
+                {left: '\\(', right: '\\)', display: false},
+                {left: '\\[', right: '\\]', display: true}
+            ],
+            // • rendering keys, e.g.:
+            throwOnError : false
+        });
+    }, [statement, mode]);
+    // console.log(statementVersion);
     const LeftGrid = mode === 'view' ? (<>
-        <Tabs onTabChange={(item) => {
-            setStatement(data.version[item as string])
+        <Tabs onTabChange={async(item) => {
+            await setStatement(data.version[item as string])
         }} defaultValue={data.defaultVersion} styles={standardTab}>
             <NoStyleCard>
                 <Tabs.List>
@@ -186,11 +178,7 @@ export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
                     <Grid.Col span={3}>
                         {RightGrid}
                         <Space h={10}></Space>
-                        <StandardCard title='分类'>
-                        <Badge size='sm' radius='xs'>NOIP</Badge>
-                        <Space h={5} />
-                        <Center><Button size='xs' variant="subtle" color="gray" compact>展开算法标签</Button></Center>
-                        </StandardCard>
+                        <TagCard event={data.tags || []} algorithm={data.algorithm || []} />
                     </Grid.Col>
                 </Grid>
             </Container>
@@ -201,11 +189,16 @@ export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
 export function ProblemViewPage() {
     const param = useParams();
     const [pdata, setPdata] = useState<Problem>({
+        tags: [{hint: 'NOIP2011提高组', id: 'NOIP2011TG', color: 'blue'}],
+        algorithm: [{hint: '最短路', id: 'alogrithm1', color: 'dark'}],
         version: {
-            'default': {
-                simples: [],
-                showProp: ['loading'],
-                loading: 'loading..'
+            'luogu': {
+                simples: [{in: '4\naabbbb\ncccccc\naabaabaabaa\nbbaabaababaaba', out: '3\n5\n4\n7'}],
+                showProp: ['statement', 'inFormer', 'outFormer', 'simples'],
+                loading: 'loading..',
+                statement: String.raw`如果一个字符串可以被拆分为 $\text{AABB}$ 的形式，其中 $\text{A}$ 和 $\text{B}$ 是任意 <strong>非空</strong> 字符串，则我们称该字符串的这种拆分是优秀的。  <br /> <br />例如，对于字符串 $ \texttt{aabaabaa} $ ，如果令 $\text{A}=\texttt{aab}$，$\text{B}=\texttt{a}$，我们就找到了这个字符串拆分成 $\text{AABB}$ 的一种方式。<br /> <br />一个字符串可能没有优秀的拆分，也可能存在不止一种优秀的拆分。  <br /> <br />比如我们令 $\text{A}=\texttt{a}$，$\text{B}=\texttt{baa}$，也可以用 $\text{AABB}$ 表示出上述字符串；但是，字符串 $\texttt{abaabaa}$ 就没有优秀的拆分。<br /> <br />现在给出一个长度为 $n$ 的字符串 $S$，我们需要求出，在它所有子串的所有拆分方式中，优秀拆分的总个数。这里的子串是指字符串中连续的一段。<br /> <br />以下事项需要注意：<br /> <br />1. 出现在不同位置的相同子串，我们认为是不同的子串，它们的优秀拆分均会被记入答案。<br />2. 在一个拆分中，允许出现 $\text{A}=\text{B}$。例如 $\texttt{cccc}$ 存在拆分 $\text{A}=\text{B}=\texttt{c}$。<br />3. 字符串本身也是它的一个子串。`,
+                inFormer: '每个输入文件包含多组数据。<br /><br />输入文件的第一行只有一个整数 $T$，表示数据的组数。<br /><br />接下来 $T$ 行，每行包含一个仅由英文小写字母构成的字符串 $S$，意义如题所述。',
+                outFormer: '输出 $T$ 行，每行包含一个整数，表示字符串 $S$ 所有子串的所有拆分中，总共有多少个是优秀的拆分。',
             },
             'ver2': {
                 simples: [{in: '无输入内容', out: 'Hello world!\nHere is rmj.ac'}],
@@ -213,16 +206,16 @@ export function ProblemViewPage() {
                 showProp: ['statement', 'simples'],
             }
         },
-        defaultVersion: 'default',
-        title: 'Loading...',
-        sources: [],
+        defaultVersion: 'luogu',
+        title: '优秀的拆分',
+        sources: [{platform: 'luogu', pid: 'P1117'}],
         limit: {
-            time: '-',
-            memory: '-',
+            time: '1.00s',
+            memory: '128MB',
             difficult: {
-                text: '-',
+                text: '隐藏',
                 color: '',
-                hint: ''
+                hint: '测试prop'
             }
         }
 
@@ -230,9 +223,9 @@ export function ProblemViewPage() {
     const pid = param.pid || '';
     useEffect(() => {
         try {
-            handleProblem(pid as string).then((res: any) => {
+            handleProblem(pid as string).then((res) => {
             if (res.status === 'success') {
-                setPdata(pdata);
+                setPdata(res.data as Problem);
             } else {
                 toast.error('题目查询错误。');
             }

@@ -18,6 +18,12 @@ export interface StandardProblemStatement extends Record<string, Array<string> |
 }
 
 
+export interface TagView {
+    hint: string; 
+    id: string;
+    color?: string;
+}
+
 /*
 * Standard Format / Universal Format.
 * 标准格式 / 全局传输格式
@@ -30,8 +36,8 @@ export interface Problem { //Standard Problem Schema
         platform: string; // 中文
         pid: string; // 题号
     }[];
-    tags?: string[]; // events
-    algorithm?: string[]; // 算法标签
+    tags?: TagView[]; // events
+    algorithm?: TagView[]; // 算法标签
     translate?: StandardProblemStatement; // translate version.
     allowedPlatform?: {
         platform: string;

@@ -1,9 +1,11 @@
-import { PlatformToCNName, StandardProblemStatement, StatementToCNName } from 'rmjac-declare/problem';
-import { Alert, Box, Button, Center, Code, Divider, Grid, Group, Input, NativeSelect, Space, Tabs, Text, Tooltip, useMantineTheme } from '@mantine/core';
+import { PlatformToCNName, StandardProblemStatement, StatementToCNName, TagView } from 'rmjac-declare/problem';
+import { Alert, Badge, Box, Button, Center, Code, Divider, Grid, Group, Input, NativeSelect, Space, Tabs, Text, Tooltip, useMantineTheme } from '@mantine/core';
 import React from 'react';
-import { NoStyleCard } from './card';
+import { NoStyleCard, StandardCard } from './card';
 import { IconAlertCircle, IconArrowLeft, IconChevronsDown } from '@tabler/icons-react';
 import { Editor } from '@monaco-editor/react';
+import { useToggle } from '@mantine/hooks';
+// import { renderToString } from 'katex';
 
 interface SimpleShowProp {
     key: number | string;
@@ -64,12 +66,14 @@ function ShowSimple({ id, ind, out }: SimpleShowProp) {
 }
 
 export function ProblemStatementShow({ data }: { data: StandardProblemStatement }) {
+    // console.log(katex);
+    // console.log(renderToString('$233$'));
     const items = data.showProp.map((id) => {
         const item = data[id] as string;
+        
         if (id !== 'simples')
             return (
-                <>
-                    {/* deepscan-disable-line */}
+                <> {/* deepscan-disable-line */}
                     <Text size={18} fw={600}>
                         {StatementToCNName[id] || id}
                     </Text>
@@ -83,9 +87,7 @@ export function ProblemStatementShow({ data }: { data: StandardProblemStatement 
                 return <ShowSimple key={index + 1} id={index + 1} ind={item.in} out={item.out} />;
             });
             return (
-                <>
-                    {' '}
-                    {/* deepscan-disable-line */}
+                <> {/* deepscan-disable-line */}
                     <Text size={18} fw={600}>
                         样例组
                     </Text>
@@ -137,7 +139,7 @@ export function ProblemTitle({ title, source, mode, setMode }: ProblemTitleProp)
                     </Button>
                     &nbsp;
                     <Button variant={'light'} size={'xs'}>
-                        保存至题单
+                        跳转至CPH
                     </Button>
                 </>
             ) : (
@@ -195,7 +197,7 @@ export function ProblemDescription({ time, memory, difficult }: ProblemDescripti
                     </Text>
                     <Group position='apart' align='flex-end' spacing={0}>
                         {difficult.hint !== '' && difficult.hint !== undefined ? (
-                            <Tooltip.Floating label='省选/NOI-'>
+                            <Tooltip.Floating label={difficult.hint}>
                                 <Text size={14} fw={300} color={difficult.color}> {/*TODO: dark system */}
                                     {difficult.text}
                                 </Text>
@@ -273,7 +275,7 @@ export function SyncProblemSubmit() {
         <Space h={10} />
         <Button size={'xs'} className={'shadowButton'}>同步</Button>
         </div>
-        <Center style={{ alignItems: 'center', display: 'flex' }}><Text fw={700} color={'dimmed'} size={14} style={{ alignItems: 'center', display: 'flex' }}><IconChevronsDown stroke={2} size={14} ></IconChevronsDown>&nbsp;通过记录同步</Text></Center>
+        <Center style={{ alignItems: 'center', display: 'flex' }}><Text fw={700} color={'dimmed'} size={14} style={{ alignItems: 'center', display: 'flex' }}><IconChevronsDown stroke={2.4} size={15} ></IconChevronsDown>&nbsp;通过记录同步</Text></Center>
     </Tabs.Panel>);
 }
 
@@ -353,9 +355,34 @@ export function DirectProblemSubmit() {
     </Tabs.Panel>);
 }
 
-export function ProblemSubmit() {
-
+interface TagCardProp {
+    event: TagView[];
+    algorithm: TagView[];
 }
+
+export function TagCard({event, algorithm}: TagCardProp) {
+    const eventShow = event.map((item: TagView) => {
+        return (
+            <Badge key={item.id} size='sm' radius='xs' mr={5} color={item.color || 'blue'}>{item.hint || item.id}</Badge>
+        )
+    })
+    const algorithmShow = algorithm.map((item: TagView) => {
+        return (
+            <Badge key={item.id} size='sm' radius='xs' mr={5} color={item.color || 'blue'}>{item.hint || item.id}</Badge>
+        )
+    })
+    const [showAlgorithm, setStatusAlgorithm]: readonly['close' | 'show', (val?: 'close' | 'show') => void] = useToggle(['close', 'show']);
+    return (<StandardCard title='分类'>
+        {eventShow}
+        {showAlgorithm === 'show' ? algorithmShow : <></>}
+        <Space h={5} />
+        <Center><Button onClick={() => {setStatusAlgorithm()}} size='xs' variant="subtle" color="gray" compact>{showAlgorithm === 'show' ? '收起算法标签' : '展开算法标签'}</Button></Center>
+    </StandardCard>);
+}
+
+// export function ProblemSubmit() {
+
+// }
 
 // export function ShowCard() {
 

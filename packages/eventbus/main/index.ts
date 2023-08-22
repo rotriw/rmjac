@@ -45,18 +45,16 @@ io.of('/edge').on('connection', (socket) => {
         }
     });
 
-    socket.on('qwq', (msg) => {
-        console.log(socket.handshake.auth);
-        console.log(msg);
-        console.log('qwq');
-    })
+    // socket.on('qwq', (msg) => {
+        // console.log(socket.handshake.auth);
+        // console.log(msg);
+        // console.log('qwq');
+    // })
 });
 
-io.of('/edge').on('connection', (socket) => {
-    socket.on('u2', (msg) => {
-        console.log(socket.handshake.auth);
-    });
-});
+// io.of('/edge').on('connection', (socket) => {
+// });
 
+// eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
 export async function apply(loggerI: Logger) {
 }

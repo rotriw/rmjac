@@ -1,7 +1,7 @@
 import { useToggle, upperFirst, useMediaQuery } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
 import { handleLogin, handleRegister, loginError, registerError } from '../handlers/loginHandler';
-import { notifications } from '@mantine/notifications';
+// import { notifications } from '@mantine/notifications';
 import {
     TextInput,
     PasswordInput,
@@ -20,11 +20,11 @@ import {
     createStyles,
 } from '@mantine/core';
 import React, { useState } from 'react';
-import { IconCheck, IconInfoSmall, IconX } from '@tabler/icons-react';
+import { IconCheck, IconX } from '@tabler/icons-react';
 import { StandardCard } from '../components/card';
 import { standardSelect } from '../styles/select';
 import { standardTitleColor } from '../styles/color';
-import { alarm } from '../styles/alarm';
+// import { alarm } from '../styles/alarm';
 import Cookies from 'js-cookie';
 import { toast } from 'react-hot-toast';
 
@@ -108,8 +108,8 @@ export default function LoginPage() {
         },
     });
 
-    const currDate = new Date();
-    const minBirthYear = currDate.getFullYear() - (currDate.getMonth() + 1 < 9 ? 18 : 17);
+    // const currDate = new Date();
+    // const minBirthYear = currDate.getFullYear() - (currDate.getMonth() + 1 < 9 ? 18 : 17);
 
     const largeScreen = useMediaQuery('(min-width: 512px)');
     // const largestScreen = useMediaQuery('(min-width: 700px)');

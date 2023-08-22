@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { MantineProvider, ColorScheme, createEmotionCache, useMantineTheme } from '@mantine/core';
+import { MantineProvider, ColorScheme, createEmotionCache } from '@mantine/core';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Root } from './structure/root';
-import HomePage from './pages/home';
+// import HomePage from './pages/home';
 import LoginPage from './pages/login';
 import store from './store/store';
 import { Provider } from 'react-redux';
@@ -12,6 +12,7 @@ import './app.css';
 import { ProblemViewPage } from './pages/problemView';
 import { SubmissionResultPage } from './pages/submissionResult';
 import { ProblemEditor } from './pages/problemEditor';
+import { EventShow } from './pages/event';
 
 const myCache = createEmotionCache({ key: 'rmjac' });
 
@@ -89,6 +90,7 @@ function App() {
                                         <Route path='' element={<SubmissionResultPage></SubmissionResultPage>} />
                                         <Route path='login' element={<LoginPage></LoginPage>} />
 
+                                        <Route path='event/:eid' element={<EventShow></EventShow>} />
                                         <Route path='problem/:pid' element={<ProblemViewPage></ProblemViewPage>} />
                                         <Route path='problem/create' element={<ProblemEditor></ProblemEditor>} />
                                     </Route>

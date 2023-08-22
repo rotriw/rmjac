@@ -9,6 +9,7 @@ export async function fetch(handler: string, operation: string, data: any) {
 }
 
 export async function updateNewPageBackEndData(path: string) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const datas = await axios.get(`${window.web?.link || ''}${path}?onlyJSON`);
     // window.web = datas.data;
     return ;

@@ -1,4 +1,4 @@
-import { Badge, Button, Card, Center, Container, Grid, Group, Image, Input, Menu, Space, Text, Textarea, UnstyledButton, createStyles, rem, useMantineTheme } from '@mantine/core';
+import { Button, Card, Container, Grid, Group, Input, MantineTheme, Menu, Space, Text, Textarea, UnstyledButton, createStyles, rem, useMantineTheme } from '@mantine/core';
 import React, { useState } from 'react';
 import { StandardCard } from '../components/card';
 import { RichTextEditor, Link } from '@mantine/tiptap';
@@ -69,7 +69,7 @@ const data = [
     { label: '日语', image: '' },
 ];
 
-const useStyles = createStyles((theme: any, { opened }: { opened: boolean }) => ({
+const useStyles = createStyles((theme: MantineTheme, { opened }: { opened: boolean }) => ({
     control: {
         width: rem(100),
         display: 'flex',

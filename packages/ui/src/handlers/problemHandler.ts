@@ -1,26 +1,12 @@
+import { Problem } from 'rmjac-declare/problem';
 import { fetch } from '../interfaces/data';
 
-interface RegisterProp {
-    email: string;
-    username: string;
-    password: string;
-    gender: string;
-}
-
-interface LoginProp {
-    email: string;
-    password: string;
-}
-
-interface Response {
+interface ResponseProblem {
     status: 'success' | 'error';
-    msg?: string;
-    type?: string;
-    data?: unknown;
-    param?: string;
+    data?: Problem;
 }
 
-export async function handleProblem(pid: string): Promise<any> {
+export async function handleProblem(pid: string): Promise<ResponseProblem> {
     const data = await fetch('problem', 'view', { pid });
     return data;
 }

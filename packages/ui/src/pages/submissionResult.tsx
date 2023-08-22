@@ -1,9 +1,6 @@
 import {
-    Button,
     Container,
-    Input,
     Space,
-    TextInput,
     Text,
     createStyles,
     Center,
@@ -13,18 +10,18 @@ import {
     Code,
     Divider,
     Loader,
-    Badge, Box, Tooltip, Textarea
+    Badge, Box, MantineSize
 } from '@mantine/core';
-import { useForm } from '@mantine/form';
-import React, { useState } from 'react';
+import React from 'react';
 import { Prism } from '@mantine/prism';
 import { NoStyleCard, StandardCard } from '../components/card';
 import { standardTitleColor } from '../styles/color';
-import { notifications } from '@mantine/notifications';
-import { IconX, IconCheck, IconInfoSmall, IconClock, IconCircle, IconServer, IconArchive, IconLoader, IconLoader2, IconLoader3 } from '@tabler/icons-react';
-import { alarm } from '../styles/alarm';
-import { random } from 'lodash';
-import { io } from 'socket.io-client';
+// import { notifications } from '@mantine/notifications';
+import { IconCheck } from '@tabler/icons-react';
+// import { IconX, IconCheck, IconInfoSmall, IconClock, IconCircle, IconServer, IconArchive, IconLoader, IconLoader2, IconLoader3 } from '@tabler/icons-react';
+// import { alarm } from '../styles/alarm';
+// import { random } from 'lodash';
+// import { io } from 'socket.io-client';
 // import * as MyPromise from 'some-promise-lib';
 
 
@@ -156,16 +153,7 @@ inline long long solve(void) {
 
 
 export function SubmissionResultPage() {
-    const [contentVditor, setContentVditor] = useState({});
     const { theme } = useStyles();
-
-    const createForm = useForm({
-        initialValues: {
-            topic: '灌水区',
-            title: '',
-            tags: [],
-        },
-    });
 
     // function randomInRange(min, max) {
     //     return Math.random (max - min) + min;
@@ -452,7 +440,7 @@ export function SubmissionResultPage() {
                         </NoStyleCard>
                         <Space h={10} />
                         <StandardCard title={'提交用户'}>
-                            <Center><Badge w={'75%'} radius='sm' size={19} color={'indigo'} style={{textTransform: 'none'}}>smallfang</Badge></Center>
+                            <Center><Badge w={'75%'} radius='sm' size={19 as unknown as MantineSize} color={'indigo'} style={{textTransform: 'none'}}>smallfang</Badge></Center>
                         </StandardCard>
                         <Space h={10} />
                         <NoStyleCard>
