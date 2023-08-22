@@ -30,9 +30,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install ESLint
-        run: |
-          npm install eslint@8.10.0
+      # - name: Install ESLint
+      #   run: |
+      #     npm install eslint@8.10.0
 
       - name: ESLint Check
         run: npx eslint packages/ --max-warnings 0
