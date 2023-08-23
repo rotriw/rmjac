@@ -5,6 +5,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { NavLink } from 'react-router-dom';
 import React from 'react';
 import { IconChevronDown, IconChevronRight, IconDashboard, IconHeart, IconLogout, IconMessage, IconPlayerPause, IconSettings, IconStar, IconSwitchHorizontal, IconTrash } from '@tabler/icons-react';
+import { useTranslation } from 'react-i18next';
 
 const useStyles = createStyles((theme) => ({
     header: {
@@ -138,16 +139,18 @@ export function Navbar({ links, title, type }: HeadersProps) {
     const { classes, cx, theme } = useStyles();
     const [userMenuOpened, setUserMenuOpened] = useState(false);
 
+    const {t} = useTranslation();
+
     const items =
         type === 'route'
             ? links.map((item) => (
                 <NavLink key={item.label} to={item.link} className={(state) => cx(classes.link, state.isActive ? classes.linkActive : '')}>
-                    {item.label}
+                    {t(`header.${item.label}` as const)}
                 </NavLink>
             ))
             : links.map((item) => (
                 <a key={item.label} href={item.link} className={classes.link} >
-                    {item.label}
+                    {t(`header.${item.label}` as const)}
                 </a>
             ));
 

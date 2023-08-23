@@ -22,6 +22,7 @@ import { toast } from 'react-hot-toast';
 import 'katex/dist/katex.min.css';
 import renderMathInElement from 'katex/contrib/auto-render';
 import { standardTab } from '../styles/select';
+import { useTranslation } from 'react-i18next';
 
 const useStyles = createStyles((theme) => ({
     link: {
@@ -88,6 +89,7 @@ interface ProblemViewPage {
 
 export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
     const [mode, setMode] = useState(state);
+    const {t} = useTranslation();
     const [submit, setSubmitMode] = useState('direct');
     const [statement, setStatement] = useState(data.version[data.defaultVersion]);
     const statementVersion = Object.keys(data.version).map((item) => {
@@ -131,8 +133,8 @@ export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
         }} value={submit} styles={standardTab}>
             <NoStyleCard>
                 <Tabs.List>
-                    <Tabs.Tab value="direct">直接提交</Tabs.Tab>
-                    <Tabs.Tab value="sync">同步提交</Tabs.Tab>      
+                    <Tabs.Tab value="direct">{t('problem.directsubmit')}</Tabs.Tab>
+                    <Tabs.Tab value="sync">{t('problem.syncsubmit')}</Tabs.Tab>      
                 </Tabs.List>
             </NoStyleCard>
             <Space h={10}/>
@@ -148,7 +150,7 @@ export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
         {islogin ? <NoStyleCard p={'null'}>
             <Group p='sm' pl={'md'} grow>
                 <Text color='dimmed' fw={700} size={'xs'}>
-                    历史得分
+                    {t('problem.histroyscore')}
                 </Text>
                 <Text color='green' fw={700} size={'xs'}>
                     100
@@ -156,13 +158,13 @@ export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
             </Group>
 
             <RightIcons links={[
-                    {label: <div style={{alignItems: 'center', display: 'flex'}}><IconHistory size={15} stroke={1.5}></IconHistory>&nbsp;历史提交</div>, keys:'send', order: 1, link: '#'},
-                    {label: <div style={{alignItems: 'center', display: 'flex'}}><IconExternalLink size={15} stroke={1.5}></IconExternalLink>&nbsp;原题链接</div>, order: 1, keys:'re',  link: '#'}, //alot of origin how to choose?
+                    {label: <div style={{alignItems: 'center', display: 'flex'}}><IconHistory size={15} stroke={1.5}></IconHistory>&nbsp;{t('problem.historysubmit')}</div>, keys:'send', order: 1, link: '#'},
+                    {label: <div style={{alignItems: 'center', display: 'flex'}}><IconExternalLink size={15} stroke={1.5}></IconExternalLink>&nbsp;{t('problem.originlink')}</div>, order: 1, keys:'re',  link: '#'}, //alot of origin how to choose?
             ]} active={''} />
         </NoStyleCard> : <NoStyleCard p={'null'}>
 
             <RightIcons links={[
-                    {label: <div style={{alignItems: 'center', display: 'flex'}}><IconExternalLink size={15} stroke={1.5}></IconExternalLink>&nbsp;原题链接</div>, order: 1, keys:'re',  link: '#'}, //alot of origin how to choose?
+                    {label: <div style={{alignItems: 'center', display: 'flex'}}><IconExternalLink size={15} stroke={1.5}></IconExternalLink>&nbsp;{t('problem.originlink')}</div>, order: 1, keys:'re',  link: '#'}, //alot of origin how to choose?
             ]} active={''} />
         </NoStyleCard>}
     </>);

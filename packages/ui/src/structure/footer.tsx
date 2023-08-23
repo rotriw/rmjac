@@ -1,7 +1,9 @@
 import { Button, Container, Flex, Footer, Group, Space, Text, rem, useMantineTheme } from '@mantine/core';
 import { useToggle } from '@mantine/hooks';
 import { IconBrandGithub, IconSun, IconMoon } from '@tabler/icons-react';
+import { t } from 'i18next';
 import React, { useEffect } from 'react';
+import i18n from '../utils/i18n';
 
 export function AppFooter({ onThemeChange }: { onThemeChange: () => void }) {
     const theme = useMantineTheme();
@@ -84,16 +86,17 @@ export function AppFooter({ onThemeChange }: { onThemeChange: () => void }) {
                                 Change Style
                             </Button>
 
-                            <a><Button
+                            <Button
                                 // leftIcon={<IconBrandGithub size={13} />}
                                 variant='light'
                                 color='gray'
                                 radius='xs'
                                 size='xs'
                                 compact
+                                onClick={() => {i18n.changeLanguage('zh')}}
                             >
-                                版权申诉
-                            </Button></a>
+                                {t('changelanguage')}
+                            </Button>
                         </Group>
                         <Space h={45}></Space>
                         <Text color='dimmed' fw={800} size={12.5}>

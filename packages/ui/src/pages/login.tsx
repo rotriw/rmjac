@@ -27,6 +27,7 @@ import { standardTitleColor } from '../styles/color';
 // import { alarm } from '../styles/alarm';
 import Cookies from 'js-cookie';
 import { toast } from 'react-hot-toast';
+import { t } from 'i18next';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const useStyles = createStyles((theme) => ({
@@ -43,27 +44,28 @@ function PasswordRequirement({ meets, label }: { meets: boolean; label: string }
     );
 }
 
-const requirements = [
-    { re: /[0-9]/, label: '包含至少 1 位数字' },
-    { re: /[a-z]/, label: '包含至少 1 位小写字母' },
-    { re: /[A-Z]/, label: '包含 1 位大写字母（可选）' },
-    { re: /[$&+,:;=?@#|'<>.^*()%!-]/, label: '包含特殊符号（可选）' },
-];
-
-function getStrength(password: string) {
-    let multiplier = password.length >= 8 ? 0 : 1;
-
-    requirements.forEach((requirement) => {
-        if (!requirement.re.test(password)) {
-            multiplier += 1;
-        }
-    });
-
-    return Math.max(100 - (100 / (requirements.length + 1)) * multiplier, 10);
-}
 
 export default function LoginPage() {
-    const [type, toggle] = useToggle(['登录', '注册']);
+    const requirements = [
+        { re: /[0-9]/, label: t('loginpage.AtleatOneNumber')},
+        { re: /[a-z]/, label: t('loginpage.AtleatOneSmallNumber') },
+        { re: /[A-Z]/, label: t('loginpage.AtleatOneBigNumber')},
+        { re: /[$&+,:;=?@#|'<>.^*()%!-]/, label: t('loginpage.AtleatoneSpecial') },
+    ];
+    
+    function getStrength(password: string) {
+        let multiplier = password.length >= 8 ? 0 : 1;
+    
+        requirements.forEach((requirement) => {
+            if (!requirement.re.test(password)) {
+                multiplier += 1;
+            }
+        });
+    
+        return Math.max(100 - (100 / (requirements.length + 1)) * multiplier, 10);
+    }
+    
+    const [type, toggle] = useToggle(['login', 'register']);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { classes, cx, theme } = useStyles();
     const registerForm = useForm({
@@ -81,9 +83,9 @@ export default function LoginPage() {
             },
             username: (val) => {
                 if (val.length < 4) {
-                    return '用户名需要至少 4 位！';
+                    return t('loginpage.unamelenleast') ;
                 } else if (val.length > 36) {
-                    return '用户名最多只能 36 位！';
+                    return t('loginpage.unamelenup');
                 } else {
                     return;
                 }
@@ -120,14 +122,14 @@ export default function LoginPage() {
                 <Text size='lg' weight={700} c={standardTitleColor(theme)} mb='sm'>
                     {type}
                 </Text>
-                {type === '注册' ? (
+                {type === 'register' ? (
                     <form
                         onSubmit={registerForm.onSubmit(async (data) => {
                             const value = await handleRegister(data);
                             if (value.status === 'success') {
-                                toast.success('🎉 All Done! 您的帐号已经准备就绪。');
+                                toast.success(t('loginpage.accountprepared'));
                             } else {
-                                toast.error(`${registerError[value.type || ''] || '未知错误'}${registerError[value.param || 'default'] ||''} `)
+                                toast.error(`${registerError[value.type || ''] || t('ukeerror')}${registerError[value.param || 'default'] ||''} `)
                             }
                             console.info('技术参数');
                             console.info(value);
@@ -146,7 +148,7 @@ export default function LoginPage() {
                         <Stack>
                             <TextInput
                                 name='username'
-                                required={type === '注册'}
+                                required={type === 'register'}
                                 label='用户名'
                                 placeholder='您的用户名'
                                 {...registerForm.getInputProps('username')}
@@ -195,15 +197,15 @@ export default function LoginPage() {
                                     </Popover.Target>
                                     <Popover.Dropdown>
                                         <Progress color={color} value={strength} size={5} mb='xs' />
-                                        <PasswordRequirement label='至少 8 位密码' meets={registerForm.values.password.length >= 8} />
-                                        <PasswordRequirement label='至多 36 位密码' meets={registerForm.values.password.length <= 36} />
+                                        <PasswordRequirement label={t('At_least_8_letter')} meets={registerForm.values.password.length >= 8} />
+                                        <PasswordRequirement label={t('At_most_36_letter')} meets={registerForm.values.password.length <= 36} />
                                         {checks}
                                     </Popover.Dropdown>
                                 </Popover>
                             </Box>
 
                             <Checkbox
-                                required={type === '注册'}
+                                required={type === 'register'}
                                 label='我同意用户条款'
                                 checked={registerForm.values.terms}
                                 {...registerForm.getInputProps('terms')}

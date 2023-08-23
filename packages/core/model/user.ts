@@ -171,11 +171,11 @@ export class UserModel {
         const _res = {
             title: 'rmj.ac',
             links: [
-                { link: '/', label: '主页' },
-                { link: '/problem', label: '题目' },
-                { link: '/contest', label: '比赛' },
-                { link: '/worklist', label: '题单' },
-                { link: '/submission', label: '提交记录' },
+                { link: '/', label: 'mainpage' },
+                { link: '/problem', label: 'problem' },
+                { link: '/contest', label: 'contest' },
+                { link: '/worklist', label: 'worklist' },
+                { link: '/submission', label: 'submission' },
             ],
             user: {
                 status: 'no',
@@ -184,7 +184,7 @@ export class UserModel {
             },
         };
         if (id <= 0) {
-            _res.links.push({ link: '/login', label: '注册/登录' });
+            _res.links.push({ link: '/login', label: 'Login/Register' });
             return _res;
         } else {
             _res.user.status = 'ok';
@@ -192,7 +192,7 @@ export class UserModel {
             _res.user.username = (await this.getbyId(id)).username;
         }
         if (checkPerm((await perm.getPerm(id) as {user: number}).user, 'user', 'adminHeader')) {
-            _res.links.push({ link: '/admin/dashboard', label: '管理面板' });
+            _res.links.push({ link: '/admin/dashboard', label: 'ManageBoard' });
         }
         return _res;
     }
@@ -200,4 +200,4 @@ export class UserModel {
 
 export const user = new UserModel();
 
-export const userPerm = registerPerm('user', ['view', 'adminHeader'], ['进入主站', 'headerAdmin入口'], 1, 1);
+export const userPerm = registerPerm('user', ['view', 'adminHeader'], ['enter_space', 'header_admin'], 1, 1);

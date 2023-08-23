@@ -1,0 +1,69 @@
+{
+  "translation": {
+    "header": {
+      "mainpage": "Mainpage",
+      "problem": "Problem",
+      "contest": "Contest",
+      "worklist": "Worklist",
+      "submission": "Submission",
+      "Login/Register": "Login/Reigster",
+      "userpage": "User Page",
+      "settings": "User Settings",
+      "logout": "Logout"
+    },
+    "submission": {
+      "submission_result": "submission result",
+      "total": "total",
+      "subtask": "Subtask #{{id}}",
+      "points": "{{score}} point",
+      "time_crest": "Time crest"
+    },
+    "problem": {
+      "directsubmit": "Direct Submit",
+      "syncsubmit": "Sync Submit",
+      "histroyscore": "History score",
+      "historysubmit": "History Submissions",
+      "originlink": "Origin Problem Link",
+      "submit": "submit code",
+      "cph": "Jump to CPH",
+      "return": "Return to problem",
+      "timelimit": "Time ",
+      "memorylimit": "Memory",
+      "difficult": "Difficult",
+      "platform": "platform",
+      "whichac": "your platform which your get accepted submission.",
+      "submitID": "Submission RID",
+      "submitByIDDescription": "RID / link",
+      "simpleGroup": "Simple Group",
+      "outputSimple": "Out",
+      "inSimple": "In",
+      "simple": "Simple",
+      "algorithm": "{{status}} Algorithm Tag"
+    },
+    "platform": {
+      "luogu": "Luogu"
+    },
+    "sync": "Sync",
+    "syncwithsubmission": "Sync with submission",
+    "copy": "Copy",
+    "Category": "category",
+    "Collapse": "Collapse",
+    "Expand": "Expand",
+    "changelanguage": "Change Language",
+    "loginpage": {
+      "AtleatOneNumber": "Must required one number.",
+      "AtleatOneSmallNumber": "At lease one lower case letters",
+      "AtleatOneBigNumber": "At lease one uppercase letter (optional)",
+      "AtleatoneSpecial": "At least one special letter (optional)",
+      "unamelenleast": "At least required 4 letter.",
+      "unamelenup": "Must less than 36",
+      "accountprepared": "🎉 All Done! Your account was prepared."
+    },
+    "ukeerror": "unknown error",
+    "At least 8 letter": "",
+    "At least 36 letter": "",
+    "At most 36 letter": "",
+    "At_least_8_letter": "At least 8 letter",
+    "At_most_36_letter": "At most 36 letter"
+  }
+}

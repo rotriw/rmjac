@@ -5,6 +5,8 @@ import { NoStyleCard, StandardCard } from './card';
 import { IconAlertCircle, IconArrowLeft, IconChevronsDown } from '@tabler/icons-react';
 import { Editor } from '@monaco-editor/react';
 import { useToggle } from '@mantine/hooks';
+import { useTranslation } from 'react-i18next';
+import { t } from 'i18next';
 // import { renderToString } from 'katex';
 
 interface SimpleShowProp {
@@ -16,10 +18,11 @@ interface SimpleShowProp {
 
 function ShowSimple({ id, ind, out }: SimpleShowProp) {
     const theme = useMantineTheme();
+    const {t} = useTranslation();
     return (
         <>
             <Text size={16} fw={600}>
-                样例 #{id}
+                {t('problem.simple')} #{id}
             </Text>
             <Space h={10}></Space>
             <Group grow>
@@ -27,12 +30,12 @@ function ShowSimple({ id, ind, out }: SimpleShowProp) {
                     <Grid>
                         <Grid.Col span={10}>
                             <Text size={14} fw={500}>
-                                输入样例
+                                {t('problem.inSimple')}
                             </Text>
                         </Grid.Col>
                         <Grid.Col span={2}>
                             <Button fullWidth color='indigo' variant='light' compact size='xs'>
-                                复制
+                                {t('Copy')}
                             </Button>
                         </Grid.Col>
                     </Grid>
@@ -45,12 +48,12 @@ function ShowSimple({ id, ind, out }: SimpleShowProp) {
                     <Grid>
                         <Grid.Col span={10}>
                             <Text size={14} fw={500}>
-                                输出样例
+                                {t('problem.outputSimple')}
                             </Text>
                         </Grid.Col>
                         <Grid.Col span={2}>
                             <Button fullWidth color='indigo' variant='light' compact size='xs'>
-                                复制
+                                {t('copy')}
                             </Button>
                         </Grid.Col>
                     </Grid>
@@ -66,8 +69,7 @@ function ShowSimple({ id, ind, out }: SimpleShowProp) {
 }
 
 export function ProblemStatementShow({ data }: { data: StandardProblemStatement }) {
-    // console.log(katex);
-    // console.log(renderToString('$233$'));
+    const {t} = useTranslation();
     const items = data.showProp.map((id) => {
         const item = data[id] as string;
         
@@ -89,7 +91,7 @@ export function ProblemStatementShow({ data }: { data: StandardProblemStatement 
             return (
                 <> {/* deepscan-disable-line */}
                     <Text size={18} fw={600}>
-                        样例组
+                        {t('problem.simpleGroup')}
                     </Text>
                     <Space h={10} />
                     {res}
@@ -116,6 +118,7 @@ export function ProblemTitle({ title, source, mode, setMode }: ProblemTitleProp)
     const sourceCode = source.map((item, index) => {
         return ` ${index === 0 ? '' : '/'} ${PlatformToCNName[item.platform] || item.platform} ${item.pid}`;
     });
+    const {t} = useTranslation();
     return (
         <NoStyleCard>
             <Text size={18} fw={600}>
@@ -135,11 +138,11 @@ export function ProblemTitle({ title, source, mode, setMode }: ProblemTitleProp)
                             setMode('submit');
                         }}
                     >
-                        远程提交
+                        {t('problem.submit')}
                     </Button>
                     &nbsp;
                     <Button variant={'light'} size={'xs'}>
-                        跳转至CPH
+                        {t('problem.cph')}
                     </Button>
                 </>
             ) : (
@@ -150,7 +153,7 @@ export function ProblemTitle({ title, source, mode, setMode }: ProblemTitleProp)
                         setMode('view');
                     }}
                 >
-                    <IconArrowLeft size={14} /> &nbsp;返回题目
+                    <IconArrowLeft size={14} /> &nbsp;{t('problem.return')}
                 </Button>
             )}
         </NoStyleCard>
@@ -168,12 +171,13 @@ interface ProblemDescriptionProp {
 }
 
 export function ProblemDescription({ time, memory, difficult }: ProblemDescriptionProp) {
+    const {t} = useTranslation();
     return (
         <NoStyleCard>
             <Group grow>
                 <Box>
                     <Text tt='uppercase' fz='xs' c='dimmed' fw={700}>
-                        时间限制
+                        {t('problem.timelimit')}
                     </Text>
                     <Group position='apart' align='flex-end' spacing={0}>
                         <Text size={14} fw={300}>
@@ -183,7 +187,7 @@ export function ProblemDescription({ time, memory, difficult }: ProblemDescripti
                 </Box>
                 <Box>
                     <Text tt='uppercase' fz='xs' c='dimmed' fw={700}>
-                        空间限制
+                        {t('problem.memorylimit')}
                     </Text>
                     <Group position='apart' align='flex-end' spacing={0}>
                         <Text size={14} fw={300}>
@@ -193,7 +197,7 @@ export function ProblemDescription({ time, memory, difficult }: ProblemDescripti
                 </Box>
                 <Box>
                     <Text tt='uppercase' fz='xs' c='dimmed' fw={700}>
-                        难度
+                        {t('problem.difficult')}
                     </Text>
                     <Group position='apart' align='flex-end' spacing={0}>
                         {difficult.hint !== '' && difficult.hint !== undefined ? (
@@ -216,13 +220,13 @@ export function ProblemDescription({ time, memory, difficult }: ProblemDescripti
 
 //TODO
 export function SyncProblemSubmit() {
-    
+    const {t} = useTranslation();
     return (<Tabs.Panel value="sync">
     <Group>
         <NativeSelect
             data={[
                 {
-                    label: '洛谷',
+                    label: t('platform.luogu'),
                     value: 'Luogu',
                 }
             ]}
@@ -248,34 +252,35 @@ export function SyncProblemSubmit() {
         />
     </Group>
     <Space h={10} />
-    <Button size={'xs'} className={'shadowButton'}>同步</Button>
+    <Button size={'xs'} className={'shadowButton'}>{t('sync')}</Button>
     <Space h={5} />
-    <div style={{display: 'none'}}><Divider my="xs" label={'通过提交记录同步'} labelPosition="center" />
-    <Space  h={5} />
-    <Group>
-            <NativeSelect
-                data={[
-                    {
-                        label: '洛谷',
-                        value: 'Luogu',
-                    }
-                ]}
-                label='平台'
-                name='platform'
-                description={'已通过的提交'}
-                w={100}
-                variant='filled'
-                rightSection={<></>}
-                rightSectionWidth={1}
-            />
-            <Input.Wrapper label="提交记录" description={'RID / link 均可'}>
-                <Input w={300} variant={'filled'} placeholder={'数字 / 链接 / 字符串'}  />
-            </Input.Wrapper>
+    <div style={{display: 'none'}}>
+        <Divider my="xs" label={t('syncwithsubmission')} labelPosition="center" />
+        <Space  h={5} />
+        <Group>
+                <NativeSelect
+                    data={[
+                        {
+                            label: '洛谷',
+                            value: 'Luogu',
+                        }
+                    ]}
+                    label= {t('problem.platform')}
+                    name='platform'
+                    description={t('problem.whichac')}
+                    w={100}
+                    variant='filled'
+                    rightSection={<></>}
+                    rightSectionWidth={1}
+                />
+                <Input.Wrapper label={t('problem.submitID')} description={t('problem.submitByIDDescription')}>
+                    <Input w={300} variant={'filled'} placeholder={'数字 / 链接 / 字符串'}  />
+                </Input.Wrapper>
         </Group>
         <Space h={10} />
-        <Button size={'xs'} className={'shadowButton'}>同步</Button>
+        <Button size={'xs'} className={'shadowButton'}>{t('sync')}</Button>
         </div>
-        <Center style={{ alignItems: 'center', display: 'flex' }}><Text fw={700} color={'dimmed'} size={14} style={{ alignItems: 'center', display: 'flex' }}><IconChevronsDown stroke={2.4} size={15} ></IconChevronsDown>&nbsp;通过记录同步</Text></Center>
+        <Center style={{ alignItems: 'center', display: 'flex' }}><Text fw={700} color={'dimmed'} size={14} style={{ alignItems: 'center', display: 'flex' }}><IconChevronsDown stroke={2.4} size={15} ></IconChevronsDown>&nbsp;{t('syncwithsubmission')}</Text></Center>
     </Tabs.Panel>);
 }
 
@@ -372,11 +377,11 @@ export function TagCard({event, algorithm}: TagCardProp) {
         )
     })
     const [showAlgorithm, setStatusAlgorithm]: readonly['close' | 'show', (val?: 'close' | 'show') => void] = useToggle(['close', 'show']);
-    return (<StandardCard title='分类'>
+    return (<StandardCard title={t('Category')}>
         {eventShow}
         {showAlgorithm === 'show' ? algorithmShow : <></>}
         <Space h={5} />
-        <Center><Button onClick={() => {setStatusAlgorithm()}} size='xs' variant="subtle" color="gray" compact>{showAlgorithm === 'show' ? '收起算法标签' : '展开算法标签'}</Button></Center>
+        <Center><Button onClick={() => {setStatusAlgorithm()}} size='xs' variant="subtle" color="gray" compact>{t('problem.algorithm',{status: showAlgorithm === 'show' ? t('Collapse') : t('Expand')})}</Button></Center>
     </StandardCard>);
 }
 

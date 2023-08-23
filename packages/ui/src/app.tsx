@@ -13,6 +13,8 @@ import { ProblemViewPage } from './pages/problemView';
 import { SubmissionResultPage } from './pages/submissionResult';
 import { ProblemEditor } from './pages/problemEditor';
 import { EventShow } from './pages/event';
+import i18n from './utils/i18n';
+import { I18nextProvider } from 'react-i18next';
 
 const myCache = createEmotionCache({ key: 'rmjac' });
 
@@ -55,6 +57,7 @@ function App() {
 
     return (
         <>
+        <I18nextProvider i18n={i18n} defaultNS={'translation'} >
             <Provider store={store}>
                 <MantineProvider
                     emotionCache={myCache}
@@ -100,6 +103,7 @@ function App() {
                     )}
                 </MantineProvider>
             </Provider>
+            </I18nextProvider>
         </>
     );
 }
