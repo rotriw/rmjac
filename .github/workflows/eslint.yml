@@ -9,32 +9,32 @@
 
 name: ESLint
 
-on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [ "master" ]
-  schedule:
-    - cron: '21 18 * * 3'
+on: [push, pull_request]
 
 jobs:
   eslint:
     name: Run eslint scanning
+
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # - name: Install ESLint
-      #   run: |
-      #     npm install eslint@8.10.0
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+          cache: yarn
+
+      - name: Tiptap Pro registry
+        run: echo "$TIPTAP_PRO_REGISTRY" >> .npmrc
+        env:
+          TIPTAP_PRO_REGISTRY: ${{ secrets.TIPTAP_PRO_REGISTRY }}
+
+      - name: Install dependencies
+        run: yarn
 
       - name: ESLint Check
-        run: npx eslint packages/ --max-warnings 0
+        run: yarn run lint --max-warnings 0
         continue-on-error: false
-
