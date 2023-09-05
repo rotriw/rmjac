@@ -1,12 +1,21 @@
 .loginCard {
     width: 30%;
-    @media (max-width: 767px) {
+
+}
+@media (max-width: 767px) {
+    .loginCard {
         width: 70%;
     }
 }
 
 .rmjac-Container-root {
     max-width: 75% !important;
+    padding-left: 0 !important;
+}
+
+nav .rmjac-Container-root {
+    max-width: 75% !important;
+    padding-left: 1rem !important;
 }
 
 .shadowButton:hover {

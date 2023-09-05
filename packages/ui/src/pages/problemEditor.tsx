@@ -2,7 +2,8 @@ import { Button, Card, Container, Grid, Group, Input, MantineTheme, Menu, Space,
 import React, { useState } from 'react';
 import { StandardCard } from '../components/card';
 import { RichTextEditor, Link } from '@mantine/tiptap';
-import { AnyExtension, Editor, useEditor } from '@tiptap/react';
+import { AnyExtension, useEditor } from '@tiptap/react';
+import { Editor } from '@tiptap/react';
 import Highlight from '@tiptap/extension-highlight';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -244,7 +245,7 @@ export function ProblemEditor() {
                                 <Grid.Col span={2}>
                                     <Text size={13} fw={500}>
                                         样例 #2
-                                    </Text> 
+                                    </Text>
                                 </Grid.Col>
                                 <Grid.Col span={5}>
                                     <Textarea minRows={3} variant='default' placeholder='输入样例#2' label='' />

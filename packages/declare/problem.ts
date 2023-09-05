@@ -1,4 +1,4 @@
-export type StandardProblemStatementProp = 'background' | 'statement' | 'inFormer' | 'outFormer' | 'simples' | 'hint' | string;
+export type StandardProblemStatementProp = 'background' | 'statement' | 'inFormer' | 'outFormer' | 'samples' | 'hint' | string;
 
 /*
 * Standard Problem Statement Format.
@@ -9,10 +9,10 @@ export interface StandardProblemStatement extends Record<string, Array<string> |
     statement?: string; // statement. / 题目描述 / Only HTML
     inFormer?: string; // In Former. / 输入格式 / Only HTML
     outFormer?: string; // Out Former. / 输出格式 / Only HTML
-    simples: {
-        in: string; // Simple In / 样例输入 / Texts
-        out: string; // Simple Out / 样例输出 / Texts
-    }[]; // Simples / 样例组 / Texts / Must Required([] if null)
+    samples: {
+        in: string; // Sample In / 样例输入 / Texts
+        out: string; // Sample Out / 样例输出 / Texts
+    }[]; // Samples / 样例组 / Texts / Must Required([] if null)
     hint?: string; // Hint / 提示 / Only HTML
     showProp: StandardProblemStatementProp[]; // show Prop / 展示的题目格式 /  Must Required([] if null)
 }
@@ -66,7 +66,7 @@ export const StatementToCNName: Record<string, string | undefined> = {
     statement: '题目描述',
     inFormer: '输入格式',
     outFormer: '输出格式',
-    simples: '样例组',
+    samples: '样例组',
     hint: '提示',
     pdf: '题目PDF'
 };

@@ -3,7 +3,8 @@
 import { IconCheck, IconX } from '@tabler/icons-react';
 import { StandardCard } from '../components/card';
 import React from 'react';
-import { Alert, Button, Container, createStyles, Text } from '@mantine/core';
+import { Alert, Button, Container, createStyles, Space, Text } from '@mantine/core';
+import { t } from 'i18next';
 
 const useStyles = createStyles((theme) => ({
     feedbackSuccess: {
@@ -31,7 +32,15 @@ export function Blocked() {
             <StandardCard title='提示'>
                 访问已被阻止。<br />
                 权限不足。
-            </StandardCard>
+                <Text color='dimmed' size={12}>若您无法做任何操作时, 请删除cookie后重试。</Text>
+            </StandardCard> 
+            { window?.web?.allowAppeal ? <>
+                <Space h={10} />
+                <StandardCard title='申诉'>
+                    <Text color='green' size={14} fw={600}>对当前页面访问权限 允许申诉。</Text>
+
+                </StandardCard> 
+            </> :<></>}
         </Container>
     </>);
 }

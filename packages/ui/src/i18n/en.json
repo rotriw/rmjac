@@ -1,18 +1,18 @@
 {
-  "translation": {
     "header": {
       "mainpage": "Mainpage",
-      "problem": "Problem",
-      "contest": "Contest",
+      "problem": "Problems",
+      "contest": "Contests",
       "worklist": "Worklist",
       "submission": "Submission",
       "Login/Register": "Login/Reigster",
-      "userpage": "User Page",
-      "settings": "User Settings",
-      "logout": "Logout"
+      "userpage": "My Account",
+      "settings": "Settings",
+      "logout": "Logout",
+      "ManageBoard": "ManageBoard"
     },
     "submission": {
-      "submission_result": "submission result",
+      "submission_result": "Result",
       "total": "total",
       "subtask": "Subtask #{{id}}",
       "points": "{{score}} point",
@@ -24,7 +24,7 @@
       "histroyscore": "History score",
       "historysubmit": "History Submissions",
       "originlink": "Origin Problem Link",
-      "submit": "submit code",
+      "submit": "Submit Code",
       "cph": "Jump to CPH",
       "return": "Return to problem",
       "timelimit": "Time ",
@@ -34,10 +34,10 @@
       "whichac": "your platform which your get accepted submission.",
       "submitID": "Submission RID",
       "submitByIDDescription": "RID / link",
-      "simpleGroup": "Simple Group",
-      "outputSimple": "Out",
-      "inSimple": "In",
-      "simple": "Simple",
+      "simpleGroup": "Sample Group",
+      "outputSample": "Out",
+      "inSample": "In",
+      "simple": "Sample",
       "algorithm": "{{status}} Algorithm Tag"
     },
     "platform": {
@@ -64,6 +64,9 @@
     "At least 36 letter": "",
     "At most 36 letter": "",
     "At_least_8_letter": "At least 8 letter",
-    "At_most_36_letter": "At most 36 letter"
-  }
+    "At_most_36_letter": "At most 36 letter",
+    "SearchProblem": "Search Problem",
+    "SearchProblemDescription": "Search what you want. Problem title / Problem Statement / ContestID / Algorithm name",
+    "nocontent": "[No Content]",
+  "Get Copy Version": ""
 }

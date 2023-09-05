@@ -1,0 +1,15 @@
+{
+    "name": "rmjac-imports",
+    "version": "1.0.0",
+    "description": "imports problem.",
+    "main": "./index.ts",
+    "dependencies": {
+        "@types/cli-progress": "^3.11.0",
+        "@types/markdown-it": "^13.0.1",
+        "cli-progress": "^3.12.0",
+        "markdown": "^0.5.0",
+        "markdown-it": "^13.0.1",
+        "rmjac-core": "*"
+    },
+    "author": "smallfang"
+}

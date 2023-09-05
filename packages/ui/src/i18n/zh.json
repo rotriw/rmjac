@@ -1,5 +1,4 @@
 {
-  "translation": {
     "header": {
       "mainpage": "主页",
       "problem": "题目",
@@ -9,7 +8,8 @@
       "Login/Register": "登录 / 注册",
       "userpage": "用户界面",
       "settings": "设置",
-      "logout": "退出登录"
+      "logout": "退出登录",
+      "ManageBoard": "管理面板"
     },
     "submission": {
       "submission_result": "评测结果",
@@ -34,10 +34,11 @@
       "submitID": "提交ID",
       "submitByIDDescription": "RID / link 均可",
       "simpleGroup": "样例组",
-      "outputSimple": "输出样例",
-      "inSimple": "输入样例",
+      "outputSample": "输出样例",
+      "inSample": "输入样例",
       "simple": "样例",
-      "algorithm": "{{status}}算法标签"
+      "algorithm": "{{status}}算法标签",
+      "history-score": "历史成绩"
     },
     "platform": {
       "luogu": "洛谷"
@@ -62,6 +63,10 @@
     "At least 8 letter": "最少8字符",
     "At most 36 letter": "最多36字符",
     "At_least_8_letter": "最少 8 字符",
-    "At_most_36_letter": "最多36字符"
-  }
+    "At_most_36_letter": "最多36字符",
+    "Copy": "复制",
+    "SearchProblem": "搜索题目",
+    "SearchProblemDescription": "搜索题目。支持题目标题 / 题目内容 / 算法标签",
+    "Choose Version": "选择版本",
+    "nocontent": "【无内容】"
 }

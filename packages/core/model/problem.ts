@@ -1,32 +1,20 @@
 import { db } from '../service/db';
 import { rdis } from '../service/redis';
+import { Problem, StandardProblemStatement } from 'rmjac-declare/problem';
 
-export interface ProblemContent {
-    type: 'html' | 'markdown';
-    content: {
-        background?: string;
-        statement?: string;
-        inFormer?: string;
-        outFormer?: string;
-        testdata?: {
-            in: string;
-            out: string;
-        }[];
-        hint?: string;
-    };
-}
 
 export interface ProblemSource {
     platform: string;
-    psid: string;
+    pid: string;
 }
 
 export interface ProblemSchema {
     sourceid?: string[];
     pid: number;
-    sources?: ProblemSource[];
+    title: string;
+    sources: ProblemSource[];
     defaultVersion?: string;
-    version?: Record<string, ProblemContent>;
+    version: Record<string, StandardProblemStatement>;
     tags?: string[];
     algorithm?: string[];
     timeLimit: number | string;
@@ -46,11 +34,10 @@ export class ProblemModel {
         return newID;
     }
 
-    async create(title: string, content: Omit<ProblemSchema, 'pid'>) {
+    async create(content: Omit<ProblemSchema, 'pid'>) {
         const pid = await this.genId();
         const newProblem = content;
         Object.assign(newProblem, {pid});
-        Object.assign(newProblem, {title});
         await db.insert('problem', newProblem);
         return pid;
     }
@@ -70,7 +57,7 @@ export class ProblemModel {
     }
 
     async getIdFromPSID(psid: string): Promise<undefined | number> {
-        const _res = await rdis.get('problem_psid_onlyid', psid) as unknown as number;
+        const _res = await rdis.get('problem_pid_onlyid', psid) as unknown as number;
         if (_res !== null && _res !== undefined) {
             return _res;
         }
@@ -80,6 +67,38 @@ export class ProblemModel {
         }
         rdis.set('problem_psid_onlyid', psid, __res.pid as unknown as string, 5000);
         return __res.pid;
+    }
+
+    async getObjectFromPID(pid: string): Promise<undefined | ProblemSchema> {
+        let _res = await rdis.getjson('problem_pid_object', pid), _flag = false;
+        if (!Object.keys(_res).length) {
+            _res = await db.getone('problem', { pid: +pid });
+            _flag = true;
+        }
+        if (_res === null) {
+            return undefined;
+        }
+        if (_flag)
+            rdis.setjson('problem_pid_object', pid, _res, 5000);
+        return _res as unknown as ProblemSchema;
+    }
+
+    contentToStandard(udata: ProblemSchema): Problem {
+        return {
+            title: udata.title || '',
+            version: udata.version || {},
+            defaultVersion: udata.defaultVersion || '',
+            sources: udata.sources || [],
+            limit: {
+                time: udata.timeLimit?.toString() || '-',
+                memory: udata.memoryLimit?.toString() || '-',
+                difficult: {
+                    text: udata.difficult?.toString(),
+                    color: '', // TODO
+                    hint: '' // TODO
+                }
+            }
+        }
     }
 
     async update(pid: number, content: Omit<ProblemSchema, 'pid'>) {
@@ -92,6 +111,8 @@ export class ProblemModel {
         Object.assign(content, {pid});
         await db.update('problem', {pid}, content);
     }
+
+
 
 }
 

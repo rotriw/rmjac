@@ -28,6 +28,10 @@ export type ConfigFile = {
     salt: {
         salt: string,
         strength: number
+    },
+    exports?: {
+        mode: string,
+        filePath: string
     }
 }
 

@@ -8,7 +8,7 @@ export let socket: undefined | Socket  = undefined;
 
 export async function apply(logger: Logger) {
     try {
-        socket = await io(`${config.serverlink}ws`);
+        socket = await io(`${config.serverlink}edge`);
         socket.emit('ping');
         socket.on('pong', () => {
             logger.info('Connected');

@@ -35,7 +35,7 @@ interface HeadersProps {
 }
 
 export function HeaderCard({ color, subTitle, title }: HeadersProps) {
-    const { classes, cx } = useStyles();
+    const { classes, cx } = useStyles({});
     return (
         <div style={{ backgroundColor: color }} className={classes.header}>
             <div className={classes.title}>{title}</div>

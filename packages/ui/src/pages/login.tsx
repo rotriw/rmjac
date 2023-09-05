@@ -17,7 +17,7 @@ import {
     Progress,
     Select,
     rem,
-    createStyles,
+    createStyles, MantineColor,
 } from '@mantine/core';
 import React, { useState } from 'react';
 import { IconCheck, IconX } from '@tabler/icons-react';
@@ -38,7 +38,7 @@ const useStyles = createStyles((theme) => ({
 
 function PasswordRequirement({ meets, label }: { meets: boolean; label: string }) {
     return (
-        <Text color={meets ? 'teal' : 'red'} sx={{ display: 'flex', alignItems: 'center' }} mt={7} size='sm'>
+        <Text color={(meets ? 'teal' : 'red') as unknown as MantineColor} sx={{ display: 'flex', alignItems: 'center' }} mt={7} size='sm'>
             {meets ? <IconCheck size='0.9rem' /> : <IconX size='0.9rem' />} <Box ml={10}>{label}</Box>
         </Text>
     );
@@ -52,19 +52,19 @@ export default function LoginPage() {
         { re: /[A-Z]/, label: t('loginpage.AtleatOneBigNumber')},
         { re: /[$&+,:;=?@#|'<>.^*()%!-]/, label: t('loginpage.AtleatoneSpecial') },
     ];
-    
+
     function getStrength(password: string) {
         let multiplier = password.length >= 8 ? 0 : 1;
-    
+
         requirements.forEach((requirement) => {
             if (!requirement.re.test(password)) {
                 multiplier += 1;
             }
         });
-    
+
         return Math.max(100 - (100 / (requirements.length + 1)) * multiplier, 10);
     }
-    
+
     const [type, toggle] = useToggle(['login', 'register']);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { classes, cx, theme } = useStyles();
@@ -115,7 +115,7 @@ export default function LoginPage() {
 
     const largeScreen = useMediaQuery('(min-width: 512px)');
     // const largestScreen = useMediaQuery('(min-width: 700px)');
-    
+
     return (
         <Container miw={rem(400)} className='loginCard' >
             <StandardCard pt={theme.spacing.xs} >
@@ -154,7 +154,7 @@ export default function LoginPage() {
                                 {...registerForm.getInputProps('username')}
                             />
                             <TextInput name='email' required label='邮箱' placeholder='mail@example.com' {...registerForm.getInputProps('email')} />
-                            
+
                             <Select
                                 data={[
                                     {
@@ -241,7 +241,7 @@ export default function LoginPage() {
                                         location.href = '/';
                                     } else {
                                         toast.success('已忽略。');
-                            
+
                                     }
                                 }, 2000);
                                 Cookies.set('token', value.data?.token || '');

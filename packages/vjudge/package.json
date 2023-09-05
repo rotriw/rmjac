@@ -1,0 +1,7 @@
+{
+    "name": "rmjac-vjudge",
+    "version": "0.0.1",
+    "description": "rmjac vjudge providers, provide rmj services.",
+    "main": "./index.ts",
+    "author": "smallfang"
+}

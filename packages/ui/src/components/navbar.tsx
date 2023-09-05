@@ -166,7 +166,7 @@ export function Navbar({ links, title, type }: HeadersProps) {
                 <div style={{ width: '100%', textAlign: 'right' }} className={classes.burger}>
                     <Burger opened={opened} onClick={toggle} className={classes.burger} size='sm' />
                 </div>
-                { window.web?.user.status !== 'no' ?
+                { window.web?.user?.status === 'ok' ?
                 <div style={{marginLeft: 'auto'}}>
                     <Menu
                         width={250}

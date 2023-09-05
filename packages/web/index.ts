@@ -94,6 +94,7 @@ async function handle(ctx: KoaContext, HandlerClass: any) {
                 ctx.body = await RenderFromPage({
                     type: 'back',
                     template: 'Blocked',
+                    allowAppeal: ctx.path === '/'
                 });
             } else {
                 ctx.body = JSON.stringify({

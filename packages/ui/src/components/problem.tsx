@@ -1,22 +1,21 @@
 import { PlatformToCNName, StandardProblemStatement, StatementToCNName, TagView } from 'rmjac-declare/problem';
-import { Alert, Badge, Box, Button, Center, Code, Divider, Grid, Group, Input, NativeSelect, Space, Tabs, Text, Tooltip, useMantineTheme } from '@mantine/core';
+import { Alert, Badge, Box, Button, Center, Code, Divider, Grid, Group, Input, NativeSelect, Space, Tabs, Text, Tooltip, TypographyStylesProvider, useMantineTheme } from '@mantine/core';
 import React from 'react';
 import { NoStyleCard, StandardCard } from './card';
 import { IconAlertCircle, IconArrowLeft, IconChevronsDown } from '@tabler/icons-react';
 import { Editor } from '@monaco-editor/react';
 import { useToggle } from '@mantine/hooks';
-import { useTranslation } from 'react-i18next';
-import { t } from 'i18next';
-// import { renderToString } from 'katex';
+import {t} from 'i18next';
+import {useTranslation} from 'react-i18next';
 
-interface SimpleShowProp {
+interface SampleShowProp {
     key: number | string;
     id: number | string;
     ind: string;
     out: string;
 }
 
-function ShowSimple({ id, ind, out }: SimpleShowProp) {
+function ShowSample({ id, ind, out }: SampleShowProp) {
     const theme = useMantineTheme();
     const {t} = useTranslation();
     return (
@@ -30,7 +29,7 @@ function ShowSimple({ id, ind, out }: SimpleShowProp) {
                     <Grid>
                         <Grid.Col span={10}>
                             <Text size={14} fw={500}>
-                                {t('problem.inSimple')}
+                                {t('problem.inSample')}
                             </Text>
                         </Grid.Col>
                         <Grid.Col span={2}>
@@ -41,14 +40,14 @@ function ShowSimple({ id, ind, out }: SimpleShowProp) {
                     </Grid>
                     <Space h={2}></Space>
                     <Code h={80} block style={{ backgroundColor: theme.colorScheme === 'dark' ? theme.colors?.dark[7] : theme.colors?.gray[1] }}>
-                        {ind}
+                        {ind || t('nocontent')}
                     </Code>
                 </div>
                 <div>
                     <Grid>
                         <Grid.Col span={10}>
                             <Text size={14} fw={500}>
-                                {t('problem.outputSimple')}
+                                {t('problem.outputSample')}
                             </Text>
                         </Grid.Col>
                         <Grid.Col span={2}>
@@ -69,24 +68,24 @@ function ShowSimple({ id, ind, out }: SimpleShowProp) {
 }
 
 export function ProblemStatementShow({ data }: { data: StandardProblemStatement }) {
-    const {t} = useTranslation();
+    // const {t} = useTranslation();
     const items = data.showProp.map((id) => {
         const item = data[id] as string;
-        
-        if (id !== 'simples')
+
+        if (id !== 'samples')
             return (
                 <> {/* deepscan-disable-line */}
                     <Text size={18} fw={600}>
                         {StatementToCNName[id] || id}
                     </Text>
                     <Space h={10}></Space>
-                    <div dangerouslySetInnerHTML={{ __html: item || '' }}></div>
+                    <TypographyStylesProvider fz={16}><div dangerouslySetInnerHTML={{ __html: item || '' }}></div></TypographyStylesProvider>
                     <Space h={20}></Space>
                 </>
             );
         else {
             const res = ((item as unknown) as Array<{ in: string; out: string }>).map((item, index) => {
-                return <ShowSimple key={index + 1} id={index + 1} ind={item.in} out={item.out} />;
+                return <ShowSample key={index + 1} id={index + 1} ind={item.in} out={item.out} />;
             });
             return (
                 <> {/* deepscan-disable-line */}
@@ -118,7 +117,7 @@ export function ProblemTitle({ title, source, mode, setMode }: ProblemTitleProp)
     const sourceCode = source.map((item, index) => {
         return ` ${index === 0 ? '' : '/'} ${PlatformToCNName[item.platform] || item.platform} ${item.pid}`;
     });
-    const {t} = useTranslation();
+    // const {t} = useTranslation();
     return (
         <NoStyleCard>
             <Text size={18} fw={600}>
@@ -171,7 +170,6 @@ interface ProblemDescriptionProp {
 }
 
 export function ProblemDescription({ time, memory, difficult }: ProblemDescriptionProp) {
-    const {t} = useTranslation();
     return (
         <NoStyleCard>
             <Group grow>
@@ -180,7 +178,7 @@ export function ProblemDescription({ time, memory, difficult }: ProblemDescripti
                         {t('problem.timelimit')}
                     </Text>
                     <Group position='apart' align='flex-end' spacing={0}>
-                        <Text size={14} fw={300}>
+                        <Text size={time.length >= 13 ? 10 : 12} fw={300}>
                             {time}
                         </Text>
                     </Group>
@@ -190,8 +188,14 @@ export function ProblemDescription({ time, memory, difficult }: ProblemDescripti
                         {t('problem.memorylimit')}
                     </Text>
                     <Group position='apart' align='flex-end' spacing={0}>
-                        <Text size={14} fw={300}>
-                            {memory}
+                        <Text size={12} fw={300}>
+                            {memory.length > 8 ? <Tooltip.Floating label={memory}>
+                                <Text size={14} fw={300}>
+                                {memory.slice(0, 8)}...
+                                </Text>
+                            </Tooltip.Floating>
+                                :
+                                <>{memory}</>}
                         </Text>
                     </Group>
                 </Box>
@@ -202,12 +206,12 @@ export function ProblemDescription({ time, memory, difficult }: ProblemDescripti
                     <Group position='apart' align='flex-end' spacing={0}>
                         {difficult.hint !== '' && difficult.hint !== undefined ? (
                             <Tooltip.Floating label={difficult.hint}>
-                                <Text size={14} fw={300} color={difficult.color}> {/*TODO: dark system */}
+                                <Text size={12} fw={300} color={difficult.color}> {/*TODO: dark system */}
                                     {difficult.text}
                                 </Text>
                             </Tooltip.Floating>
                         ) : (
-                            <Text size={14} fw={300} color={difficult.color}>
+                            <Text size={12} fw={300} color={difficult.color}>
                                 {difficult.text}
                             </Text>
                         )}
@@ -220,7 +224,7 @@ export function ProblemDescription({ time, memory, difficult }: ProblemDescripti
 
 //TODO
 export function SyncProblemSubmit() {
-    const {t} = useTranslation();
+    // const {t} = useTranslation();
     return (<Tabs.Panel value="sync">
     <Group>
         <NativeSelect
@@ -354,7 +358,11 @@ export function DirectProblemSubmit() {
     </Alert>
     <Space h={5} />
     <Space h={20} />
-    <Editor height={300}></Editor>
+    <Editor options={{
+        scrollbar: {
+            alwaysConsumeMouseWheel: false
+        }
+    }} height={300}></Editor>
     <Space h={10} />
     <Button size={'xs'} className={'shadowButton'}>提交代码</Button>
     </Tabs.Panel>);

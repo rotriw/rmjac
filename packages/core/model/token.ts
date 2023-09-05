@@ -83,7 +83,7 @@ export class TokenModel {
                     expires: value.expires,
                     create: value.create,
                 },
-                Math.min(7 * 24 * 60 * 60, now - value.expires)
+                Math.min(7 * 24 * 60 * 60, value.expires - now)
             );
         }
         return value.id;

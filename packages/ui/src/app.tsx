@@ -13,8 +13,8 @@ import { ProblemViewPage } from './pages/problemView';
 import { SubmissionResultPage } from './pages/submissionResult';
 import { ProblemEditor } from './pages/problemEditor';
 import { EventShow } from './pages/event';
-import i18n from './utils/i18n';
 import { I18nextProvider } from 'react-i18next';
+import { ProblemList } from './pages/problemList';
 
 const myCache = createEmotionCache({ key: 'rmjac' });
 
@@ -57,7 +57,6 @@ function App() {
 
     return (
         <>
-        <I18nextProvider i18n={i18n} defaultNS={'translation'} >
             <Provider store={store}>
                 <MantineProvider
                     emotionCache={myCache}
@@ -78,7 +77,7 @@ function App() {
                         },
                     }}
                 >
-                    
+
                     {window?.web?.type === 'back' ? (
                         <Root onThemeChange={onThemeChange} type='direct'>
                             {// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,10 +91,10 @@ function App() {
                                     <Route path='' element={<Root type='route' onThemeChange={onThemeChange} />}>
                                         <Route path='' element={<SubmissionResultPage></SubmissionResultPage>} />
                                         <Route path='login' element={<LoginPage></LoginPage>} />
-
                                         <Route path='event/:eid' element={<EventShow></EventShow>} />
                                         <Route path='problem/:pid' element={<ProblemViewPage></ProblemViewPage>} />
                                         <Route path='problem/create' element={<ProblemEditor></ProblemEditor>} />
+                                        <Route path='problem' element={<ProblemList></ProblemList>} />
                                     </Route>
                                 </Routes>
                             </BrowserRouter>
@@ -103,7 +102,6 @@ function App() {
                     )}
                 </MantineProvider>
             </Provider>
-            </I18nextProvider>
         </>
     );
 }

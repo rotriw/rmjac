@@ -1,15 +1,16 @@
 import { Button, Container, Flex, Footer, Group, Space, Text, rem, useMantineTheme } from '@mantine/core';
 import { useToggle } from '@mantine/hooks';
 import { IconBrandGithub, IconSun, IconMoon } from '@tabler/icons-react';
-import { t } from 'i18next';
+// import { t } from 'i18next';
 import React, { useEffect } from 'react';
 import i18n from '../utils/i18n';
+import { useTranslation } from 'react-i18next';
 
 export function AppFooter({ onThemeChange }: { onThemeChange: () => void }) {
     const theme = useMantineTheme();
 
     const [displaysStyles, cgDisplaysStyles] = useToggle(['', 'none']);
-
+    const {t} = useTranslation();
     useEffect(() => {
         function changeFooter() {
             cgDisplaysStyles();

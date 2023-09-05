@@ -9,4 +9,6 @@ export async function apply(logger: Logger) {
         logger.warn('Disconnected. Waiting for reconnect');
         await Restart(logger);
     })
+    setTimeout(() => {}, 1000000)
+    socket?.emit('createProblem', {})
 }
