@@ -9,8 +9,6 @@ export interface VjudgeSubmitOption {
 export type sid = number;
 
 export class BasicVjudge {
-
-
     async syncSubmit(uid: string, options: VjudgeSubmitOption): Promise<sid> {
         return -1;
     }

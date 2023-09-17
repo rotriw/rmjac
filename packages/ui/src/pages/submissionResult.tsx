@@ -194,7 +194,7 @@ export function SubmissionResultPage() {
                         <NoStyleCard
                             style={{
                                 backgroundImage:
-                                    'linear-gradient(45deg, rgb(172 255 154 / 31%) 0%, rgb(206 250 196 / 31%) 99%, rgba(250, 208, 196, 0.314) 100%)',
+                                    'linear-gradient(45deg, rgba(172 255 154 / 31%) 0%, rgb(206 250 196 / 31%) 99%, rgba(250, 208, 196, 0.314) 100%)',
                             }} /* linear-gradient(45deg, rgb(154 179 255 / 31%) 0%, rgb(196 213 250 / 31%) 99%, rgba(250, 208, 196, 0.314) 100%) Waiting / Judge */
                             /*linear-gradient(45deg, rgb(34 69 175 / 31%) 0%, rgb(176 196 240 / 31%) 100%) TLE MLE*/
                             /*linear-gradient(45deg, rgb(176 93 255 / 31%) 0%, rgb(240 176 189 / 31%) 100%) RE */
@@ -202,19 +202,18 @@ export function SubmissionResultPage() {
                             /*linear-gradient(45deg, rgb(139 189 232 / 31%) 0%, rgb(30 139 187 / 31%) 100%) ARCHIEVE */
                             /*linear-gradient(45deg, rgb(255 112 112 / 31%) 0%, rgb(252 61 61 / 31%) 100%) WA */
                         >
-                            <Text size='sm' weight={300} c={standardTitleColor(theme)}>
-                                评测结果
-                            </Text>
-                            <Space h={1} />
-                            <Text size='lg' weight={700} c={standardTitleColor(theme)}>
+                            {/*<Text size={12}  fw={600} c={standardTitleColor(theme)}>*/}
+                            {/*    评测结果*/}
+                            {/*</Text>*/}
+                            <Text fw={600} size={12} c={standardTitleColor(theme)}>评测记录 · 洛谷 P1221 · you</Text>
+                            <Space h={20} />
+                            <Text size={18} weight={600} c={standardTitleColor(theme)}>
                                 <Center>
                                     <IconCheck stroke={3} width={15} />
                                     &nbsp;100 Accepted{' '}
                                 </Center>
                             </Text>
-                            <Text ta={'right'} size='xs' weight={300} c={standardTitleColor(theme)}>
-                                【模版】最小生成树
-                            </Text>
+                            <Space h={30} />
                         </NoStyleCard>
                         <Space h={10}></Space>
                         <StandardCard title='测试点详情'>
@@ -435,14 +434,14 @@ export function SubmissionResultPage() {
                         </StandardCard>
                     </Grid.Col>
                     <Grid.Col span={3}>
-                        <NoStyleCard>
-                            <Center><Text color={theme.colorScheme === 'dark' ? 'white' : theme.colors.gray[7]} fw={700} size={14}>洛谷 P1145</Text></Center>
-                        </NoStyleCard>
-                        <Space h={10} />
-                        <StandardCard title={'提交用户'}>
-                            <Center><Badge w={'75%'} radius='sm' size={19 as unknown as MantineSize} color={'indigo'} style={{textTransform: 'none'}}>smallfang</Badge></Center>
-                        </StandardCard>
-                        <Space h={10} />
+                        {/*<NoStyleCard>*/}
+                        {/*    <Center><Text color={theme.colorScheme === 'dark' ? 'white' : theme.colors.gray[7]} fw={700} size={14}>洛谷 P1145</Text></Center>*/}
+                        {/*</NoStyleCard>*/}
+                        {/*<Space h={10} />*/}
+                        {/*<StandardCard title={'提交用户'}>*/}
+                        {/*    <Center><Badge w={'75%'} radius='sm' size={19 as unknown as MantineSize} color={'indigo'} style={{textTransform: 'none'}}>smallfang</Badge></Center>*/}
+                        {/*</StandardCard>*/}
+                        {/*<Space h={10} />*/}
                         <NoStyleCard>
                             <Group grow>
                                 <Box>

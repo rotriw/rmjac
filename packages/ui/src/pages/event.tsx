@@ -1,8 +1,10 @@
 import { EventTask } from 'rmjac-declare/event';
 import React from 'react';
-import { Container, Grid, Space, Table, Text, useMantineTheme } from '@mantine/core';
-import { NoStyleCard } from '../components/card';
-import { IconInfoCircle } from '@tabler/icons-react';
+import {Button, Container, Grid, Group, Space, Table, Text, useMantineTheme} from '@mantine/core';
+import {NoStyleCard, StandardCard} from '../components/card';
+import {IconArrowLeft, IconExternalLink, IconHistory, IconInfoCircle} from '@tabler/icons-react';
+import {t} from 'i18next';
+import {RightIcons} from './problemView';
 
 export function EventShow() {
     const theme = useMantineTheme();
@@ -40,7 +42,7 @@ export function EventShow() {
     return (<>
         <Container>
             <Grid>
-                <Grid.Col span={12}>
+                <Grid.Col span={9}>
                     <NoStyleCard>
                         <Text size={18} fw={600}>
                             {data.title}
@@ -49,23 +51,61 @@ export function EventShow() {
                         <Text size={13} fw={300} color={theme.colors.gray[theme.colorScheme === 'dark' ? 4 : 7]}>
                             {data.id}
                         </Text>
+                        <Space h={5} />
+                        <Button
+                            size={'xs'}
+                        >
+                            收藏事件
+                        </Button>
+                    </NoStyleCard>
+
+                    <Space h={10} />
+                    <NoStyleCard>
+                        <Table>
+                            <thead>
+                            <tr>
+                                <th>题目顺序</th>
+                                <th>题目</th>
+                                <th>状态</th>
+                            </tr>
+                            </thead>
+                            <tbody>{rows}</tbody>
+                        </Table>
                     </NoStyleCard>
                 </Grid.Col>
-            </Grid>
-            <Grid>
-                <Grid.Col span={4}>
-                    <NoStyleCard>
+                <Grid.Col span={3}>
+                    <StandardCard title={'关于 Event'}>
                         <Text size={14} fw={400}>
                             <div dangerouslySetInnerHTML={{__html: data.description}}></div>
                         </Text>
-                    </NoStyleCard>
+                    </StandardCard>
                     <Space h={10} />
                     <NoStyleCard>
-                        <Text size={14} fw={400}>
-                            <span style={{fontWeight: 600}}>举行时间: </span>2011<br />
-                            <span style={{fontWeight: 600}}>题目数: </span>6<br />
-                            <span style={{fontWeight: 600}}>状态: </span>已结束<br />
-                        </Text>
+                            <Group grow>
+                                <Text color="dimmed" fw={700} size={'xs'}>
+                                    举行时间
+                                </Text>
+                                <Text color="blue" fw={700} size={'xs'}>
+                                    2011
+                                </Text>
+                            </Group>
+                            <Group grow>
+                                <Text color="dimmed" fw={700} size={'xs'}>
+                                    题目数
+                                </Text>
+                                <Text color="blue" fw={700} size={'xs'}>
+                                    6
+                                </Text>
+                            </Group>
+                            <Group grow>
+                                <Text color="dimmed" fw={700} size={'xs'}>
+                                    状态
+                                </Text>
+                                <Text color="dimmed" fw={700} size={'xs'}>
+                                    已结束
+                                </Text>
+                            </Group>
+
                     </NoStyleCard>
                     <Space h={10} />
                     <NoStyleCard>
@@ -75,20 +115,6 @@ export function EventShow() {
                         }}>
                             <IconInfoCircle size={14} stroke={2} /> &nbsp;什么是event?
                         </Text>
-                    </NoStyleCard>
-                </Grid.Col>
-                <Grid.Col span={8}>
-                    <NoStyleCard>
-                    <Table>
-                        <thead>
-                            <tr>
-                                <th>题目顺序</th>
-                                <th>题目</th>
-                                <th>状态</th>
-                            </tr>
-                        </thead>
-                        <tbody>{rows}</tbody>
-                    </Table>
                     </NoStyleCard>
                 </Grid.Col>
             </Grid>

@@ -8,7 +8,7 @@ import {
     Text,
     Tabs,
     Modal,
-    useMantineTheme
+    useMantineTheme, Card, Button, SegmentedControl
 } from '@mantine/core';
 import React, { useEffect, useState } from 'react';
 import { NoStyleCard } from '../components/card';
@@ -118,44 +118,59 @@ export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
     const [opened, setOpened] = useState(false);
     const theme = useMantineTheme();
     const LeftGrid = mode === 'view' ? (<>
-        <Tabs variant='pills' onTabChange={async(item) => {
-            setUTab(item as string)
-            await setStatement(data.version[item as string])
-        }}  styles={standardTab} value={uTab}>
-            <NoStyleCard>
-                <Modal withCloseButton={false} opened={opened} onClose={() => {setOpened(false)}} >
-                    <Text size={14} fw={600}>{t('Choose Version')}</Text>
-                    <Tabs.List>
-                        <Tabs.Tab value={data.defaultVersion}>{PlatformToCNName[data.defaultVersion] || data.defaultVersion}</Tabs.Tab>
-                        {statementVersion}
-                    </Tabs.List>
-                </Modal>
-                <Text fw={600} size={14}>当前展示版本为 {PlatformToCNName[uTab] || uTab}</Text>
-                <Text fw={400} size={10} color='dimmed'>Version: Luogu / root. <a href='#change-version' style={{textDecoration: 'none', color: theme.colors.blue[9]}} onClick={() => {setOpened(true)}}>点击更换版本</a></Text>
-            </NoStyleCard>
-            <Space h={10}/>
-            <ProblemStatementShow data={statement} />
-        </Tabs>
+            <>
+                <NoStyleCard>
+                    <Card.Section p={'sm'} pl={15} mb={5}>
+                        <Text size={16} fw={600}>{data.title}</Text>
+                        <Text size={12} fw={400} color={'dimmed'}>时间限制: {data.limit.time} · 空间限制: {data.limit.memory} · 难度：{data.limit.difficult.text}</Text>
+                    </Card.Section>
+                    <ProblemStatementShow data={statement} />
+                </NoStyleCard>
+            </>
     </>) : (<>
         <Tabs onTabChange={(item) => {
             setSubmitMode(item as string)
-        }} value={submit} styles={standardTab}>
+        }} value={submit} variant={'pills'}>
+
             <NoStyleCard>
+                <Card.Section p={'sm'} pl={15} mb={5}>
+                    <Text size={16} fw={600}>{data.title}</Text>
+                    <Text size={12} fw={400} color={'dimmed'}>时间限制: {data.limit.time} · 空间限制: {data.limit.memory} · 难度：{data.limit.difficult.text}</Text>
+                </Card.Section>
                 <Tabs.List>
                     <Tabs.Tab value="direct">{t('problem.directsubmit')}</Tabs.Tab>
                     <Tabs.Tab value="sync">{t('problem.syncsubmit')}</Tabs.Tab>
                 </Tabs.List>
-            </NoStyleCard>
-            <Space h={10}/>
-            <NoStyleCard>
+                <Space h={20}/>
                 <DirectProblemSubmit />
                 <SyncProblemSubmit />
             </NoStyleCard>
         </Tabs>
     </>);
     const RightGrid = (<>
-        <ProblemDescription {...data.limit} />
+        {/*<ProblemDescription {...data.limit} />*/}
+
+            <SegmentedControl fullWidth
+                data={[
+                    { label: '题目详情', value: 'view' },
+                    { label: '提交', value: 'submit' },
+                ]}
+                value={mode} onChange={(mode: string) => setMode(mode as 'view' | 'submit')}
+            />
         <Space h={10}/>
+        <NoStyleCard>
+            <Modal withCloseButton={false} opened={opened} onClose={() => {setOpened(false)}} >
+                <Text size={14} fw={600}>{t('Choose Version')}</Text>
+                <Space h={10} />
+                <Tabs.List>
+                    <Tabs.Tab value={data.defaultVersion}>{PlatformToCNName[data.defaultVersion] || data.defaultVersion}</Tabs.Tab>
+                    {statementVersion}
+                </Tabs.List>
+            </Modal>
+            <Text fw={600} size={14}>当前展示版本为 {PlatformToCNName[uTab] || uTab}</Text>
+            <Text fw={400} size={10} color='dimmed'>Version: Luogu / root. <a href='#change-version' style={{textDecoration: 'none', color: theme.colors.blue[9]}} onClick={() => {setOpened(true)}}>点击更换版本</a></Text>
+        </NoStyleCard>
+        <Space h={10} />
         {islogin ? <NoStyleCard p={'null'}>
             <Group p="sm" pl={'md'} grow>
                 <Text color="dimmed" fw={700} size={'xs'}>
@@ -192,10 +207,14 @@ export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
     return (
         <>
             <Container>
+                <Tabs variant='pills' onTabChange={async(item) => {
+                    setUTab(item as string)
+                    await setStatement(data.version[item as string])
+                }}  styles={standardTab} value={uTab}>
                 <Grid>
                     <Grid.Col span={9}>
-                        <ProblemTitle setMode={setMode} title={data.title} source={data.sources} mode={mode} />
-                        <Space h={10}></Space>
+                        {/*<ProblemTitle setMode={setMode} title={data.title} source={data.sources} mode={mode} />*/}
+                        {/*<Space h={10}></Space>*/}
                         {LeftGrid}
                     </Grid.Col>
                     <Grid.Col span={3}>
@@ -204,6 +223,7 @@ export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
                         <TagCard event={data.tags || []} algorithm={data.algorithm || []} />
                     </Grid.Col>
                 </Grid>
+                </Tabs>
             </Container>
         </>
     )

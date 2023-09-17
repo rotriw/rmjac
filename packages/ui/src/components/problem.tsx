@@ -1,5 +1,5 @@
 import { PlatformToCNName, StandardProblemStatement, StatementToCNName, TagView } from 'rmjac-declare/problem';
-import { Alert, Badge, Box, Button, Center, Code, Divider, Grid, Group, Input, NativeSelect, Space, Tabs, Text, Tooltip, TypographyStylesProvider, useMantineTheme } from '@mantine/core';
+import { Alert, Badge, Box, Button, Center, Code, Card, Divider, Grid, Group, Input, NativeSelect, Space, Tabs, Text, Tooltip, TypographyStylesProvider, useMantineTheme } from '@mantine/core';
 import React from 'react';
 import { NoStyleCard, StandardCard } from './card';
 import { IconAlertCircle, IconArrowLeft, IconChevronsDown } from '@tabler/icons-react';
@@ -72,24 +72,30 @@ export function ProblemStatementShow({ data }: { data: StandardProblemStatement 
     const items = data.showProp.map((id) => {
         const item = data[id] as string;
 
-        if (id !== 'samples')
+        if (id !== 'samples') {
+
+            if (item === '') {
+                return (<></>)
+            }
             return (
                 <> {/* deepscan-disable-line */}
-                    <Text size={18} fw={600}>
+                    <Text size={16} fw={600}>
                         {StatementToCNName[id] || id}
                     </Text>
-                    <Space h={10}></Space>
-                    <TypographyStylesProvider fz={16}><div dangerouslySetInnerHTML={{ __html: item || '' }}></div></TypographyStylesProvider>
-                    <Space h={20}></Space>
+                    <Space h={5}></Space>
+                    <TypographyStylesProvider fw={500} fz={15}>
+                        <div style={{color: '#424344'}} dangerouslySetInnerHTML={{__html: item || ''}}></div>
+                    </TypographyStylesProvider>
+                    <Space h={5}></Space>
                 </>
             );
-        else {
+        } else {
             const res = ((item as unknown) as Array<{ in: string; out: string }>).map((item, index) => {
                 return <ShowSample key={index + 1} id={index + 1} ind={item.in} out={item.out} />;
             });
             return (
                 <> {/* deepscan-disable-line */}
-                    <Text size={18} fw={600}>
+                    <Text size={16} fw={600}>
                         {t('problem.simpleGroup')}
                     </Text>
                     <Space h={10} />
@@ -99,7 +105,8 @@ export function ProblemStatementShow({ data }: { data: StandardProblemStatement 
             );
         }
     });
-    return <NoStyleCard>{items}</NoStyleCard>;
+    const theme = useMantineTheme();
+    return <>{items}</>;
 }
 
 interface ProblemTitleProp {
@@ -117,7 +124,6 @@ export function ProblemTitle({ title, source, mode, setMode }: ProblemTitleProp)
     const sourceCode = source.map((item, index) => {
         return ` ${index === 0 ? '' : '/'} ${PlatformToCNName[item.platform] || item.platform} ${item.pid}`;
     });
-    // const {t} = useTranslation();
     return (
         <NoStyleCard>
             <Text size={18} fw={600}>
@@ -172,49 +178,42 @@ interface ProblemDescriptionProp {
 export function ProblemDescription({ time, memory, difficult }: ProblemDescriptionProp) {
     return (
         <NoStyleCard>
-            <Group grow>
-                <Box>
-                    <Text tt='uppercase' fz='xs' c='dimmed' fw={700}>
-                        {t('problem.timelimit')}
+
+            <Box>
+                <Text tt='uppercase' fz='xs' c='dimmed' fw={700}>
+                    {t('problem.timelimit')}
+                </Text>
+                <Group position='apart' align='flex-end' spacing={0}>
+                    <Text size={time.length >= 13 ? 10 : 12} fw={300}>
+                        {time}
                     </Text>
-                    <Group position='apart' align='flex-end' spacing={0}>
-                        <Text size={time.length >= 13 ? 10 : 12} fw={300}>
-                            {time}
-                        </Text>
-                    </Group>
-                </Box>
-                <Box>
-                    <Text tt='uppercase' fz='xs' c='dimmed' fw={700}>
-                        {t('problem.memorylimit')}
-                    </Text>
-                    <Group position='apart' align='flex-end' spacing={0}>
-                        <Text size={12} fw={300}>
-                            {memory.length > 8 ? <Tooltip.Floating label={memory}>
+                </Group>
+            </Box>
+            <Box>
+                <Text tt='uppercase' fz='xs' c='dimmed' fw={700}>
+                    {t('problem.memorylimit')}
+                </Text>
+                <Group position='apart' align='flex-end' spacing={0}>
+                    <Text size={12} fw={300}>
+                        {memory.length > 8 ? <Tooltip.Floating label={memory}>
                                 <Text size={14} fw={300}>
-                                {memory.slice(0, 8)}...
+                                    {memory.slice(0, 8)}...
                                 </Text>
                             </Tooltip.Floating>
-                                :
-                                <>{memory}</>}
-                        </Text>
-                    </Group>
-                </Box>
+                            :
+                            <>{memory}</>}
+                    </Text>
+                </Group>
+            </Box>
+            <Group grow>
                 <Box>
                     <Text tt='uppercase' fz='xs' c='dimmed' fw={700}>
                         {t('problem.difficult')}
                     </Text>
                     <Group position='apart' align='flex-end' spacing={0}>
-                        {difficult.hint !== '' && difficult.hint !== undefined ? (
-                            <Tooltip.Floating label={difficult.hint}>
-                                <Text size={12} fw={300} color={difficult.color}> {/*TODO: dark system */}
-                                    {difficult.text}
-                                </Text>
-                            </Tooltip.Floating>
-                        ) : (
-                            <Text size={12} fw={300} color={difficult.color}>
-                                {difficult.text}
-                            </Text>
-                        )}
+                        <Text size={12} fw={300} color={difficult.color}>
+                            {difficult.text}
+                        </Text>
                     </Group>
                 </Box>
             </Group>

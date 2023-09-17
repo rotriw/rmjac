@@ -38,7 +38,8 @@
       "outputSample": "Out",
       "inSample": "In",
       "simple": "Sample",
-      "algorithm": "{{status}} Algorithm Tag"
+      "algorithm": "{{status}} Algorithm Tag",
+      "history-score": ""
     },
     "platform": {
       "luogu": "Luogu"
