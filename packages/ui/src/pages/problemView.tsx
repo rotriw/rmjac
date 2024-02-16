@@ -148,8 +148,6 @@ export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
         </Tabs>
     </>);
     const RightGrid = (<>
-        {/*<ProblemDescription {...data.limit} />*/}
-
             <SegmentedControl fullWidth
                 data={[
                     { label: '题目详情', value: 'view' },
@@ -183,13 +181,11 @@ export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
 
             <RightIcons links={[
                 {
-                    label: <div style={{alignItems: 'center', display: 'flex'}}><IconHistory size={15}
-                                                                                             stroke={1.5}></IconHistory>&nbsp;{t('problem.historysubmit')}
+                    label: <div style={{alignItems: 'center', display: 'flex'}}><IconHistory size={15} stroke={1.5}></IconHistory>&nbsp;{t('problem.historysubmit')}
                     </div>, keys: 'send', order: 1, link: '#'
                 },
                 {
-                    label: <div style={{alignItems: 'center', display: 'flex'}}><IconExternalLink size={15}
-                                                                                                  stroke={1.5}></IconExternalLink>&nbsp;{t('problem.originlink')}
+                    label: <div style={{alignItems: 'center', display: 'flex'}}><IconExternalLink size={15} stroke={1.5}></IconExternalLink>&nbsp;{t('problem.originlink')}
                     </div>, order: 1, keys: 're', link: '#'
                 }, //alot of origin how to choose?
             ]} active={''}/>
@@ -197,10 +193,9 @@ export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
 
             <RightIcons links={[
                 {
-                    label: <div style={{alignItems: 'center', display: 'flex'}}><IconExternalLink size={15}
-                                                                                                  stroke={1.5}></IconExternalLink>&nbsp;{t('problem.originlink')}
+                    label: <div style={{alignItems: 'center', display: 'flex'}}><IconExternalLink size={15} stroke={1.5}></IconExternalLink>&nbsp;{t('problem.originlink')}
                     </div>, order: 1, keys: 're', link: '#'
-                }, //alot of origin how to choose?
+                },
             ]} active={''}/>
         </NoStyleCard>}
     </>);
@@ -213,8 +208,6 @@ export function ProblemViewPageIn({data, state, islogin}: ProblemViewPage) {
                 }}  styles={standardTab} value={uTab}>
                 <Grid>
                     <Grid.Col span={9}>
-                        {/*<ProblemTitle setMode={setMode} title={data.title} source={data.sources} mode={mode} />*/}
-                        {/*<Space h={10}></Space>*/}
                         {LeftGrid}
                     </Grid.Col>
                     <Grid.Col span={3}>
@@ -239,7 +232,7 @@ export function ProblemViewPage() {
                 samples: [{in: '4\naabbbb\ncccccc\naabaabaabaa\nbbaabaababaaba', out: '3\n5\n4\n7'}],
                 showProp: ['statement', 'inFormer', 'outFormer', 'samples'],
                 loading: 'loading..',
-                statement: String.raw`如果一个字符串可以被拆分为 $\text{AABB}$ 的形式，其中 $\text{A}$ 和 $\text{B}$ 是任意 <strong>非空</strong> 字符串，则我们称该字符串的这种拆分是优秀的。  <br /> <br />例如，对于字符串 $ \texttt{aabaabaa} $ ，如果令 $\text{A}=\texttt{aab}$，$\text{B}=\texttt{a}$，我们就找到了这个字符串拆分成 $\text{AABB}$ 的一种方式。<br /> <br />一个字符串可能没有优秀的拆分，也可能存在不止一种优秀的拆分。  <br /> <br />比如我们令 $\text{A}=\texttt{a}$，$\text{B}=\texttt{baa}$，也可以用 $\text{AABB}$ 表示出上述字符串；但是，字符串 $\texttt{abaabaa}$ 就没有优秀的拆分。<br /> <br />现在给出一个长度为 $n$ 的字符串 $S$，我们需要求出，在它所有子串的所有拆分方式中，优秀拆分的总个数。这里的子串是指字符串中连续的一段。<br /> <br />以下事项需要注意：<br /> <br />1. 出现在不同位置的相同子串，我们认为是不同的子串，它们的优秀拆分均会被记入答案。<br />2. 在一个拆分中，允许出现 $\text{A}=\text{B}$。例如 $\texttt{cccc}$ 存在拆分 $\text{A}=\text{B}=\texttt{c}$。<br />3. 字符串本身也是它的一个子串。`,
+                statement: String.raw`如果一个字符串可以被拆分为 $\text{AABB}$ 的形式，其中 $\text{A}$ 和 $\text{B}$ 是任意 <strong>非空</strong> 字符串，则我们称该字符串的这种拆分是优秀的。  <br /> 例如，对于字符串 $ \texttt{aabaabaa} $ ，如果令 $\text{A}=\texttt{aab}$，$\text{B}=\texttt{a}$，我们就找到了这个字符串拆分成 $\text{AABB}$ 的一种方式。<br /> 一个字符串可能没有优秀的拆分，也可能存在不止一种优秀的拆分。  <br /> 比如我们令 $\text{A}=\texttt{a}$，$\text{B}=\texttt{baa}$，也可以用 $\text{AABB}$ 表示出上述字符串；但是，字符串 $\texttt{abaabaa}$ 就没有优秀的拆分。<br /> 现在给出一个长度为 $n$ 的字符串 $S$，我们需要求出，在它所有子串的所有拆分方式中，优秀拆分的总个数。这里的子串是指字符串中连续的一段。<br /> 以下事项需要注意：<br /> 1. 出现在不同位置的相同子串，我们认为是不同的子串，它们的优秀拆分均会被记入答案。<br />2. 在一个拆分中，允许出现 $\text{A}=\text{B}$。例如 $\texttt{cccc}$ 存在拆分 $\text{A}=\text{B}=\texttt{c}$。<br />3. 字符串本身也是它的一个子串。`,
                 inFormer: '每个输入文件包含多组数据。<br /><br />输入文件的第一行只有一个整数 $T$，表示数据的组数。<br /><br />接下来 $T$ 行，每行包含一个仅由英文小写字母构成的字符串 $S$，意义如题所述。',
                 outFormer: '输出 $T$ 行，每行包含一个整数，表示字符串 $S$ 所有子串的所有拆分中，总共有多少个是优秀的拆分。',
             },

@@ -1,5 +1,5 @@
 import { PlatformToCNName, StandardProblemStatement, StatementToCNName, TagView } from 'rmjac-declare/problem';
-import { Alert, Badge, Box, Button, Center, Code, Card, Divider, Grid, Group, Input, NativeSelect, Space, Tabs, Text, Tooltip, TypographyStylesProvider, useMantineTheme } from '@mantine/core';
+import { Alert, Badge, Box, Button, Center, Code, Divider, Grid, Group, Input, NativeSelect, Space, Tabs, Text, Tooltip, TypographyStylesProvider, useMantineTheme } from '@mantine/core';
 import React from 'react';
 import { NoStyleCard, StandardCard } from './card';
 import { IconAlertCircle, IconArrowLeft, IconChevronsDown } from '@tabler/icons-react';
@@ -68,14 +68,11 @@ function ShowSample({ id, ind, out }: SampleShowProp) {
 }
 
 export function ProblemStatementShow({ data }: { data: StandardProblemStatement }) {
-    // const {t} = useTranslation();
     const items = data.showProp.map((id) => {
         const item = data[id] as string;
-
         if (id !== 'samples') {
-
             if (item === '') {
-                return (<></>)
+                return (<></>) // deepscan-disable-line
             }
             return (
                 <> {/* deepscan-disable-line */}
@@ -83,7 +80,7 @@ export function ProblemStatementShow({ data }: { data: StandardProblemStatement 
                         {StatementToCNName[id] || id}
                     </Text>
                     <Space h={5}></Space>
-                    <TypographyStylesProvider fw={500} fz={15}>
+                    <TypographyStylesProvider fz={16}>
                         <div style={{color: '#424344'}} dangerouslySetInnerHTML={{__html: item || ''}}></div>
                     </TypographyStylesProvider>
                     <Space h={5}></Space>
@@ -105,7 +102,6 @@ export function ProblemStatementShow({ data }: { data: StandardProblemStatement 
             );
         }
     });
-    const theme = useMantineTheme();
     return <>{items}</>;
 }
 

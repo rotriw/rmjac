@@ -10,6 +10,8 @@
         "tsc:watch": "tsc --watch"
     },
     "dependencies": {
+        "awesome-static": "^1.4.3",
+        "js-sha512": "^0.8.0",
         "koa": "^2.14.1",
         "koa-body": "^6.0.1",
         "koa-bodyparser": "^4.3.0",

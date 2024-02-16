@@ -61,7 +61,7 @@ export class Handler {
 }
 
 async function handle(ctx: KoaContext, HandlerClass: any) {
-    const body = ctx.request.body;
+    const body = (ctx.request as any).body;
     const method = ctx.method.toLowerCase();
     let operation = '';
     if (method === 'post' && body?.operation !== '') {
@@ -116,7 +116,7 @@ async function handle(ctx: KoaContext, HandlerClass: any) {
 }
 
 export function Route(name: string, link: string, Handler: any) {
-    router.all(link, async (ctx: Koa.Context, next: () => void) => {
+    router.all(link, async (ctx: any, next: any) => {
         await handle(ctx, Handler);
         next();
     });
