@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState } from 'react';
-import { createStyles, Header, Container, Group, Burger, Navbar as Navs, Transition, Paper, Menu, UnstyledButton, Avatar, rem, Text, Center } from '@mantine/core';
+import { Container, Group, Burger, Navbar as Navs, Transition, Paper, Menu, UnstyledButton, Avatar, rem, Text, Center } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { NavLink } from 'react-router-dom';
 import React from 'react';
