@@ -1,0 +1,7 @@
+#root {
+    background-color: light-dark('#f7f7f7', var(--mantine-color-dark-7));
+}
+
+html, body {
+    background-color: light-dark(white, '#2C2E33') !important;
+}

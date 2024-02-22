@@ -1,34 +1,27 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Card, Group, Text, useMantineTheme, createStyles, TextProps } from '@mantine/core';
+import { Card, Group, Text, useMantineTheme, TextProps, CardProps } from '@mantine/core';
 import React from 'react';
-import * as utils from '@mantine/utils';
-import { PaperProps } from '@mantine/core';
+// import * as utils from '@mantine/utils';
+// import { CardProps } from '@mantine/core';
 
-const useStyles = createStyles((theme) => ({
-    standardCard: {
-        fontWeight: 700,
-        color: theme.colors.gray[6],
-        fontSize: 12.5,
-    },
-}));
 
-export interface StandardCardProps extends PaperProps {
+export interface StandardCardProps extends CardProps {
     title?: string | React.ReactNode;
     content?: React.ReactNode;
     subtitle?: React.ReactNode;
+    children?: React.ReactNode;
 }
 
-export interface NoStyleCardProps extends PaperProps {
+export interface NoStyleCardProps extends CardProps {
     content?: React.ReactNode;
 }
 
 export function StandardCard({ title, content, subtitle, children, ...props }: StandardCardProps) {
-    const { classes, cx, theme } = useStyles();
     return (
         <Card shadow='xs' p='md' radius='sm' {...props}>
             <Card.Section inheritPadding>
-                <Group position='apart' mt='md' mb='xs'>
-                    <Text className={classes.standardCard}>{title}</Text>
+                <Group align='apart' mt='md' mb='xs'>
+                    <Text>{title}</Text>
                     {subtitle}
                 </Group>
             </Card.Section>
@@ -38,7 +31,6 @@ export function StandardCard({ title, content, subtitle, children, ...props }: S
 }
 
 export function NoStyleCard({ content, children, ...props }: NoStyleCardProps) {
-    const { classes, cx, theme } = useStyles();
     return (
         <Card shadow='xs' p='md' radius='sm' {...props}>
             {children || content}

@@ -215,6 +215,5 @@ class LoginHandler extends Handler {
 
 export function apply() {
     Route('SignUp', '/register', RegisterHandler);
-    Route('SignUp-Id', '/register/:id', RegisterHandler);
     Route('SignIn', '/login', LoginHandler);
 }

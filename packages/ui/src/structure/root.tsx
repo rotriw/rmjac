@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { createStyles, AppShell, rem, Space } from '@mantine/core';
+import { AppShell, rem, Space, useMantineColorScheme } from '@mantine/core';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { Navbar } from '../components/navbar';
@@ -8,8 +8,6 @@ import { AppFooter } from '../structure/footer';
 import { updateNewPageBackEndData } from '../interfaces/data';
 import { Toaster } from 'react-hot-toast';
 
-const useStyles = createStyles((theme) => ({}));
-
 interface RootProps {
     onThemeChange: () => void;
     type: 'route' | 'direct';
@@ -17,9 +15,9 @@ interface RootProps {
 }
 
 export function Root({ onThemeChange, type, children }: RootProps) {
-    const { classes, cx, theme } = useStyles();
     // const userState = useAppSelector((state) => state.user);
     const mainLinks = window?.web?.links || [];
+    const theme = useMantineColorScheme();
     const location = type == 'direct' ? {pathname: 'unk '} : useLocation();
     React.useEffect(() => {
         if (window.nowPage === undefined) {
@@ -37,10 +35,15 @@ export function Root({ onThemeChange, type, children }: RootProps) {
                     paddingBottom: 'calc(var(--mantine-header-height, 0px) + 0.05rem)',
                 },
             }}
+            
             padding='md'
-            footer={<AppFooter onThemeChange={onThemeChange}></AppFooter>}
-            header={<Navbar title={window.web?.title || 'rmj.ac'} links={mainLinks} type={type}></Navbar>}
         >
+            <AppShell.Header>
+                <Navbar title={window.web?.title || 'rmj.ac'} links={mainLinks} type={type}></Navbar>
+            </AppShell.Header>
+            <AppShell.Footer>
+                <AppFooter onThemeChange={onThemeChange}></AppFooter>
+            </AppShell.Footer>
         <Toaster
             position="top-center"
             toastOptions={{

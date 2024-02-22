@@ -3,7 +3,7 @@
     "private": true,
     "version": "0.0.0",
     "scripts": {
-        "ui:dev": "yarn workspace rmjac-ui run dev",
+        "ui:dev": "cd packages/ui-new && pnpm run dev",
         "ui:build": "yarn workspace rmjac-ui run build",
         "ui:preview": "yarn workspace rmjac-ui run preview",
         "debug": "ts-node packages/entry/index.ts --debug",

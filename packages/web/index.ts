@@ -115,11 +115,14 @@ async function handle(ctx: KoaContext, HandlerClass: any) {
     }
 }
 
+let webLogger: any;
+
 export function Route(name: string, link: string, Handler: any) {
     router.all(link, async (ctx: any, next: any) => {
         await handle(ctx, Handler);
         next();
     });
+    webLogger.debug(`Route ${name} loaded.`);
 }
 
 export async function applyPrepare(logger: Logger) {
@@ -140,6 +143,7 @@ export async function applyPrepare(logger: Logger) {
 export async function applyAfter(logger: Logger) {
     const handlerPath = path.join(__dirname, 'handler');
     const handlerDir = await fs.readdirSync(handlerPath);
+    webLogger = logger;
     for (const pack of handlerDir) {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const runTag = require(path.join(handlerPath, pack));
