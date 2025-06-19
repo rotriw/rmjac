@@ -10,3 +10,7 @@ node_modules
 # Added by cargo
 
 /target
+
+*.json
+!*.example.json
+!package.json

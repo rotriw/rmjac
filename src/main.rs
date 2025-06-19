@@ -8,6 +8,7 @@ generate_commands! {
 pub mod command;
 #[macro_use]
 pub mod utils;
+pub mod env;
 pub mod handler;
 
 fn main() {

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct GroupNode {
-    pub node_id: u128,
+    pub node_id: u64,
     pub node_iden: String,
     pub public: GroupNodePublic,
     pub private: GroupNodePrivate,
@@ -23,7 +23,7 @@ pub struct GroupNodePrivate {
 }
 
 impl GroupNode {
-    pub fn get_node_id(&self) -> u128 {
+    pub fn get_node_id(&self) -> u64 {
         self.node_id
     }
 

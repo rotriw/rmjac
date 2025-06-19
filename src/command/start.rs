@@ -5,11 +5,9 @@
 //! --config -c <config>, Server will use this config file
 //! --host -H <host>, Server will listen on this host (default: 127.0.0.1)
 
-use core::error::CoreError;
-
 use log::LevelFilter;
 
-use crate::{handler, utils};
+use crate::{env::env_load, handler, utils};
 
 pub fn run(
     port: Option<u16>,
@@ -25,6 +23,8 @@ pub fn run(
         .parse()
         .unwrap_or(LevelFilter::Info);
     let _ = utils::logger::setup_logger_with_stdout(log_level);
+    let _ = env_load(&config);
+
     let _ = handler::main(host.as_str(), port);
     Some(())
 }

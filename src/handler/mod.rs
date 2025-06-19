@@ -1,7 +1,12 @@
 use core::error::CoreError;
 
-use actix_web::{error, web, App, HttpResponse, HttpServer, http::{header::ContentType, StatusCode}};
+use actix_web::{
+    App, HttpResponse, HttpServer, error,
+    http::{StatusCode, header::ContentType},
+    web,
+};
 use derive_more::derive::Display;
+use sea_orm::Database;
 
 #[derive(Debug, Display)]
 pub enum HttpError {
@@ -17,14 +22,16 @@ impl error::ResponseError for HttpError {
     fn error_response(&self) -> HttpResponse {
         HttpResponse::build(self.status_code())
             .insert_header(ContentType::json())
-            .body(Json!{
+            .body(Json! {
                 "error": self.to_string()
             })
     }
 
     fn status_code(&self) -> StatusCode {
         match *self {
-            HttpError::CoreError(_) | HttpError::IOError | HttpError::ActixError => StatusCode::INTERNAL_SERVER_ERROR,
+            HttpError::CoreError(_) | HttpError::IOError | HttpError::ActixError => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
         }
     }
 }
@@ -45,18 +52,31 @@ pub type ResultHandler<T> = Result<T, HttpError>;
 
 #[actix_web::main]
 pub async fn main(host: &str, port: u16) -> std::io::Result<()> {
+    log::info!("Connecting to database...");
+    let database_url = crate::env::CONFIG
+        .lock()
+        .unwrap()
+        .postgres_url
+        .clone()
+        .ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::NotFound, "Postgres URL not found")
+        })?;
+    let conn = Database::connect(database_url.as_str()).await.unwrap();
+    log::info!("Connected to database at {}", database_url);
     log::info!("Server is running on port {}", port);
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         App::new()
-        .service(user::service())
-        .app_data(web::JsonConfig::default().error_handler(|err, _req| {
-            error::InternalError::from_response(
-                "",
-                HttpResponse::BadRequest()
-                    .content_type("application/json")
-                    .body(Json!{"code": -1, "msg": err.to_string()})
-            ).into()
-        }))
+            .service(user::service())
+            .app_data(web::JsonConfig::default().error_handler(|err, _req| {
+                error::InternalError::from_response(
+                    "",
+                    HttpResponse::BadRequest()
+                        .content_type("application/json")
+                        .body(Json! {"code": -1, "msg": err.to_string()}),
+                )
+                .into()
+            }))
+            .app_data(web::Data::new(conn.clone()))
     })
     .bind((host, port))?
     .run()

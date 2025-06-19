@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { CardTitle } from "./ui/card"
 
 // 生成模拟数据
 const generateContributionData = () => {
@@ -99,8 +100,9 @@ export default function ContributionGraph() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <div className="text-sm text-muted-foreground">
-          {contributionData.length > 0 && <span>{getTotalContributions()} 次通过（过去一年）</span>}
+        <div className="text-sm">
+          <CardTitle>题目通过数</CardTitle>
+          <span className=" text-muted-foreground"></span>{contributionData.length > 0 && <span>共 {getTotalContributions()} 次通过（过去一年 {getTotalContributions()} 次）</span>}
         </div>
         <div className="flex items-center space-x-2">
           <span className="text-xs text-muted-foreground">贡献少</span>
@@ -116,22 +118,8 @@ export default function ContributionGraph() {
       </div>
 
       <div className="relative">
-        <div className="flex text-xs text-muted-foreground mb-2">
-          {getMonthLabels().map((item, i) => (
-            <div key={i} className="flex-1" style={{ textAlign: "center" }}>
-              {
-                ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"][
-                  item.month
-                ]
-              }
-            </div>
-          ))}
-        </div>
 
         <div className="flex">
-          <div className="grid grid-rows-7 grid-flow-row gap-1 mr-2 text-xs text-muted-foreground">
-            <div className="h-3">通过</div>
-          </div>
 
           <div className="flex space-x-1 overflow-x-auto">
             {weeks.map((week, weekIndex) => (
@@ -144,7 +132,7 @@ export default function ContributionGraph() {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div
-                            className={`w-3 h-3 rounded-sm ${day ? getContributionColor(day.count) : "bg-gray-100 dark:bg-gray-800"}`}
+                            className={`w-3 h-3 rounded-xs ${day ? getContributionColor(day.count) : "bg-gray-100 dark:bg-gray-800"}`}
                           ></div>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="text-xs">

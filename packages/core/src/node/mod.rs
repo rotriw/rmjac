@@ -17,12 +17,6 @@ pub enum NodeResult {
 }
 
 pub trait Node {
-    fn get_node_id(&self) -> u128;
+    fn get_node_id(&self) -> u64;
     fn get_node_iden(&self) -> String;
-}
-
-pub fn new_node_id() -> u128 {
-    let mut res = (*env::NODEID.lock().unwrap()).clone();
-    res += 1;
-    res.clone()
 }

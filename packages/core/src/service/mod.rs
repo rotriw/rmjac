@@ -1,7 +1,5 @@
-use crate::env;
+use crate::{env, error::CoreError};
 
-pub fn service_start(postgresql: Option<String>) {
-    *env::POSTGRESQL.lock().unwrap() = postgresql
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| "postgres://localhost/rmjac".to_string());
+pub async fn service_start() -> Result<(), CoreError> {
+    Ok(())
 }

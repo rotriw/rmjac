@@ -17,4 +17,3 @@ macro_rules! async_run {
         })
     }};
 }
-

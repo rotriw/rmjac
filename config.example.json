@@ -1,0 +1,4 @@
+{
+    "secret_challenge_code": "123456",
+    "postgres_url": "postgresql://localhost:5432/rmjac?schema=public"
+}

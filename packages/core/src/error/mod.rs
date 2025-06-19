@@ -4,6 +4,16 @@ use derive_more::Display;
 pub enum CoreError {
     #[display("Std Error")]
     StdError,
+    #[display("Db Error(seaorm::error::DbErr): _{}", _0)]
+    DbError(sea_orm::error::DbErr),
+    #[display("DB Error: _{}", _0)]
+    MongoError(String),
+}
+
+impl From<sea_orm::error::DbErr> for CoreError {
+    fn from(err: sea_orm::error::DbErr) -> Self {
+        CoreError::DbError(err)
+    }
 }
 
 impl AsRef<str> for CoreError {

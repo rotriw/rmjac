@@ -45,9 +45,9 @@ export function LoginForm({
                 </Button>
               </div>
               <div className="text-center text-sm">
-                Don&apos;t have an account?{" "}
-                <a href="#" className="underline underline-offset-4">
-                  Sign up
+                没有账号，请&nbsp;
+                <a href="/register" className="underline underline-offset-4">
+                  注册
                 </a>
               </div>
             </div>

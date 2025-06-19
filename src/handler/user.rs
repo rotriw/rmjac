@@ -1,14 +1,93 @@
-use actix_web::{get, services, web, HttpRequest, Scope};
-use crate::handler::ResultHandler;
+use core::now_time;
 
-#[get("/")]
-pub async fn new_data(req: HttpRequest) -> ResultHandler<String> {
+use crate::{
+    env::CONFIG,
+    handler::ResultHandler,
+    utils::challenge::{self, gen_captcha, gen_verify_code},
+};
+use actix_web::{HttpRequest, Scope, get, post, services, web};
+use sea_orm::DatabaseConnection;
+use serde::Deserialize;
+
+#[get("/view/{id}")]
+pub async fn get_user(_req: HttpRequest) -> ResultHandler<String> {
     Ok("test".to_string())
 }
 
+#[derive(Deserialize)]
+pub struct UserCreaterUserVerify {
+    pub challenge_text: String,
+    pub challenge_img: String,
+    pub challenge_code: String,
+    pub challenge_time: i64,
+}
+
+#[derive(Deserialize)]
+pub struct UserCreateUser {
+    pub iden: String,
+    pub name: String,
+    pub email: String,
+    pub avatar: String,
+    pub password: String,
+    pub verify: UserCreaterUserVerify,
+}
+
+#[post("/create")]
+pub async fn create_user(
+    data: web::Json<UserCreateUser>,
+    db: web::Data<DatabaseConnection>,
+) -> ResultHandler<String> {
+    let user = data.into_inner();
+    // check verify time
+    let now = now_time!();
+    if now.and_utc().timestamp_millis() - user.verify.challenge_time > 5 * 60 * 1000 {
+        return Ok(Json! {
+            "error": "Challenge expired"
+        });
+    }
+    // verify challenge code
+    if !challenge::verify_code(
+        &user.verify.challenge_text,
+        user.verify.challenge_time,
+        &CONFIG.lock().unwrap().secret_challenge_code,
+        user.verify.challenge_img == "dark",
+        &user.verify.challenge_code,
+    ) {
+        return Ok(Json! {
+            "error": "Challenge code mismatch"
+        });
+    }
+    let res = core::model::user::create_default_user(
+        &db,
+        user.iden.as_str(),
+        user.name.as_str(),
+        user.email.as_str(),
+        user.avatar.as_str(),
+        user.password.as_str(),
+    )
+    .await?;
+    Ok(serde_json::to_string(&res).unwrap())
+}
+
+#[derive(Deserialize)]
+pub struct UserBeforeCreate {
+    dark_mode: bool,
+}
+
+#[get("/before_create")]
+pub async fn before_create(path: web::Query<UserBeforeCreate>) -> ResultHandler<String> {
+    let (challenge_text, challenge_img) = gen_captcha(path.dark_mode);
+    let time = chrono::Utc::now().naive_utc();
+    let code = (*CONFIG.lock().unwrap()).secret_challenge_code.clone();
+    let challenge_code = gen_verify_code(&challenge_text, &time, code.as_str(), path.dark_mode);
+    Ok(Json! {
+        "challenge_code": challenge_img,
+        "challenge_verify": challenge_code,
+        "challenge_time": time.and_utc().timestamp_millis(),
+    })
+}
+
 pub fn service() -> Scope {
-    let service = services! [
-        new_data
-    ];
+    let service = services![get_user, create_user, before_create];
     web::scope("/api/user").service(service)
 }

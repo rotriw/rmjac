@@ -1,9 +1,11 @@
-import { CalendarIcon, GlobeIcon, IdCardIcon, MailIcon, MapPinIcon, UserIcon, Verified } from "lucide-react"
+import { CalendarIcon, ContactIcon, GlobeIcon, IdCardIcon, MailIcon, MapPinIcon, UserIcon, Verified } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import ContributionGraph from "@/components/contribution-graph"
+import React from "react"
+import { Button } from "@/components/ui/button"
 
 export default function ProfilePage() {
     const data = {
@@ -24,12 +26,19 @@ export default function ProfilePage() {
                     <AvatarImage src={data.avatar} alt="用户头像" />
                     <AvatarFallback></AvatarFallback>
                 </Avatar>
-                <div className="text-left">
+                <div className="space-y-1 text-center">
                     <h2 className="text-2xl font-bold">{data.name}</h2>
+                    <span className="font-light">𝚃𝚑𝚎 𝚏𝚞𝚝𝚞𝚛𝚎 𝚒𝚜 𝚒𝚗 𝚜𝚒𝚐𝚑𝚝</span>
+                    
                 </div>
+
                 </div>
-                <div className="mt-3 space-y-4">
-                <div className="flex items-end text-sm">
+                <div className="mt-5 space-y-3">
+                <Button variant="default" className="w-full">
+                    <ContactIcon className="mr-2 h-4 w-4" />
+                    联系
+                </Button>
+                <div className="mt-1 flex items-end text-sm">
                     <MailIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                     <span>{data.email}</span>
                 </div>
@@ -44,7 +53,7 @@ export default function ProfilePage() {
                 </div>
         </div>
         <div className="md:col-span-5">
-            <Card className="mb-6 relative">
+            <Card className="mb-6 relative shadow-none rounded-md">
             <CardContent className="pb-12">
                 <ContributionGraph />
                 <div className="absolute bottom-3 right-4">
@@ -54,7 +63,7 @@ export default function ProfilePage() {
                 </div>
             </CardContent>
             </Card>
-            <Card className="mb-6 relative">
+            <Card className="mb-6 relative shadow-none rounded-md">
             <CardContent className="pb-12">
                 <div className="prose dark:prose-invert max-w-none">
                     {data.description || "暂无描述信息"}
