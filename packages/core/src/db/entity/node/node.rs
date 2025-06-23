@@ -7,7 +7,7 @@ use crate::error::CoreError;
 #[sea_orm(table_name = "node")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub node_id: u64,
+    pub node_id: i64,
     pub node_iden: String,
     pub node_type: String,
 }

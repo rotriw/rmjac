@@ -1,12 +1,14 @@
 use core::error::CoreError;
 
+use actix_cors::Cors;
 use actix_web::{
     App, HttpResponse, HttpServer, error,
     http::{StatusCode, header::ContentType},
     web,
 };
 use derive_more::derive::Display;
-use sea_orm::Database;
+use log::LevelFilter;
+use sea_orm::{ConnectOptions, Database};
 
 #[derive(Debug, Display)]
 pub enum HttpError {
@@ -52,7 +54,6 @@ pub type ResultHandler<T> = Result<T, HttpError>;
 
 #[actix_web::main]
 pub async fn main(host: &str, port: u16) -> std::io::Result<()> {
-    log::info!("Connecting to database...");
     let database_url = crate::env::CONFIG
         .lock()
         .unwrap()
@@ -61,10 +62,19 @@ pub async fn main(host: &str, port: u16) -> std::io::Result<()> {
         .ok_or_else(|| {
             std::io::Error::new(std::io::ErrorKind::NotFound, "Postgres URL not found")
         })?;
-    let conn = Database::connect(database_url.as_str()).await.unwrap();
-    log::info!("Connected to database at {}", database_url);
+    log::info!("Connecting to database {}...", &database_url);
+    let connection_options = ConnectOptions::new(database_url)
+        .sqlx_logging_level(LevelFilter::Trace)
+        .to_owned();
+    let conn = Database::connect(connection_options).await.unwrap();
+    log::info!("Connected to database");
     log::info!("Server is running on port {}", port);
     HttpServer::new(move || {
+        let cors = Cors::default()
+        .allow_any_origin()
+        .allow_any_method()
+        .allow_any_header()
+        .max_age(3600);
         App::new()
             .service(user::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {
@@ -77,6 +87,7 @@ pub async fn main(host: &str, port: u16) -> std::io::Result<()> {
                 .into()
             }))
             .app_data(web::Data::new(conn.clone()))
+            .wrap(cors)
     })
     .bind((host, port))?
     .run()

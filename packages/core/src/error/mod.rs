@@ -8,6 +8,8 @@ pub enum CoreError {
     DbError(sea_orm::error::DbErr),
     #[display("DB Error: _{}", _0)]
     MongoError(String),
+    #[display("User not found")]
+    UserNotFound,
 }
 
 impl From<sea_orm::error::DbErr> for CoreError {

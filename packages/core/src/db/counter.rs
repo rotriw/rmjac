@@ -6,10 +6,10 @@ use crate::{env, error::CoreError};
 #[derive(Serialize, Deserialize, Debug)]
 struct Counter {
     iden: String,
-    value: u64,
+    value: i64,
 }
 
-pub async fn gen_counter(client: &Client, db_name: &str, iden: &str) -> Result<u64, CoreError> {
+pub async fn gen_counter(client: &Client, db_name: &str, iden: &str) -> Result<i64, CoreError> {
     let db = client.database(db_name);
     let collection: Collection<Counter> = db.collection("counter");
     let filter = doc! { "iden": iden };

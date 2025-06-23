@@ -1,9 +1,9 @@
 use sea_orm::DatabaseConnection;
 
 use crate::{
-    db,
+    db::{self, entity::{self, node::{node::create_node, token::create_token, user::get_user_by_iden}}},
     error::CoreError,
-    node::user::{UserNode, UserNodePrivate, UserNodePublic},
+    graph::node::{token::TokenNode, user::{UserNode, UserNodePrivate, UserNodePublic}},
 };
 
 pub async fn create_default_user(
@@ -15,8 +15,8 @@ pub async fn create_default_user(
     password: &str,
 ) -> Result<UserNode, CoreError> {
     let node_iden = format!("user_{}", iden);
-    let new_node = db::entity::node::create_node(&db, node_iden.as_str(), "user").await?;
-    let user = db::entity::user::create_user(
+    let new_node = db::entity::node::node::create_node(&db, node_iden.as_str(), "user").await?;
+    let user = db::entity::node::user::create_user(
         &db,
         new_node.node_id,
         name,
@@ -30,22 +30,36 @@ pub async fn create_default_user(
         None, // profile_show
     )
     .await?;
-    Ok(UserNode {
-        node_id: new_node.node_id,
-        node_iden: new_node.node_iden,
-        public: UserNodePublic {
-            name: name.to_string(),
-            email: email.to_string(),
-            creation_time: chrono::Utc::now().timestamp_millis(),
-            creation_order: user.user_creation_order,
-            last_login_time: chrono::Utc::now().to_rfc3339(),
-            avatar: avatar.to_string(),
-            description: String::new(),
-            bio: String::new(),
-            profile_show: vec![],
-        },
-        private: UserNodePrivate {
-            password: password.to_string(),
-        },
-    })
+    Ok(user.into())
+}
+
+pub async fn check_iden_exists(
+    db: &DatabaseConnection,
+    iden: &str,
+) -> Result<bool, CoreError> {
+    let exists = entity::node::user::check_iden_exists(&db, iden).await?;
+    Ok(exists)
+}
+
+
+pub async fn user_login(
+    db: &DatabaseConnection,
+    iden: &str,
+    password: &str,
+    service: &str,
+    token_iden: &str,
+    long_token: bool,
+) -> Result<(UserNode, TokenNode), CoreError> {
+    let user = get_user_by_iden(&db, iden).await?;
+    if user.user_password != password {
+        return Err(CoreError::UserNotFound);
+    }
+    let token_expiration = if long_token {
+        Some((chrono::Utc::now() + chrono::Duration::days(30)).naive_utc())
+    } else {
+        None
+    };
+    let token_node = create_node(&db, service, token_iden).await?;
+    let token = create_token(&db, token_node.node_id, service, token_iden, token_expiration, "main").await?;
+    Ok((user.into(), token.into()))
 }

@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "packages/core"
-, "packages/macro_db_init"]
+, "packages/macro_db_init", "packages/vjudge"]
 
 [package]
 name = "rmjac"
@@ -27,3 +27,5 @@ shellexpand = "3.1.1"
 captcha-rs = "0.2.11"
 base16ct = "0.2.0"
 sha2 = "0.10.9"
+actix-cors = "0.7.1"
+uuid = "1.17.0"

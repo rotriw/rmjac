@@ -21,6 +21,7 @@ mongodb = "3.2.3"
 enumx = "0.4.3"
 sha2 = "0.10.9"
 base16ct = { version = "0.2.0", features = ["alloc"] }
+uuid = { version = "1.17.0", features = ["v4"] }
 
 
 [dependencies.sea-orm-migration]

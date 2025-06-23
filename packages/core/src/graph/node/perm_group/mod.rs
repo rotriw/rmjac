@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use crate::node::Node;
+use crate::graph::node::Node;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PermGroupNode {
-    pub node_id: u64,
+    pub node_id: i64,
     pub node_iden: String,
     pub name: String,
     pub description: String,
@@ -14,7 +14,7 @@ pub struct PermGroupNode {
 }
 
 impl Node for PermGroupNode {
-    fn get_node_id(&self) -> u64 {
+    fn get_node_id(&self) -> i64 {
         self.node_id
     }
 

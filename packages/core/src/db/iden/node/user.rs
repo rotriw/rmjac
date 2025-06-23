@@ -2,7 +2,7 @@ use sea_orm::DeriveIden;
 
 #[derive(DeriveIden)]
 pub enum User {
-    #[sea_orm(iden = "user")]
+    #[sea_orm(iden = "node_user")]
     Table,
     #[sea_orm(iden = "node_id")]
     NodeId,

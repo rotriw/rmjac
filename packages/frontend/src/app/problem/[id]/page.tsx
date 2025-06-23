@@ -9,12 +9,8 @@ import { Button } from "@/components/ui/button"
 
 export default function ProfilePage() {
     const data = {
-        avatar: "https://cdn.rotriw.cn/smallfang/avatar.png",
-        name: "smallfang",
-        email: "smallfang233@qq.com",
-        creationTime: "2023-01-01",
-        creationOrder: "1",
-        description: "这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。",
+        title: "A+B Problem",
+        
     };
 
     return (

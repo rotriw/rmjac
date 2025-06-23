@@ -19,14 +19,19 @@ lazy_static! {
 pub fn env_load(path: &str) -> Result<(), String> {
     let path = shellexpand::tilde(path).to_string();
     let config =
-        std::fs::read_to_string(path).map_err(|e| format!("Failed to read config file: {}", e))?;
+        std::fs::read_to_string(&path).map_err(|e| format!("Failed to read config file: {}", e))?;
+    log::info!("Loading config from: {}", &path);
     let config: Result<Config, serde_json::Error> = serde_json::from_str(&config);
     match config {
         Ok(cfg) => {
             let mut env = CONFIG.lock().unwrap();
             env.secret_challenge_code = cfg.secret_challenge_code;
+            env.postgres_url = cfg.postgres_url;
             Ok(())
         }
-        Err(e) => Err(format!("Failed to parse config file: {}", e)),
+        Err(e) => {
+            log::error!("Failed to parse config file: {}", e);
+            Err(format!("Failed to parse config file: {}", e))
+        }
     }
 }

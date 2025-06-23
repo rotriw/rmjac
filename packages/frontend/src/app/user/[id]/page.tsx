@@ -14,7 +14,7 @@ export default function ProfilePage() {
         email: "smallfang233@qq.com",
         creationTime: "2023-01-01",
         creationOrder: "1",
-        description: "这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。",
+        description: "这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n",
     };
 
     return (
@@ -53,23 +53,29 @@ export default function ProfilePage() {
                 </div>
         </div>
         <div className="md:col-span-5">
-            <Card className="mb-6 relative shadow-none rounded-md">
-            <CardContent className="pb-12">
+            <Card style={{
+              background: "linear-gradient(180deg, rgba(249, 234, 234, 0.2) 0%, rgba(255, 255, 255, 0) 100%);",
+            }} className="mb-6 py-5 relative shadow-none rounded-md">
+            <CardContent className="pb-7 px-5">
                 <ContributionGraph />
                 <div className="absolute bottom-3 right-4">
                 <span className="text-xs uppercase tracking-wider font-medium text-muted-foreground">
-                    SOLVED GRAPH
+                    题目通过图
                 </span>
                 </div>
             </CardContent>
             </Card>
-            <Card className="mb-6 relative shadow-none rounded-md">
-            <CardContent className="pb-12">
-                <div className="prose dark:prose-invert max-w-none">
+            <Card style={{
+              background: "linear-gradient(180deg, rgba(249, 234, 234, 0.2) 0%, rgba(255, 255, 255, 0) 100%);",
+            }} className="mb-6 py-5 relative shadow-none rounded-md">
+            <CardContent className="pb-7 px-5">
+                <div className="prose dark:prose-invert max-w-none text-md text-gray-900">
                     {data.description || "暂无描述信息"}
                 </div>
                 <div className="absolute bottom-3 right-4">
-                <span className="text-xs uppercase tracking-wider font-medium text-muted-foreground">DESCRIPTION</span>
+                <span className="text-xs uppercase tracking-wider font-medium text-muted-foreground">
+                  README.md
+                </span>
                 </div>
             </CardContent>
             </Card>

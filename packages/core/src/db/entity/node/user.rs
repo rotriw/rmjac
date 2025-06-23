@@ -1,24 +1,23 @@
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter};
-
 use crate::error::CoreError;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "user")]
+#[sea_orm(table_name = "node_user")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub node_id: u64,
+    pub node_id: i64,
     pub user_name: String,
     pub user_email: String,
     pub user_password: String,
     pub user_avatar: String,
     pub user_creation_time: DateTime,
-    pub user_creation_order: u64,
+    pub user_creation_order: i64,
     pub user_last_login_time: DateTime,
-    pub user_description: String,
+    pub user_description: Option<String>,
     pub user_iden: String,
     pub user_bio: Option<String>,
-    pub user_profile_show: String,
+    pub user_profile_show: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -28,7 +27,7 @@ impl ActiveModelBehavior for ActiveModel {}
 
 pub async fn create_user(
     db: &DatabaseConnection,
-    node_id: u64,
+    node_id: i64,
     user_name: &str,
     user_email: &str,
     user_password: &str,
@@ -52,7 +51,35 @@ pub async fn create_user(
         user_description: NotSet,
         user_iden: Set(user_iden.to_string()),
         user_bio: Set(user_bio),
-        user_profile_show: Set(user_profile_show.unwrap_or_default().join(",")),
+        user_profile_show: Set(Some(user_profile_show.unwrap_or_default().join(","))),
     };
     Ok(new_user.insert(db).await?)
+}
+
+pub async fn check_iden_exists(
+    db: &DatabaseConnection,
+    iden: &str,
+) -> Result<bool, CoreError> {
+    use sea_orm::EntityTrait;
+    let exists = Entity::find()
+        .filter(Column::UserIden.eq(iden))
+        .one(db)
+        .await?
+        .is_some();
+    Ok(exists)
+}
+
+pub async fn get_user_by_iden(
+    db: &DatabaseConnection,
+    iden: &str,
+) -> Result<Model, CoreError> {
+    use sea_orm::EntityTrait;
+    let user = Entity::find()
+        .filter(Column::UserIden.eq(iden))
+        .one(db)
+        .await?;
+    if user.is_none() {
+        return Err(CoreError::UserNotFound);
+    }
+    Ok(user.unwrap())
 }
