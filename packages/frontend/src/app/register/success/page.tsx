@@ -1,9 +1,7 @@
 import { LogInIcon } from "lucide-react"
 
-import { RegisterForm } from "@/components/register-form"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 
 export default function RegisterSuccessPage({
     searchParams

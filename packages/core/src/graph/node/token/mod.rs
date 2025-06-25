@@ -31,9 +31,7 @@ impl From<db::entity::node::token::Model> for TokenNode {
                 token_type: model.token_type,
                 token_expiration: model.token_expiration.and_utc().naive_utc(),
             },
-            private: TokenNodePrivate {
-                token: model.token,
-            },
+            private: TokenNodePrivate { token: model.token },
         }
     }
 }

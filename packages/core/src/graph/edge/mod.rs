@@ -2,7 +2,15 @@ use sea_orm::DatabaseConnection;
 
 use crate::{db::entity, error::CoreError};
 
-pub async fn add_edge(db: &DatabaseConnection, edge_type: &str, u_id: i64, v_id: i64) -> Result<(), CoreError> {
-    let edge = entity::edge::edge::create_edge(db, edge_type, u_id, v_id).await?;
-    Ok(())
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EdgeType {
+    PermView,
+}
+
+impl<'a> From<EdgeType> for &'a str {
+    fn from(edge_type: EdgeType) -> Self {
+        match edge_type {
+            EdgeType::PermView => "perm_view",
+        }
+    }
 }

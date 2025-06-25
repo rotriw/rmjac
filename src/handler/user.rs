@@ -31,7 +31,6 @@ pub async fn check_iden_exist(
     })
 }
 
-
 #[derive(Deserialize)]
 pub struct UserCreaterUserVerify {
     pub challenge_text: String,
@@ -89,6 +88,38 @@ pub async fn create_user(
 }
 
 #[derive(Deserialize)]
+pub struct UserLogin {
+    pub iden: String,
+    pub password: String,
+    pub long_token: Option<bool>,
+}
+
+#[post("/login")]
+pub async fn user_login(
+    req: HttpRequest,
+    data: web::Json<UserLogin>,
+    db: web::Data<DatabaseConnection>,
+) -> ResultHandler<String> {
+    let user_agent = req.headers().get("User-Agent").unwrap().to_str().unwrap();
+    let service = user_agent.split(" ").nth(0).unwrap();
+    let token_iden = user_agent.split(" ").nth(1).unwrap();
+    let (user, token) = core::model::user::user_login(
+        &db,
+        data.iden.as_str(),
+        data.password.as_str(),
+        service,
+        token_iden,
+        data.long_token.unwrap_or(false),
+    )
+    .await?;
+    Ok(Json! {
+        "user_public": user.public,
+        "token_public": token.public,
+        "token_private": token.private,
+    })
+}
+
+#[derive(Deserialize)]
 pub struct UserBeforeCreate {
     dark_mode: bool,
     email: String,
@@ -99,7 +130,13 @@ pub async fn before_create(path: web::Query<UserBeforeCreate>) -> ResultHandler<
     let (challenge_text, challenge_img) = gen_captcha(path.dark_mode);
     let time = chrono::Utc::now().naive_utc();
     let code = (*CONFIG.lock().unwrap()).secret_challenge_code.clone();
-    let challenge_code = gen_verify_captcha(&challenge_text, path.email.as_str(), &time, code.as_str(), path.dark_mode);
+    let challenge_code = gen_verify_captcha(
+        &challenge_text,
+        path.email.as_str(),
+        &time,
+        code.as_str(),
+        path.dark_mode,
+    );
     Ok(Json! {
         "challenge_code": challenge_img,
         "challenge_verify": challenge_code,

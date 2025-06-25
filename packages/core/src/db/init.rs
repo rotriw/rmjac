@@ -13,54 +13,116 @@ pub struct Migration;
 
 fn get_tables() -> HashMap<String, TableCreateStatement> {
     let mut tables = HashMap::new();
-    tables.insert(format!("node"), table_create!(iden::node::node::Node, {
-        NodeId: big_integer not_null primary_key auto_increment,
-        NodeIden: text not_null,
-        NodeType: text not_null,
-    }));
-    tables.insert(format!("node_user"), table_create!(iden::node::user::User, {
-        NodeId: big_integer not_null primary_key,
-        UserIden: text not_null,
-        UserName: text not_null,
-        UserEmail: text not_null,
-        UserCreationTime: date_time not_null,
-    }));
-    tables.insert(format!("node_token"), table_create!(iden::node::token::Token, {
-        NodeId: big_integer not_null primary_key,
-        TokenIden: text not_null,
-        TokenType: text not_null,
-        TokenExpiration: date_time not_null,
-        Service: text not_null,
-        Token: text not_null,
-    }));
-    tables.insert(format!("node_problem_statement"), table_create!(iden::node::problem_statement::ProblemStatement, {
-        NodeId: big_integer not_null primary_key,
-        Iden: text not_null,
-        Source: text not_null,
-        Content: text not_null,
-        CreationTime: date_time not_null,
-    }));
-    tables.insert(format!("edge"), table_create!(iden::edge::edge::Edge, {
-        EdgeId: big_integer not_null primary_key auto_increment,
-        EdgeType: text not_null,
-    }));
-    tables.insert(format!("edge_perm_view"), table_create!(iden::edge::perm_view::PermView, {
-        EdgeId: big_integer not_null primary_key,
-        UNodeId: big_integer not_null,
-        VNodeId: big_integer not_null,
-        Perm: text not_null,
-    }));
+    tables.insert(
+        format!("node"),
+        table_create!(iden::node::node::Node, {
+            NodeId: big_integer not_null primary_key auto_increment,
+            NodeIden: text not_null,
+            NodeType: text not_null,
+        }),
+    );
+    tables.insert(
+        format!("node_user"),
+        table_create!(iden::node::user::User, {
+            NodeId: big_integer not_null primary_key,
+            UserName: text not_null,
+            UserEmail: text not_null,
+            UserPassword: text not_null,
+            UserAvatar: text not_null,
+            UserCreationTime: date_time not_null,
+            UserCreationOrder: big_integer not_null auto_increment,
+            UserLastLoginTime: date_time not_null,
+            UserDescription: text,
+            UserIden: text not_null,
+            UserBio: text,
+            UserProfileShow: text,
+        }),
+    );
+    tables.insert(
+        format!("node_token"),
+        table_create!(iden::node::token::Token, {
+            NodeId: big_integer not_null primary_key,
+            Token: text not_null,
+            TokenType: text not_null,
+            TokenExpiration: date_time not_null,
+            Service: text not_null,
+            TokenIden: text not_null,
+        }),
+    );
+    tables.insert(
+        format!("node_problem_statement"),
+        table_create!(iden::node::problem_statement::ProblemStatement, {
+            NodeId: big_integer not_null primary_key,
+            Iden: text not_null,
+            Source: text not_null,
+            Content: text not_null,
+            CreationTime: date_time not_null,
+            UpdateTime: date_time not_null,
+        }),
+    );
+    tables.insert(
+        format!("edge"),
+        table_create!(iden::edge::edge::Edge, {
+            EdgeId: big_integer not_null primary_key auto_increment,
+            EdgeType: text not_null,
+        }),
+    );
+    tables.insert(
+        format!("edge_perm_view"),
+        table_create!(iden::edge::perm_view::PermView, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
+            Perm: integer not_null,
+        }),
+    );
     return tables;
 }
 
 fn get_drop_tables() -> HashMap<String, TableDropStatement> {
     let mut tables = HashMap::new();
-    tables.insert(format!("node"), Table::drop().table(iden::node::node::Node::Table).if_exists().to_owned());
-    tables.insert(format!("node_user"), Table::drop().table(iden::node::user::User::Table).if_exists().to_owned());
-    tables.insert(format!("node_token"), Table::drop().table(iden::node::token::Token::Table).if_exists().to_owned());
-    tables.insert(format!("node_problem_statement"), Table::drop().table(iden::node::problem_statement::ProblemStatement::Table).if_exists().to_owned());
-    tables.insert(format!("edge"), Table::drop().table(iden::edge::edge::Edge::Table).if_exists().to_owned());
-    tables.insert(format!("edge_perm_view"), Table::drop().table(iden::edge::perm_view::PermView::Table).if_exists().to_owned());
+    tables.insert(
+        format!("node"),
+        Table::drop()
+            .table(iden::node::node::Node::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        format!("node_user"),
+        Table::drop()
+            .table(iden::node::user::User::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        format!("node_token"),
+        Table::drop()
+            .table(iden::node::token::Token::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        format!("node_problem_statement"),
+        Table::drop()
+            .table(iden::node::problem_statement::ProblemStatement::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        format!("edge"),
+        Table::drop()
+            .table(iden::edge::edge::Edge::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        format!("edge_perm_view"),
+        Table::drop()
+            .table(iden::edge::perm_view::PermView::Table)
+            .if_exists()
+            .to_owned(),
+    );
     return tables;
 }
 

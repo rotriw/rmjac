@@ -1,6 +1,7 @@
+use crate::db::entity::node::node::create_node;
+use crate::error::CoreError;
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter};
-use crate::error::CoreError;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "node_user")]
@@ -25,9 +26,9 @@ pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
 
-pub async fn create_user(
+pub async fn create_user_node(
     db: &DatabaseConnection,
-    node_id: i64,
+    node_id: Option<i64>,
     user_name: &str,
     user_email: &str,
     user_password: &str,
@@ -39,6 +40,16 @@ pub async fn create_user(
     user_profile_show: Option<Vec<String>>,
 ) -> Result<Model, CoreError> {
     use sea_orm::ActiveValue::{NotSet, Set};
+    let node_id = match node_id {
+        Some(id) => id,
+        None => {
+            let node = create_node(db, format!("user_{}", user_iden).as_str(), "user").await?;
+            node.node_id
+        }
+    };
+    if check_iden_exists(db, user_iden).await? {
+        return Err(CoreError::UserIdenExists);
+    }
     let new_user = ActiveModel {
         node_id: Set(node_id),
         user_name: Set(user_name.to_string()),
@@ -56,10 +67,7 @@ pub async fn create_user(
     Ok(new_user.insert(db).await?)
 }
 
-pub async fn check_iden_exists(
-    db: &DatabaseConnection,
-    iden: &str,
-) -> Result<bool, CoreError> {
+pub async fn check_iden_exists(db: &DatabaseConnection, iden: &str) -> Result<bool, CoreError> {
     use sea_orm::EntityTrait;
     let exists = Entity::find()
         .filter(Column::UserIden.eq(iden))
@@ -69,13 +77,22 @@ pub async fn check_iden_exists(
     Ok(exists)
 }
 
-pub async fn get_user_by_iden(
-    db: &DatabaseConnection,
-    iden: &str,
-) -> Result<Model, CoreError> {
+pub async fn get_user_by_iden(db: &DatabaseConnection, iden: &str) -> Result<Model, CoreError> {
     use sea_orm::EntityTrait;
     let user = Entity::find()
         .filter(Column::UserIden.eq(iden))
+        .one(db)
+        .await?;
+    if user.is_none() {
+        return Err(CoreError::UserNotFound);
+    }
+    Ok(user.unwrap())
+}
+
+pub async fn get_user_by_nodeid(db: &DatabaseConnection, node_id: i64) -> Result<Model, CoreError> {
+    use sea_orm::EntityTrait;
+    let user = Entity::find()
+        .filter(Column::NodeId.eq(node_id))
         .one(db)
         .await?;
     if user.is_none() {

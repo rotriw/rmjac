@@ -1,15 +1,30 @@
 use derive_more::Display;
+use enum_const::EnumConst;
 
-#[derive(Debug, Display)]
+#[derive(Debug, Display, EnumConst)]
 pub enum CoreError {
     #[display("Std Error")]
     StdError,
     #[display("Db Error(seaorm::error::DbErr): _{}", _0)]
     DbError(sea_orm::error::DbErr),
-    #[display("DB Error: _{}", _0)]
-    MongoError(String),
     #[display("User not found")]
     UserNotFound,
+    #[display("User IDEN already exists")]
+    UserIdenExists,
+    #[display("NotFound Error: _{}", _0)]
+    NotFound(String),
+}
+
+impl From<CoreError> for i64 {
+    fn from(value: CoreError) -> Self {
+        match value {
+            CoreError::StdError => 10000,
+            CoreError::DbError(_) => 20000,
+            CoreError::UserNotFound => 3000,
+            CoreError::UserIdenExists => 40000,
+            CoreError::NotFound(_) => 50000,
+        }
+    }
 }
 
 impl From<sea_orm::error::DbErr> for CoreError {

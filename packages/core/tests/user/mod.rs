@@ -1,2 +1,2 @@
 #[test]
-pub fn test_user_create() {}
+pub fn test_user() {}

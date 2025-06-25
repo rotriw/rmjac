@@ -71,10 +71,10 @@ pub async fn main(host: &str, port: u16) -> std::io::Result<()> {
     log::info!("Server is running on port {}", port);
     HttpServer::new(move || {
         let cors = Cors::default()
-        .allow_any_origin()
-        .allow_any_method()
-        .allow_any_header()
-        .max_age(3600);
+            .allow_any_origin()
+            .allow_any_method()
+            .allow_any_header()
+            .max_age(3600);
         App::new()
             .service(user::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {

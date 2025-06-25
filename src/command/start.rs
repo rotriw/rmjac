@@ -10,12 +10,12 @@ use log::LevelFilter;
 use crate::{env::env_load, handler, utils};
 
 pub fn run(
-    port: Option<u16>,
+    port: Option<String>,
     host: Option<String>,
     config: Option<String>,
     log_level: Option<String>,
 ) -> Option<()> {
-    let port = port.unwrap_or(1824);
+    let port = port.unwrap_or("1824".to_string()).parse::<u16>().unwrap();
     let host = host.unwrap_or("127.0.0.1".to_string());
     let config = config.unwrap_or_else(|| "config.json".to_string());
     let log_level: LevelFilter = log_level

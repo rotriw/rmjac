@@ -94,11 +94,14 @@ export async function RegisterForm({
       challengeVerify={data.challenge_verify}
       challengeTime={data.challenge_time}
       email={params.email as string} />
+    {searchParams?.err === "iden_exist" ? <Label className="text-xs text-red-500">用户名已存在，请更换用户名。</Label> : ""}
+    {searchParams?.err === "captcha_invalid" ? <Label className="text-xs text-red-500">验证码无效，请重新输入。</Label> : ""}
+    {searchParams?.err === "captcha_expired" ? <Label className="text-xs text-red-500">验证码已过期，请刷新验证码。</Label> : ""}
     <div className="grid gap-3">
       <div className="grid grid-cols-4 gap-3">
-        <Button variant="outline" type="submit" className="col-span-1"><a href="/register">
+        <a href="/register"><Button type="button" variant="outline" className="col-span-1">
           上一步
-        </a></Button>
+        </Button></a>
         <Button type="submit" className="col-span-3">
           注册
         </Button>
@@ -120,7 +123,7 @@ export async function RegisterForm({
         challenge_darkmode: "light",
       }
     }));
-    /* onst result = await fetch("http://127.0.0.1:1824/api/user/create", {
+    const result = await fetch("http://127.0.0.1:1824/api/user/create", {
       method: "POST",
       headers: {
         'Content-Type': 'application/json',
@@ -138,12 +141,21 @@ export async function RegisterForm({
           challenge_darkmode: "false",
         }
       })});
-    const res = await result.json(); */
-    const res = {
-      node_id: "1"
-    };
+    const res = await result.json();
+    console.log(res);
     if (res?.node_id) {
       redirect('/register/success?email=' + data.get("email"));
+    } else {
+      if (res?.error === "(Core Error)User IDEN already exists") {
+        redirect(`/register?email=${data.get("email")}&err=iden_exist`);
+      } else if (res?.error === "(Core Error)User Email already exists") {
+        redirect(`/register?email=${data.get("email")}&err=iden_exist`);
+      } else if (res?.error === "Captcha is invalid") {
+        redirect(`/register?email=${data.get("email")}&err=captcha_invalid`);
+      } else if (res?.error === "Captcha is expired") {
+        redirect(`/register?email=${data.get("email")}&err=captcha_expired`);
+      }
+      console.log(res);
     }
   }
   if (params?.email) {

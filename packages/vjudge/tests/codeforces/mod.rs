@@ -2,7 +2,6 @@ use std::ffi::OsStr;
 
 use vjudge::service::VjudgeService;
 
-
 #[test]
 pub fn test_codeforces() {
     let option = headless_chrome::LaunchOptions {

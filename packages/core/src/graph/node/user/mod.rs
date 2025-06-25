@@ -1,6 +1,9 @@
 use chrono::NaiveDateTime;
+use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
+use tap::Conv;
 
+use crate::Result;
 use crate::{db, graph::node::Node};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -21,15 +24,7 @@ pub struct UserNodePrivate {
     pub password: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct UserNode {
-    pub node_id: i64,
-    pub node_iden: String,
-    pub public: UserNodePublic,
-    pub private: UserNodePrivate,
-}
-
-impl Node for UserNode {
+impl<'a> Node<'a> for UserNode {
     fn get_node_id(&self) -> i64 {
         self.node_id
     }
@@ -37,6 +32,26 @@ impl Node for UserNode {
     fn get_node_iden(&self) -> String {
         self.node_iden.clone()
     }
+
+    async fn from_db(db: &DatabaseConnection, node_id: i64) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let model = db::entity::node::user::get_user_by_nodeid(db, node_id).await?;
+        Ok(model.conv::<UserNode>())
+    }
+
+    fn get_outdegree(&self, db: &DatabaseConnection) -> Result<i64> {
+        Ok(1)
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserNode {
+    pub node_id: i64,
+    pub node_iden: String,
+    pub public: UserNodePublic,
+    pub private: UserNodePrivate,
 }
 
 impl From<db::entity::node::user::Model> for UserNode {
@@ -53,7 +68,12 @@ impl From<db::entity::node::user::Model> for UserNode {
                 avatar: model.user_avatar,
                 description: model.user_description.unwrap_or_default(),
                 bio: model.user_bio.unwrap_or_default(),
-                profile_show: model.user_profile_show.unwrap_or_default().split(",").map(|s| s.to_string()).collect(),
+                profile_show: model
+                    .user_profile_show
+                    .unwrap_or_default()
+                    .split(",")
+                    .map(|s| s.to_string())
+                    .collect(),
             },
             private: UserNodePrivate {
                 password: model.user_password,

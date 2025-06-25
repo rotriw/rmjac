@@ -1,9 +1,18 @@
 use sea_orm::DatabaseConnection;
 
 use crate::{
-    db::{self, entity::{self, node::{node::create_node, token::create_token, user::get_user_by_iden}}},
+    db::{
+        self,
+        entity::{
+            self,
+            node::{node::create_node, token::create_token, user::get_user_by_iden},
+        },
+    },
     error::CoreError,
-    graph::node::{token::TokenNode, user::{UserNode, UserNodePrivate, UserNodePublic}},
+    graph::node::{
+        token::TokenNode,
+        user::{UserNode, UserNodePrivate, UserNodePublic},
+    },
 };
 
 pub async fn create_default_user(
@@ -14,11 +23,9 @@ pub async fn create_default_user(
     avatar: &str,
     password: &str,
 ) -> Result<UserNode, CoreError> {
-    let node_iden = format!("user_{}", iden);
-    let new_node = db::entity::node::node::create_node(&db, node_iden.as_str(), "user").await?;
-    let user = db::entity::node::user::create_user(
+    let user = db::entity::node::user::create_user_node(
         &db,
-        new_node.node_id,
+        None,
         name,
         email,
         password,
@@ -26,21 +33,17 @@ pub async fn create_default_user(
         chrono::Utc::now().naive_utc(),
         chrono::Utc::now().naive_utc(),
         iden,
-        None, // bio
-        None, // profile_show
+        None,
+        None,
     )
     .await?;
     Ok(user.into())
 }
 
-pub async fn check_iden_exists(
-    db: &DatabaseConnection,
-    iden: &str,
-) -> Result<bool, CoreError> {
+pub async fn check_iden_exists(db: &DatabaseConnection, iden: &str) -> Result<bool, CoreError> {
     let exists = entity::node::user::check_iden_exists(&db, iden).await?;
     Ok(exists)
 }
-
 
 pub async fn user_login(
     db: &DatabaseConnection,
@@ -60,6 +63,14 @@ pub async fn user_login(
         None
     };
     let token_node = create_node(&db, service, token_iden).await?;
-    let token = create_token(&db, token_node.node_id, service, token_iden, token_expiration, "main").await?;
+    let token = create_token(
+        &db,
+        token_node.node_id,
+        service,
+        token_iden,
+        token_expiration,
+        "login",
+    )
+    .await?;
     Ok((user.into(), token.into()))
 }
