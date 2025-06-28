@@ -5,8 +5,8 @@ pub mod token;
 pub mod user;
 
 use crate::{
-    db::entity::node::{node::create_node, DbNodeActiveModel, DbNodeInfo},
-    graph::{action::get_outdegree, edge::EdgeType},
+    db::entity::{edge::{edge::create_edge, DbEdgeActiveModel, DbEdgeInfo}, node::{node::create_node, DbNodeActiveModel, DbNodeInfo}},
+    graph::{action::get_outdegree, edge::{EdgeRaw, EdgeType}},
     Result,
 };
 use sea_orm::{

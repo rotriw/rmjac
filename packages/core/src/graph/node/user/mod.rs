@@ -22,15 +22,41 @@ pub struct UserNodePublic {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct UserNodeRaw {
+pub struct UserNodePrivate {
+    pub password: String,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserNodePublicRaw {
+    pub name: String,
+    pub email: String,
+    pub iden: String,
+    pub creation_time: NaiveDateTime,
+    pub last_login_time: NaiveDateTime,
+    pub avatar: String,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserNodePrivateRaw {
+    pub password: String,
+}
+
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserNode {
+    pub node_id: i64,
+    pub node_iden: String,
     pub public: UserNodePublic,
     pub private: UserNodePrivate,
 }
 
+
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct UserNodePrivate {
-    pub password: String,
+pub struct UserNodeRaw {
+    pub public: UserNodePublicRaw,
+    pub private: UserNodePrivateRaw,
 }
+
 
 impl From<UserNodeRaw> for db::entity::node::user::ActiveModel {
     fn from(value: UserNodeRaw) -> Self {
@@ -88,14 +114,6 @@ impl NodeRaw<UserNode, user_entity::Model, user_entity::ActiveModel> for UserNod
     fn get_node_iden(&self) -> &str {
         &self.public.iden
     }
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct UserNode {
-    pub node_id: i64,
-    pub node_iden: String,
-    pub public: UserNodePublic,
-    pub private: UserNodePrivate,
 }
 
 impl From<db::entity::node::user::Model> for UserNode {

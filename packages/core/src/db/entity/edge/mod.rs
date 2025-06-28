@@ -1,15 +1,25 @@
+use sea_orm::{ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel};
+use tap::Conv;
+use crate::Result;
+
 pub mod edge;
 pub mod perm_view;
 pub mod perm_manage;
 
-pub trait Perm {
-    fn add_perm<T>(self, perm: T) -> Self where T: Into<Self>, Self: Sized + Into<i64> + From<i64> {
-        use tap::Conv;
-        (self.conv::<i64>() | perm.into().conv::<i64>()).into()
-    }
+pub trait DbEdgeInfo {
+    fn get_edge_type(&self) -> &str;
+}
 
-    fn remove_perm<T>(self, perm: T) -> Self where T: Into<Self>, Self: Sized + Into<i64> + From<i64> {
-        use tap::Conv;
-        (self.conv::<i64>() & (-1i64 ^ perm.into().conv::<i64>())).into()
+pub trait DbEdgeActiveModel<MODEL, EDGE>
+where
+    MODEL: Into<EDGE>
+        + From<<<Self as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+    Self: Sized + Send + Sync + ActiveModelTrait + ActiveModelBehavior,
+{
+    async fn save_into_db(&self, db: &DatabaseConnection) -> Result<MODEL>
+    where
+        <Self::Entity as EntityTrait>::Model: IntoActiveModel<Self>,
+    {
+        Ok(self.clone().insert(db).await?.conv::<MODEL>())
     }
 }

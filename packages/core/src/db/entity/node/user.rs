@@ -68,6 +68,18 @@ pub async fn get_user_by_iden(db: &DatabaseConnection, iden: &str) -> Result<Mod
     Ok(user.unwrap())
 }
 
+pub async fn get_user_by_email(db: &DatabaseConnection, email: &str) -> Result<Model, CoreError> {
+    use sea_orm::EntityTrait;
+    let user = Entity::find()
+        .filter(Column::UserEmail.eq(email))
+        .one(db)
+        .await?;
+    if user.is_none() {
+        return Err(CoreError::UserNotFound);
+    }
+    Ok(user.unwrap())
+}
+
 pub async fn get_user_by_nodeid(db: &DatabaseConnection, node_id: i64) -> Result<Model, CoreError> {
     use sea_orm::EntityTrait;
     let user = Entity::find()

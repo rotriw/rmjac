@@ -24,6 +24,8 @@ base16ct = { version = "0.2.0", features = ["alloc"] }
 uuid = { version = "1.17.0", features = ["v4"] }
 enum_const = "0.1.1"
 tap = "1.0.1"
+strum_macros = "0.27.1"
+strum = "0.27.1"
 
 
 [dependencies.sea-orm-migration]

@@ -101,13 +101,11 @@ pub async fn user_login(
     db: web::Data<DatabaseConnection>,
 ) -> ResultHandler<String> {
     let user_agent = req.headers().get("User-Agent").unwrap().to_str().unwrap();
-    let service = user_agent.split(" ").nth(0).unwrap();
     let token_iden = user_agent.split(" ").nth(1).unwrap();
     let (user, token) = core::model::user::user_login(
         &db,
         data.iden.as_str(),
         data.password.as_str(),
-        service,
         token_iden,
         data.long_token.unwrap_or(false),
     )

@@ -1,5 +1,7 @@
 use crate::db::entity::node::node::create_node;
+use crate::db::entity::node::{DbNodeActiveModel, DbNodeInfo};
 use crate::error::CoreError;
+use crate::graph::node::token::TokenNode;
 use chrono::{naive::NaiveDateTime, Duration, Utc};
 use sea_orm::entity::prelude::*;
 use sea_orm::ActiveValue::Set;
@@ -29,29 +31,9 @@ pub fn gen_token() -> String {
     token
 }
 
-pub async fn create_token(
-    db: &DatabaseConnection,
-    node_id: Option<i64>,
-    service: &str,
-    token_iden: &str,
-    token_expiration: Option<NaiveDateTime>,
-    token_type: &str,
-) -> Result<Model, CoreError> {
-    let node_id = if let Some(id) = node_id {
-        id
-    } else {
-        create_node(db, format!("token_{}", token_iden).as_str(), "token").await?.node_id
-    };
-    let token = gen_token();
-    let token_expiration = token_expiration.unwrap_or((Utc::now() + Duration::days(7)).naive_utc()); // now + 7days
-    let token = ActiveModel {
-        node_id: Set(node_id),
-        token: Set(token),
-        token_type: Set(token_type.to_string()),
-        token_expiration: Set(token_expiration),
-        service: Set(service.to_string()),
-        token_iden: Set(token_iden.to_string()),
-    };
-    let token = token.insert(db).await?;
-    Ok(token)
+impl DbNodeActiveModel<Model, TokenNode> for ActiveModel {}
+impl DbNodeInfo for ActiveModel {
+    fn get_node_type(&self) -> &str {
+        "token"
+    }
 }

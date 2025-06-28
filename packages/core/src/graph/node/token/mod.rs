@@ -1,15 +1,12 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
-use crate::db;
+use db::entity::node::token::ActiveModel as TokenNodeActiveModel;
+use db::entity::node::token::Model as TokenNodeModel;
+use db::entity::node::token::Column as TokenNodeColumn;
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct TokenNode {
-    pub node_id: i64,
-    pub node_iden: String,
-    pub public: TokenNodePublic,
-    pub private: TokenNodePrivate,
-}
+use crate::db;
+use crate::graph::node::NodeRaw;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct TokenNodePublic {
@@ -22,8 +19,52 @@ pub struct TokenNodePrivate {
     pub token: String,
 }
 
-impl From<db::entity::node::token::Model> for TokenNode {
-    fn from(model: db::entity::node::token::Model) -> Self {
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct TokenNodePublicRaw {
+    pub token_type: String,
+    pub token_expiration: Option<NaiveDateTime>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct TokenNodePrivateRaw {
+    pub token: String,
+}
+
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct TokenNode {
+    pub node_id: i64,
+    pub node_iden: String,
+    pub public: TokenNodePublic,
+    pub private: TokenNodePrivate,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct TokenNodeRaw {
+    pub iden: String,
+    pub public: TokenNodePublicRaw,
+    pub private: TokenNodePrivateRaw,
+}
+
+impl From<TokenNodeRaw> for TokenNodeActiveModel {
+    fn from(value: TokenNodeRaw) -> Self {
+        use sea_orm::ActiveValue::{Set, NotSet};
+        Self {
+            node_id: NotSet,
+            token: Set(value.private.token),
+            token_type: Set(value.public.token_type),
+            token_expiration: match value.public.token_expiration {
+                Some(exp) => Set(exp),
+                None => NotSet,
+            },
+            service: NotSet,
+            token_iden: Set(value.iden),
+        }
+    }
+}
+
+impl From<TokenNodeModel> for TokenNode {
+    fn from(model: TokenNodeModel) -> Self {
         TokenNode {
             node_id: model.node_id,
             node_iden: model.token_iden,
@@ -33,5 +74,23 @@ impl From<db::entity::node::token::Model> for TokenNode {
             },
             private: TokenNodePrivate { token: model.token },
         }
+    }
+}
+
+impl NodeRaw<TokenNode, TokenNodeModel, TokenNodeActiveModel> for TokenNodeRaw {
+    fn get_node_id_column(&self) -> <<TokenNodeActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+        TokenNodeColumn::NodeId
+    }
+
+    fn get_node_iden_column(&self) -> <<TokenNodeActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+        TokenNodeColumn::TokenIden
+    }
+
+    fn get_node_type(&self) -> &str {
+        "token"
+    }
+
+    fn get_node_iden(&self) -> &str {
+        &self.iden
     }
 }
