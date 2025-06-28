@@ -5,8 +5,8 @@ pub mod token;
 pub mod user;
 
 use crate::{
-    db::entity::{edge::{edge::create_edge, DbEdgeActiveModel, DbEdgeInfo}, node::{node::create_node, DbNodeActiveModel, DbNodeInfo}},
-    graph::{action::get_outdegree, edge::{EdgeRaw, EdgeType}},
+    db::entity::node::{node::create_node, DbNodeActiveModel, DbNodeInfo},
+    graph::{edge::EdgeType},
     Result,
 };
 use sea_orm::{
@@ -44,43 +44,9 @@ pub trait Node {
     ) -> impl std::future::Future<Output = Result<Self>> + Send
     where
         Self: Sized;
-    async fn get_outdegree(
-        &self,
-        db: &DatabaseConnection,
-        edge_type: EdgeType,
-    ) -> Result<Vec<(i64, i64)>> {
-        let node_id = self.get_node_id();
-        get_outdegree(db, node_id, edge_type).await
-    }
-
-    async fn get_outdegree_count(
-        &self,
-        db: &DatabaseConnection,
-        edge_type: EdgeType,
-    ) -> Result<i64> {
-        let outdegree = self.get_outdegree(db, edge_type).await?;
-        Ok(outdegree.len() as i64)
-    }
-
-    async fn get_indegree(
-        &self,
-        db: &DatabaseConnection,
-        edge_type: EdgeType,
-    ) -> Result<Vec<(i64, i64)>> {
-        let node_id = self.get_node_id();
-        edge_type.get_indegree(db, node_id).await
-    }
-
-    async fn get_indegree_count(
-        &self,
-        db: &DatabaseConnection,
-        edge_type: EdgeType,
-    ) -> Result<i64> {
-        let indegree = self.get_indegree(db, edge_type).await?;
-        Ok(indegree.len() as i64)
-    }
 }
 
+#[allow(async_fn_in_trait)]
 pub trait NodeRaw<Node, DbModel, DbNodeActive>
 where
     Self: Into<DbNodeActive> + Clone,
