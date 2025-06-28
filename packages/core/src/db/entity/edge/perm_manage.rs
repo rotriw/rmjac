@@ -1,5 +1,5 @@
 use crate::db::entity::edge::edge::create_edge;
-use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo};
+use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeEntityModel, DbEdgeInfo};
 use crate::error::CoreError;
 use crate::graph::edge::perm_manage::PermManageEdge;
 use enum_const::EnumConst;
@@ -31,24 +31,12 @@ impl DbEdgeInfo for ActiveModel {
     }
 }
 
-pub async fn query_u_perm_manage_edges(
-    db: &DatabaseConnection,
-    u_node_id: i64,
-) -> Result<Vec<Model>, CoreError> {
-    let edges = Entity::find()
-        .filter(Column::UNodeId.eq(u_node_id))
-        .all(db)
-        .await?;
-    Ok(edges)
-}
+impl DbEdgeEntityModel<Model> for Entity {
+    fn get_u_edge_id_column(&self) -> <Self as EntityTrait>::Column {
+        Column::UNodeId
+    }
 
-pub async fn query_v_perm_manage_edges(
-    db: &DatabaseConnection,
-    v_node_id: i64,
-) -> Result<Vec<Model>, CoreError> {
-    let edges = Entity::find()
-        .filter(Column::VNodeId.eq(v_node_id))
-        .all(db)
-        .await?;
-    Ok(edges)
+    fn get_v_edge_id_column(&self) -> <Self as EntityTrait>::Column {
+        Column::VNodeId
+    }
 }
