@@ -1,3 +1,4 @@
+use crate::db::entity::node::node::create_node;
 use crate::error::CoreError;
 use chrono::{naive::NaiveDateTime, Duration, Utc};
 use sea_orm::entity::prelude::*;
@@ -30,12 +31,17 @@ pub fn gen_token() -> String {
 
 pub async fn create_token(
     db: &DatabaseConnection,
-    node_id: i64,
+    node_id: Option<i64>,
     service: &str,
     token_iden: &str,
     token_expiration: Option<NaiveDateTime>,
     token_type: &str,
 ) -> Result<Model, CoreError> {
+    let node_id = if let Some(id) = node_id {
+        id
+    } else {
+        create_node(db, format!("token_{}", token_iden).as_str(), "token").await?.node_id
+    };
     let token = gen_token();
     let token_expiration = token_expiration.unwrap_or((Utc::now() + Duration::days(7)).naive_utc()); // now + 7days
     let token = ActiveModel {

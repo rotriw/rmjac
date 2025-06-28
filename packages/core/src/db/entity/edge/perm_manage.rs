@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use tap::Conv;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "edge_perm_view")]
+#[sea_orm(table_name = "edge_perm_manage")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub edge_id: i64,
@@ -23,18 +23,18 @@ pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
 
-
 #[derive(EnumConst, Copy, Clone, Debug, PartialEq)]
-pub enum ViewPerm {
+pub enum ManagePerm {
     All = -1,
-    ReadProblem = 1,
-    ViewPublic = 2,
-    ViewPrivate = 4,
+    ManageStatement = 1,
+    ManageEdge = 2,
+    ManagePublicDescription = 4,
+    ManagePrivateDescription = 8,
 }
 
-impl Perm for ViewPerm {}
+impl Perm for ManagePerm {}
 
-pub struct Perms(Vec<ViewPerm>);
+pub struct Perms(Vec<ManagePerm>);
 
 impl From<Perms> for i64 {
     fn from(perms: Perms) -> i64 {
@@ -46,19 +46,19 @@ impl From<Perms> for i64 {
     }
 }
 
-impl From<Vec<ViewPerm>> for Perms {
-    fn from(perms: Vec<ViewPerm>) -> Self {
+impl From<Vec<ManagePerm>> for Perms {
+    fn from(perms: Vec<ManagePerm>) -> Self {
         Perms(perms)
     }
 }
 
-impl From<&[ViewPerm]> for Perms {
-    fn from(perms: &[ViewPerm]) -> Self {
+impl From<&[ManagePerm]> for Perms {
+    fn from(perms: &[ManagePerm]) -> Self {
         Perms(perms.to_vec())
     }
 }
 
-pub async fn new_perm_view_edge<T: Into<Perms>>(
+pub async fn new_perm_manage_edge<T: Into<Perms>>(
     db: &DatabaseConnection,
     edge_type: &str,
     u_id: i64,
@@ -76,7 +76,7 @@ pub async fn new_perm_view_edge<T: Into<Perms>>(
     Ok(edge)
 }
 
-pub async fn query_u_perm_view_edges(
+pub async fn query_u_perm_manage_edges(
     db: &DatabaseConnection,
     u_node_id: i64,
 ) -> Result<Vec<Model>, CoreError> {
@@ -87,7 +87,7 @@ pub async fn query_u_perm_view_edges(
     Ok(edges)
 }
 
-pub async fn query_v_perm_view_edges(
+pub async fn query_v_perm_manage_edges(
     db: &DatabaseConnection,
     v_node_id: i64,
 ) -> Result<Vec<Model>, CoreError> {

@@ -1,6 +1,7 @@
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 
+use crate::graph::edge::EdgeType;
 use crate::graph::node::Node;
 use crate::Result;
 
@@ -21,7 +22,7 @@ pub struct ProblemStatementNodePublic {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemStatementNodePrivate {}
 
-impl<'a> Node<'a> for ProblemStatementNode {
+impl Node for ProblemStatementNode {
     fn get_node_id(&self) -> i64 {
         self.node_id
     }
@@ -46,7 +47,4 @@ impl<'a> Node<'a> for ProblemStatementNode {
         })
     }
 
-    fn get_outdegree(&self, _db: &DatabaseConnection) -> Result<i64> {
-        Ok(0) // [TODO]
-    }
 }

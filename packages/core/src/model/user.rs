@@ -4,15 +4,14 @@ use crate::{
     db::{
         self,
         entity::{
-            self,
-            node::{node::create_node, token::create_token, user::get_user_by_iden},
+            self, edge::edge::create_edge, node::{node::create_node, token::create_token, user::get_user_by_iden}
         },
     },
     error::CoreError,
     graph::node::{
         token::TokenNode,
-        user::{UserNode, UserNodePrivate, UserNodePublic},
-    },
+        user::{UserNode, UserNodePrivate, UserNodePublic, UserNodeRaw}, NodeRaw,
+    }, utils::encrypt::encode_password,
 };
 
 pub async fn create_default_user(
@@ -23,21 +22,25 @@ pub async fn create_default_user(
     avatar: &str,
     password: &str,
 ) -> Result<UserNode, CoreError> {
-    let user = db::entity::node::user::create_user_node(
-        &db,
-        None,
-        name,
-        email,
-        password,
-        avatar,
-        chrono::Utc::now().naive_utc(),
-        chrono::Utc::now().naive_utc(),
-        iden,
-        None,
-        None,
-    )
-    .await?;
-    Ok(user.into())
+    let user = UserNodeRaw {
+        public: UserNodePublic {
+            name: name.to_string(),
+            email: email.to_string(),
+            iden: iden.to_string(),
+            creation_time: chrono::Utc::now().naive_utc(),
+            creation_order: 0,
+            last_login_time: chrono::Utc::now().naive_utc(),
+            avatar: avatar.to_string(),
+            description: String::new(),
+            bio: String::new(),
+            profile_show: vec![],
+        },
+        private: UserNodePrivate {
+            password: encode_password(&password.to_string()),
+        },
+    };
+    let result = user.save(db).await?;
+    Ok(result)
 }
 
 pub async fn check_iden_exists(db: &DatabaseConnection, iden: &str) -> Result<bool, CoreError> {
@@ -62,10 +65,9 @@ pub async fn user_login(
     } else {
         None
     };
-    let token_node = create_node(&db, service, token_iden).await?;
     let token = create_token(
         &db,
-        token_node.node_id,
+        None,
         service,
         token_iden,
         token_expiration,

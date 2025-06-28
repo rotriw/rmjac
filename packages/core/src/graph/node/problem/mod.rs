@@ -24,7 +24,7 @@ pub struct ProblemNodePublic {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemNodePrivate {}
 
-impl<'a> Node<'a> for ProblemNode {
+impl Node for ProblemNode {
     fn get_node_id(&self) -> i64 {
         self.node_id
     }
@@ -39,10 +39,6 @@ impl<'a> Node<'a> for ProblemNode {
     {
         let model = crate::db::entity::node::problem::get_problem_by_nodeid(db, node_id).await?;
         Ok(model.into())
-    }
-
-    fn get_outdegree(&self, _db: &sea_orm::DatabaseConnection) -> Result<i64> {
-        Ok(0) // [TODO]
     }
 }
 

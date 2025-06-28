@@ -3,6 +3,7 @@ use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use tap::Conv;
 
+use crate::graph::node::NodeRaw;
 use crate::Result;
 use crate::{db, graph::node::Node};
 
@@ -10,6 +11,7 @@ use crate::{db, graph::node::Node};
 pub struct UserNodePublic {
     pub name: String,
     pub email: String,
+    pub iden: String,
     pub creation_time: NaiveDateTime,
     pub creation_order: i64,
     pub last_login_time: NaiveDateTime,
@@ -20,11 +22,37 @@ pub struct UserNodePublic {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserNodeRaw {
+    pub public: UserNodePublic,
+    pub private: UserNodePrivate,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserNodePrivate {
     pub password: String,
 }
 
-impl<'a> Node<'a> for UserNode {
+impl From<UserNodeRaw> for db::entity::node::user::ActiveModel {
+    fn from(value: UserNodeRaw) -> Self {
+        use sea_orm::ActiveValue::{Set, NotSet};
+        Self {
+            node_id: NotSet,
+            user_name: Set(value.public.name),
+            user_email: Set(value.public.email),
+            user_password: Set(value.private.password),
+            user_avatar: Set(value.public.avatar),
+            user_creation_time: Set(chrono::Utc::now().naive_utc()),
+            user_creation_order: NotSet,
+            user_last_login_time: Set(value.public.last_login_time),
+            user_description: NotSet,
+            user_iden: Set(value.public.iden),
+            user_bio: NotSet,
+            user_profile_show: NotSet,
+        }
+    }
+}
+
+impl Node for UserNode {
     fn get_node_id(&self) -> i64 {
         self.node_id
     }
@@ -40,9 +68,25 @@ impl<'a> Node<'a> for UserNode {
         let model = db::entity::node::user::get_user_by_nodeid(db, node_id).await?;
         Ok(model.conv::<UserNode>())
     }
+}
 
-    fn get_outdegree(&self, db: &DatabaseConnection) -> Result<i64> {
-        Ok(1)
+use crate::db::entity::node::user as user_entity;
+
+impl NodeRaw<UserNode, user_entity::Model, user_entity::ActiveModel> for UserNodeRaw {
+    fn get_node_id_column(&self) -> <<user_entity::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+        user_entity::Column::NodeId
+    }
+
+    fn get_node_iden_column(&self) -> <<user_entity::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+        user_entity::Column::UserIden
+    }
+
+    fn get_node_type(&self) -> &str {
+        "user"
+    }
+
+    fn get_node_iden(&self) -> &str {
+        &self.public.iden
     }
 }
 
@@ -58,9 +102,10 @@ impl From<db::entity::node::user::Model> for UserNode {
     fn from(model: db::entity::node::user::Model) -> Self {
         UserNode {
             node_id: model.node_id,
-            node_iden: model.user_iden,
+            node_iden: model.user_iden.clone(),
             public: UserNodePublic {
                 name: model.user_name,
+                iden: model.user_iden,
                 email: model.user_email,
                 creation_time: model.user_creation_time.and_utc().naive_utc(),
                 creation_order: model.user_creation_order,
