@@ -1,7 +1,6 @@
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 
-use crate::graph::edge::EdgeType;
 use crate::graph::node::Node;
 use crate::Result;
 

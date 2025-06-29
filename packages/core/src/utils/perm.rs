@@ -1,6 +1,3 @@
-use strum::IntoEnumIterator;
-
-
 pub trait Perm {
     fn add_perm<T>(self, perm: T) -> Self where T: Into<Self>, Self: Sized + Into<i64> + From<i64> {
         use tap::Conv;

@@ -100,8 +100,15 @@ pub async fn user_login(
     data: web::Json<UserLogin>,
     db: web::Data<DatabaseConnection>,
 ) -> ResultHandler<String> {
-    let user_agent = req.headers().get("User-Agent").unwrap().to_str().unwrap();
-    let token_iden = user_agent.split(" ").nth(1).unwrap();
+    let token_iden = match req.headers().get("User-Agent") {
+        Some(_) => {
+            // UA Handler.
+            "Known Device"
+        },
+        None => {
+            "Unknow Device"
+        }
+    };
     let (user, token) = core::model::user::user_login(
         &db,
         data.iden.as_str(),
@@ -143,6 +150,6 @@ pub async fn before_create(path: web::Query<UserBeforeCreate>) -> ResultHandler<
 }
 
 pub fn service() -> Scope {
-    let service = services![get_user, create_user, before_create, check_iden_exist];
+    let service = services![get_user, create_user, before_create, check_iden_exist, user_login];
     web::scope("/api/user").service(service)
 }

@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use crate::graph::node::Node;
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PermGroupNode {
     pub node_id: i64,

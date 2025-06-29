@@ -3,8 +3,6 @@ use sea_orm::{
 };
 use tap::Conv;
 
-use crate::db::entity::node::node::create_node;
-
 pub mod node;
 pub mod problem;
 pub mod problem_statement;
@@ -22,10 +20,10 @@ where
     MODEL: Into<NODE>
         + From<<<Self as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
     Self: Sized + Send + Sync + ActiveModelTrait + ActiveModelBehavior + DbNodeInfo, {
-    async fn save_into_db(&self, db: &DatabaseConnection) -> Result<MODEL>
+    fn save_into_db(&self, db: &DatabaseConnection) -> impl std::future::Future<Output = Result<MODEL>> + Send
     where
         <Self::Entity as EntityTrait>::Model: IntoActiveModel<Self>,
-    {
+    {async {
         Ok(self.clone().insert(db).await?.conv::<MODEL>())
-    }
+    } }
 }
