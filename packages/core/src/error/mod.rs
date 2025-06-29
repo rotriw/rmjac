@@ -33,11 +33,9 @@ impl From<CoreError> for i64 {
             CoreError::UserNotFound => 3000,
             CoreError::UserIdenExists => 40000,
             CoreError::NotFound(_) => 50000,
-            CoreError::QueryExists(data) =>  {
-                match data {
-                    QueryExists::RegisterIDENExist => 60001,
-                    QueryExists::RegisterEmailExist => 60002,
-                }
+            CoreError::QueryExists(data) => match data {
+                QueryExists::RegisterIDENExist => 60001,
+                QueryExists::RegisterEmailExist => 60002,
             },
         }
     }

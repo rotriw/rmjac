@@ -104,10 +104,8 @@ pub async fn user_login(
         Some(_) => {
             // UA Handler.
             "Known Device"
-        },
-        None => {
-            "Unknow Device"
         }
+        None => "Unknow Device",
     };
     let (user, token) = core::model::user::user_login(
         &db,
@@ -150,6 +148,12 @@ pub async fn before_create(path: web::Query<UserBeforeCreate>) -> ResultHandler<
 }
 
 pub fn service() -> Scope {
-    let service = services![get_user, create_user, before_create, check_iden_exist, user_login];
+    let service = services![
+        get_user,
+        create_user,
+        before_create,
+        check_iden_exist,
+        user_login
+    ];
     web::scope("/api/user").service(service)
 }

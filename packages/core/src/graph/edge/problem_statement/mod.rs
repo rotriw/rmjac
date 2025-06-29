@@ -7,7 +7,6 @@ use crate::utils::perm::Perm;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProblemStatementEdge {
     pub id: i64,
@@ -23,8 +22,9 @@ pub struct ProblemStatementEdgeRaw {
     pub copyright_risk: i64,
 }
 
-
-impl EdgeRaw<ProblemStatementEdge, problem_statement::Model, problem_statement::ActiveModel> for ProblemStatementEdgeRaw {
+impl EdgeRaw<ProblemStatementEdge, problem_statement::Model, problem_statement::ActiveModel>
+    for ProblemStatementEdgeRaw
+{
     fn get_edge_type(&self) -> &str {
         "problem_statement"
     }
@@ -36,7 +36,7 @@ impl EdgeRaw<ProblemStatementEdge, problem_statement::Model, problem_statement::
 
 impl From<ProblemStatementEdgeRaw> for problem_statement::ActiveModel {
     fn from(raw: ProblemStatementEdgeRaw) -> Self {
-        use sea_orm::ActiveValue::{Set, NotSet};
+        use sea_orm::ActiveValue::{NotSet, Set};
         problem_statement::ActiveModel {
             edge_id: NotSet,
             u_node_id: Set(raw.u),

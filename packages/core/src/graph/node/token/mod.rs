@@ -3,8 +3,8 @@ use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
 use db::entity::node::token::ActiveModel as TokenNodeActiveModel;
-use db::entity::node::token::Model as TokenNodeModel;
 use db::entity::node::token::Column as TokenNodeColumn;
+use db::entity::node::token::Model as TokenNodeModel;
 
 use crate::db;
 use crate::graph::node::NodeRaw;
@@ -31,7 +31,6 @@ pub struct TokenNodePrivateRaw {
     pub token: String,
 }
 
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct TokenNode {
     pub node_id: i64,
@@ -50,7 +49,7 @@ pub struct TokenNodeRaw {
 
 impl From<TokenNodeRaw> for TokenNodeActiveModel {
     fn from(value: TokenNodeRaw) -> Self {
-        use sea_orm::ActiveValue::{Set, NotSet};
+        use sea_orm::ActiveValue::{NotSet, Set};
         Self {
             node_id: NotSet,
             token: Set(value.private.token),
@@ -80,11 +79,17 @@ impl From<TokenNodeModel> for TokenNode {
 }
 
 impl NodeRaw<TokenNode, TokenNodeModel, TokenNodeActiveModel> for TokenNodeRaw {
-    fn get_node_id_column(&self) -> <<TokenNodeActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+    fn get_node_id_column(
+        &self,
+    ) -> <<TokenNodeActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column
+    {
         TokenNodeColumn::NodeId
     }
 
-    fn get_node_iden_column(&self) -> <<TokenNodeActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+    fn get_node_iden_column(
+        &self,
+    ) -> <<TokenNodeActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column
+    {
         TokenNodeColumn::TokenIden
     }
 

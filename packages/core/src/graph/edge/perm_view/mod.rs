@@ -5,14 +5,12 @@ use crate::utils::perm::Perm;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct PermViewEdge {
     pub id: i64,
     pub u: i64,
     pub v: i64,
     pub perms: Vec<ViewPerm>,
-
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -22,7 +20,6 @@ pub struct PermViewEdgeRaw {
     pub perms: Vec<ViewPerm>,
 }
 
-
 #[derive(EnumConst, Copy, Clone, Debug, PartialEq, EnumIter)]
 pub enum ViewPerm {
     All = -1,
@@ -31,20 +28,22 @@ pub enum ViewPerm {
     ViewPrivate = 4,
 }
 
-
 impl EdgeRaw<PermViewEdge, PermViewModel, PermViewActiveModel> for PermViewEdgeRaw {
     fn get_edge_type(&self) -> &str {
         "perm_view"
     }
 
-    fn get_edge_id_column(&self) -> <<PermViewActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
+    fn get_edge_id_column(
+        &self,
+    ) -> <<PermViewActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column
+    {
         PermViewColumn::EdgeId
     }
 }
 
 impl From<PermViewEdgeRaw> for PermViewActiveModel {
     fn from(raw: PermViewEdgeRaw) -> Self {
-        use sea_orm::ActiveValue::{Set, NotSet};
+        use sea_orm::ActiveValue::{NotSet, Set};
         PermViewActiveModel {
             edge_id: NotSet,
             u_node_id: Set(raw.u),
@@ -54,9 +53,9 @@ impl From<PermViewEdgeRaw> for PermViewActiveModel {
     }
 }
 
-use crate::db::entity::edge::perm_view::Model as PermViewModel;
 use crate::db::entity::edge::perm_view::ActiveModel as PermViewActiveModel;
 use crate::db::entity::edge::perm_view::Column as PermViewColumn;
+use crate::db::entity::edge::perm_view::Model as PermViewModel;
 
 impl From<PermViewModel> for PermViewEdge {
     fn from(model: PermViewModel) -> Self {

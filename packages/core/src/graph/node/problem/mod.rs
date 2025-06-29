@@ -19,7 +19,7 @@ pub struct ProblemNodePrivate {}
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemNodePublicRaw {
     pub name: String,
-    pub creation_time: NaiveDateTime
+    pub creation_time: NaiveDateTime,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -56,7 +56,7 @@ impl From<crate::db::entity::node::problem::Model> for ProblemNode {
 
 impl From<ProblemNodeRaw> for crate::db::entity::node::problem::ActiveModel {
     fn from(value: ProblemNodeRaw) -> Self {
-        use sea_orm::ActiveValue::{Set, NotSet};
+        use sea_orm::ActiveValue::{NotSet, Set};
         Self {
             node_id: NotSet,
             node_iden: Set(format!("problem_{}", value.public.name)),
@@ -69,12 +69,18 @@ impl From<ProblemNodeRaw> for crate::db::entity::node::problem::ActiveModel {
     }
 }
 
-impl NodeRaw<ProblemNode, crate::db::entity::node::problem::Model, crate::db::entity::node::problem::ActiveModel> for ProblemNodeRaw {
-    fn get_node_id_column(&self) -> <<crate::db::entity::node::problem::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+impl
+    NodeRaw<
+        ProblemNode,
+        crate::db::entity::node::problem::Model,
+        crate::db::entity::node::problem::ActiveModel,
+    > for ProblemNodeRaw
+{
+    fn get_node_id_column(&self) -> <<crate::db::entity::node::problem::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
         problem::Column::NodeId
     }
 
-    fn get_node_iden_column(&self) -> <<crate::db::entity::node::problem::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+    fn get_node_iden_column(&self) -> <<crate::db::entity::node::problem::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
         problem::Column::NodeIden
     }
 

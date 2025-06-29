@@ -1,9 +1,12 @@
+use crate::{
+    db::entity::edge::{self, perm_manage},
+    graph::edge::EdgeRaw,
+    Result,
+};
 use enum_const::EnumConst;
 use sea_orm::DatabaseConnection;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-use crate::{db::entity::edge::{self, perm_manage}, graph::edge::EdgeRaw, Result};
-
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PermManageEdge {
@@ -11,7 +14,6 @@ pub struct PermManageEdge {
     pub u: i64,
     pub v: i64,
     pub perms: Vec<ManagePerm>,
-
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -35,14 +37,14 @@ impl EdgeRaw<PermManageEdge, perm_manage::Model, perm_manage::ActiveModel> for P
         "perm_manage"
     }
 
-    fn get_edge_id_column(&self) ->  <<perm_manage::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+    fn get_edge_id_column(&self) ->  <<perm_manage::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
         perm_manage::Column::EdgeId
     }
 }
 
 impl From<PermManageEdgeRaw> for perm_manage::ActiveModel {
     fn from(raw: PermManageEdgeRaw) -> Self {
-        use sea_orm::ActiveValue::{Set, NotSet};
+        use sea_orm::ActiveValue::{NotSet, Set};
         perm_manage::ActiveModel {
             edge_id: NotSet,
             u_node_id: Set(raw.u),
@@ -88,7 +90,6 @@ impl From<Perms> for i64 {
         res as i64
     }
 }
-
 
 impl From<Vec<ManagePerm>> for Perms {
     fn from(perms: Vec<ManagePerm>) -> Self {

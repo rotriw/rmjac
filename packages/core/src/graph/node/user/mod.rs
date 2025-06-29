@@ -41,7 +41,6 @@ pub struct UserNodePrivateRaw {
     pub password: String,
 }
 
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserNode {
     pub node_id: i64,
@@ -50,17 +49,15 @@ pub struct UserNode {
     pub private: UserNodePrivate,
 }
 
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserNodeRaw {
     pub public: UserNodePublicRaw,
     pub private: UserNodePrivateRaw,
 }
 
-
 impl From<UserNodeRaw> for db::entity::node::user::ActiveModel {
     fn from(value: UserNodeRaw) -> Self {
-        use sea_orm::ActiveValue::{Set, NotSet};
+        use sea_orm::ActiveValue::{NotSet, Set};
         Self {
             node_id: NotSet,
             user_name: Set(value.public.name),
@@ -99,11 +96,11 @@ impl Node for UserNode {
 use crate::db::entity::node::user as user_entity;
 
 impl NodeRaw<UserNode, user_entity::Model, user_entity::ActiveModel> for UserNodeRaw {
-    fn get_node_id_column(&self) -> <<user_entity::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+    fn get_node_id_column(&self) -> <<user_entity::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
         user_entity::Column::NodeId
     }
 
-    fn get_node_iden_column(&self) -> <<user_entity::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+    fn get_node_iden_column(&self) -> <<user_entity::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
         user_entity::Column::UserIden
     }
 

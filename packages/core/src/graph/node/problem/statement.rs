@@ -18,7 +18,6 @@ pub struct ProblemStatementNodePublic {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemStatementNodePrivate {}
 
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemStatementNodePublicRaw {
     pub statements: Vec<ContentType>,
@@ -29,7 +28,6 @@ pub struct ProblemStatementNodePublicRaw {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemStatementNodePrivateRaw {}
-
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemStatementNode {
@@ -85,11 +83,11 @@ impl NodeRaw<ProblemStatementNode, problem_statement::Model, problem_statement::
         format!("problem_statement_{}", self.public.iden)
     }
 
-    fn get_node_id_column(&self) -> <<problem_statement::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+    fn get_node_id_column(&self) -> <<problem_statement::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
         problem_statement::Column::NodeId
     }
 
-    fn get_node_iden_column(&self) -> <<problem_statement::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+    fn get_node_iden_column(&self) -> <<problem_statement::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
         problem_statement::Column::Iden
     }
 }

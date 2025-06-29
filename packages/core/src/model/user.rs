@@ -5,14 +5,33 @@ use crate::{
     db::{
         self,
         entity::{
-            self, edge::edge::create_edge, node::{node::create_node, user::{get_user_by_email, get_user_by_iden}}
+            self,
+            edge::edge::create_edge,
+            node::{
+                node::create_node,
+                user::{get_user_by_email, get_user_by_iden},
+            },
         },
     },
     error::{CoreError, QueryExists},
-    graph::{edge::{perm_manage::{ManagePerm, PermManageEdgeRaw}, perm_view::{PermViewEdge, PermViewEdgeRaw, ViewPerm}, EdgeRaw}, node::{
-        token::{TokenNode, TokenNodePrivateRaw, TokenNodePublic, TokenNodePublicRaw, TokenNodeRaw},
-        user::{UserNode, UserNodePrivate, UserNodePrivateRaw, UserNodePublic, UserNodePublicRaw, UserNodeRaw}, NodeRaw,
-    }}, utils::encrypt::encode_password,
+    graph::{
+        edge::{
+            perm_manage::{ManagePerm, PermManageEdgeRaw},
+            perm_view::{PermViewEdge, PermViewEdgeRaw, ViewPerm},
+            EdgeRaw,
+        },
+        node::{
+            token::{
+                TokenNode, TokenNodePrivateRaw, TokenNodePublic, TokenNodePublicRaw, TokenNodeRaw,
+            },
+            user::{
+                UserNode, UserNodePrivate, UserNodePrivateRaw, UserNodePublic, UserNodePublicRaw,
+                UserNodeRaw,
+            },
+            NodeRaw,
+        },
+    },
+    utils::encrypt::encode_password,
 };
 
 pub async fn create_default_user(
@@ -63,9 +82,13 @@ pub async fn user_login(
         user
     } else {
         get_user_by_email(&db, iden).await?
-    }.conv::<UserNode>();
+    }
+    .conv::<UserNode>();
     if user.private.password != encode_password(&password.to_string()) {
-        dbg!(user.private.password, encode_password(&password.to_string()));
+        dbg!(
+            user.private.password,
+            encode_password(&password.to_string())
+        );
         return Err(CoreError::UserNotFound);
     }
     let token_expiration = if long_token {
@@ -83,16 +106,22 @@ pub async fn user_login(
         private: TokenNodePrivateRaw {
             token: db::entity::node::token::gen_token(),
         },
-    }.save(db).await?;
+    }
+    .save(db)
+    .await?;
     PermViewEdgeRaw {
         u: token.node_id,
         v: user.node_id,
         perms: vec![ViewPerm::All],
-    }.save(db).await?;
+    }
+    .save(db)
+    .await?;
     PermManageEdgeRaw {
         u: token.node_id,
         v: user.node_id,
         perms: vec![ManagePerm::All],
-    }.save(db).await?;
+    }
+    .save(db)
+    .await?;
     Ok((user.into(), token.into()))
 }
