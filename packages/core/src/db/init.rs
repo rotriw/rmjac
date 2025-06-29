@@ -61,6 +61,14 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
+        format!("node_pages"),
+        table_create!(iden::node::pages::Pages, {
+            NodeId: big_integer not_null primary_key,
+            NodeIden: text not_null,
+            Iden: text not_null,
+        }),
+    );
+    tables.insert(
         format!("edge"),
         table_create!(iden::edge::edge::Edge, {
             EdgeId: big_integer not_null primary_key auto_increment,

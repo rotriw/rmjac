@@ -3,6 +3,7 @@ pub mod perm_group;
 pub mod problem;
 pub mod token;
 pub mod user;
+pub mod pages;
 
 use crate::{
     db::entity::node::{node::create_node, DbNodeActiveModel, DbNodeInfo},
