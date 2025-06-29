@@ -111,8 +111,8 @@ impl NodeRaw<UserNode, user_entity::Model, user_entity::ActiveModel> for UserNod
         "user"
     }
 
-    fn get_node_iden(&self) -> &str {
-        &self.public.iden
+    fn get_node_iden(&self) -> String {
+        format!("user_{}", self.public.iden)
     }
 }
 

@@ -1,6 +1,6 @@
-use crate::error::CoreError;
+use crate::db::entity::node::{DbNodeActiveModel, DbNodeInfo};
+use crate::graph::node::problem::statement::ProblemStatementNode;
 use sea_orm::entity::prelude::*;
-use sea_orm::ActiveValue::Set;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter, FromJsonQueryResult};
 use serde::{Deserialize, Serialize};
 
@@ -26,21 +26,9 @@ pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
 
-pub async fn create_problem_statement(
-    db: &DatabaseConnection,
-    node_id: i64,
-    iden: String,
-    source: String,
-    content: Vec<ContentType>,
-) -> Result<Model, CoreError> {
-    let model = ActiveModel {
-        node_id: Set(node_id),
-        iden: Set(iden),
-        source: Set(source),
-        content: Set(content),
-        creation_time: Set(chrono::Utc::now().naive_utc()),
-        update_time: Set(chrono::Utc::now().naive_utc()),
-    };
-    let res = model.insert(db).await?;
-    Ok(res)
+impl DbNodeInfo for ActiveModel {
+    fn get_node_type(&self) -> &str {
+        "problem_statement"
+    }
 }
+impl DbNodeActiveModel<Model, ProblemStatementNode> for ActiveModel {}

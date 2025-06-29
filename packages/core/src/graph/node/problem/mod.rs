@@ -3,16 +3,8 @@ use serde::{Deserialize, Serialize};
 
 pub mod statement;
 
-use crate::graph::node::Node;
-use crate::Result;
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct ProblemNode {
-    pub node_id: i64,
-    pub node_iden: String,
-    pub public: ProblemNodePublic,
-    pub private: ProblemNodePrivate,
-}
+use crate::db::entity::node::problem;
+use crate::graph::node::NodeRaw;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemNodePublic {
@@ -24,22 +16,27 @@ pub struct ProblemNodePublic {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemNodePrivate {}
 
-impl Node for ProblemNode {
-    fn get_node_id(&self) -> i64 {
-        self.node_id
-    }
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct ProblemNodePublicRaw {
+    pub name: String,
+    pub creation_time: NaiveDateTime
+}
 
-    fn get_node_iden(&self) -> String {
-        self.node_iden.clone()
-    }
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct ProblemNodePrivateRaw {}
 
-    async fn from_db(db: &sea_orm::DatabaseConnection, node_id: i64) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let model = crate::db::entity::node::problem::get_problem_by_nodeid(db, node_id).await?;
-        Ok(model.into())
-    }
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct ProblemNode {
+    pub node_id: i64,
+    pub node_iden: String,
+    pub public: ProblemNodePublic,
+    pub private: ProblemNodePrivate,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct ProblemNodeRaw {
+    pub public: ProblemNodePublicRaw,
+    pub private: ProblemNodePrivateRaw,
 }
 
 impl From<crate::db::entity::node::problem::Model> for ProblemNode {
@@ -54,5 +51,38 @@ impl From<crate::db::entity::node::problem::Model> for ProblemNode {
             },
             private: ProblemNodePrivate {},
         }
+    }
+}
+
+impl From<ProblemNodeRaw> for crate::db::entity::node::problem::ActiveModel {
+    fn from(value: ProblemNodeRaw) -> Self {
+        use sea_orm::ActiveValue::{Set, NotSet};
+        Self {
+            node_id: NotSet,
+            node_iden: Set(format!("problem_{}", value.public.name)),
+            name: Set(value.public.name),
+            content_public: NotSet,
+            content_private: NotSet,
+            creation_time: Set(value.public.creation_time),
+            creation_order: NotSet,
+        }
+    }
+}
+
+impl NodeRaw<ProblemNode, crate::db::entity::node::problem::Model, crate::db::entity::node::problem::ActiveModel> for ProblemNodeRaw {
+    fn get_node_id_column(&self) -> <<crate::db::entity::node::problem::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+        problem::Column::NodeId
+    }
+
+    fn get_node_iden_column(&self) -> <<crate::db::entity::node::problem::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+        problem::Column::NodeIden
+    }
+
+    fn get_node_iden(&self) -> String {
+        format!("problem_{}", self.public.name)
+    }
+
+    fn get_node_type(&self) -> &str {
+        "problem"
     }
 }

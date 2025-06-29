@@ -6,6 +6,8 @@ pub mod edge;
 pub mod perm_view;
 pub mod perm_manage;
 
+pub mod problem_statement;
+
 pub trait DbEdgeInfo {
     fn get_edge_type(&self) -> &str;
 }

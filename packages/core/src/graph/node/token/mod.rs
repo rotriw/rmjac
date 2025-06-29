@@ -1,3 +1,4 @@
+use chrono::DateTime;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
@@ -42,6 +43,7 @@ pub struct TokenNode {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct TokenNodeRaw {
     pub iden: String,
+    pub service: String,
     pub public: TokenNodePublicRaw,
     pub private: TokenNodePrivateRaw,
 }
@@ -57,7 +59,7 @@ impl From<TokenNodeRaw> for TokenNodeActiveModel {
                 Some(exp) => Set(exp),
                 None => NotSet,
             },
-            service: NotSet,
+            service: Set(value.service),
             token_iden: Set(value.iden),
         }
     }
@@ -90,7 +92,12 @@ impl NodeRaw<TokenNode, TokenNodeModel, TokenNodeActiveModel> for TokenNodeRaw {
         "token"
     }
 
-    fn get_node_iden(&self) -> &str {
-        &self.iden
+    fn get_node_iden(&self) -> String {
+        let time_stamp = if let Some(time) = self.public.token_expiration {
+            time.and_utc().timestamp()
+        } else {
+            0
+        };
+        format!("token_{}_{}", self.iden, time_stamp)
     }
 }

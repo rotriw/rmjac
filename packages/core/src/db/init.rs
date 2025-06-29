@@ -73,7 +73,25 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             EdgeId: big_integer not_null primary_key,
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
-            Perm: integer not_null,
+            Perm: big_integer not_null,
+        }),
+    );
+    tables.insert(
+        format!("edge_perm_manage"),
+        table_create!(iden::edge::perm_manage::PermManage, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
+            Perm: big_integer not_null,
+        }),
+    );
+    tables.insert(
+        format!("edge_problem_statement"),
+        table_create!(iden::edge::problem_statement::ProblemStatement, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
+            CopyrightRisk: text not_null,
         }),
     );
     return tables;

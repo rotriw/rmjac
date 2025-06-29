@@ -65,6 +65,7 @@ pub async fn user_login(
         get_user_by_email(&db, iden).await?
     }.conv::<UserNode>();
     if user.private.password != encode_password(&password.to_string()) {
+        dbg!(user.private.password, encode_password(&password.to_string()));
         return Err(CoreError::UserNotFound);
     }
     let token_expiration = if long_token {
@@ -74,6 +75,7 @@ pub async fn user_login(
     };
     let token = TokenNodeRaw {
         iden: token_iden.to_string(),
+        service: "auth".to_string(),
         public: TokenNodePublicRaw {
             token_expiration,
             token_type: "auth".to_string(),
@@ -88,8 +90,8 @@ pub async fn user_login(
         perms: vec![ViewPerm::All],
     }.save(db).await?;
     PermManageEdgeRaw {
-        u: user.node_id,
-        v: token.node_id,
+        u: token.node_id,
+        v: user.node_id,
         perms: vec![ManagePerm::All],
     }.save(db).await?;
     Ok((user.into(), token.into()))

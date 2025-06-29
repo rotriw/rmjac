@@ -17,6 +17,7 @@ impl<'a> From<EdgeType> for &'a str {
 
 pub mod perm_view;
 pub mod perm_manage;
+pub mod problem_statement;
 
 pub trait Edge {
     fn get_edge_id(&self) -> i64;

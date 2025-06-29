@@ -1,5 +1,7 @@
 use crate::db::entity::node::node::create_node;
+use crate::db::entity::node::{DbNodeActiveModel, DbNodeInfo};
 use crate::error::CoreError;
+use crate::graph::node::problem::ProblemNode;
 use sea_orm::entity::prelude::*;
 use sea_orm::ActiveValue::Set;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter, FromJsonQueryResult};
@@ -25,47 +27,9 @@ pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
 
-pub async fn create_problem_node(
-    db: &DatabaseConnection,
-    node_id: Option<i64>,
-    node_iden: &str,
-    name: &str,
-    content_public: String,
-    content_private: String,
-) -> Result<Model, CoreError> {
-    let node_iden = format!("problem_{}", node_iden);
-    let node_id = match node_id {
-        Some(id) => id,
-        None => {
-            create_node(db, node_iden.as_str(), "problem")
-                .await?
-                .node_id
-        }
-    };
-    let model = ActiveModel {
-        node_id: Set(node_id),
-        node_iden: Set(node_iden),
-        content_public: Set(content_public),
-        content_private: Set(content_private),
-        creation_time: Set(chrono::Utc::now().naive_utc()),
-        creation_order: Set(0),
-        name: Set(name.to_string()),
-    };
-    let res = model.insert(db).await?;
-    Ok(res)
-}
-
-pub async fn get_problem_by_nodeid(
-    db: &DatabaseConnection,
-    node_id: i64,
-) -> Result<Model, CoreError> {
-    use sea_orm::EntityTrait;
-    let problem = Entity::find_by_id(node_id).one(db).await?;
-    match problem {
-        Some(problem) => Ok(problem),
-        None => Err(CoreError::NotFound(format!(
-            "Problem with node_id {} not found",
-            node_id
-        ))),
+impl DbNodeInfo for ActiveModel {
+    fn get_node_type(&self) -> &str {
+        "problem"
     }
 }
+impl DbNodeActiveModel<Model, ProblemNode> for ActiveModel {}
