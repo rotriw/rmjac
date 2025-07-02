@@ -6,7 +6,7 @@ use crate::graph::node::NodeRaw;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemLimitNodePublic {
-    pub time_limit: i64, // ms
+    pub time_limit: i64,   // ms
     pub memory_limit: i64, // kb
 }
 
@@ -15,7 +15,7 @@ pub struct ProblemLimitNodePrivate {}
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemLimitNodePublicRaw {
-    pub time_limit: i64, // ms
+    pub time_limit: i64,   // ms
     pub memory_limit: i64, // kb
 }
 

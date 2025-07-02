@@ -1,6 +1,6 @@
+use crate::Result;
 use enum_const::EnumConst;
 use sea_orm::DatabaseConnection;
-use crate::Result;
 
 use crate::graph::edge::EdgeQuery;
 use crate::graph::edge::EdgeRaw;
@@ -137,7 +137,10 @@ impl EdgeQuery for PermViewEdgeQuery {
             .filter(PermViewColumn::UNodeId.eq(i))
             .all(db)
             .await?;
-        Ok(edges.into_iter().map(|edge| (edge.v_node_id, edge.perm)).collect())
+        Ok(edges
+            .into_iter()
+            .map(|edge| (edge.v_node_id, edge.perm))
+            .collect())
     }
 
     fn get_edge_type() -> &'static str {

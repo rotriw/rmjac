@@ -1,7 +1,5 @@
-
 use crate::db::entity::edge::problem_limit;
 use crate::graph::edge::EdgeRaw;
-
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProblemLimitEdge {

@@ -8,7 +8,6 @@ use crate::graph::node::NodeRaw;
 pub struct ProblemTagNodePublic {
     pub tag_name: String,
     pub tag_description: String,
-
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -63,9 +62,7 @@ impl From<ProblemTagNodeRaw> for problem_tag::ActiveModel {
     }
 }
 
-impl NodeRaw<ProblemTagNode, problem_tag::Model, problem_tag::ActiveModel>
-    for ProblemTagNodeRaw
-{
+impl NodeRaw<ProblemTagNode, problem_tag::Model, problem_tag::ActiveModel> for ProblemTagNodeRaw {
     fn get_node_type(&self) -> &str {
         "problem_tag"
     }

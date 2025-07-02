@@ -1,7 +1,5 @@
-
 use crate::db::entity::edge::problem_tag;
 use crate::graph::edge::EdgeRaw;
-
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProblemTagEdge {
@@ -16,9 +14,7 @@ pub struct ProblemTagEdgeRaw {
     pub v: i64,
 }
 
-impl EdgeRaw<ProblemTagEdge, problem_tag::Model, problem_tag::ActiveModel>
-    for ProblemTagEdgeRaw
-{
+impl EdgeRaw<ProblemTagEdge, problem_tag::Model, problem_tag::ActiveModel> for ProblemTagEdgeRaw {
     fn get_edge_type(&self) -> &str {
         "problem_tag"
     }

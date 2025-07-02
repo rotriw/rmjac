@@ -17,13 +17,8 @@ use crate::{
             EdgeRaw,
         },
         node::{
-            token::{
-                TokenNode, TokenNodePrivateRaw, TokenNodePublicRaw, TokenNodeRaw,
-            },
-            user::{
-                UserNode, UserNodePrivateRaw, UserNodePublicRaw,
-                UserNodeRaw,
-            },
+            token::{TokenNode, TokenNodePrivateRaw, TokenNodePublicRaw, TokenNodeRaw},
+            user::{UserNode, UserNodePrivateRaw, UserNodePublicRaw, UserNodeRaw},
             NodeRaw,
         },
     },

@@ -8,8 +8,7 @@ use crate::db;
 use crate::graph::node::NodeRaw;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct PagesNodePublic {
-}
+pub struct PagesNodePublic {}
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PagesNodePrivate {
@@ -17,8 +16,7 @@ pub struct PagesNodePrivate {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct PagesNodePublicRaw {
-}
+pub struct PagesNodePublicRaw {}
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PagesNodePrivateRaw {
@@ -52,7 +50,6 @@ impl From<PagesNodeRaw> for PagesNodeActiveModel {
     }
 }
 
-
 impl NodeRaw<PagesNode, PagesNodeModel, PagesNodeActiveModel> for PagesNodeRaw {
     fn get_node_id_column(
         &self,
@@ -75,6 +72,4 @@ impl NodeRaw<PagesNode, PagesNodeModel, PagesNodeActiveModel> for PagesNodeRaw {
     fn get_node_iden(&self) -> String {
         format!("pages_{}", self.iden)
     }
-
-
 }

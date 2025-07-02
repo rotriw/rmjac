@@ -1,12 +1,13 @@
 use chrono::NaiveDateTime;
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
 
-pub mod statement;
 pub mod limit;
+pub mod statement;
 pub mod tag;
 
 use crate::db::entity::node::problem;
-use crate::graph::node::NodeRaw;
+use crate::graph::node::{Node, NodeRaw};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemNodePublic {
@@ -92,5 +93,32 @@ impl
 
     fn get_node_type(&self) -> &str {
         "problem"
+    }
+}
+
+impl Node for ProblemNode {
+    fn get_node_id(&self) -> i64 {
+        self.node_id
+    }
+
+    fn get_node_iden(&self) -> String {
+        self.node_iden.clone()
+    }
+
+    async fn from_db(db: &sea_orm::DatabaseConnection, node_id: i64) -> crate::Result<Self>
+    where
+        Self: Sized,
+    {
+        let model = problem::Entity::find()
+            .filter(problem::Column::NodeId.eq(node_id))
+            .one(db)
+            .await?;
+        match model {
+            Some(model) => Ok(model.into()),
+            None => Err(crate::error::CoreError::NotFound(format!(
+                "Problem node with id {} not found",
+                node_id
+            ))),
+        }
     }
 }

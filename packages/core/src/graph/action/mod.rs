@@ -4,7 +4,6 @@ use crate::env::{PATH_VIS, SAVED_NODE_PATH};
 use crate::graph::edge::EdgeQuery;
 use crate::Result;
 
-
 macro_rules! path_vis {
     [$ckid:expr,$u:expr] => {
         PATH_VIS
@@ -44,7 +43,8 @@ pub async fn has_path<T: EdgeQuery>(
         .lock()
         .unwrap()
         .get(&u)
-        .and_then(|m| m.get(&u)) {
+        .and_then(|m| m.get(&u))
+    {
         if T::check_perm(required_perm, *x) {
             return Ok(1);
         } else {
@@ -65,8 +65,18 @@ pub async fn has_path<T: EdgeQuery>(
         if ver.0 == v {
             return Ok(1);
         }
-        let val = has_path(db, ver.0, v, edge_type, required_perm, ckid, step + 1, max_step).await?;
-        if  val == -1 {
+        let val = has_path(
+            db,
+            ver.0,
+            v,
+            edge_type,
+            required_perm,
+            ckid,
+            step + 1,
+            max_step,
+        )
+        .await?;
+        if val == -1 {
             return Ok(-1);
         } else if val == 1 {
             return Ok(1);

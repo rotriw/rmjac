@@ -119,7 +119,10 @@ impl EdgeQuery for PermManageEdgeQuery {
             .filter(edge::perm_manage::Column::UNodeId.eq(u))
             .all(db)
             .await?;
-        Ok(edges.into_iter().map(|edge| (edge.v_node_id, edge.perm.into())).collect())
+        Ok(edges
+            .into_iter()
+            .map(|edge| (edge.v_node_id, edge.perm.into()))
+            .collect())
     }
 
     fn get_edge_type() -> &'static str {

@@ -7,7 +7,10 @@
 
 use log::LevelFilter;
 
-use crate::{env::{env_load, CONFIG}, handler, utils};
+use crate::{
+    env::{CONFIG, env_load},
+    handler, utils,
+};
 
 pub fn run(
     port: Option<String>,
@@ -24,10 +27,7 @@ pub fn run(
         .unwrap_or(LevelFilter::Info);
     let _ = utils::logger::setup_logger_with_stdout(log_level);
     let _ = env_load(&config);
-    let redis_url = CONFIG.lock().unwrap()
-        .redis_url
-        .clone()
-        .unwrap();
+    let redis_url = CONFIG.lock().unwrap().redis_url.clone().unwrap();
     let mut env_redis_url = core::env::REDIS_URL.lock().unwrap();
     *env_redis_url = redis_url;
     let _ = handler::main(host.as_str(), port);

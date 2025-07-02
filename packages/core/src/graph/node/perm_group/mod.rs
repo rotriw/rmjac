@@ -8,8 +8,7 @@ use crate::db;
 use crate::graph::node::NodeRaw;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct PermGroupNodePublic {
-}
+pub struct PermGroupNodePublic {}
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PermGroupNodePrivate {
@@ -17,8 +16,7 @@ pub struct PermGroupNodePrivate {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct PermGroupNodePublicRaw {
-}
+pub struct PermGroupNodePublicRaw {}
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PermGroupNodePrivateRaw {
@@ -52,7 +50,6 @@ impl From<PermGroupNodeRaw> for PermGroupNodeActiveModel {
     }
 }
 
-
 impl NodeRaw<PermGroupNode, PermGroupNodeModel, PermGroupNodeActiveModel> for PermGroupNodeRaw {
     fn get_node_id_column(
         &self,
@@ -75,6 +72,4 @@ impl NodeRaw<PermGroupNode, PermGroupNodeModel, PermGroupNodeActiveModel> for Pe
     fn get_node_iden(&self) -> String {
         format!("perm_group_{}", self.iden)
     }
-
-
 }

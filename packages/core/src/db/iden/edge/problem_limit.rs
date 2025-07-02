@@ -1,6 +1,5 @@
 use sea_orm::DeriveIden;
 
-
 #[derive(DeriveIden)]
 pub enum ProblemLimit {
     #[sea_orm(iden = "edge_problem_limit")]

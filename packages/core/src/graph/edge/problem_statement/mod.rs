@@ -1,7 +1,5 @@
-
 use crate::db::entity::edge::problem_statement;
 use crate::graph::edge::EdgeRaw;
-
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProblemStatementEdge {
@@ -43,24 +41,3 @@ impl From<ProblemStatementEdgeRaw> for problem_statement::ActiveModel {
 }
 
 pub struct ProblemStatementEdgeQuery;
-
-// impl EdgeQuery for ProblemStatementEdgeQuery {
-//     async fn get_v(u: i64, db: &sea_orm::DatabaseConnection) -> Result<Vec<i64>> {
-//         let res = edge::problem_statement::Entity::find()
-//                 .filter(edge::problem_statement::Column::UNodeId.eq(u))
-//                 .all(db)
-//                 .await?;
-//         Ok(res.into_iter().map(|x| x.v_node_id).collect())
-//     }
-
-//     async fn get_perm_v(i: i64, db: &sea_orm::DatabaseConnection) -> Result<Vec<(i64, i64)>> {
-//         let res = edge::problem_statement::Entity::find()
-//             .filter(edge::problem_statement::Column::VNodeId.eq(i))
-//             .all(db)
-//             .await?;
-//         Ok(res.into_iter().map(|x| (x.v_node_id, )).collect())
-//     }
-//     fn get_edge_type() -> &'static str {
-//         "problem_statement"
-//     }
-// }
