@@ -77,6 +77,24 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
+        format!("node_problem_limit"),
+        table_create!(iden::node::problem_limit::ProblemLimit, {
+            NodeId: big_integer not_null primary_key,
+            NodeIden: text not_null,
+            TimeLimit: big_integer not_null,
+            MemoryLimit: big_integer not_null,
+        }),
+    );
+    tables.insert(
+        format!("node_problem_tag"),
+        table_create!(iden::node::problem_tag::ProblemTag, {
+            NodeId: big_integer not_null primary_key,
+            NodeIden: text not_null,
+            TagName: text not_null,
+            TagDescription: text not_null,
+        }),
+    );
+    tables.insert(
         format!("edge"),
         table_create!(iden::edge::edge::Edge, {
             EdgeId: big_integer not_null primary_key auto_increment,
@@ -108,6 +126,22 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
             CopyrightRisk: text not_null,
+        }),
+    );
+    tables.insert(
+        format!("edge_problem_limit"),
+        table_create!(iden::edge::problem_limit::ProblemLimit, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
+        }),
+    );
+    tables.insert(
+        format!("edge_problem_tag"),
+        table_create!(iden::edge::problem_tag::ProblemTag, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
         }),
     );
     return tables;
@@ -144,6 +178,34 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
             .to_owned(),
     );
     tables.insert(
+        format!("node_pages"),
+        Table::drop()
+            .table(iden::node::pages::Pages::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        format!("node_perm_group"),
+        Table::drop()
+            .table(iden::node::perm_group::PermGroup::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        format!("node_problem_limit"),
+        Table::drop()
+            .table(iden::node::problem_limit::ProblemLimit::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        format!("node_problem_tag"),
+        Table::drop()
+            .table(iden::node::problem_tag::ProblemTag::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
         format!("edge"),
         Table::drop()
             .table(iden::edge::edge::Edge::Table)
@@ -154,6 +216,34 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         format!("edge_perm_view"),
         Table::drop()
             .table(iden::edge::perm_view::PermView::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        format!("edge_perm_manage"),
+        Table::drop()
+            .table(iden::edge::perm_manage::PermManage::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        format!("edge_problem_statement"),
+        Table::drop()
+            .table(iden::edge::problem_statement::ProblemStatement::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        format!("edge_problem_limit"),
+        Table::drop()
+            .table(iden::edge::problem_limit::ProblemLimit::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        format!("edge_problem_tag"),
+        Table::drop()
+            .table(iden::edge::problem_tag::ProblemTag::Table)
             .if_exists()
             .to_owned(),
     );

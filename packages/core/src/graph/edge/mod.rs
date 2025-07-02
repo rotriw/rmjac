@@ -3,6 +3,7 @@ use crate::Result;
 use sea_orm::{
     ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
 };
+use sea_orm_migration::async_trait::async_trait;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EdgeType {
@@ -20,6 +21,17 @@ impl<'a> From<EdgeType> for &'a str {
 pub mod perm_manage;
 pub mod perm_view;
 pub mod problem_statement;
+pub mod problem_limit;
+pub mod problem_tag;
+
+pub trait EdgeQuery {
+    fn get_v(u: i64, db: &DatabaseConnection)-> impl std::future::Future<Output = Result<Vec<i64>>>;
+    fn get_perm_v(i: i64, db: &DatabaseConnection) -> impl std::future::Future<Output = Result<Vec<(i64, i64)>>> ;
+    fn get_edge_type() -> &'static str;
+    fn check_perm(perm_a: i64, perm_b: i64) -> bool { // perm_b require perm_A ?
+        (perm_a & perm_b) == perm_a
+    }
+}
 
 pub trait Edge {
     fn get_edge_id(&self) -> i64;

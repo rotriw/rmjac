@@ -6,6 +6,7 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub secret_challenge_code: String,
+    pub redis_url: Option<String>,
     pub postgres_url: Option<String>,
 }
 
@@ -13,6 +14,7 @@ lazy_static! {
     pub static ref CONFIG: Mutex<Config> = Mutex::new(Config {
         secret_challenge_code: "default_secret".to_string(),
         postgres_url: Some("postgresql://localhost:5432".to_string()),
+        redis_url: Some("redis://localhost:6379".to_string()),
     });
 }
 
@@ -27,6 +29,7 @@ pub fn env_load(path: &str) -> Result<(), String> {
             let mut env = CONFIG.lock().unwrap();
             env.secret_challenge_code = cfg.secret_challenge_code;
             env.postgres_url = cfg.postgres_url;
+            env.redis_url = cfg.redis_url;
             Ok(())
         }
         Err(e) => {

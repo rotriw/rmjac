@@ -845,6 +845,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "combine"
+version = "4.6.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba5a308b75df32fe02788e748662718f03fde005016435c444eea572398219fd"
+dependencies = [
+ "bytes",
+ "memchr",
+]
+
+[[package]]
 name = "command_tool"
 version = "0.1.0"
 source = "git+https://github.com/rotriw/rust_command_tool_macro#d986bb2d2c98312f8da3c2a74a036f6e34289c81"
@@ -945,6 +955,7 @@ dependencies = [
  "log",
  "macro_db_init",
  "mongodb",
+ "redis",
  "sea-orm",
  "sea-orm-migration",
  "serde",
@@ -2979,6 +2990,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "redis"
+version = "0.32.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2f6fd3fd5bb3a9a48819ae5cbad501968f208c1abd139649e7e2cf5d7f4b40b"
+dependencies = [
+ "combine",
+ "itoa",
+ "num-bigint",
+ "percent-encoding",
+ "ryu",
+ "sha1_smol",
+ "socket2",
+ "url",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3138,6 +3165,7 @@ dependencies = [
  "fern",
  "lazy_static",
  "log",
+ "redis",
  "sea-orm",
  "serde",
  "serde_json",
@@ -3628,6 +3656,12 @@ dependencies = [
  "cpufeatures",
  "digest",
 ]
+
+[[package]]
+name = "sha1_smol"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbfa15b3dddfee50a0fff136974b3e1bde555604ba463834a7eb7deb6417705d"
 
 [[package]]
 name = "sha2"

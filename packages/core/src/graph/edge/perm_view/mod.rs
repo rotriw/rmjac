@@ -1,5 +1,9 @@
 use enum_const::EnumConst;
+use sea_orm::DatabaseConnection;
+use sea_orm_migration::async_trait::async_trait;
+use crate::Result;
 
+use crate::graph::edge::EdgeQuery;
 use crate::graph::edge::EdgeRaw;
 use crate::utils::perm::Perm;
 use strum::IntoEnumIterator;
@@ -109,5 +113,35 @@ impl From<Vec<ViewPerm>> for Perms {
 impl From<&[ViewPerm]> for Perms {
     fn from(perms: &[ViewPerm]) -> Self {
         Perms(perms.to_vec())
+    }
+}
+
+pub struct PermViewEdgeQuery;
+
+impl EdgeQuery for PermViewEdgeQuery {
+    async fn get_v(u: i64, db: &DatabaseConnection) -> Result<Vec<i64>> {
+        use crate::db::entity::edge::perm_view::Entity as PermViewEntity;
+        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+
+        let edges = PermViewEntity::find()
+            .filter(PermViewColumn::UNodeId.eq(u))
+            .all(db)
+            .await?;
+        Ok(edges.into_iter().map(|edge| edge.v_node_id).collect())
+    }
+
+    async fn get_perm_v(i: i64, db: &DatabaseConnection) -> Result<Vec<(i64, i64)>> {
+        use crate::db::entity::edge::perm_view::Entity as PermViewEntity;
+        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+
+        let edges = PermViewEntity::find()
+            .filter(PermViewColumn::UNodeId.eq(i))
+            .all(db)
+            .await?;
+        Ok(edges.into_iter().map(|edge| (edge.v_node_id, edge.perm)).collect())
+    }
+
+    fn get_edge_type() -> &'static str {
+        "perm_view"
     }
 }

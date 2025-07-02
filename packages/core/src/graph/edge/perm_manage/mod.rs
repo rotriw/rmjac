@@ -1,10 +1,10 @@
 use crate::{
     db::entity::edge::{self, perm_manage},
-    graph::edge::EdgeRaw,
+    graph::edge::{EdgeQuery, EdgeRaw},
     Result,
 };
 use enum_const::EnumConst;
-use sea_orm::DatabaseConnection;
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
@@ -100,5 +100,29 @@ impl From<Vec<ManagePerm>> for Perms {
 impl From<&[ManagePerm]> for Perms {
     fn from(perms: &[ManagePerm]) -> Self {
         Perms(perms.to_vec())
+    }
+}
+
+pub struct PermManageEdgeQuery;
+
+impl EdgeQuery for PermManageEdgeQuery {
+    async fn get_v(u: i64, db: &DatabaseConnection) -> Result<Vec<i64>> {
+        let res = edge::perm_manage::Entity::find()
+            .filter(edge::perm_manage::Column::UNodeId.eq(u))
+            .all(db)
+            .await?;
+        Ok(res.into_iter().map(|x| x.v_node_id).collect())
+    }
+
+    async fn get_perm_v(u: i64, db: &DatabaseConnection) -> Result<Vec<(i64, i64)>> {
+        let edges = edge::perm_manage::Entity::find()
+            .filter(edge::perm_manage::Column::UNodeId.eq(u))
+            .all(db)
+            .await?;
+        Ok(edges.into_iter().map(|edge| (edge.v_node_id, edge.perm.into())).collect())
+    }
+
+    fn get_edge_type() -> &'static str {
+        "perm_manage"
     }
 }

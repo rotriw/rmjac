@@ -26,6 +26,7 @@ enum_const = "0.1.1"
 tap = "1.0.1"
 strum_macros = "0.27.1"
 strum = "0.27.1"
+redis = "0.32.2"
 
 
 [dependencies.sea-orm-migration]
