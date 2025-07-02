@@ -1,9 +1,6 @@
-use crate::db::entity::node::node::create_node;
 use crate::db::entity::node::{DbNodeActiveModel, DbNodeInfo};
-use crate::error::CoreError;
 use crate::graph::node::problem::ProblemNode;
 use sea_orm::entity::prelude::*;
-use sea_orm::ActiveValue::Set;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter, FromJsonQueryResult};
 use serde::{Deserialize, Serialize};
 

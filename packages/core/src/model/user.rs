@@ -6,26 +6,22 @@ use crate::{
         self,
         entity::{
             self,
-            edge::edge::create_edge,
-            node::{
-                node::create_node,
-                user::{get_user_by_email, get_user_by_iden},
-            },
+            node::user::{get_user_by_email, get_user_by_iden},
         },
     },
     error::{CoreError, QueryExists},
     graph::{
         edge::{
             perm_manage::{ManagePerm, PermManageEdgeRaw},
-            perm_view::{PermViewEdge, PermViewEdgeRaw, ViewPerm},
+            perm_view::{PermViewEdgeRaw, ViewPerm},
             EdgeRaw,
         },
         node::{
             token::{
-                TokenNode, TokenNodePrivateRaw, TokenNodePublic, TokenNodePublicRaw, TokenNodeRaw,
+                TokenNode, TokenNodePrivateRaw, TokenNodePublicRaw, TokenNodeRaw,
             },
             user::{
-                UserNode, UserNodePrivate, UserNodePrivateRaw, UserNodePublic, UserNodePublicRaw,
+                UserNode, UserNodePrivateRaw, UserNodePublicRaw,
                 UserNodeRaw,
             },
             NodeRaw,

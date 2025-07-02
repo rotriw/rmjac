@@ -1,8 +1,7 @@
 use crate::db::entity::node::{DbNodeActiveModel, DbNodeInfo};
 use crate::graph::node::problem::limit::ProblemLimitNode;
 use sea_orm::entity::prelude::*;
-use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter, FromJsonQueryResult};
-use serde::{Deserialize, Serialize};
+use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "node_limit")]

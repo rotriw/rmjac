@@ -1,14 +1,13 @@
 use crate::{
-    db::entity::node::problem_statement::ContentType,
     graph::{
         edge::{
-            perm_manage::{ManagePerm, PermManageEdgeRaw}, perm_view::{PermViewEdgeRaw, ViewPerm}, problem_limit::ProblemLimitEdgeRaw, problem_statement::ProblemStatementEdgeRaw, EdgeRaw
+            perm_manage::{ManagePerm, PermManageEdgeRaw}, perm_view::{PermViewEdgeRaw, ViewPerm}, problem_limit::ProblemLimitEdgeRaw, EdgeRaw
         },
         node::{
             problem::{
                 limit::{ProblemLimitNode, ProblemLimitNodeRaw}, statement::{
-                    ProblemStatementNode, ProblemStatementNodePrivateRaw, ProblemStatementNodePublicRaw, ProblemStatementNodeRaw
-                }, tag::ProblemTagNode, ProblemNode, ProblemNodePrivate, ProblemNodePrivateRaw, ProblemNodePublic, ProblemNodePublicRaw, ProblemNodeRaw
+                    ProblemStatementNode, ProblemStatementNodeRaw
+                }, tag::ProblemTagNode, ProblemNode, ProblemNodePrivateRaw, ProblemNodePublicRaw, ProblemNodeRaw
             },
             NodeRaw,
         },

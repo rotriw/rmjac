@@ -1,6 +1,5 @@
 use enum_const::EnumConst;
 use sea_orm::DatabaseConnection;
-use sea_orm_migration::async_trait::async_trait;
 use crate::Result;
 
 use crate::graph::edge::EdgeQuery;

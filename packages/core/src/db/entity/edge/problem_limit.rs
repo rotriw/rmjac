@@ -1,5 +1,4 @@
 use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeEntityModel, DbEdgeInfo};
-use crate::graph::edge::perm_manage::PermManageEdge;
 use crate::graph::edge::problem_limit::ProblemLimitEdge;
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter};

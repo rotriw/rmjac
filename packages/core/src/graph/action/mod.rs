@@ -1,11 +1,7 @@
-use std::pin::Pin;
-
-use redis::Commands;
 use sea_orm::DatabaseConnection;
 
-use crate::db::entity::edge;
 use crate::env::{PATH_VIS, SAVED_NODE_PATH};
-use crate::graph::edge::{Edge, EdgeQuery, EdgeType};
+use crate::graph::edge::EdgeQuery;
 use crate::Result;
 
 
