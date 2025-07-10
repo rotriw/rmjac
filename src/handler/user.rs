@@ -1,4 +1,4 @@
-use core::now_time;
+use core::{error::CoreError, now_time};
 
 use crate::{
     env::CONFIG,
@@ -147,13 +147,19 @@ pub async fn before_create(path: web::Query<UserBeforeCreate>) -> ResultHandler<
     })
 }
 
+#[get("/test_error")]
+pub async fn test_error() -> ResultHandler<String> {
+    return Err(CoreError::NotFound("Test Error".to_string()).into());
+}
+
 pub fn service() -> Scope {
     let service = services![
         get_user,
         create_user,
         before_create,
         check_iden_exist,
-        user_login
+        user_login,
+        test_error
     ];
     web::scope("/api/user").service(service)
 }

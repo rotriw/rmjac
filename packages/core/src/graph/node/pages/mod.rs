@@ -26,7 +26,6 @@ pub struct PagesNodePrivateRaw {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PagesNode {
     pub node_id: i64,
-    pub node_iden: String,
     pub public: PagesNodePublic,
     pub private: PagesNodePrivate,
 }
@@ -34,7 +33,6 @@ pub struct PagesNode {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PagesNodeRaw {
     pub iden: String,
-    pub service: String,
     pub public: PagesNodePublicRaw,
     pub private: PagesNodePrivateRaw,
 }
@@ -44,7 +42,6 @@ impl From<PagesNodeRaw> for PagesNodeActiveModel {
         use sea_orm::ActiveValue::{NotSet, Set};
         Self {
             node_id: NotSet,
-            node_iden: Set(value.iden.clone()),
             iden: Set(value.iden),
         }
     }
@@ -58,18 +55,8 @@ impl NodeRaw<PagesNode, PagesNodeModel, PagesNodeActiveModel> for PagesNodeRaw {
         PagesNodeColumn::NodeId
     }
 
-    fn get_node_iden_column(
-        &self,
-    ) -> <<PagesNodeActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column
-    {
-        PagesNodeColumn::NodeIden
-    }
-
     fn get_node_type(&self) -> &str {
         "pages"
     }
 
-    fn get_node_iden(&self) -> String {
-        format!("pages_{}", self.iden)
-    }
 }

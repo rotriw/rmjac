@@ -2,7 +2,7 @@ use sea_orm::DeriveIden;
 
 #[derive(DeriveIden)]
 pub enum ProblemStatement {
-    #[sea_orm(iden = "edge_perm_view")]
+    #[sea_orm(iden = "edge_problem_statement")]
     Table,
     #[sea_orm(iden = "edge_id")]
     EdgeId,

@@ -1,3 +1,4 @@
+use crate::graph::edge::EdgeQueryPerm;
 use crate::Result;
 use enum_const::EnumConst;
 use sea_orm::DatabaseConnection;
@@ -129,6 +130,12 @@ impl EdgeQuery for PermViewEdgeQuery {
         Ok(edges.into_iter().map(|edge| edge.v_node_id).collect())
     }
 
+    fn get_edge_type() -> &'static str {
+        "perm_view"
+    }
+}
+
+impl EdgeQueryPerm for PermViewEdgeQuery {
     async fn get_perm_v(i: i64, db: &DatabaseConnection) -> Result<Vec<(i64, i64)>> {
         use crate::db::entity::edge::perm_view::Entity as PermViewEntity;
         use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
@@ -141,9 +148,5 @@ impl EdgeQuery for PermViewEdgeQuery {
             .into_iter()
             .map(|edge| (edge.v_node_id, edge.perm))
             .collect())
-    }
-
-    fn get_edge_type() -> &'static str {
-        "perm_view"
     }
 }

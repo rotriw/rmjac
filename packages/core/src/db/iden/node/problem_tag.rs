@@ -6,8 +6,6 @@ pub enum ProblemTag {
     Table,
     #[sea_orm(iden = "node_id")]
     NodeId,
-    #[sea_orm(iden = "node_iden")]
-    NodeIden,
     #[sea_orm(iden = "tag_name")]
     TagName,
     #[sea_orm(iden = "tag_description")]

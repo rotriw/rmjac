@@ -17,7 +17,6 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         format!("node"),
         table_create!(iden::node::node::Node, {
             NodeId: big_integer not_null primary_key auto_increment,
-            NodeIden: text not_null,
             NodeType: text not_null,
         }),
     );
@@ -64,7 +63,6 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         format!("node_pages"),
         table_create!(iden::node::pages::Pages, {
             NodeId: big_integer not_null primary_key,
-            NodeIden: text not_null,
             Iden: text not_null,
         }),
     );
@@ -72,7 +70,6 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         format!("node_perm_group"),
         table_create!(iden::node::perm_group::PermGroup, {
             NodeId: big_integer not_null primary_key,
-            NodeIden: text not_null,
             Iden: text not_null,
         }),
     );
@@ -80,7 +77,6 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         format!("node_problem_limit"),
         table_create!(iden::node::problem_limit::ProblemLimit, {
             NodeId: big_integer not_null primary_key,
-            NodeIden: text not_null,
             TimeLimit: big_integer not_null,
             MemoryLimit: big_integer not_null,
         }),
@@ -89,7 +85,6 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         format!("node_problem_tag"),
         table_create!(iden::node::problem_tag::ProblemTag, {
             NodeId: big_integer not_null primary_key,
-            NodeIden: text not_null,
             TagName: text not_null,
             TagDescription: text not_null,
         }),

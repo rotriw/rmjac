@@ -33,7 +33,6 @@ pub struct TokenNodePrivateRaw {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct TokenNode {
     pub node_id: i64,
-    pub node_iden: String,
     pub public: TokenNodePublic,
     pub private: TokenNodePrivate,
 }
@@ -67,7 +66,6 @@ impl From<TokenNodeModel> for TokenNode {
     fn from(model: TokenNodeModel) -> Self {
         TokenNode {
             node_id: model.node_id,
-            node_iden: model.token_iden,
             public: TokenNodePublic {
                 token_type: model.token_type,
                 token_expiration: model.token_expiration.and_utc().naive_utc(),
@@ -84,24 +82,7 @@ impl NodeRaw<TokenNode, TokenNodeModel, TokenNodeActiveModel> for TokenNodeRaw {
     {
         TokenNodeColumn::NodeId
     }
-
-    fn get_node_iden_column(
-        &self,
-    ) -> <<TokenNodeActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column
-    {
-        TokenNodeColumn::TokenIden
-    }
-
     fn get_node_type(&self) -> &str {
         "token"
-    }
-
-    fn get_node_iden(&self) -> String {
-        let time_stamp = if let Some(time) = self.public.token_expiration {
-            time.and_utc().timestamp()
-        } else {
-            0
-        };
-        format!("token_{}_{}", self.iden, time_stamp)
     }
 }

@@ -14,7 +14,6 @@ pub struct ContentType {
 pub struct Model {
     #[sea_orm(primary_key)]
     pub node_id: i64,
-    pub node_iden: String,
     pub iden: String,
 }
 
@@ -34,7 +33,6 @@ impl From<Model> for PagesNode {
     fn from(model: Model) -> Self {
         PagesNode {
             node_id: model.node_id,
-            node_iden: model.node_iden,
             public: PagesNodePublic {},
             private: PagesNodePrivate {
                 name: model.iden.clone(),

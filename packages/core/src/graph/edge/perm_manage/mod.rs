@@ -1,6 +1,6 @@
 use crate::{
     db::entity::edge::{self, perm_manage},
-    graph::edge::{EdgeQuery, EdgeRaw},
+    graph::edge::{EdgeQuery, EdgeQueryPerm, EdgeRaw},
     Result,
 };
 use enum_const::EnumConst;
@@ -114,6 +114,12 @@ impl EdgeQuery for PermManageEdgeQuery {
         Ok(res.into_iter().map(|x| x.v_node_id).collect())
     }
 
+    fn get_edge_type() -> &'static str {
+        "perm_manage"
+    }
+}
+
+impl EdgeQueryPerm for PermManageEdgeQuery {
     async fn get_perm_v(u: i64, db: &DatabaseConnection) -> Result<Vec<(i64, i64)>> {
         let edges = edge::perm_manage::Entity::find()
             .filter(edge::perm_manage::Column::UNodeId.eq(u))
@@ -123,9 +129,5 @@ impl EdgeQuery for PermManageEdgeQuery {
             .into_iter()
             .map(|edge| (edge.v_node_id, edge.perm.into()))
             .collect())
-    }
-
-    fn get_edge_type() -> &'static str {
-        "perm_manage"
     }
 }

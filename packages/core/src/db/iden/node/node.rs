@@ -6,8 +6,6 @@ pub enum Node {
     Table,
     #[sea_orm(iden = "node_id")]
     NodeId,
-    #[sea_orm(iden = "node_iden")]
-    NodeIden,
     #[sea_orm(iden = "node_type")]
     NodeType,
 }

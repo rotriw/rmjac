@@ -80,10 +80,6 @@ impl Node for UserNode {
         self.node_id
     }
 
-    fn get_node_iden(&self) -> String {
-        self.node_iden.clone()
-    }
-
     async fn from_db(db: &DatabaseConnection, node_id: i64) -> Result<Self>
     where
         Self: Sized,
@@ -99,17 +95,8 @@ impl NodeRaw<UserNode, user_entity::Model, user_entity::ActiveModel> for UserNod
     fn get_node_id_column(&self) -> <<user_entity::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
         user_entity::Column::NodeId
     }
-
-    fn get_node_iden_column(&self) -> <<user_entity::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
-        user_entity::Column::UserIden
-    }
-
     fn get_node_type(&self) -> &str {
         "user"
-    }
-
-    fn get_node_iden(&self) -> String {
-        format!("user_{}", self.public.iden)
     }
 }
 

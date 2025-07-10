@@ -14,7 +14,6 @@ pub struct ContentType {
 pub struct Model {
     #[sea_orm(primary_key)]
     pub node_id: i64,
-    pub node_iden: String,
     pub iden: String,
 }
 
@@ -34,7 +33,6 @@ impl From<Model> for PermGroupNode {
     fn from(model: Model) -> Self {
         PermGroupNode {
             node_id: model.node_id,
-            node_iden: model.node_iden,
             public: PermGroupNodePublic {},
             private: PermGroupNodePrivate {
                 name: model.iden.clone(),

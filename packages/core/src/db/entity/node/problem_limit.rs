@@ -8,7 +8,6 @@ use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter};
 pub struct Model {
     #[sea_orm(primary_key)]
     pub node_id: i64,
-    pub node_iden: String,
     pub time_limit: i64,
     pub memory_limit: i64,
 }

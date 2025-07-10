@@ -8,6 +8,11 @@ lazy_static! {
             .expect("Failed to create Redis client")
     );
     pub static ref PATH_VIS: Mutex<HashMap<i32, HashMap<i64, bool>>> = Mutex::new(HashMap::new());
-    pub static ref SAVED_NODE_PATH: Mutex<HashMap<i64, HashMap<i64, i64>>> =
+    pub static ref SAVED_NODE_PATH: Mutex<HashMap<(i64, String), HashMap<i64, i64>>> =
         Mutex::new(HashMap::new());
+    pub static ref SAVED_NODE_PATH_REV: Mutex<HashMap<(i64, String), HashMap<i64, i64>>> =
+        Mutex::new(HashMap::new());
+    pub static ref SAVED_NODE_PATH_LIST: Mutex<HashMap<String, Vec<i64>>> = Mutex::new(HashMap::new());
+    pub static ref SAVED_NODE_CIRCLE_ID: Mutex<i32> = Mutex::new(0);
+    
 }

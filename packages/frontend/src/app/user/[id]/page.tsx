@@ -53,18 +53,25 @@ export default function ProfilePage() {
                 </div>
         </div>
         <div className="md:col-span-5">
+            <div style= {{
+                background: "radial-gradient(320px circle at -1px 25.6796875px, green 0%, transparent 25%)",
+            }} className="rounded-md">
+                <div style= {{
+                background: "radial-gradient(320px circle at 1100px 200px, green 0%, transparent 25%)",
+            }} className="rounded-md">
             <Card style={{
-              background: "linear-gradient(180deg, rgba(249, 234, 234, 0.2) 0%, rgba(255, 255, 255, 0) 100%);",
-            }} className="mb-6 py-5 relative shadow-none rounded-md">
+              backdropFilter: "blur(100px)",
+              background: "#00000000",
+            }} className="mb-12 py-5 relative shadow-none rounded-md">
             <CardContent className="pb-7 px-5">
                 <ContributionGraph />
                 <div className="absolute bottom-3 right-4">
-                <span className="text-xs uppercase tracking-wider font-medium text-muted-foreground">
-                    题目通过图
-                </span>
+
                 </div>
             </CardContent>
             </Card>
+            </div>
+            </div>
             <Card style={{
               background: "linear-gradient(180deg, rgba(249, 234, 234, 0.2) 0%, rgba(255, 255, 255, 0) 100%);",
             }} className="mb-6 py-5 relative shadow-none rounded-md">

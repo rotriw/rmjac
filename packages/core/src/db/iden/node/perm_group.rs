@@ -6,8 +6,6 @@ pub enum PermGroup {
     Table,
     #[sea_orm(iden = "node_id")]
     NodeId,
-    #[sea_orm(iden = "node_iden")]
-    NodeIden,
     #[sea_orm(iden = "iden")]
     Iden,
 }

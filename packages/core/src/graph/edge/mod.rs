@@ -28,15 +28,18 @@ pub trait EdgeQuery {
         u: i64,
         db: &DatabaseConnection,
     ) -> impl std::future::Future<Output = Result<Vec<i64>>>;
-    fn get_perm_v(
-        i: i64,
-        db: &DatabaseConnection,
-    ) -> impl std::future::Future<Output = Result<Vec<(i64, i64)>>>;
     fn get_edge_type() -> &'static str;
     fn check_perm(perm_a: i64, perm_b: i64) -> bool {
         // perm_b require perm_A ?
         (perm_a & perm_b) == perm_a
     }
+}
+
+pub trait EdgeQueryPerm {
+    fn get_perm_v(
+        i: i64,
+        db: &DatabaseConnection,
+    ) -> impl std::future::Future<Output = Result<Vec<(i64, i64)>>>;
 }
 
 pub trait Edge {

@@ -20,12 +20,22 @@ pub enum HttpError {
     ActixError,
 }
 
+fn error_code(error: &HttpError) -> i64 {
+    use tap::Conv;
+    match error {
+        HttpError::CoreError(core_error) => core_error.conv::<i64>(),
+        HttpError::IOError => 10000,
+        HttpError::ActixError => 20000,
+    }
+}
+
 impl error::ResponseError for HttpError {
     fn error_response(&self) -> HttpResponse {
         HttpResponse::build(self.status_code())
             .insert_header(ContentType::json())
             .body(Json! {
-                "error": self.to_string()
+                "code": error_code(self),
+                "error": self.to_string(),
             })
     }
 

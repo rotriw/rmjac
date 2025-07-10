@@ -36,7 +36,6 @@ impl From<NodeType> for &str {
 
 pub trait Node {
     fn get_node_id(&self) -> i64;
-    fn get_node_iden(&self) -> String;
     fn from_db(
         db: &DatabaseConnection,
         node_id: i64,
@@ -60,20 +59,16 @@ where
     <DbNodeActive::Entity as EntityTrait>::Model: IntoActiveModel<DbNodeActive>,
 {
     fn get_node_type(&self) -> &str;
-    fn get_node_iden(&self) -> String;
     fn get_node_id_column(&self) -> <DbNodeActive::Entity as EntityTrait>::Column;
-    fn get_node_iden_column(&self) -> <DbNodeActive::Entity as EntityTrait>::Column;
     fn save(&self, db: &DatabaseConnection) -> impl std::future::Future<Output = Result<Node>> {
         async {
             use tap::Conv;
-            let node_iden = self.get_node_iden();
             let node_type = self.get_node_type();
-            let node_id = create_node(db, node_iden.as_str(), node_type)
+            let node_id = create_node(db, node_type)
                 .await?
                 .node_id;
             let mut value = (*self).clone().conv::<DbNodeActive>();
             value.set(self.get_node_id_column(), node_id.into());
-            // value.set(self.get_node_iden_column(), node_iden.into());
             Ok(value.save_into_db(db).await?.into())
         }
     }

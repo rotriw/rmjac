@@ -1,5 +1,8 @@
+use sea_orm::DatabaseConnection;
+
 use crate::db::entity::edge::problem_limit;
-use crate::graph::edge::EdgeRaw;
+use crate::graph::edge::{EdgeQuery, EdgeRaw};
+use crate::Result;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProblemLimitEdge {
@@ -38,3 +41,21 @@ impl From<ProblemLimitEdgeRaw> for problem_limit::ActiveModel {
 }
 
 pub struct ProblemLimitEdgeQuery;
+
+impl EdgeQuery for ProblemLimitEdgeQuery {
+    fn get_edge_type() -> &'static str {
+        "problem_limit"
+    }
+
+    async fn get_v(u: i64, db: &DatabaseConnection) -> Result<Vec<i64>> {
+        use crate::db::entity::edge::perm_view::Entity as PermViewEntity;
+        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+
+        let edges = PermViewEntity::find()
+            .filter(problem_limit::Column::UNodeId.eq(u))
+            .all(db)
+            .await?;
+        Ok(edges.into_iter().map(|edge| edge.v_node_id).collect())
+    }
+
+}

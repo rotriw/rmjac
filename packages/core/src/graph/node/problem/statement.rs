@@ -1,9 +1,11 @@
 use chrono::NaiveDateTime;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
-
+use crate::error::CoreError;
+use crate::Result;
 use crate::db::entity::node::problem_statement::{self, ContentType};
-use crate::graph::node::NodeRaw;
+use crate::graph::node::{Node, NodeRaw};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemStatementNodePublic {
@@ -30,7 +32,6 @@ pub struct ProblemStatementNodePrivateRaw {}
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemStatementNode {
     pub node_id: i64,
-    pub node_iden: String,
     pub public: ProblemStatementNodePublic,
     pub private: ProblemStatementNodePrivate,
 }
@@ -41,11 +42,30 @@ pub struct ProblemStatementNodeRaw {
     pub private: ProblemStatementNodePrivateRaw,
 }
 
+impl Node for ProblemStatementNode {
+    async fn from_db(
+            db: &sea_orm::DatabaseConnection,
+            node_id: i64,
+        ) -> Result<Self>
+        where
+            Self: Sized
+    {
+        let result = problem_statement::Entity::find()
+            .filter(problem_statement::Column::NodeId.eq(node_id))
+            .one(db)
+            .await?.ok_or(CoreError::NotFound("NodeId".to_string()))?;
+        Ok(result.into())
+    }
+
+    fn get_node_id(&self) -> i64 {
+        self.node_id
+    }
+}
+
 impl From<problem_statement::Model> for ProblemStatementNode {
     fn from(model: problem_statement::Model) -> Self {
         ProblemStatementNode {
             node_id: model.node_id,
-            node_iden: model.iden,
             public: ProblemStatementNodePublic {
                 statements: model.content,
                 source: model.source,
@@ -77,15 +97,7 @@ impl NodeRaw<ProblemStatementNode, problem_statement::Model, problem_statement::
         "problem_statement"
     }
 
-    fn get_node_iden(&self) -> String {
-        format!("problem_statement_{}", self.public.iden)
-    }
-
     fn get_node_id_column(&self) -> <<problem_statement::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
         problem_statement::Column::NodeId
-    }
-
-    fn get_node_iden_column(&self) -> <<problem_statement::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
-        problem_statement::Column::Iden
     }
 }

@@ -26,7 +26,6 @@ pub struct PermGroupNodePrivateRaw {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PermGroupNode {
     pub node_id: i64,
-    pub node_iden: String,
     pub public: PermGroupNodePublic,
     pub private: PermGroupNodePrivate,
 }
@@ -44,7 +43,6 @@ impl From<PermGroupNodeRaw> for PermGroupNodeActiveModel {
         use sea_orm::ActiveValue::{NotSet, Set};
         Self {
             node_id: NotSet,
-            node_iden: Set(value.iden.clone()),
             iden: Set(value.iden),
         }
     }
@@ -58,18 +56,7 @@ impl NodeRaw<PermGroupNode, PermGroupNodeModel, PermGroupNodeActiveModel> for Pe
         PermGroupNodeColumn::NodeId
     }
 
-    fn get_node_iden_column(
-        &self,
-    ) -> <<PermGroupNodeActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column
-    {
-        PermGroupNodeColumn::NodeIden
-    }
-
     fn get_node_type(&self) -> &str {
         "perm_group"
-    }
-
-    fn get_node_iden(&self) -> String {
-        format!("perm_group_{}", self.iden)
     }
 }
