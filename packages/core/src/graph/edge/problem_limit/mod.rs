@@ -57,5 +57,4 @@ impl EdgeQuery for ProblemLimitEdgeQuery {
             .await?;
         Ok(edges.into_iter().map(|edge| edge.v_node_id).collect())
     }
-
 }

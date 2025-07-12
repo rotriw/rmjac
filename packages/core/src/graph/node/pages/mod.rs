@@ -58,5 +58,4 @@ impl NodeRaw<PagesNode, PagesNodeModel, PagesNodeActiveModel> for PagesNodeRaw {
     fn get_node_type(&self) -> &str {
         "pages"
     }
-
 }

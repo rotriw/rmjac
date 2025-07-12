@@ -90,3 +90,16 @@ pub async fn get_user_by_nodeid(db: &DatabaseConnection, node_id: i64) -> Result
     }
     Ok(user.unwrap())
 }
+
+pub async fn get_guest_user_node(db: &DatabaseConnection) -> Result<i64, CoreError> {
+    use sea_orm::EntityTrait;
+    let guest_user = Entity::find()
+        .filter(Column::UserIden.eq("guest"))
+        .one(db)
+        .await?;
+    if let Some(user) = guest_user {
+        Ok(user.node_id)
+    } else {
+        Err(CoreError::UserNotFound)
+    }
+}

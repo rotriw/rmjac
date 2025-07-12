@@ -1,11 +1,11 @@
+use crate::db::entity::node::problem_statement::{self, ContentType};
+use crate::error::CoreError;
+use crate::graph::node::{Node, NodeRaw};
+use crate::Result;
 use chrono::NaiveDateTime;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
-use crate::error::CoreError;
-use crate::Result;
-use crate::db::entity::node::problem_statement::{self, ContentType};
-use crate::graph::node::{Node, NodeRaw};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemStatementNodePublic {
@@ -43,17 +43,15 @@ pub struct ProblemStatementNodeRaw {
 }
 
 impl Node for ProblemStatementNode {
-    async fn from_db(
-            db: &sea_orm::DatabaseConnection,
-            node_id: i64,
-        ) -> Result<Self>
-        where
-            Self: Sized
+    async fn from_db(db: &sea_orm::DatabaseConnection, node_id: i64) -> Result<Self>
+    where
+        Self: Sized,
     {
         let result = problem_statement::Entity::find()
             .filter(problem_statement::Column::NodeId.eq(node_id))
             .one(db)
-            .await?.ok_or(CoreError::NotFound("NodeId".to_string()))?;
+            .await?
+            .ok_or(CoreError::NotFound("NodeId".to_string()))?;
         Ok(result.into())
     }
 

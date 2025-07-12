@@ -1,9 +1,12 @@
 use async_recursion::async_recursion;
 use sea_orm::DatabaseConnection;
+use serde::{Deserialize, Serialize};
 
-use crate::env::{PATH_VIS, SAVED_NODE_CIRCLE_ID, SAVED_NODE_PATH, SAVED_NODE_PATH_LIST, SAVED_NODE_PATH_REV};
+use crate::env::{
+    PATH_VIS, SAVED_NODE_CIRCLE_ID, SAVED_NODE_PATH, SAVED_NODE_PATH_LIST, SAVED_NODE_PATH_REV,
+};
 use crate::graph::edge::{EdgeQuery, EdgeQueryPerm};
-use crate::Result;
+use crate::{db, Result};
 
 macro_rules! path_vis {
     [$ckid:expr,$u:expr] => {
@@ -88,7 +91,6 @@ pub async fn has_path_dfs<T: EdgeQuery + EdgeQueryPerm>(
     Ok(0)
 }
 
-
 pub async fn has_path<T: EdgeQuery + EdgeQueryPerm>(
     db: &DatabaseConnection,
     u: i64,
@@ -102,17 +104,17 @@ pub async fn has_path<T: EdgeQuery + EdgeQueryPerm>(
     for path in data {
         let path = *path;
         if let Some(x) = SAVED_NODE_PATH
-        .lock()
-        .unwrap()
-        .get(&(path, T::get_edge_type().to_string()))
-        .and_then(|m| m.get(&v))
+            .lock()
+            .unwrap()
+            .get(&(path, T::get_edge_type().to_string()))
+            .and_then(|m| m.get(&v))
         {
             if T::check_perm(required_perm, *x) {
                 if let Some(x) = SAVED_NODE_PATH_REV
-                .lock()
-                .unwrap()
-                .get(&(path, T::get_edge_type().to_string()))
-                .and_then(|m| m.get(&u))
+                    .lock()
+                    .unwrap()
+                    .get(&(path, T::get_edge_type().to_string()))
+                    .and_then(|m| m.get(&u))
                 {
                     if T::check_perm(required_perm, *x) {
                         return Ok(1);
@@ -133,4 +135,21 @@ pub async fn has_path<T: EdgeQuery + EdgeQueryPerm>(
     let l = (*ckid).clone();
     drop(ckid);
     Ok(has_path_dfs(&db, u, v, edge_type, required_perm, l, 0, 100).await?)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DefaultNodes {
+    pub guest_user_node: i64,
+    pub default_strategy_node: i64,
+}
+
+pub async fn get_default_node(db: &DatabaseConnection) -> Result<DefaultNodes> {
+    let mut result = DefaultNodes {
+        guest_user_node: -1,
+        default_strategy_node: -1,
+    };
+
+    result.guest_user_node = db::entity::node::user::get_guest_user_node(db).await?;
+    result.default_strategy_node = db::entity::node::perm_group::get_default_strategy_node(db).await?;
+    Ok(result)
 }

@@ -6,7 +6,7 @@ use macro_db_init::table_create;
 use sea_orm::{ConnectOptions, Database};
 use sea_orm_migration::prelude::*;
 
-use crate::{db::iden, error::CoreError};
+use crate::{db::iden, error::CoreError, graph::{edge::{perm_view::{PermViewEdgeRaw, ViewPerm}, EdgeRaw}, node::{pages::{PagesNodePrivateRaw, PagesNodePublicRaw, PagesNodeRaw}, perm_group::{PermGroupNodePrivateRaw, PermGroupNodePublicRaw, PermGroupNodeRaw}, user::{UserNodePrivateRaw, UserNodePublicRaw, UserNodeRaw}, NodeRaw}}};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -279,6 +279,7 @@ impl MigratorTrait for Migrator {
 pub async fn init(
     url: &str,
     schema: &str,
+    mode: &str,
     up: Vec<&str>,
     down: Vec<&str>,
 ) -> Result<(), CoreError> {
@@ -293,6 +294,13 @@ pub async fn init(
     let db = Database::connect(connection_options).await.unwrap();
     log::info!("Database connected");
     if down.contains(&"all") {
+        log::error!("Dropping all tables, this will delete all data in the database!");
+        if mode != "dev" {
+            log::error!("Dropping all is only available in development mode!(use --mode dev to confirm this action)");
+            return Err(CoreError::DbError(sea_orm::error::DbErr::Custom(
+                "Cannot drop all tables in non-development mode".to_string(),
+            )));
+        }
         let _ = Migrator::down(&db, None).await;
     } else {
         let manager = SchemaManager::new(&db);
@@ -315,6 +323,77 @@ pub async fn init(
                 manager.create_table(table).await?;
             }
         }
+    }
+    let mut default_pages = vec![];
+    if up.contains(&"all") || up.contains(&"node_pages") {
+        log::info!("Creating default pages");
+        log::info!("Creating home page");
+        let home_page = PagesNodeRaw {
+            iden: "home".to_string(),
+            public: PagesNodePublicRaw {},
+            private: PagesNodePrivateRaw { name: "home".to_string()},
+        }.save(&db).await?;
+        log::info!("Creating about page");
+        let about_page = PagesNodeRaw {
+            iden: "about".to_string(),
+            public: PagesNodePublicRaw {},
+            private: PagesNodePrivateRaw { name: "about".to_string()},
+        }.save(&db).await?;
+        default_pages.push(home_page.node_id);
+        default_pages.push(about_page.node_id);
+    } else {
+        log::warn!("Skipping default pages creation, This may lead to unexpected behavior.");
+    }
+    if up.contains(&"all") || up.contains(&"node_perm_group") {
+        log::info!("Creating default perm group");
+        let default_strategy = PermGroupNodeRaw {
+            iden: "default".to_string(),
+            service: "default".to_string(),
+            public: PermGroupNodePublicRaw {},
+            private: PermGroupNodePrivateRaw { name: "default strategy".to_string() },
+        }.save(&db).await?;
+        log::info!("Perm group -> default pages");
+        for i in default_pages.clone() {
+            PermViewEdgeRaw {
+                u: default_strategy.node_id,
+                v: i,
+                perms: vec![ViewPerm::ViewPublic, ViewPerm::ReadProblem].into(),
+            }.save(&db).await?;
+        }
+    } else {
+        log::warn!("Skipping default perm group creation, This may lead to unexpected behavior.");
+    }
+    let mut guest_user_id = 0;
+    if up.contains(&"all") || up.contains(&"node_user") {
+        log::info!("Creating default user");
+        let guest_user = UserNodeRaw {
+            public: UserNodePublicRaw {
+                name: "Guest".to_string(),
+                email: "".to_string(),
+                iden: "guest".to_string(),
+                creation_time: chrono::Utc::now().naive_utc(),
+                last_login_time: chrono::Utc::now().naive_utc(),
+                avatar: "".to_string(),
+            },
+            private: UserNodePrivateRaw {
+                password: "".to_string(),
+            },
+        }.save(&db).await?;
+        guest_user_id = guest_user.node_id;
+    } else {
+        log::warn!("Skipping default user creation, This may lead to unexpected behavior.");
+    }
+    if up.contains(&"all") || (up.contains(&"node_perm_group") && up.contains(&"edge_perm_view") && up.contains(&"node_pages")) {
+        log::info!("default user -> default pages");
+        for i in default_pages {
+            PermViewEdgeRaw {
+                u: guest_user_id,
+                v: i,
+                perms: vec![ViewPerm::ViewPublic, ViewPerm::ReadProblem].into(),
+            }.save(&db).await?;
+        }
+    } else {
+        log::warn!("Skipping default perm view edge creation, This may lead to unexpected behavior.");
     }
     log::info!("Database migrated");
     Ok(())

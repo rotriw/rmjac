@@ -78,6 +78,10 @@ pub async fn main(host: &str, port: u16) -> std::io::Result<()> {
         .to_owned();
     let conn = Database::connect(connection_options).await.unwrap();
     log::info!("Connected to database");
+    let data = core::service::service_start(&conn).await;
+    if data.is_err() {
+        log::error!("Failed to start service: {:?}", data.err());
+    }
     log::info!("Server is running on port {}", port);
     HttpServer::new(move || {
         let cors = Cors::default()

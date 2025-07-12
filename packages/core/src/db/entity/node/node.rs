@@ -16,10 +16,7 @@ pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
 
-pub async fn create_node(
-    db: &DatabaseConnection,
-    node_type: &str,
-) -> Result<Model, CoreError> {
+pub async fn create_node(db: &DatabaseConnection, node_type: &str) -> Result<Model, CoreError> {
     use sea_orm::ActiveValue::{NotSet, Set};
     let new_node = ActiveModel {
         node_id: NotSet,

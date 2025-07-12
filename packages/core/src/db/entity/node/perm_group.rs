@@ -1,4 +1,5 @@
 use crate::db::entity::node::{DbNodeActiveModel, DbNodeInfo};
+use crate::error::CoreError;
 use crate::graph::node::perm_group::{PermGroupNode, PermGroupNodePrivate, PermGroupNodePublic};
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter, FromJsonQueryResult};
@@ -39,4 +40,16 @@ impl From<Model> for PermGroupNode {
             },
         }
     }
+}
+
+pub async fn get_default_strategy_node(
+    db: &DatabaseConnection,
+) -> Result<i64, CoreError> {
+    use sea_orm::EntityTrait;
+    let node = Entity::find()
+        .filter(Column::Iden.eq("default"))
+        .one(db)
+        .await?
+        .ok_or(CoreError::NotFound("Default strategy node not found".to_string()))?;
+    Ok(node.node_id)
 }

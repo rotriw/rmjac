@@ -64,9 +64,7 @@ where
         async {
             use tap::Conv;
             let node_type = self.get_node_type();
-            let node_id = create_node(db, node_type)
-                .await?
-                .node_id;
+            let node_id = create_node(db, node_type).await?.node_id;
             let mut value = (*self).clone().conv::<DbNodeActive>();
             value.set(self.get_node_id_column(), node_id.into());
             Ok(value.save_into_db(db).await?.into())

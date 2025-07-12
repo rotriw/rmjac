@@ -2,12 +2,15 @@ use crate::{
     db::entity::edge,
     graph::{
         edge::{
-            problem_limit::{ProblemLimitEdgeQuery, ProblemLimitEdgeRaw}, problem_statement::ProblemStatementEdgeRaw, problem_tag::ProblemTagEdgeRaw, EdgeQuery, EdgeRaw
+            problem_limit::{ProblemLimitEdgeQuery, ProblemLimitEdgeRaw},
+            problem_statement::ProblemStatementEdgeRaw,
+            problem_tag::ProblemTagEdgeRaw,
+            EdgeQuery, EdgeRaw,
         },
         node::{
             problem::{
-                limit::{ProblemLimitNode, ProblemLimitNodeRaw},
                 statement::{ProblemStatementNode, ProblemStatementNodeRaw},
+                limit::{ProblemLimitNode, ProblemLimitNodeRaw},
                 tag::{ProblemTagNode, ProblemTagNodeRaw},
                 ProblemNode, ProblemNodePrivateRaw, ProblemNodePublicRaw, ProblemNodeRaw,
             },
@@ -75,7 +78,11 @@ pub struct ProblemModel {
     pub tag: Vec<ProblemTagNode>,
 }
 
-pub async fn view_problem(db: &DatabaseConnection, redis: &mut redis::Connection, problem_node_id: i64) -> Result<ProblemModel> {
+pub async fn view_problem(
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    problem_node_id: i64,
+) -> Result<ProblemModel> {
     if let Ok(value) = redis.get::<_, String>(format!("problem_{}", problem_node_id)) {
         if let Ok(problem_model) = serde_json::from_str::<ProblemModel>(value.as_str()) {
             return Ok(problem_model);
