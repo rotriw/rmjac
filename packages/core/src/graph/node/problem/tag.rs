@@ -1,10 +1,3 @@
-use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-use serde::{Deserialize, Serialize};
-
-use crate::db::entity::node::problem_tag;
-use crate::graph::node::{Node, NodeRaw};
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemTagNodePublic {
     pub tag_name: String,
@@ -23,21 +16,22 @@ pub struct ProblemTagNodePublicRaw {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemTagNodePrivateRaw {}
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Node)]
 pub struct ProblemTagNode {
     pub node_id: i64,
     pub public: ProblemTagNodePublic,
     pub private: ProblemTagNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[node_raw(node_type = "problem_tag")]
 pub struct ProblemTagNodeRaw {
     pub public: ProblemTagNodePublicRaw,
     pub private: ProblemTagNodePrivateRaw,
 }
 
-impl From<problem_tag::Model> for ProblemTagNode {
-    fn from(model: problem_tag::Model) -> Self {
+impl From<Model> for ProblemTagNode {
+    fn from(model: Model) -> Self {
         ProblemTagNode {
             node_id: model.node_id,
             public: ProblemTagNodePublic {
@@ -49,9 +43,9 @@ impl From<problem_tag::Model> for ProblemTagNode {
     }
 }
 
-impl From<ProblemTagNodeRaw> for problem_tag::ActiveModel {
+impl From<ProblemTagNodeRaw> for ActiveModel {
     fn from(value: ProblemTagNodeRaw) -> Self {
-        problem_tag::ActiveModel {
+        ActiveModel {
             node_id: NotSet,
             tag_name: Set(value.public.tag_name),
             tag_description: Set(value.public.tag_description),
@@ -59,32 +53,9 @@ impl From<ProblemTagNodeRaw> for problem_tag::ActiveModel {
     }
 }
 
-impl Node for ProblemTagNode {
-    async fn from_db(
-        db: &sea_orm::DatabaseConnection,
-        node_id: i64,
-    ) -> Result<Self, crate::error::CoreError>
-    where
-        Self: Sized,
-    {
-        let result = problem_tag::Entity::find()
-            .filter(problem_tag::Column::NodeId.eq(node_id))
-            .one(db)
-            .await?
-            .ok_or(crate::error::CoreError::NotFound("NodeId".to_string()))?;
-        Ok(result.into())
-    }
-
-    fn get_node_id(&self) -> i64 {
-        self.node_id
-    }
-}
-
-impl NodeRaw<ProblemTagNode, problem_tag::Model, problem_tag::ActiveModel> for ProblemTagNodeRaw {
-    fn get_node_type(&self) -> &str {
-        "problem_tag"
-    }
-    fn get_node_id_column(&self) -> <<problem_tag::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
-        problem_tag::Column::NodeId
-    }
-}
+use crate::db::entity::node::problem_tag::{Model, ActiveModel, Entity, Column};
+use macro_node_iden::{Node, NodeRaw};
+use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::EntityTrait;
+use serde::{Deserialize, Serialize};
+use crate::graph::node::{Node, NodeRaw};

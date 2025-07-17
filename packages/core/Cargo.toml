@@ -16,6 +16,7 @@ sea-orm = { version = "1.0.0-rc.5", features = [ "sqlx-postgres", "sqlx-sqlite",
 serde = { version = "1.0.219", features = ["derive", "serde_derive"] }
 serde_json = "1.0.140"
 macro_db_init = { path = "../macro_db_init" }
+macro_node_iden = { path = "../macro_node_iden" }
 tokio = "1.45.1"
 mongodb = "3.2.3"
 enumx = "0.4.3"

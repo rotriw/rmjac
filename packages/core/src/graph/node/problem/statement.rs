@@ -1,12 +1,3 @@
-use crate::db::entity::node::problem_statement::{self, ContentType};
-use crate::error::CoreError;
-use crate::graph::node::{Node, NodeRaw};
-use crate::Result;
-use chrono::NaiveDateTime;
-use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-use serde::{Deserialize, Serialize};
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemStatementNodePublic {
     pub statements: Vec<ContentType>,
@@ -29,39 +20,22 @@ pub struct ProblemStatementNodePublicRaw {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemStatementNodePrivateRaw {}
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Node)]
 pub struct ProblemStatementNode {
     pub node_id: i64,
     pub public: ProblemStatementNodePublic,
     pub private: ProblemStatementNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[node_raw(node_type = "problem_statement")]
 pub struct ProblemStatementNodeRaw {
     pub public: ProblemStatementNodePublicRaw,
     pub private: ProblemStatementNodePrivateRaw,
 }
 
-impl Node for ProblemStatementNode {
-    async fn from_db(db: &sea_orm::DatabaseConnection, node_id: i64) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let result = problem_statement::Entity::find()
-            .filter(problem_statement::Column::NodeId.eq(node_id))
-            .one(db)
-            .await?
-            .ok_or(CoreError::NotFound("NodeId".to_string()))?;
-        Ok(result.into())
-    }
-
-    fn get_node_id(&self) -> i64 {
-        self.node_id
-    }
-}
-
-impl From<problem_statement::Model> for ProblemStatementNode {
-    fn from(model: problem_statement::Model) -> Self {
+impl From<Model> for ProblemStatementNode {
+    fn from(model: Model) -> Self {
         ProblemStatementNode {
             node_id: model.node_id,
             public: ProblemStatementNodePublic {
@@ -75,9 +49,9 @@ impl From<problem_statement::Model> for ProblemStatementNode {
     }
 }
 
-impl From<ProblemStatementNodeRaw> for problem_statement::ActiveModel {
+impl From<ProblemStatementNodeRaw> for ActiveModel {
     fn from(value: ProblemStatementNodeRaw) -> Self {
-        problem_statement::ActiveModel {
+        ActiveModel {
             node_id: NotSet,
             iden: Set(value.public.iden),
             source: Set(value.public.source),
@@ -88,14 +62,10 @@ impl From<ProblemStatementNodeRaw> for problem_statement::ActiveModel {
     }
 }
 
-impl NodeRaw<ProblemStatementNode, problem_statement::Model, problem_statement::ActiveModel>
-    for ProblemStatementNodeRaw
-{
-    fn get_node_type(&self) -> &str {
-        "problem_statement"
-    }
-
-    fn get_node_id_column(&self) -> <<problem_statement::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
-        problem_statement::Column::NodeId
-    }
-}
+use crate::db::entity::node::problem_statement::{ContentType, Model, ActiveModel, Entity, Column};
+use crate::graph::node::{Node, NodeRaw};
+use chrono::NaiveDateTime;
+use macro_node_iden::{Node, NodeRaw};
+use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::EntityTrait;
+use serde::{Deserialize, Serialize};
