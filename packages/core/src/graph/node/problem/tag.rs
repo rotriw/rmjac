@@ -53,7 +53,6 @@ impl From<ProblemTagNodeRaw> for problem_tag::ActiveModel {
     fn from(value: ProblemTagNodeRaw) -> Self {
         problem_tag::ActiveModel {
             node_id: NotSet,
-            node_iden: NotSet,
             tag_name: Set(value.public.tag_name),
             tag_description: Set(value.public.tag_description),
         }

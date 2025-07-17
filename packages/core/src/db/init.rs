@@ -60,6 +60,14 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
+        format!("node_problem_source"),
+        table_create!(iden::node::problem_source::ProblemSource, {
+            NodeId: big_integer not_null primary_key,
+            Name: text not_null,
+            Iden: text not_null,
+        })
+    );
+    tables.insert(
         format!("node_pages"),
         table_create!(iden::node::pages::Pages, {
             NodeId: big_integer not_null primary_key,
@@ -197,6 +205,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         format!("node_problem_tag"),
         Table::drop()
             .table(iden::node::problem_tag::ProblemTag::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        format!("node_problem_source"),
+        Table::drop()
+            .table(iden::node::problem_source::ProblemSource::Table)
             .if_exists()
             .to_owned(),
     );

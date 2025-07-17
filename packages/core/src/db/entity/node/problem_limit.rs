@@ -4,7 +4,7 @@ use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "node_limit")]
+#[sea_orm(table_name = "node_problem_limit")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub node_id: i64,
