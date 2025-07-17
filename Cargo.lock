@@ -967,6 +967,7 @@ dependencies = [
  "lazy_static",
  "log",
  "macro_db_init",
+ "macro_node_iden",
  "mongodb",
  "queue",
  "redis",
@@ -2399,6 +2400,16 @@ checksum = "73ea28ee64b88876bf45277ed9a5817c1817df061a74f2b988971a12570e5869"
 dependencies = [
  "macro_magic_core",
  "quote",
+ "syn 2.0.103",
+]
+
+[[package]]
+name = "macro_node_iden"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "sea-orm",
  "syn 2.0.103",
 ]
 

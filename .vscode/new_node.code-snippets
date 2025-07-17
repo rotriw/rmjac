@@ -1,0 +1,76 @@
+{
+	// Place your rmjac 工作区 snippets here. Each snippet is defined under a snippet name and has a scope, prefix, body and 
+	// description. Add comma separated ids of the languages where the snippet is applicable in the scope field. If scope 
+	// is left empty or omitted, the snippet gets applied to all languages. The prefix is what is 
+	// used to trigger the snippet and the body will be expanded and inserted. Possible variables are: 
+	// $1, $2 for tab stops, $0 for the final cursor position, and ${1:label}, ${2:another} for placeholders. 
+	// Placeholders with the same ids are connected.
+	// Example:
+	// "Print to console": {
+	// 	"scope": "javascript,typescript",
+	// 	"prefix": "log",
+	// 	"body": [
+	// 		"console.log('$1');",
+	// 		"$2"
+	// 	],
+	// 	"description": "Log output to console"
+	// }
+    "Print to console": {
+        "scope": "rust",
+        "prefix": "newnode",
+        "body": [
+            "#[derive(Deserialize, Serialize, Debug, Clone)]",
+            "pub struct $1NodePublic {$3}",
+            "",
+            "#[derive(Deserialize, Serialize, Debug, Clone)]",
+            "pub struct $1NodePrivate {$4}",
+            "",
+            "#[derive(Deserialize, Serialize, Debug, Clone)]",
+            "pub struct $1NodePublicRaw {$5}",
+            "",
+            "#[derive(Deserialize, Serialize, Debug, Clone)]",
+            "pub struct $1NodePrivateRaw {$6}",
+            "",
+            "#[derive(Deserialize, Serialize, Debug, Clone, Node)]",
+            "pub struct $1Node {",
+            "    pub node_id: i64,",
+            "    pub public: $1NodePublic,",
+            "    pub private: $1NodePrivate,",
+            "}",
+            "",
+            "#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]",
+            "#[node_raw(node_type = \"problem_statement\")]",
+            "pub struct $1NodeRaw {",
+            "    pub public: $1NodePublicRaw,",
+            "    pub private: $1NodePrivateRaw,",
+            "}",
+            "",
+            "impl From<Model> for $1Node {",
+            "    fn from(model: Model) -> Self {",
+            "        $1Node {",
+            "            node_id: model.node_id,",
+            "            public: $1NodePublic {$7},",
+            "            private: $1NodePrivate {$8},",
+            "        }",
+            "    }",
+            "}",
+            "",
+            "impl From<$1NodeRaw> for ActiveModel {",
+            "    fn from(value: $1NodeRaw) -> Self {",
+            "        ActiveModel {",
+            "            node_id: NotSet,",
+            "        }",
+            "    }",
+            "}",
+            "",
+            "use crate::db::entity::node::$2::{ContentType, Model, ActiveModel, Entity, Column};",
+            "use crate::graph::node::{Node, NodeRaw};",
+            "use chrono::NaiveDateTime;",
+            "use macro_node_iden::{Node, NodeRaw};",
+            "use sea_orm::ActiveValue::{NotSet, Set};",
+            "use sea_orm::EntityTrait;",
+            "use serde::{Deserialize, Serialize};"
+        ],
+        "description": "生成一个新节点 $1: Node, $2: iden"
+    }
+}

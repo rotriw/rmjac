@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "packages/core"
-, "packages/macro_db_init", "packages/vjudge"]
+, "packages/macro_db_init", "packages/macro_node_iden", "packages/vjudge"]
 
 [package]
 name = "rmjac"
