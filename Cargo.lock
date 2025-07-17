@@ -968,6 +968,7 @@ dependencies = [
  "log",
  "macro_db_init",
  "mongodb",
+ "queue",
  "redis",
  "sea-orm",
  "sea-orm-migration",
@@ -2945,6 +2946,12 @@ dependencies = [
  "quote",
  "syn 1.0.109",
 ]
+
+[[package]]
+name = "queue"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ff7e7fd62294a081720771513c1c1c995468a5d4e771a2928e423b88682ce48"
 
 [[package]]
 name = "quote"

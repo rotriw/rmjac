@@ -10,8 +10,8 @@
     "ui:dev": "pnpm --filter=rmjac_fe run dev",
     "ui:build": "pnpm --filter=rmjac_fe run build",
     "start": "cargo run -- start",
-    "build": "cargo build --release"
-
+    "build": "cargo build --release",
+    "init": "cargo run -- dbinit"
   },
   "dependencies": {
     "acorn": "^8.15.0",

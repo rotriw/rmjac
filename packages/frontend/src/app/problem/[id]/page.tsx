@@ -9,63 +9,83 @@ import { Button } from "@/components/ui/button"
 
 export default function ProfilePage() {
     const data = {
-        title: "A+B Problem",
-        
+        avatar: "https://cdn.rotriw.cn/smallfang/avatar.png",
+        name: "smallfang",
+        email: "smallfang233@qq.com",
+        creationTime: "2023-01-01",
+        creationOrder: "1",
+        description: "这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n这是一个用户的个人描述信息，可能包含用户的兴趣爱好、技能等。\n",
     };
 
     return (
     <div className="container mx-auto py-6 px-4 md:px-6">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-        <div className="md:col-span-1">
-        <div className="flex flex-col items-center space-y-4">
-                <Avatar className="rounded-md h-50 w-50">
-                    <AvatarImage src={data.avatar} alt="用户头像" />
-                    <AvatarFallback></AvatarFallback>
-                </Avatar>
-                <div className="space-y-1 text-center">
-                    <h2 className="text-2xl font-bold">{data.name}</h2>
-                    <span className="font-light">𝚃𝚑𝚎 𝚏𝚞𝚝𝚞𝚛𝚎 𝚒𝚜 𝚒𝚗 𝚜𝚒𝚐𝚑𝚝</span>
-                    
-                </div>
-
-                </div>
-                <div className="mt-5 space-y-3">
-                <Button variant="default" className="w-full">
-                    <ContactIcon className="mr-2 h-4 w-4" />
-                    联系
-                </Button>
-                <div className="mt-1 flex items-end text-sm">
-                    <MailIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span>{data.email}</span>
-                </div>
-                <div className="flex items-center text-sm">
-                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span>注册于 {data.creationTime}</span>
-                </div>
-                <div className="flex items-center text-sm">
-                    <IdCardIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span>{data.creationOrder}</span>
-                </div>
-                </div>
-        </div>
         <div className="md:col-span-5">
-            <Card className="mb-6 pt-0 relative border-0 shadow-none">
-            <CardContent className="pb-12">
+        <div style= {{
+                background: "linear-gradient(135deg,rgba(165, 207, 157, 0.07) 0%, rgba(255, 255, 255, 0) 500px);",
+            }} className="rounded-md">
+                <div style= {{
+                background: "linear-gradient(180deg,rgba(165, 207, 157, 0.1) 0%, rgba(255, 255, 255, 0) 100px);",
+            }} className="rounded-md">
+            <Card style={{
+              /* backdropFilter: "blur(100px)", */
+                background: "#00000000",
+            }} className="mb-12 py-5 relative shadow-none rounded-md">
+            <CardHeader>
+                <CardTitle className="pt-1">P1001 A+B Problem</CardTitle>
+                <CardDescription className="text-sm text-muted-foreground">
+                    时间限制 1 s · 内存限制 256 MB · 洛谷
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-7 px-5 text-neutral-800">
+                <h2 className="font-bold text-lg pb-3">题目背景</h2>
+                这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。这是题目背景。
+                <h2 className="font-bold text-lg pt-3 pb-3">题目描述</h2>
+                这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。这是一段题目描述。
+                <h2 className="font-bold text-lg pt-3 pb-3">输入格式</h2>
+                输入格式要求是....<br />输入格式要求是....<br />输入格式要求是....<br />输入格式要求是....<br />输入格式要求是....<br />输入格式要求是....<br />输入格式要求是....<br />
+                <h2 className="font-bold text-lg pt-3 pb-3">输出格式</h2>
+                输出格式要求是....
+                <h2 className="font-bold text-lg pt-3 pb-3">样例</h2>
+                <h2 className="font-bold text-lg pt-3 pb-3">数据范围</h2>
+                数据范围要求是....
+                
+            </CardContent>
+            </Card>
+            </div>
+            </div>
+        </div>
+        <div className="md:col-span-1">
+            <div style= {{
+                background: "radial-gradient(320px circle at -1px 25.6796875px, green 0%, transparent 25%)",
+            }} className="rounded-md">
+                <div style= {{
+                background: "radial-gradient(320px circle at 1100px 200px, green 0%, transparent 25%)",
+            }} className="rounded-md">
+            <Card style={{
+              backdropFilter: "blur(100px)",
+              background: "#00000000",
+            }} className="mb-12 py-5 relative shadow-none rounded-md">
+            <CardContent className="pb-7 px-5">
                 <ContributionGraph />
                 <div className="absolute bottom-3 right-4">
-                <span className="text-xs uppercase tracking-wider font-medium text-muted-foreground">
-                    SOLVED GRAPH
-                </span>
+
                 </div>
             </CardContent>
             </Card>
-            <Card className="mb-6 relative border-0 shadow-none">
-            <CardContent className="pb-12">
-                <div className="prose dark:prose-invert max-w-none">
+            </div>
+            </div>
+            <Card style={{
+              background: "linear-gradient(180deg, rgba(249, 234, 234, 0.2) 0%, rgba(255, 255, 255, 0) 100%);",
+            }} className="mb-6 py-5 relative shadow-none rounded-md">
+            <CardContent className="pb-7 px-5">
+                <div className="prose dark:prose-invert max-w-none text-md text-gray-900">
                     {data.description || "暂无描述信息"}
                 </div>
                 <div className="absolute bottom-3 right-4">
-                <span className="text-xs uppercase tracking-wider font-medium text-muted-foreground">DESCRIPTION</span>
+                <span className="text-xs uppercase tracking-wider font-medium text-muted-foreground">
+                  README.md
+                </span>
                 </div>
             </CardContent>
             </Card>

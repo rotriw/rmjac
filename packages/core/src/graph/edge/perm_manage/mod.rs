@@ -7,6 +7,7 @@ use enum_const::EnumConst;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use tap::Conv;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PermManageEdge {
@@ -20,16 +21,42 @@ pub struct PermManageEdge {
 pub struct PermManageEdgeRaw {
     pub u: i64,
     pub v: i64,
-    pub perms: Vec<ManagePerm>,
+    pub perms: ManagePermRaw,
 }
 
 #[derive(EnumConst, Copy, Clone, Debug, PartialEq, EnumIter)]
 pub enum ManagePerm {
-    All = -1,
     ManageStatement = 1,
     ManageEdge = 2,
     ManagePublicDescription = 4,
     ManagePrivateDescription = 8,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ManagePermRaw {
+    All,
+    Perms(Vec<ManagePerm>),
+}
+
+impl From<ManagePermRaw> for i32 {
+    fn from(perms: ManagePermRaw) -> i32 {
+        match perms {
+            ManagePermRaw::All => {
+                let mut res = 0;
+                for i in ManagePerm::iter() {
+                    res |= i.get_const_isize().unwrap() as i32;
+                }
+                res
+            },
+            ManagePermRaw::Perms(perms) => {
+                let mut res = 0;
+                for perm in perms {
+                    res |= perm.get_const_isize().unwrap() as i32;
+                }
+                res
+            },
+        }
+    }
 }
 
 impl EdgeRaw<PermManageEdge, perm_manage::Model, perm_manage::ActiveModel> for PermManageEdgeRaw {
@@ -49,7 +76,7 @@ impl From<PermManageEdgeRaw> for perm_manage::ActiveModel {
             edge_id: NotSet,
             u_node_id: Set(raw.u),
             v_node_id: Set(raw.v),
-            perm: Set(Perms::from(raw.perms).into()),
+            perm: Set(raw.perms.conv::<i32>() as i64),
         }
     }
 }

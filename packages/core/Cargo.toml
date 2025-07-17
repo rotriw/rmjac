@@ -29,6 +29,7 @@ strum = "0.27.1"
 redis = "0.32.2"
 futures = "0.3.31"
 async-recursion = "1.1.1"
+queue = "0.3.1"
 
 
 [dependencies.sea-orm-migration]

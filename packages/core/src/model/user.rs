@@ -7,7 +7,7 @@ use crate::{
         },
     }, env, error::{CoreError, QueryExists}, graph::{
         edge::{
-            perm_manage::{ManagePerm, PermManageEdgeRaw},
+            perm_manage::{ManagePerm, ManagePermRaw, PermManageEdgeRaw},
             perm_view::{PermViewEdgeRaw, ViewPerm},
             EdgeRaw,
         },
@@ -49,7 +49,7 @@ pub async fn create_default_user(
         },
     };
     let result = user.save(db).await?;
-    let default_node_id = env::DEFAULT_NODES.lock().unwrap().guest_user_node.clone();
+    let default_node_id = env::DEFAULT_NODES.lock().unwrap().default_strategy_node.clone();
     if default_node_id != -1 {
         PermViewEdgeRaw {
             u: result.node_id,
@@ -116,7 +116,7 @@ pub async fn user_login(
     PermManageEdgeRaw {
         u: token.node_id,
         v: user.node_id,
-        perms: vec![ManagePerm::All],
+        perms: ManagePermRaw::All,
     }
     .save(db)
     .await?;

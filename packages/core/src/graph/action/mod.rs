@@ -1,11 +1,11 @@
 use async_recursion::async_recursion;
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
-
+use queue::Queue;
 use crate::env::{
     PATH_VIS, SAVED_NODE_CIRCLE_ID, SAVED_NODE_PATH, SAVED_NODE_PATH_LIST, SAVED_NODE_PATH_REV,
 };
-use crate::graph::edge::{EdgeQuery, EdgeQueryPerm};
+use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryPerm};
 use crate::{db, Result};
 
 macro_rules! path_vis {
@@ -91,6 +91,18 @@ pub async fn has_path_dfs<T: EdgeQuery + EdgeQueryPerm>(
     Ok(0)
 }
 
+pub fn gen_ckid() -> i32 {
+    let mut ckid = SAVED_NODE_CIRCLE_ID.lock().unwrap();
+    (*ckid) += 1;
+    (*ckid) %= 1000;
+    let mut d = (*PATH_VIS).lock().unwrap();
+    if d.contains_key(&(*ckid)) {
+        d.remove(&(*ckid));
+    }
+    d.insert(*ckid, std::collections::HashMap::new());
+    (*ckid).clone()
+}
+
 pub async fn has_path<T: EdgeQuery + EdgeQueryPerm>(
     db: &DatabaseConnection,
     u: i64,
@@ -123,19 +135,75 @@ pub async fn has_path<T: EdgeQuery + EdgeQueryPerm>(
             }
         }
     }
-    let mut ckid = SAVED_NODE_CIRCLE_ID.lock().unwrap();
-    (*ckid) += 1;
-    (*ckid) %= 1000;
-    let mut d = (*PATH_VIS).lock().unwrap();
-    if !d.is_empty() {
-        d.clear();
-    }
-    d.insert(*ckid, std::collections::HashMap::new());
-    drop(d);
-    let l = (*ckid).clone();
-    drop(ckid);
-    Ok(has_path_dfs(&db, u, v, edge_type, required_perm, l, 0, 100).await?)
+    let ckid = gen_ckid();
+    Ok(has_path_dfs(&db, u, v, edge_type, required_perm, ckid, 0, 100).await?)
 }
+
+// 暂时想不到怎么优化。
+// pub async fn init_spot_forward<T: EdgeQuery + EdgeQueryPerm>(
+//     db: &DatabaseConnection,
+//     edge_type: &T,
+//     spot_node_id: i64,
+//     ckid: i32,
+// ) -> Result<()> {
+//     let mut que = Queue::new();
+//     que.queue(spot_node_id);
+//     while let Some(u)= que.dequeue() {
+//         if path_vis![ckid, u] {
+//             continue;
+//         }
+//         path_vis_insert![ckid, u];
+//         let nv = T::get_perm_v(u, db).await?;
+//         for ver in nv {
+//             if ver.0 == spot_node_id {
+//                 continue;
+//             }
+//             if !T::check_perm(ver.1, 1) {
+//                 continue;
+//             }
+//             if let Some(x) = SAVED_NODE_PATH
+//                  .lock()
+//                 .unwrap()
+//                 .get(&(ver.0, T::get_edge_type().to_string()))
+//             {
+//                 if x.contains_key(&spot_node_id) {
+//                     continue;
+//                 }
+//             }
+//             que.queue(ver.0);
+//         }
+//     }
+//     Ok(())
+// }
+
+// pub async fn init_spot_reverse<T: EdgeQuery + EdgeQueryPerm>(
+//     db: &DatabaseConnection,
+//     edge_type: &T,
+//     spot_node_id: i64,
+// ) -> Result<()> {
+// }
+
+// pub async fn init_spot<T: EdgeQuery + EdgeQueryPerm>(
+//     db: &DatabaseConnection,
+//     edge_type: &T,
+//     spot_node_id: i64,
+// ) -> Result<()> {
+//     let ckid = gen_ckid();
+//     init_spot_forward(db, edge_type, spot_node_id).await?;
+//     init_spot_reverse(db, edge_type, spot_node_id).await?;
+//     let mut save_path_list = SAVED_NODE_PATH_LIST.lock().unwrap();
+//     if (*save_path_list)
+//         .get_mut(T::get_edge_type())
+//         .is_none()
+//     {
+//         save_path_list.insert(T::get_edge_type().to_string(), vec![]);
+//     }
+//     save_path_list
+//         .get_mut(T::get_edge_type())
+//         .unwrap()
+//         .push(spot_node_id);
+//     Ok(())
+// }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefaultNodes {
