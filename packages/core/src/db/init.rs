@@ -7,6 +7,7 @@ use sea_orm::{ConnectOptions, Database};
 use sea_orm_migration::prelude::*;
 
 use crate::{db::iden, error::CoreError, graph::{edge::{perm_view::{PermViewEdgeRaw, ViewPerm}, EdgeRaw}, node::{pages::{PagesNodePrivateRaw, PagesNodePublicRaw, PagesNodeRaw}, perm_group::{PermGroupNodePrivateRaw, PermGroupNodePublicRaw, PermGroupNodeRaw}, user::{UserNodePrivateRaw, UserNodePublicRaw, UserNodeRaw}, NodeRaw}}};
+use crate::graph::edge::perm_view::ViewPermRaw;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -96,6 +97,13 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             TagName: text not_null,
             TagDescription: text not_null,
         }),
+    );
+    tables.insert(
+        format!("node_iden"),
+        table_create!(iden::node::iden::Iden, {
+            NodeId: big_integer not_null primary_key,
+            Iden: text not_null,
+        })
     );
     tables.insert(
         format!("edge"),
@@ -212,6 +220,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         format!("node_problem_source"),
         Table::drop()
             .table(iden::node::problem_source::ProblemSource::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        format!("node_iden"),
+        Table::drop()
+            .table(iden::node::iden::Iden::Table)
             .if_exists()
             .to_owned(),
     );
@@ -372,7 +387,7 @@ pub async fn init(
             PermViewEdgeRaw {
                 u: default_strategy.node_id,
                 v: i,
-                perms: vec![ViewPerm::ViewPublic, ViewPerm::ReadProblem].into(),
+                perms: ViewPermRaw::Perms(vec![ViewPerm::ViewPublic, ViewPerm::ReadProblem]),
             }.save(&db).await?;
         }
     } else {
@@ -404,7 +419,7 @@ pub async fn init(
             PermViewEdgeRaw {
                 u: guest_user_id,
                 v: i,
-                perms: vec![ViewPerm::ViewPublic, ViewPerm::ReadProblem].into(),
+                perms: ViewPermRaw::Perms(vec![ViewPerm::ViewPublic, ViewPerm::ReadProblem]),
             }.save(&db).await?;
         }
     } else {

@@ -21,7 +21,13 @@ pub struct PermViewEdge {
 pub struct PermViewEdgeRaw {
     pub u: i64,
     pub v: i64,
-    pub perms: Vec<ViewPerm>,
+    pub perms: ViewPermRaw,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ViewPermRaw {
+    All,
+    Perms(Vec<ViewPerm>),
 }
 
 #[derive(EnumConst, Copy, Clone, Debug, PartialEq, EnumIter)]
@@ -30,6 +36,27 @@ pub enum ViewPerm {
     ReadProblem = 1,
     ViewPublic = 2,
     ViewPrivate = 4,
+}
+
+impl From<ViewPermRaw> for i32 {
+    fn from(perms: ViewPermRaw) -> i32 {
+        match perms {
+            ViewPermRaw::All => {
+                let mut res = 0;
+                for i in ViewPerm::iter() {
+                    res |= i.get_const_isize().unwrap() as i32;
+                }
+                res
+            },
+            ViewPermRaw::Perms(perms) => {
+                let mut res = 0;
+                for perm in perms {
+                    res |= perm.get_const_isize().unwrap() as i32;
+                }
+                res
+            },
+        }
+    }
 }
 
 impl EdgeRaw<PermViewEdge, PermViewModel, PermViewActiveModel> for PermViewEdgeRaw {
@@ -48,11 +75,12 @@ impl EdgeRaw<PermViewEdge, PermViewModel, PermViewActiveModel> for PermViewEdgeR
 impl From<PermViewEdgeRaw> for PermViewActiveModel {
     fn from(raw: PermViewEdgeRaw) -> Self {
         use sea_orm::ActiveValue::{NotSet, Set};
+        use tap::Conv;
         PermViewActiveModel {
             edge_id: NotSet,
             u_node_id: Set(raw.u),
             v_node_id: Set(raw.v),
-            perm: Set(Perms::from(raw.perms).into()),
+            perm: Set(raw.perms.conv::<i32>() as i64),
         }
     }
 }
@@ -60,6 +88,7 @@ impl From<PermViewEdgeRaw> for PermViewActiveModel {
 use crate::db::entity::edge::perm_view::ActiveModel as PermViewActiveModel;
 use crate::db::entity::edge::perm_view::Column as PermViewColumn;
 use crate::db::entity::edge::perm_view::Model as PermViewModel;
+use crate::graph::edge::perm_manage::{ManagePerm, ManagePermRaw};
 
 impl From<PermViewModel> for PermViewEdge {
     fn from(model: PermViewModel) -> Self {

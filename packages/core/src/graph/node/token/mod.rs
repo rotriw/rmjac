@@ -1,13 +1,3 @@
-use chrono::NaiveDateTime;
-use serde::{Deserialize, Serialize};
-
-use db::entity::node::token::ActiveModel as TokenNodeActiveModel;
-use db::entity::node::token::Column as TokenNodeColumn;
-use db::entity::node::token::Model as TokenNodeModel;
-
-use crate::db;
-use crate::graph::node::NodeRaw;
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct TokenNodePublic {
     pub token_type: String,
@@ -30,14 +20,15 @@ pub struct TokenNodePrivateRaw {
     pub token: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Node)]
 pub struct TokenNode {
     pub node_id: i64,
     pub public: TokenNodePublic,
     pub private: TokenNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[node_raw(node_type = "token")]
 pub struct TokenNodeRaw {
     pub iden: String,
     pub service: String,
@@ -45,7 +36,7 @@ pub struct TokenNodeRaw {
     pub private: TokenNodePrivateRaw,
 }
 
-impl From<TokenNodeRaw> for TokenNodeActiveModel {
+impl From<TokenNodeRaw> for ActiveModel {
     fn from(value: TokenNodeRaw) -> Self {
         use sea_orm::ActiveValue::{NotSet, Set};
         Self {
@@ -62,27 +53,26 @@ impl From<TokenNodeRaw> for TokenNodeActiveModel {
     }
 }
 
-impl From<TokenNodeModel> for TokenNode {
-    fn from(model: TokenNodeModel) -> Self {
-        TokenNode {
+impl From<Model> for TokenNode {
+    fn from(model: Model) -> Self {
+        Self {
             node_id: model.node_id,
             public: TokenNodePublic {
                 token_type: model.token_type,
-                token_expiration: model.token_expiration.and_utc().naive_utc(),
+                token_expiration: model.token_expiration,
             },
-            private: TokenNodePrivate { token: model.token },
+            private: TokenNodePrivate {
+                token: model.token,
+            },
         }
     }
 }
 
-impl NodeRaw<TokenNode, TokenNodeModel, TokenNodeActiveModel> for TokenNodeRaw {
-    fn get_node_id_column(
-        &self,
-    ) -> <<TokenNodeActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column
-    {
-        TokenNodeColumn::NodeId
-    }
-    fn get_node_type(&self) -> &str {
-        "token"
-    }
-}
+use crate::graph::node::NodeRaw;
+use crate::graph::node::Node;
+use db::entity::node::token::{ActiveModel, Model, Entity, Column};
+use chrono::NaiveDateTime;
+use serde::{Deserialize, Serialize};
+use macro_node_iden::{Node, NodeRaw};
+use sea_orm::EntityTrait;
+use crate::db;

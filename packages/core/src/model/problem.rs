@@ -22,6 +22,7 @@ use crate::{
 use redis::Commands;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
+use crate::graph::node::problem_source::{ProblemSourceNode, ProblemSourceNodePrivateRaw, ProblemSourceNodePublicRaw, ProblemSourceNodeRaw};
 
 pub async fn create_problem(
     db: &DatabaseConnection,
@@ -78,6 +79,17 @@ pub struct ProblemModel {
     pub tag: Vec<ProblemTagNode>,
 }
 
+
+pub async fn create_problem_source(db: &DatabaseConnection, name: &str, iden: &str) -> Result<ProblemSourceNode> {
+    ProblemSourceNodeRaw {
+        public: ProblemSourceNodePublicRaw {
+            name: name.to_string(),
+            iden: iden.to_string(),
+        },
+        private: ProblemSourceNodePrivateRaw {},
+    }.save(db).await
+}
+
 pub async fn view_problem(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,
@@ -116,7 +128,6 @@ pub async fn view_problem(
         let tag_node = ProblemTagNode::from_db(db, tag_node_id).await?;
         tag.push(tag_node);
     }
-    // Cache the problem model in Redis
     let problem_model = ProblemModel {
         problem_node: problem_node,
         problem_statement_node,

@@ -7,8 +7,8 @@ use crate::{
         },
     }, env, error::{CoreError, QueryExists}, graph::{
         edge::{
-            perm_manage::{ManagePerm, ManagePermRaw, PermManageEdgeRaw},
-            perm_view::{PermViewEdgeRaw, ViewPerm},
+            perm_manage::{ManagePermRaw, PermManageEdgeRaw},
+            perm_view::PermViewEdgeRaw,
             EdgeRaw,
         },
         node::{
@@ -20,6 +20,7 @@ use crate::{
 };
 use sea_orm::DatabaseConnection;
 use tap::Conv;
+use crate::graph::edge::perm_view::ViewPermRaw;
 
 pub async fn create_default_user(
     db: &DatabaseConnection,
@@ -54,7 +55,7 @@ pub async fn create_default_user(
         PermViewEdgeRaw {
             u: result.node_id,
             v: default_node_id,
-            perms: vec![ViewPerm::All],
+            perms: ViewPermRaw::All,
         }.save(db).await?;
     } else {
         log::error!("Default strategy node not set, user will not have default permissions.");
@@ -74,6 +75,8 @@ pub async fn user_login(
     token_iden: &str,
     long_token: bool,
 ) -> Result<(UserNode, TokenNode), CoreError> {
+    use db::entity::node::token::gen_token;
+
     let user = get_user_by_iden(&db, iden).await;
     let user = if let Ok(user) = user {
         user
@@ -101,7 +104,7 @@ pub async fn user_login(
             token_type: "auth".to_string(),
         },
         private: TokenNodePrivateRaw {
-            token: db::entity::node::token::gen_token(),
+            token: gen_token(),
         },
     }
     .save(db)
@@ -109,7 +112,7 @@ pub async fn user_login(
     PermViewEdgeRaw {
         u: token.node_id,
         v: user.node_id,
-        perms: vec![ViewPerm::All],
+        perms: ViewPermRaw::All
     }
     .save(db)
     .await?;

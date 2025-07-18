@@ -2,7 +2,7 @@ use command_tool::generate_commands;
 
 generate_commands! {
     src="src/command",
-    exec_func="exec"
+    exec_func="exec",
 }
 
 pub mod command;

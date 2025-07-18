@@ -13,6 +13,7 @@ pub mod problem_tag;
 pub mod problem_source;
 pub mod token;
 pub mod user;
+pub mod iden;
 
 use crate::Result;
 

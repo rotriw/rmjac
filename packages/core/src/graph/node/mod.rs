@@ -5,6 +5,7 @@ pub mod problem;
 pub mod token;
 pub mod user;
 pub mod problem_source;
+pub mod iden;
 
 use crate::{
     db::entity::node::{node::create_node, DbNodeActiveModel, DbNodeInfo}, error::CoreError, Result
