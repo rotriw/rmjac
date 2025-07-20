@@ -16,7 +16,6 @@ pub enum QueryNotFound {
     ProblemIdenNotFound,
 }
 
-
 #[derive(Debug, Display, EnumConst)]
 pub enum CoreError {
     #[display("Std Error")]

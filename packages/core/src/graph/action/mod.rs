@@ -1,16 +1,17 @@
-use sea_orm::QueryFilter;
-use sea_orm::ColumnTrait;
-use sea_orm::EntityTrait;
+use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo};
+use crate::db::entity::node::node;
 use crate::env::{
     PATH_VIS, SAVED_NODE_CIRCLE_ID, SAVED_NODE_PATH, SAVED_NODE_PATH_LIST, SAVED_NODE_PATH_REV,
 };
-use crate::graph::edge::{EdgeQuery, EdgeQueryPerm};
+use crate::error::CoreError;
+use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryPerm};
 use crate::{db, Result};
 use async_recursion::async_recursion;
+use sea_orm::ColumnTrait;
 use sea_orm::DatabaseConnection;
+use sea_orm::EntityTrait;
+use sea_orm::{ActiveModelBehavior, ActiveModelTrait, IntoActiveModel, QueryFilter};
 use serde::{Deserialize, Serialize};
-use crate::db::entity::node::node;
-use crate::error::CoreError;
 
 macro_rules! path_vis {
     [$ckid:expr,$u:expr] => {
@@ -35,7 +36,13 @@ macro_rules! path_vis_insert {
 }
 
 #[async_recursion(?Send)]
-pub async fn has_path_dfs<T: EdgeQuery + EdgeQueryPerm>(
+pub async fn has_path_dfs<
+    DbActive,
+    DbModel,
+    DbEntity,
+    EdgeA,
+    T: EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm,
+>(
     db: &DatabaseConnection,
     u: i64,
     v: i64,
@@ -44,7 +51,23 @@ pub async fn has_path_dfs<T: EdgeQuery + EdgeQueryPerm>(
     ckid: i32,
     step: i64,
     max_step: i64,
-) -> Result<i8> {
+) -> Result<i8>
+where
+    DbActive: DbEdgeActiveModel<DbModel, EdgeA>
+        + Sized
+        + Send
+        + Sync
+        + ActiveModelTrait
+        + ActiveModelBehavior
+        + DbEdgeInfo,
+    DbModel: Into<EdgeA>
+        + From<<<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+    <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
+    <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
+    EdgeA: Edge<DbActive, DbModel, DbEntity>,
+    DbEntity: EntityTrait,
+    T: Sized + Send + Sync + Clone,
+{
     if step > max_step {
         return Ok(-1);
     }
@@ -107,13 +130,35 @@ pub fn gen_ckid() -> i32 {
     (*ckid).clone()
 }
 
-pub async fn has_path<T: EdgeQuery + EdgeQueryPerm>(
+pub async fn has_path<
+    DbActive,
+    DbModel,
+    DbEntity,
+    EdgeA,
+    T: EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm,
+>(
     db: &DatabaseConnection,
     u: i64,
     v: i64,
     edge_type: &T,
     required_perm: i64,
-) -> Result<i8> {
+) -> Result<i8>
+where
+    DbActive: DbEdgeActiveModel<DbModel, EdgeA>
+        + Sized
+        + Send
+        + Sync
+        + ActiveModelTrait
+        + ActiveModelBehavior
+        + DbEdgeInfo,
+    DbModel: Into<EdgeA>
+        + From<<<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+    <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
+    <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
+    EdgeA: Edge<DbActive, DbModel, DbEntity>,
+    DbEntity: EntityTrait,
+    T: Sized + Send + Sync + Clone,
+{
     let empty = vec![];
     let value = SAVED_NODE_PATH_LIST.lock().unwrap();
     let data = value.get(T::get_edge_type()).unwrap_or(&empty);
@@ -235,6 +280,9 @@ pub async fn get_node_type(db: &DatabaseConnection, node_id: i64) -> Result<Stri
     if let Some(node) = node {
         Ok(node.node_type)
     } else {
-        Err(CoreError::NotFound(format!("Node with id {} not found", node_id)))
+        Err(CoreError::NotFound(format!(
+            "Node with id {} not found",
+            node_id
+        )))
     }
 }

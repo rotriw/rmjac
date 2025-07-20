@@ -53,7 +53,9 @@ impl EdgeRaw<PermManageEdge, Model, ActiveModel> for PermManageEdgeRaw {
         "perm_manage"
     }
 
-    fn get_edge_id_column(&self) ->  <<ActiveModel as sea_orm::ActiveModelTrait>::Entity as EntityTrait>::Column {
+    fn get_edge_id_column(
+        &self,
+    ) -> <<ActiveModel as sea_orm::ActiveModelTrait>::Entity as EntityTrait>::Column {
         Column::EdgeId
     }
 }
@@ -76,7 +78,7 @@ impl From<Model> for PermManageEdge {
         PermManageEdge {
             id: model.edge_id,
             u: model.u_node_id,
-             v: model.v_node_id,
+            v: model.v_node_id,
             perms: perms.0,
         }
     }
@@ -117,26 +119,17 @@ impl From<&[ManagePerm]> for Perms {
         Perms(perms.to_vec())
     }
 }
+
+#[derive(Clone, Debug, PartialOrd, PartialEq)]
 pub struct PermManageEdgeQuery;
 
-impl EdgeQuery for PermManageEdgeQuery {
-    async fn get_v(u: i64, db: &DatabaseConnection) -> Result<Vec<i64>> {
-        let res = Entity::find()
-            .filter(Column::UNodeId.eq(u))
-            .all(db)
-            .await?;
-        Ok(res.into_iter().map(|x| x.v_node_id).collect())
+impl Edge<ActiveModel, Model, Entity> for PermManageEdge {
+    fn get_edge_id(&self) -> i64 {
+        self.id
     }
+}
 
-    async fn get_v_filter<T: IntoCondition>(u: i64, filter: T, db: &DatabaseConnection) -> Result<Vec<i64>> {
-        let edges = Entity::find()
-            .filter(filter)
-            .filter(Column::UNodeId.eq(u))
-            .all(db)
-            .await?;
-        Ok(edges.into_iter().map(|edge| edge.u_node_id).collect())
-    }
-
+impl EdgeQuery<ActiveModel, Model, Entity, PermManageEdge> for PermManageEdgeQuery {
     fn get_edge_type() -> &'static str {
         "perm_manage"
     }
@@ -144,10 +137,7 @@ impl EdgeQuery for PermManageEdgeQuery {
 
 impl EdgeQueryPerm for PermManageEdgeQuery {
     async fn get_perm_v(u: i64, db: &DatabaseConnection) -> Result<Vec<(i64, i64)>> {
-        let edges = Entity::find()
-            .filter(Column::UNodeId.eq(u))
-            .all(db)
-            .await?;
+        let edges = Entity::find().filter(Column::UNodeId.eq(u)).all(db).await?;
         Ok(edges
             .into_iter()
             .map(|edge| (edge.v_node_id, edge.perm.into()))
@@ -155,12 +145,11 @@ impl EdgeQueryPerm for PermManageEdgeQuery {
     }
 }
 
-use crate::db::entity::edge::perm_manage::{ActiveModel, Model, Entity, Column};
-use crate::graph::edge::{EdgeQuery, EdgeQueryPerm, EdgeRaw};
+use crate::db::entity::edge::perm_manage::{ActiveModel, Column, Entity, Model};
+use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryPerm, EdgeRaw};
 use crate::Result;
 use enum_const::EnumConst;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
-use sea_orm::sea_query::IntoCondition;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use tap::Conv;

@@ -1,15 +1,14 @@
-use sea_orm::ColumnTrait;
-use crate::graph::edge::EdgeQueryPerm;
-use crate::Result;
-use enum_const::EnumConst;
-use sea_orm::DatabaseConnection;
-use sea_orm::sea_query::IntoCondition;
+use crate::db::entity::edge::perm_view::{ActiveModel, Column, Entity, Model};
 use crate::graph::edge::EdgeQuery;
 use crate::graph::edge::EdgeRaw;
+use crate::graph::edge::{Edge, EdgeQueryPerm};
 use crate::utils::perm::Perm;
+use crate::Result;
+use enum_const::EnumConst;
+use sea_orm::ColumnTrait;
+use sea_orm::DatabaseConnection;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-use crate::db::entity::edge::perm_manage::{Column, Entity};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PermViewEdge {
@@ -61,24 +60,23 @@ impl From<ViewPermRaw> for i32 {
     }
 }
 
-impl EdgeRaw<PermViewEdge, PermViewModel, PermViewActiveModel> for PermViewEdgeRaw {
+impl EdgeRaw<PermViewEdge, Model, ActiveModel> for PermViewEdgeRaw {
     fn get_edge_type(&self) -> &str {
         "perm_view"
     }
 
     fn get_edge_id_column(
         &self,
-    ) -> <<PermViewActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column
-    {
-        PermViewColumn::EdgeId
+    ) -> <<ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+        Column::EdgeId
     }
 }
 
-impl From<PermViewEdgeRaw> for PermViewActiveModel {
+impl From<PermViewEdgeRaw> for ActiveModel {
     fn from(raw: PermViewEdgeRaw) -> Self {
         use sea_orm::ActiveValue::{NotSet, Set};
         use tap::Conv;
-        PermViewActiveModel {
+        ActiveModel {
             edge_id: NotSet,
             u_node_id: Set(raw.u),
             v_node_id: Set(raw.v),
@@ -87,14 +85,11 @@ impl From<PermViewEdgeRaw> for PermViewActiveModel {
     }
 }
 
-use crate::db::entity::edge::perm_view::ActiveModel as PermViewActiveModel;
 use crate::db::entity::edge::perm_view::Column as PermViewColumn;
-use crate::db::entity::edge::perm_view::Model as PermViewModel;
 
-impl From<PermViewModel> for PermViewEdge {
-    fn from(model: PermViewModel) -> Self {
+impl From<Model> for PermViewEdge {
+    fn from(model: Model) -> Self {
         let perms: Perms = model.perm.into();
-
         PermViewEdge {
             id: model.edge_id,
             u: model.u_node_id,
@@ -146,30 +141,15 @@ impl From<&[ViewPerm]> for Perms {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct PermViewEdgeQuery;
 
-impl EdgeQuery for PermViewEdgeQuery {
-    async fn get_v(u: i64, db: &DatabaseConnection) -> Result<Vec<i64>> {
-        use crate::db::entity::edge::perm_view::Entity as PermViewEntity;
-        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-
-        let edges = PermViewEntity::find()
-            .filter(PermViewColumn::UNodeId.eq(u))
-            .all(db)
-            .await?;
-        Ok(edges.into_iter().map(|edge| edge.v_node_id).collect())
+impl Edge<ActiveModel, Model, Entity> for PermViewEdge {
+    fn get_edge_id(&self) -> i64 {
+        self.id
     }
-
-    async fn get_v_filter<T: IntoCondition>(u: i64, filter: T, db: &DatabaseConnection) -> Result<Vec<i64>> {
-        use crate::db::entity::edge::perm_view::Entity as PermViewEntity;
-        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-        let edges = PermViewEntity::find()
-            .filter(filter)
-            .filter(PermViewColumn::UNodeId.eq(u))
-            .all(db)
-            .await?;
-        Ok(edges.into_iter().map(|edge| edge.u_node_id).collect())
-    }
+}
+impl EdgeQuery<ActiveModel, Model, Entity, PermViewEdge> for PermViewEdgeQuery {
     fn get_edge_type() -> &'static str {
         "perm_view"
     }

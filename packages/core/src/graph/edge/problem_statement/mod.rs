@@ -1,10 +1,5 @@
-use sea_orm::QueryFilter;
-use sea_orm::{ColumnTrait, EntityTrait};
-use sea_orm::DatabaseConnection;
-use sea_orm::sea_query::IntoCondition;
-use crate::db::entity::edge::problem_statement::{Column, Entity};
-use crate::db::entity::edge::problem_statement;
-use crate::graph::edge::{EdgeQuery, EdgeRaw};
+use crate::db::entity::edge::problem_statement::{ActiveModel, Column, Entity, Model};
+use crate::graph::edge::{Edge, EdgeQuery, EdgeRaw};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProblemStatementEdge {
@@ -21,22 +16,22 @@ pub struct ProblemStatementEdgeRaw {
     pub copyright_risk: i64,
 }
 
-impl EdgeRaw<ProblemStatementEdge, problem_statement::Model, problem_statement::ActiveModel>
-    for ProblemStatementEdgeRaw
-{
+impl EdgeRaw<ProblemStatementEdge, Model, ActiveModel> for ProblemStatementEdgeRaw {
     fn get_edge_type(&self) -> &str {
         "problem_statement"
     }
 
-    fn get_edge_id_column(&self) -> <<problem_statement::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
-        problem_statement::Column::EdgeId
+    fn get_edge_id_column(
+        &self,
+    ) -> <<ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+        Column::EdgeId
     }
 }
 
-impl From<ProblemStatementEdgeRaw> for problem_statement::ActiveModel {
+impl From<ProblemStatementEdgeRaw> for ActiveModel {
     fn from(raw: ProblemStatementEdgeRaw) -> Self {
         use sea_orm::ActiveValue::{NotSet, Set};
-        problem_statement::ActiveModel {
+        ActiveModel {
             edge_id: NotSet,
             u_node_id: Set(raw.u),
             v_node_id: Set(raw.v),
@@ -45,28 +40,27 @@ impl From<ProblemStatementEdgeRaw> for problem_statement::ActiveModel {
     }
 }
 
+impl From<Model> for ProblemStatementEdge {
+    fn from(model: Model) -> Self {
+        ProblemStatementEdge {
+            id: model.edge_id,
+            u: model.u_node_id,
+            v: model.v_node_id,
+            copyright_risk: model.copyright_risk,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct ProblemStatementEdgeQuery;
 
-impl EdgeQuery for ProblemStatementEdgeQuery {
-    async fn get_v(u: i64, db: &DatabaseConnection) -> crate::Result<Vec<i64>> {
-        let res = Entity::find()
-            .filter(Column::UNodeId.eq(u))
-            .all(db)
-            .await?;
-        Ok(res.into_iter().map(|x| x.v_node_id).collect())
+impl Edge<ActiveModel, Model, Entity> for ProblemStatementEdge {
+    fn get_edge_id(&self) -> i64 {
+        self.id
     }
-
-    async fn get_v_filter<T: IntoCondition>(u: i64, filter: T, db: &DatabaseConnection) -> crate::Result<Vec<i64>> {
-        let edges = Entity::find()
-            .filter(filter)
-            .filter(Column::UNodeId.eq(u))
-            .all(db)
-            .await?;
-        Ok(edges.into_iter().map(|edge| edge.u_node_id).collect())
-    }
-
+}
+impl EdgeQuery<ActiveModel, Model, Entity, ProblemStatementEdge> for ProblemStatementEdgeQuery {
     fn get_edge_type() -> &'static str {
         "problem_statement"
     }
-
 }

@@ -7,15 +7,18 @@ pub mod problem_source;
 pub mod token;
 pub mod user;
 
-use std::fmt::{Debug, Display};
-use std::str::FromStr;
 use crate::{
     db::entity::node::{node::create_node, DbNodeActiveModel, DbNodeInfo},
     error::CoreError,
     Result,
 };
 use sea_orm::sea_query::IntoCondition;
-use sea_orm::{ActiveModelBehavior, ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel};
+use sea_orm::{
+    ActiveModelBehavior, ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait,
+    IntoActiveModel,
+};
+use std::fmt::Debug;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NodeType {
@@ -57,7 +60,9 @@ where
     fn get_node_id(&self) -> i64;
 
     fn get_node_id_column() -> <DbNodeActive::Entity as EntityTrait>::Column {
-        <DbNodeActive::Entity as EntityTrait>::Column::from_str("node_id").ok().unwrap()
+        <DbNodeActive::Entity as EntityTrait>::Column::from_str("node_id")
+            .ok()
+            .unwrap()
     }
 
     fn from_db(
@@ -110,7 +115,12 @@ where
         async move {
             use tap::Conv;
             let mut new_model = DbNodeActive::new();
-            log::trace!("Modifying node {}: setting {} to {:?}", self.get_node_id(), column.enum_type_name().unwrap_or("unknown"), data);
+            log::trace!(
+                "Modifying node {}: setting {} to {:?}",
+                self.get_node_id(),
+                column.enum_type_name().unwrap_or("unknown"),
+                data
+            );
             new_model.set(column, data.into());
             let data = new_model.update(db).await?.conv::<DbModel>();
             Ok(data.into())

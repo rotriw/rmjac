@@ -1,9 +1,13 @@
 use crate::db::entity::edge::{edge::create_edge, DbEdgeActiveModel, DbEdgeInfo};
+use crate::db::entity::node::DbNodeActiveModel;
+use crate::error::CoreError;
 use crate::Result;
+use sea_orm::sea_query::IntoCondition;
 use sea_orm::{
     ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
 };
-use sea_orm::sea_query::IntoCondition;
+use std::str::FromStr;
+use crate::error::CoreError::NotFound;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EdgeType {
@@ -25,19 +29,147 @@ pub mod problem_limit;
 pub mod problem_statement;
 pub mod problem_tag;
 
-pub trait EdgeQuery {
+pub trait EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>
+where
+    DbActive: DbEdgeActiveModel<DbModel, EdgeA>
+        + Sized
+        + Send
+        + Sync
+        + ActiveModelTrait
+        + ActiveModelBehavior
+        + DbEdgeInfo,
+    DbModel: Into<EdgeA>
+        + From<<<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+    <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
+    Self: Sized + Send + Sync + Clone,
+    DbEntity: EntityTrait,
+    EdgeA: Edge<DbActive, DbModel, DbEntity>,
+    <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
+{
+    fn get_u_edge_id_column() -> <DbEntity as EntityTrait>::Column {
+        <DbEntity as EntityTrait>::Column::from_str("u_edge_id")
+            .ok()
+            .unwrap()
+    }
+
+    fn get_v_edge_id_column() -> <DbEntity as EntityTrait>::Column {
+        <DbEntity as EntityTrait>::Column::from_str("v_edge_id")
+            .ok()
+            .unwrap()
+    }
+
     fn get_v(
         u: i64,
         db: &DatabaseConnection,
-    ) -> impl std::future::Future<Output = Result<Vec<i64>>>;
+    ) -> impl std::future::Future<Output = Result<Vec<i64>>> {
+        async move {
+            use sea_orm::{ColumnTrait, QueryFilter};
+            let edges = DbEntity::find()
+                .filter(Self::get_u_edge_id_column().eq(u))
+                .all(db)
+                .await?;
+            use tap::Conv;
+            Ok(edges
+                .into_iter()
+                .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_edge_id())
+                .collect())
+        }
+    }
 
     fn get_v_filter<T: IntoCondition>(
         u: i64,
         filter: T,
         db: &DatabaseConnection,
-    ) -> impl std::future::Future<Output = Result<Vec<i64>>>
-    where
-        Self: Sized;
+    ) -> impl std::future::Future<Output = Result<Vec<i64>>> {
+        async move {
+            use sea_orm::{ColumnTrait, QueryFilter};
+            let edges = DbEntity::find()
+                .filter(filter)
+                .filter(Self::get_u_edge_id_column().eq(u))
+                .all(db)
+                .await?;
+            use tap::Conv;
+            Ok(edges
+                .into_iter()
+                .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_edge_id())
+                .collect())
+        }
+    }
+
+    fn get_u(
+        v: i64,
+        db: &DatabaseConnection,
+    ) -> impl std::future::Future<Output = Result<Vec<i64>>> {
+        async move {
+            use sea_orm::{ColumnTrait, QueryFilter};
+            let edges = DbEntity::find()
+                .filter(Self::get_v_edge_id_column().eq(v))
+                .all(db)
+                .await?;
+            use tap::Conv;
+            Ok(edges
+                .into_iter()
+                .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_edge_id())
+                .collect())
+        }
+    }
+
+    fn get_u_one(
+        v: i64,
+        db: &DatabaseConnection,
+    ) -> impl std::future::Future<Output = Result<i64>> {
+        async move {
+            use sea_orm::{ColumnTrait, QueryFilter};
+            let edge = DbEntity::find()
+                .filter(Self::get_v_edge_id_column().eq(v))
+                .one(db)
+                .await?;
+            if edge.is_none() {
+                return Err(NotFound("Not Found Edge id".to_string()));
+            }
+            use tap::Conv;
+            Ok(edge.unwrap().conv::<DbModel>().conv::<EdgeA>().get_edge_id())
+        }
+    }
+
+    fn get_v_one(
+        u: i64,
+        db: &DatabaseConnection,
+    ) -> impl std::future::Future<Output = Result<i64>> {
+        async move {
+            use sea_orm::{ColumnTrait, QueryFilter};
+            let edge = DbEntity::find()
+                .filter(Self::get_u_edge_id_column().eq(u))
+                .one(db)
+                .await?;
+            if edge.is_none() {
+                return Err(NotFound("Not Found Edge id".to_string()));
+            }
+            use tap::Conv;
+            Ok(edge.unwrap().conv::<DbModel>().conv::<EdgeA>().get_edge_id())
+        }
+    }
+
+    fn get_u_filter<T: IntoCondition>(
+        v: i64,
+        filter: T,
+        db: &DatabaseConnection,
+    ) -> impl std::future::Future<Output = Result<Vec<i64>>> {
+        async move {
+            use sea_orm::{ColumnTrait, QueryFilter};
+            let edges = DbEntity::find()
+                .filter(filter)
+                .filter(Self::get_v_edge_id_column().eq(v))
+                .all(db)
+                .await?;
+            use tap::Conv;
+            Ok(edges
+                .into_iter()
+                .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_edge_id())
+                .collect())
+        }
+    }
+
 
     fn get_edge_type() -> &'static str;
     fn check_perm(perm_a: i64, perm_b: i64) -> bool {
@@ -53,14 +185,47 @@ pub trait EdgeQueryPerm {
     ) -> impl std::future::Future<Output = Result<Vec<(i64, i64)>>>;
 }
 
-pub trait Edge {
+pub trait Edge<DbActive, DbModel, DbEntity>
+where
+    DbActive: DbEdgeActiveModel<DbModel, Self>
+        + Sized
+        + Send
+        + Sync
+        + ActiveModelTrait
+        + ActiveModelBehavior
+        + DbEdgeInfo,
+    DbModel: Into<Self>
+        + From<<<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+    <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
+    Self: Sized + Send + Sync + Clone,
+    DbEntity: EntityTrait,
+    <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
+{
+    fn get_edge_id_column() -> <DbActive::Entity as EntityTrait>::Column {
+        <DbActive::Entity as EntityTrait>::Column::from_str("edge_id")
+            .ok()
+            .unwrap()
+    }
     fn get_edge_id(&self) -> i64;
     fn from_db(
         db: &DatabaseConnection,
         edge_id: i64,
-    ) -> impl std::future::Future<Output = Result<Self>> + Send
-    where
-        Self: Sized;
+    ) -> impl std::future::Future<Output = Result<Self>> + Send {
+        async move {
+            use tap::Conv;
+            let edge_id_column = Self::get_edge_id_column();
+            use sea_orm::ColumnTrait;
+            use sea_orm::QueryFilter;
+            let model = DbEntity::find()
+                .filter(edge_id_column.eq(edge_id))
+                .one(db)
+                .await?
+                .ok_or_else(|| {
+                    CoreError::NotFound(format!("Edge with id {} not found", edge_id))
+                })?;
+            Ok(model.conv::<DbModel>().into())
+        }
+    }
 }
 
 pub trait EdgeRaw<Edge, EdgeModel, EdgeActive>
