@@ -1,14 +1,40 @@
+use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo};
 use crate::graph::action::has_path;
-use crate::graph::edge::{EdgeQuery, EdgeQueryPerm};
+use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryPerm};
 use crate::Result;
-use sea_orm::DatabaseConnection;
+use sea_orm::{
+    ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
+};
 
-pub async fn check_perm<T: EdgeQuery + EdgeQueryPerm, K: Into<i64>>(
+pub async fn check_perm<
+    DbActive,
+    DbModel,
+    DbEntity,
+    EdgeA,
+    T: EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm,
+    K: Into<i64>,
+>(
     db: &DatabaseConnection,
     u: i64,
     v: i64,
     edge_type: T,
     perm: K,
-) -> Result<i8> {
+) -> Result<i8>
+where
+    DbActive: DbEdgeActiveModel<DbModel, EdgeA>
+        + Sized
+        + Send
+        + Sync
+        + ActiveModelTrait
+        + ActiveModelBehavior
+        + DbEdgeInfo,
+    DbModel: Into<EdgeA>
+        + From<<<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+    <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
+    <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
+    EdgeA: Edge<DbActive, DbModel, DbEntity>,
+    DbEntity: EntityTrait,
+    T: Sized + Send + Sync + Clone,
+{
     has_path(db, u, v, &edge_type, perm.into()).await
 }

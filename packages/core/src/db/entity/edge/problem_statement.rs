@@ -24,18 +24,6 @@ impl DbEdgeInfo for ActiveModel {
         "problem_statement"
     }
 }
-
-impl From<Model> for ProblemStatementEdge {
-    fn from(model: Model) -> Self {
-        ProblemStatementEdge {
-            id: model.edge_id,
-            u: model.u_node_id,
-            v: model.v_node_id,
-            copyright_risk: model.copyright_risk,
-        }
-    }
-}
-
 impl DbEdgeEntityModel<Model> for Entity {
     fn get_u_edge_id_column(&self) -> <Self as EntityTrait>::Column {
         Column::UNodeId

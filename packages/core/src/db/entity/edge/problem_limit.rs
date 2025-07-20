@@ -24,16 +24,6 @@ impl DbEdgeInfo for ActiveModel {
     }
 }
 
-impl From<Model> for ProblemLimitEdge {
-    fn from(model: Model) -> Self {
-        ProblemLimitEdge {
-            id: model.edge_id,
-            u: model.u_node_id,
-            v: model.v_node_id,
-        }
-    }
-}
-
 impl DbEdgeEntityModel<Model> for Entity {
     fn get_u_edge_id_column(&self) -> <Self as EntityTrait>::Column {
         Column::UNodeId

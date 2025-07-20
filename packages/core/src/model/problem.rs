@@ -1,5 +1,6 @@
-use async_recursion::async_recursion;
 use crate::db::entity::edge::{problem_statement, problem_tag};
+use crate::error::CoreError;
+use crate::graph::action::get_node_type;
 use crate::graph::edge::iden::{IdenEdgeQuery, IdenEdgeRaw};
 use crate::graph::edge::problem_limit::{ProblemLimitEdgeQuery, ProblemLimitEdgeRaw};
 use crate::graph::edge::problem_statement::{ProblemStatementEdgeQuery, ProblemStatementEdgeRaw};
@@ -18,11 +19,10 @@ use crate::graph::node::problem_source::{
 };
 use crate::graph::node::{Node, NodeRaw};
 use crate::{db, Result};
+use async_recursion::async_recursion;
 use redis::Commands;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
-use crate::error::CoreError;
-use crate::graph::action::get_node_type;
 
 pub async fn create_problem(
     db: &DatabaseConnection,
@@ -129,19 +129,15 @@ pub async fn create_problem_iden(
     Ok(iden_node)
 }
 
-
 #[async_recursion(?Send)]
 pub async fn get_end_iden(db: &DatabaseConnection, iden: &str, id: i64) -> Result<i64> {
     use db::entity::node::iden::Column as IdenColumn;
-    use db::entity::node::iden::Entity as IdenEntity;
+
     let mut now_iden = "".to_string();
     for i in 0..iden.len() {
         now_iden.push(iden.chars().nth(i).unwrap());
-        let result = IdenEdgeQuery::get_v_filter(
-            id,
-            IdenColumn::Iden.eq(now_iden.as_str()),
-            db,
-        ).await?;
+        let result =
+            IdenEdgeQuery::get_v_filter(id, IdenColumn::Iden.eq(now_iden.as_str()), db).await?;
         if !result.is_empty() {
             let next_iden = iden[i + 1..].to_string();
             let result = get_end_iden(db, &next_iden, result[0]).await?;
@@ -157,24 +153,28 @@ pub async fn get_end_iden(db: &DatabaseConnection, iden: &str, id: i64) -> Resul
 Result<(ProblemModel, i64)>: 最终题目的模型，选中的题面(若指向题目则返回problem_id）。
 
 */
-pub async fn get_problem(db: &DatabaseConnection, redis: &mut redis::Connection, iden: &str) -> Result<(ProblemModel, i64)> {
-    #[derive(Deserialize, Serialize, Debug, Clone)]
-    struct ProblemIden {
-        problem_node_or_statement_id: i64,
-    }
+pub async fn get_problem(
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    iden: &str,
+) -> Result<(ProblemModel, i64)> {
     use db::entity::node::problem_source::Column as ProblemSourceColumn;
     let mut saved = false;
     let node_id = 'scope: {
         if let Ok(value) = redis.get::<_, String>(format!("pi_{}", iden)) {
-            if let Ok(problem_model) = serde_json::from_str::<ProblemIden>(value.as_str()) {
+            if let Ok(problem_model) = value.as_str().parse::<i64>() {
                 saved = true;
-                break 'scope problem_model.problem_node_or_statement_id;
+                break 'scope problem_model;
             }
         }
         let mut now_iden = "".to_string();
         for i in 0..iden.len() {
             now_iden.push(iden.chars().nth(i).unwrap());
-            let result = ProblemSourceNode::from_db_filter(db, ProblemSourceColumn::Iden.eq(now_iden.as_str())).await?;
+            let result = ProblemSourceNode::from_db_filter(
+                db,
+                ProblemSourceColumn::Iden.eq(now_iden.as_str()),
+            )
+            .await?;
             if !result.is_empty() {
                 let problem_source_node = result[0].clone();
                 let next_iden = iden[i + 1..].to_string();
@@ -189,12 +189,17 @@ pub async fn get_problem(db: &DatabaseConnection, redis: &mut redis::Connection,
     if node_id == -1 {
         return Err(CoreError::NotFound("Problem not found".to_string()));
     }
-    let node_type = get_node_type(db, node_id).await?;
-    if node_type == "problem_statement" {
-        // let problem_node = ProblemStatementEdgeQuery::get_u()
-        // get u.
+    if !saved {
+        redis.set::<_, _, ()>(format!("pi_{}", iden), node_id.to_string())?;
+        redis.expire::<_, ()>(format!("pi_{}", iden), 3600)?;
     }
-    Ok((view_problem(db, redis, node_id).await?, node_id))
+    let node_type = get_node_type(db, node_id).await?;
+    let problem_node = if node_type == "problem_statement" {
+        ProblemStatementEdgeQuery::get_u_one(node_id, db).await?
+    } else {
+        node_id
+    };
+    Ok((view_problem(db, redis, problem_node).await?, node_id))
 }
 
 pub async fn view_problem(
