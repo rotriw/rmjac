@@ -1,3 +1,4 @@
+use crate::graph::edge::perm_view::ViewPermRaw;
 use crate::{
     db::{
         self,
@@ -5,7 +6,10 @@ use crate::{
             self,
             node::user::{get_user_by_email, get_user_by_iden},
         },
-    }, env, error::{CoreError, QueryExists}, graph::{
+    },
+    env,
+    error::{CoreError, QueryExists},
+    graph::{
         edge::{
             perm_manage::{ManagePermRaw, PermManageEdgeRaw},
             perm_view::PermViewEdgeRaw,
@@ -16,11 +20,11 @@ use crate::{
             user::{UserNode, UserNodePrivateRaw, UserNodePublicRaw, UserNodeRaw},
             NodeRaw,
         },
-    }, utils::encrypt::encode_password
+    },
+    utils::encrypt::encode_password,
 };
 use sea_orm::DatabaseConnection;
 use tap::Conv;
-use crate::graph::edge::perm_view::ViewPermRaw;
 
 pub async fn create_default_user(
     db: &DatabaseConnection,
@@ -50,13 +54,19 @@ pub async fn create_default_user(
         },
     };
     let result = user.save(db).await?;
-    let default_node_id = env::DEFAULT_NODES.lock().unwrap().default_strategy_node.clone();
+    let default_node_id = env::DEFAULT_NODES
+        .lock()
+        .unwrap()
+        .default_strategy_node
+        .clone();
     if default_node_id != -1 {
         PermViewEdgeRaw {
             u: result.node_id,
             v: default_node_id,
             perms: ViewPermRaw::All,
-        }.save(db).await?;
+        }
+        .save(db)
+        .await?;
     } else {
         log::error!("Default strategy node not set, user will not have default permissions.");
     }
@@ -103,16 +113,14 @@ pub async fn user_login(
             token_expiration,
             token_type: "auth".to_string(),
         },
-        private: TokenNodePrivateRaw {
-            token: gen_token(),
-        },
+        private: TokenNodePrivateRaw { token: gen_token() },
     }
     .save(db)
     .await?;
     PermViewEdgeRaw {
         u: token.node_id,
         v: user.node_id,
-        perms: ViewPermRaw::All
+        perms: ViewPermRaw::All,
     }
     .save(db)
     .await?;

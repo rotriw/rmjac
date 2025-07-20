@@ -2,7 +2,6 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, Attribute, DeriveInput, Expr, Lit, Meta};
 
-
 #[proc_macro_derive(Node)]
 pub fn derive_node(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -27,7 +26,7 @@ pub fn derive_node_raw(input: TokenStream) -> TokenStream {
     let node_type = extract_node_type(&input.attrs, &name.to_string());
     let uname = name.clone();
     let uname = uname.to_string();
-    let uname = uname[..uname.len()-3].to_string();
+    let uname = uname[..uname.len() - 3].to_string();
     let uname = proc_macro2::Ident::new(&uname, name.span());
     let node_type_literal = proc_macro2::Literal::string(&node_type);
     let expanded = quote! {

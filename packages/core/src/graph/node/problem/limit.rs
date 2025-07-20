@@ -59,5 +59,5 @@ use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::EntityTrait;
 use serde::{Deserialize, Serialize};
 
-use crate::db::entity::node::problem_limit::{Model, ActiveModel, Entity, Column};
+use crate::db::entity::node::problem_limit::{ActiveModel, Column, Entity, Model};
 use crate::graph::node::{Node, NodeRaw};

@@ -1,5 +1,10 @@
+use sea_orm::QueryFilter;
+use sea_orm::{ColumnTrait, EntityTrait};
+use sea_orm::DatabaseConnection;
+use sea_orm::sea_query::IntoCondition;
+use crate::db::entity::edge::problem_statement::{Column, Entity};
 use crate::db::entity::edge::problem_statement;
-use crate::graph::edge::EdgeRaw;
+use crate::graph::edge::{EdgeQuery, EdgeRaw};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProblemStatementEdge {
@@ -41,3 +46,27 @@ impl From<ProblemStatementEdgeRaw> for problem_statement::ActiveModel {
 }
 
 pub struct ProblemStatementEdgeQuery;
+
+impl EdgeQuery for ProblemStatementEdgeQuery {
+    async fn get_v(u: i64, db: &DatabaseConnection) -> crate::Result<Vec<i64>> {
+        let res = Entity::find()
+            .filter(Column::UNodeId.eq(u))
+            .all(db)
+            .await?;
+        Ok(res.into_iter().map(|x| x.v_node_id).collect())
+    }
+
+    async fn get_v_filter<T: IntoCondition>(u: i64, filter: T, db: &DatabaseConnection) -> crate::Result<Vec<i64>> {
+        let edges = Entity::find()
+            .filter(filter)
+            .filter(Column::UNodeId.eq(u))
+            .all(db)
+            .await?;
+        Ok(edges.into_iter().map(|edge| edge.u_node_id).collect())
+    }
+
+    fn get_edge_type() -> &'static str {
+        "problem_statement"
+    }
+
+}

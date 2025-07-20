@@ -1,5 +1,5 @@
 use sea_orm::DatabaseConnection;
-
+use sea_orm::sea_query::IntoCondition;
 use crate::db::entity::edge::problem_limit;
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
 use crate::Result;
@@ -56,5 +56,16 @@ impl EdgeQuery for ProblemLimitEdgeQuery {
             .all(db)
             .await?;
         Ok(edges.into_iter().map(|edge| edge.v_node_id).collect())
+    }
+
+    async fn get_v_filter<T: IntoCondition>(u: i64, filter: T, db: &DatabaseConnection) -> Result<Vec<i64>> {
+        use crate::db::entity::edge::problem_limit::Entity;
+        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+        let edges = Entity::find()
+            .filter(filter)
+            .filter(crate::db::entity::edge::problem_limit::Column::UNodeId.eq(u))
+            .all(db)
+            .await?;
+        Ok(edges.into_iter().map(|edge| edge.u_node_id).collect())
     }
 }

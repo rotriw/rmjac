@@ -53,9 +53,9 @@ impl From<ProblemTagNodeRaw> for ActiveModel {
     }
 }
 
-use crate::db::entity::node::problem_tag::{Model, ActiveModel, Entity, Column};
+use crate::db::entity::node::problem_tag::{ActiveModel, Column, Entity, Model};
+use crate::graph::node::{Node, NodeRaw};
 use macro_node_iden::{Node, NodeRaw};
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::EntityTrait;
 use serde::{Deserialize, Serialize};
-use crate::graph::node::{Node, NodeRaw};

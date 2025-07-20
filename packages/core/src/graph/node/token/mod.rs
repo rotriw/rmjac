@@ -61,18 +61,16 @@ impl From<Model> for TokenNode {
                 token_type: model.token_type,
                 token_expiration: model.token_expiration,
             },
-            private: TokenNodePrivate {
-                token: model.token,
-            },
+            private: TokenNodePrivate { token: model.token },
         }
     }
 }
 
-use crate::graph::node::NodeRaw;
+use crate::db;
 use crate::graph::node::Node;
-use db::entity::node::token::{ActiveModel, Model, Entity, Column};
+use crate::graph::node::NodeRaw;
 use chrono::NaiveDateTime;
-use serde::{Deserialize, Serialize};
+use db::entity::node::token::{ActiveModel, Column, Entity, Model};
 use macro_node_iden::{Node, NodeRaw};
 use sea_orm::EntityTrait;
-use crate::db;
+use serde::{Deserialize, Serialize};

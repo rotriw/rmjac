@@ -1,4 +1,4 @@
-use core::{error::CoreError, now_time};
+use core::now_time;
 
 use crate::{
     env::CONFIG,

@@ -7,5 +7,5 @@ pub enum Iden {
     #[sea_orm(iden = "node_id")]
     NodeId,
     #[sea_orm(iden = "iden")]
-    Iden
+    Iden,
 }

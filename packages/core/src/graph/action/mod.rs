@@ -1,12 +1,16 @@
-use async_recursion::async_recursion;
-use sea_orm::DatabaseConnection;
-use serde::{Deserialize, Serialize};
-use queue::Queue;
+use sea_orm::QueryFilter;
+use sea_orm::ColumnTrait;
+use sea_orm::EntityTrait;
 use crate::env::{
     PATH_VIS, SAVED_NODE_CIRCLE_ID, SAVED_NODE_PATH, SAVED_NODE_PATH_LIST, SAVED_NODE_PATH_REV,
 };
-use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryPerm};
+use crate::graph::edge::{EdgeQuery, EdgeQueryPerm};
 use crate::{db, Result};
+use async_recursion::async_recursion;
+use sea_orm::DatabaseConnection;
+use serde::{Deserialize, Serialize};
+use crate::db::entity::node::node;
+use crate::error::CoreError;
 
 macro_rules! path_vis {
     [$ckid:expr,$u:expr] => {
@@ -218,6 +222,19 @@ pub async fn get_default_node(db: &DatabaseConnection) -> Result<DefaultNodes> {
     };
 
     result.guest_user_node = db::entity::node::user::get_guest_user_node(db).await?;
-    result.default_strategy_node = db::entity::node::perm_group::get_default_strategy_node(db).await?;
+    result.default_strategy_node =
+        db::entity::node::perm_group::get_default_strategy_node(db).await?;
     Ok(result)
+}
+
+pub async fn get_node_type(db: &DatabaseConnection, node_id: i64) -> Result<String> {
+    let node = node::Entity::find()
+        .filter(node::Column::NodeId.eq(node_id))
+        .one(db)
+        .await?;
+    if let Some(node) = node {
+        Ok(node.node_type)
+    } else {
+        Err(CoreError::NotFound(format!("Node with id {} not found", node_id)))
+    }
 }

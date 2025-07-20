@@ -19,7 +19,6 @@ pub struct IdenNode {
     pub node_id: i64,
     pub public: IdenNodePublic,
     pub private: IdenNodePrivate,
-
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
@@ -33,9 +32,7 @@ impl From<Model> for IdenNode {
     fn from(model: Model) -> Self {
         IdenNode {
             node_id: model.node_id,
-            public: IdenNodePublic {
-                iden: model.iden,
-            },
+            public: IdenNodePublic { iden: model.iden },
             private: IdenNodePrivate {},
         }
     }
@@ -45,14 +42,13 @@ impl From<IdenNodeRaw> for ActiveModel {
     fn from(value: IdenNodeRaw) -> Self {
         ActiveModel {
             node_id: NotSet,
-            iden: Set(value.public.iden)
+            iden: Set(value.public.iden),
         }
     }
 }
 
-use crate::db::entity::node::iden::{Model, ActiveModel, Entity, Column};
+use crate::db::entity::node::iden::{ActiveModel, Column, Entity, Model};
 use crate::graph::node::{Node, NodeRaw};
-use chrono::NaiveDateTime;
 use macro_node_iden::{Node, NodeRaw};
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::EntityTrait;

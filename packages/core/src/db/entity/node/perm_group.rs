@@ -42,14 +42,14 @@ impl From<Model> for PermGroupNode {
     }
 }
 
-pub async fn get_default_strategy_node(
-    db: &DatabaseConnection,
-) -> Result<i64, CoreError> {
+pub async fn get_default_strategy_node(db: &DatabaseConnection) -> Result<i64, CoreError> {
     use sea_orm::EntityTrait;
     let node = Entity::find()
         .filter(Column::Iden.eq("default"))
         .one(db)
         .await?
-        .ok_or(CoreError::NotFound("Default strategy node not found".to_string()))?;
+        .ok_or(CoreError::NotFound(
+            "Default strategy node not found".to_string(),
+        ))?;
     Ok(node.node_id)
 }

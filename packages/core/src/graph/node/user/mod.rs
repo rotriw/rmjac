@@ -1,4 +1,3 @@
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserNodePublic {
     pub name: String,
@@ -97,10 +96,9 @@ impl From<Model> for UserNode {
     }
 }
 
-
-use crate::db::entity::node::user::{ActiveModel, Model, Entity, Column};
+use crate::db::entity::node::user::{ActiveModel, Column, Entity, Model};
+use crate::graph::node::{Node, NodeRaw};
 use chrono::NaiveDateTime;
 use macro_node_iden::{Node, NodeRaw};
-use serde::{Deserialize, Serialize};
-use crate::graph::node::{Node, NodeRaw};
 use sea_orm::EntityTrait;
+use serde::{Deserialize, Serialize};

@@ -62,7 +62,7 @@ impl From<ProblemStatementNodeRaw> for ActiveModel {
     }
 }
 
-use crate::db::entity::node::problem_statement::{ContentType, Model, ActiveModel, Entity, Column};
+use crate::db::entity::node::problem_statement::{ActiveModel, Column, ContentType, Entity, Model};
 use crate::graph::node::{Node, NodeRaw};
 use chrono::NaiveDateTime;
 use macro_node_iden::{Node, NodeRaw};

@@ -1,9 +1,8 @@
 use crate::db::entity::node::{DbNodeActiveModel, DbNodeInfo};
-use crate::graph::node::problem::ProblemNode;
+use crate::graph::node::iden::IdenNode;
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter, FromJsonQueryResult};
 use serde::{Deserialize, Serialize};
-use crate::graph::node::iden::IdenNode;
 
 #[derive(
     Clone, Debug, PartialEq, DeriveEntityModel, Deserialize, Serialize, FromJsonQueryResult,
@@ -12,7 +11,7 @@ use crate::graph::node::iden::IdenNode;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub node_id: i64,
-    pub iden: String
+    pub iden: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

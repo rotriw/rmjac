@@ -9,6 +9,7 @@ pub mod edge;
 pub mod perm_manage;
 pub mod perm_view;
 
+pub mod iden;
 pub mod problem_limit;
 pub mod problem_statement;
 pub mod problem_tag;

@@ -11,6 +11,13 @@ pub enum QueryExists {
 }
 
 #[derive(Debug, Display, EnumConst)]
+pub enum QueryNotFound {
+    #[display("Problem IDEN not found")]
+    ProblemIdenNotFound,
+}
+
+
+#[derive(Debug, Display, EnumConst)]
 pub enum CoreError {
     #[display("Std Error")]
     StdError,
@@ -22,6 +29,8 @@ pub enum CoreError {
     UserIdenExists,
     #[display("_{}", _0)]
     QueryExists(QueryExists),
+    #[display("_{}", _0)]
+    QueryNotFound(QueryNotFound),
     #[display("NotFound Error: {}", _0)]
     NotFound(String),
     #[display("Serde Error: {}", _0)]
@@ -42,6 +51,9 @@ impl From<&CoreError> for i64 {
             CoreError::QueryExists(data) => match data {
                 QueryExists::RegisterIDENExist => 60001,
                 QueryExists::RegisterEmailExist => 60002,
+            },
+            CoreError::QueryNotFound(data) => match data {
+                QueryNotFound::ProblemIdenNotFound => 61001,
             },
             CoreError::SerdeError(_) => 70000,
         }

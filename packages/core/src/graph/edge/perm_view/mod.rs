@@ -1,13 +1,15 @@
+use sea_orm::ColumnTrait;
 use crate::graph::edge::EdgeQueryPerm;
 use crate::Result;
 use enum_const::EnumConst;
 use sea_orm::DatabaseConnection;
-
+use sea_orm::sea_query::IntoCondition;
 use crate::graph::edge::EdgeQuery;
 use crate::graph::edge::EdgeRaw;
 use crate::utils::perm::Perm;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use crate::db::entity::edge::perm_manage::{Column, Entity};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PermViewEdge {
@@ -47,14 +49,14 @@ impl From<ViewPermRaw> for i32 {
                     res |= i.get_const_isize().unwrap() as i32;
                 }
                 res
-            },
+            }
             ViewPermRaw::Perms(perms) => {
                 let mut res = 0;
                 for perm in perms {
                     res |= perm.get_const_isize().unwrap() as i32;
                 }
                 res
-            },
+            }
         }
     }
 }
@@ -88,7 +90,6 @@ impl From<PermViewEdgeRaw> for PermViewActiveModel {
 use crate::db::entity::edge::perm_view::ActiveModel as PermViewActiveModel;
 use crate::db::entity::edge::perm_view::Column as PermViewColumn;
 use crate::db::entity::edge::perm_view::Model as PermViewModel;
-use crate::graph::edge::perm_manage::{ManagePerm, ManagePermRaw};
 
 impl From<PermViewModel> for PermViewEdge {
     fn from(model: PermViewModel) -> Self {
@@ -159,6 +160,16 @@ impl EdgeQuery for PermViewEdgeQuery {
         Ok(edges.into_iter().map(|edge| edge.v_node_id).collect())
     }
 
+    async fn get_v_filter<T: IntoCondition>(u: i64, filter: T, db: &DatabaseConnection) -> Result<Vec<i64>> {
+        use crate::db::entity::edge::perm_view::Entity as PermViewEntity;
+        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+        let edges = PermViewEntity::find()
+            .filter(filter)
+            .filter(PermViewColumn::UNodeId.eq(u))
+            .all(db)
+            .await?;
+        Ok(edges.into_iter().map(|edge| edge.u_node_id).collect())
+    }
     fn get_edge_type() -> &'static str {
         "perm_view"
     }

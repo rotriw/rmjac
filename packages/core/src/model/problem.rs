@@ -1,28 +1,28 @@
-use crate::{
-    db::entity::edge,
-    graph::{
-        edge::{
-            problem_limit::{ProblemLimitEdgeQuery, ProblemLimitEdgeRaw},
-            problem_statement::ProblemStatementEdgeRaw,
-            problem_tag::ProblemTagEdgeRaw,
-            EdgeQuery, EdgeRaw,
-        },
-        node::{
-            problem::{
-                statement::{ProblemStatementNode, ProblemStatementNodeRaw},
-                limit::{ProblemLimitNode, ProblemLimitNodeRaw},
-                tag::{ProblemTagNode, ProblemTagNodeRaw},
-                ProblemNode, ProblemNodePrivateRaw, ProblemNodePublicRaw, ProblemNodeRaw,
-            },
-            Node, NodeRaw,
-        },
-    },
-    Result,
+use async_recursion::async_recursion;
+use crate::db::entity::edge::{problem_statement, problem_tag};
+use crate::graph::edge::iden::{IdenEdgeQuery, IdenEdgeRaw};
+use crate::graph::edge::problem_limit::{ProblemLimitEdgeQuery, ProblemLimitEdgeRaw};
+use crate::graph::edge::problem_statement::{ProblemStatementEdgeQuery, ProblemStatementEdgeRaw};
+use crate::graph::edge::problem_tag::ProblemTagEdgeRaw;
+use crate::graph::edge::{EdgeQuery, EdgeRaw};
+use crate::graph::node::iden::{IdenNode, IdenNodePrivateRaw, IdenNodePublicRaw, IdenNodeRaw};
+use crate::graph::node::problem::limit::{ProblemLimitNode, ProblemLimitNodeRaw};
+use crate::graph::node::problem::statement::{ProblemStatementNode, ProblemStatementNodeRaw};
+use crate::graph::node::problem::tag::{ProblemTagNode, ProblemTagNodeRaw};
+use crate::graph::node::problem::{
+    ProblemNode, ProblemNodePrivateRaw, ProblemNodePublicRaw, ProblemNodeRaw,
 };
+use crate::graph::node::problem_source::{
+    ProblemSourceNode, ProblemSourceNodePrivateRaw, ProblemSourceNodePublicRaw,
+    ProblemSourceNodeRaw,
+};
+use crate::graph::node::{Node, NodeRaw};
+use crate::{db, Result};
 use redis::Commands;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
-use crate::graph::node::problem_source::{ProblemSourceNode, ProblemSourceNodePrivateRaw, ProblemSourceNodePublicRaw, ProblemSourceNodeRaw};
+use crate::error::CoreError;
+use crate::graph::action::get_node_type;
 
 pub async fn create_problem(
     db: &DatabaseConnection,
@@ -79,15 +79,122 @@ pub struct ProblemModel {
     pub tag: Vec<ProblemTagNode>,
 }
 
-
-pub async fn create_problem_source(db: &DatabaseConnection, name: &str, iden: &str) -> Result<ProblemSourceNode> {
+pub async fn create_problem_source(
+    db: &DatabaseConnection,
+    name: &str,
+    iden: &str,
+) -> Result<ProblemSourceNode> {
     ProblemSourceNodeRaw {
         public: ProblemSourceNodePublicRaw {
             name: name.to_string(),
             iden: iden.to_string(),
         },
         private: ProblemSourceNodePrivateRaw {},
-    }.save(db).await
+    }
+    .save(db)
+    .await
+}
+
+pub async fn create_problem_iden(
+    db: &DatabaseConnection,
+    problem_source: &str,
+    iden: &str,
+    problem_node_or_statement_id: i64,
+) -> Result<IdenNode> {
+    use db::entity::node::problem_source::Column as ProblemSourceColumn;
+    let iden_node = IdenNodeRaw {
+        public: IdenNodePublicRaw {
+            iden: iden.to_string(),
+        },
+        private: IdenNodePrivateRaw {},
+    }
+    .save(db)
+    .await?;
+    let problem_source_node =
+        ProblemSourceNode::from_db_filter(db, ProblemSourceColumn::Iden.eq(problem_source)).await?;
+    IdenEdgeRaw {
+        u: problem_source_node[0].node_id,
+        v: iden_node.node_id,
+        iden: iden.to_string(),
+    }
+    .save(db)
+    .await?;
+    IdenEdgeRaw {
+        u: iden_node.node_id,
+        v: problem_node_or_statement_id,
+        iden: iden.to_string(),
+    }
+    .save(db)
+    .await?;
+    Ok(iden_node)
+}
+
+
+#[async_recursion(?Send)]
+pub async fn get_end_iden(db: &DatabaseConnection, iden: &str, id: i64) -> Result<i64> {
+    use db::entity::node::iden::Column as IdenColumn;
+    use db::entity::node::iden::Entity as IdenEntity;
+    let mut now_iden = "".to_string();
+    for i in 0..iden.len() {
+        now_iden.push(iden.chars().nth(i).unwrap());
+        let result = IdenEdgeQuery::get_v_filter(
+            id,
+            IdenColumn::Iden.eq(now_iden.as_str()),
+            db,
+        ).await?;
+        if !result.is_empty() {
+            let next_iden = iden[i + 1..].to_string();
+            let result = get_end_iden(db, &next_iden, result[0]).await?;
+            if result != 0 {
+                return Ok(result);
+            }
+        }
+    }
+    Ok(0)
+}
+
+/**
+Result<(ProblemModel, i64)>: 最终题目的模型，选中的题面(若指向题目则返回problem_id）。
+
+*/
+pub async fn get_problem(db: &DatabaseConnection, redis: &mut redis::Connection, iden: &str) -> Result<(ProblemModel, i64)> {
+    #[derive(Deserialize, Serialize, Debug, Clone)]
+    struct ProblemIden {
+        problem_node_or_statement_id: i64,
+    }
+    use db::entity::node::problem_source::Column as ProblemSourceColumn;
+    let mut saved = false;
+    let node_id = 'scope: {
+        if let Ok(value) = redis.get::<_, String>(format!("pi_{}", iden)) {
+            if let Ok(problem_model) = serde_json::from_str::<ProblemIden>(value.as_str()) {
+                saved = true;
+                break 'scope problem_model.problem_node_or_statement_id;
+            }
+        }
+        let mut now_iden = "".to_string();
+        for i in 0..iden.len() {
+            now_iden.push(iden.chars().nth(i).unwrap());
+            let result = ProblemSourceNode::from_db_filter(db, ProblemSourceColumn::Iden.eq(now_iden.as_str())).await?;
+            if !result.is_empty() {
+                let problem_source_node = result[0].clone();
+                let next_iden = iden[i + 1..].to_string();
+                let result = get_end_iden(db, &next_iden, problem_source_node.node_id).await?;
+                if result != 0 {
+                    break 'scope result;
+                }
+            }
+        }
+        -1
+    };
+    if node_id == -1 {
+        return Err(CoreError::NotFound("Problem not found".to_string()));
+    }
+    let node_type = get_node_type(db, node_id).await?;
+    if node_type == "problem_statement" {
+        // let problem_node = ProblemStatementEdgeQuery::get_u()
+        // get u.
+    }
+    Ok((view_problem(db, redis, node_id).await?, node_id))
 }
 
 pub async fn view_problem(
@@ -95,14 +202,14 @@ pub async fn view_problem(
     redis: &mut redis::Connection,
     problem_node_id: i64,
 ) -> Result<ProblemModel> {
-    if let Ok(value) = redis.get::<_, String>(format!("problem_{}", problem_node_id)) {
+    if let Ok(value) = redis.get::<_, String>(format!("p_{}", problem_node_id)) {
         if let Ok(problem_model) = serde_json::from_str::<ProblemModel>(value.as_str()) {
             return Ok(problem_model);
         }
     }
     let problem_node = ProblemNode::from_db(db, problem_node_id).await?;
-    let problem_statement_node_id: Vec<i64> = edge::problem_statement::Entity::find()
-        .filter(edge::problem_statement::Column::UNodeId.eq(problem_node.node_id))
+    let problem_statement_node_id: Vec<i64> = problem_statement::Entity::find()
+        .filter(problem_statement::Column::UNodeId.eq(problem_node.node_id))
         .all(db)
         .await?
         .into_iter()
@@ -111,13 +218,12 @@ pub async fn view_problem(
     let mut problem_statement_node = vec![];
     for node_id in problem_statement_node_id {
         let statement_node = ProblemStatementNode::from_db(db, node_id).await?;
-        let problem_limit_node = ProblemLimitEdgeQuery::get_v(statement_node.node_id, db).await?;
-        let problem_limit_node = problem_limit_node[0];
+        let problem_limit_node = ProblemLimitEdgeQuery::get_v(statement_node.node_id, db).await?[0];
         let problem_limit_node = ProblemLimitNode::from_db(db, problem_limit_node).await?;
         problem_statement_node.push((statement_node, problem_limit_node));
     }
-    let tag_nodes: Vec<i64> = edge::problem_tag::Entity::find()
-        .filter(edge::problem_tag::Column::UNodeId.eq(problem_node.node_id))
+    let tag_nodes: Vec<i64> = problem_tag::Entity::find()
+        .filter(problem_tag::Column::UNodeId.eq(problem_node.node_id))
         .all(db)
         .await?
         .into_iter()
@@ -129,12 +235,12 @@ pub async fn view_problem(
         tag.push(tag_node);
     }
     let problem_model = ProblemModel {
-        problem_node: problem_node,
+        problem_node,
         problem_statement_node,
         tag,
     };
     let serialized = serde_json::to_string(&problem_model)?;
-    redis.set::<_, _, ()>(format!("problem_{}", problem_node_id), serialized)?;
-    redis.expire::<_, ()>(format!("problem_{}", problem_node_id), 3600)?;
+    redis.set::<_, _, ()>(format!("p_{}", problem_node_id), serialized)?;
+    redis.expire::<_, ()>(format!("p_{}", problem_node_id), 3600)?;
     Ok(problem_model)
 }

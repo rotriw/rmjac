@@ -17,5 +17,8 @@ lazy_static! {
     pub static ref SAVED_NODE_PATH_LIST: Mutex<HashMap<String, Vec<i64>>> =
         Mutex::new(HashMap::new());
     pub static ref SAVED_NODE_CIRCLE_ID: Mutex<i32> = Mutex::new(0);
-    pub static ref DEFAULT_NODES: Mutex<DefaultNodes> = Mutex::new(DefaultNodes { guest_user_node:  -1, default_strategy_node: -1});
+    pub static ref DEFAULT_NODES: Mutex<DefaultNodes> = Mutex::new(DefaultNodes {
+        guest_user_node: -1,
+        default_strategy_node: -1
+    });
 }

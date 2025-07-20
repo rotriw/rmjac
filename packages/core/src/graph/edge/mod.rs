@@ -3,6 +3,7 @@ use crate::Result;
 use sea_orm::{
     ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
 };
+use sea_orm::sea_query::IntoCondition;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EdgeType {
@@ -17,6 +18,7 @@ impl<'a> From<EdgeType> for &'a str {
     }
 }
 
+pub mod iden;
 pub mod perm_manage;
 pub mod perm_view;
 pub mod problem_limit;
@@ -28,6 +30,15 @@ pub trait EdgeQuery {
         u: i64,
         db: &DatabaseConnection,
     ) -> impl std::future::Future<Output = Result<Vec<i64>>>;
+
+    fn get_v_filter<T: IntoCondition>(
+        u: i64,
+        filter: T,
+        db: &DatabaseConnection,
+    ) -> impl std::future::Future<Output = Result<Vec<i64>>>
+    where
+        Self: Sized;
+
     fn get_edge_type() -> &'static str;
     fn check_perm(perm_a: i64, perm_b: i64) -> bool {
         // perm_b require perm_A ?

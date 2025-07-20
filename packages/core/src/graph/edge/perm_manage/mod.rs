@@ -1,14 +1,3 @@
-use crate::{
-    db::entity::edge::{self, perm_manage},
-    graph::edge::{EdgeQuery, EdgeQueryPerm, EdgeRaw},
-    Result,
-};
-use enum_const::EnumConst;
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
-use strum::IntoEnumIterator;
-use strum_macros::EnumIter;
-use tap::Conv;
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct PermManageEdge {
     pub id: i64,
@@ -47,32 +36,32 @@ impl From<ManagePermRaw> for i32 {
                     res |= i.get_const_isize().unwrap() as i32;
                 }
                 res
-            },
+            }
             ManagePermRaw::Perms(perms) => {
                 let mut res = 0;
                 for perm in perms {
                     res |= perm.get_const_isize().unwrap() as i32;
                 }
                 res
-            },
+            }
         }
     }
 }
 
-impl EdgeRaw<PermManageEdge, perm_manage::Model, perm_manage::ActiveModel> for PermManageEdgeRaw {
+impl EdgeRaw<PermManageEdge, Model, ActiveModel> for PermManageEdgeRaw {
     fn get_edge_type(&self) -> &str {
         "perm_manage"
     }
 
-    fn get_edge_id_column(&self) ->  <<perm_manage::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
-        perm_manage::Column::EdgeId
+    fn get_edge_id_column(&self) ->  <<ActiveModel as sea_orm::ActiveModelTrait>::Entity as EntityTrait>::Column {
+        Column::EdgeId
     }
 }
 
-impl From<PermManageEdgeRaw> for perm_manage::ActiveModel {
+impl From<PermManageEdgeRaw> for ActiveModel {
     fn from(raw: PermManageEdgeRaw) -> Self {
         use sea_orm::ActiveValue::{NotSet, Set};
-        perm_manage::ActiveModel {
+        ActiveModel {
             edge_id: NotSet,
             u_node_id: Set(raw.u),
             v_node_id: Set(raw.v),
@@ -81,14 +70,13 @@ impl From<PermManageEdgeRaw> for perm_manage::ActiveModel {
     }
 }
 
-impl From<perm_manage::Model> for PermManageEdge {
-    fn from(model: perm_manage::Model) -> Self {
+impl From<Model> for PermManageEdge {
+    fn from(model: Model) -> Self {
         let perms: Perms = model.perm.into();
-
         PermManageEdge {
             id: model.edge_id,
             u: model.u_node_id,
-            v: model.v_node_id,
+             v: model.v_node_id,
             perms: perms.0,
         }
     }
@@ -129,16 +117,24 @@ impl From<&[ManagePerm]> for Perms {
         Perms(perms.to_vec())
     }
 }
-
 pub struct PermManageEdgeQuery;
 
 impl EdgeQuery for PermManageEdgeQuery {
     async fn get_v(u: i64, db: &DatabaseConnection) -> Result<Vec<i64>> {
-        let res = edge::perm_manage::Entity::find()
-            .filter(edge::perm_manage::Column::UNodeId.eq(u))
+        let res = Entity::find()
+            .filter(Column::UNodeId.eq(u))
             .all(db)
             .await?;
         Ok(res.into_iter().map(|x| x.v_node_id).collect())
+    }
+
+    async fn get_v_filter<T: IntoCondition>(u: i64, filter: T, db: &DatabaseConnection) -> Result<Vec<i64>> {
+        let edges = Entity::find()
+            .filter(filter)
+            .filter(Column::UNodeId.eq(u))
+            .all(db)
+            .await?;
+        Ok(edges.into_iter().map(|edge| edge.u_node_id).collect())
     }
 
     fn get_edge_type() -> &'static str {
@@ -148,8 +144,8 @@ impl EdgeQuery for PermManageEdgeQuery {
 
 impl EdgeQueryPerm for PermManageEdgeQuery {
     async fn get_perm_v(u: i64, db: &DatabaseConnection) -> Result<Vec<(i64, i64)>> {
-        let edges = edge::perm_manage::Entity::find()
-            .filter(edge::perm_manage::Column::UNodeId.eq(u))
+        let edges = Entity::find()
+            .filter(Column::UNodeId.eq(u))
             .all(db)
             .await?;
         Ok(edges
@@ -158,3 +154,13 @@ impl EdgeQueryPerm for PermManageEdgeQuery {
             .collect())
     }
 }
+
+use crate::db::entity::edge::perm_manage::{ActiveModel, Model, Entity, Column};
+use crate::graph::edge::{EdgeQuery, EdgeQueryPerm, EdgeRaw};
+use crate::Result;
+use enum_const::EnumConst;
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::sea_query::IntoCondition;
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
+use tap::Conv;

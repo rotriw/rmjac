@@ -6,8 +6,23 @@ use macro_db_init::table_create;
 use sea_orm::{ConnectOptions, Database};
 use sea_orm_migration::prelude::*;
 
-use crate::{db::iden, error::CoreError, graph::{edge::{perm_view::{PermViewEdgeRaw, ViewPerm}, EdgeRaw}, node::{pages::{PagesNodePrivateRaw, PagesNodePublicRaw, PagesNodeRaw}, perm_group::{PermGroupNodePrivateRaw, PermGroupNodePublicRaw, PermGroupNodeRaw}, user::{UserNodePrivateRaw, UserNodePublicRaw, UserNodeRaw}, NodeRaw}}};
 use crate::graph::edge::perm_view::ViewPermRaw;
+use crate::{
+    db::iden,
+    error::CoreError,
+    graph::{
+        edge::{
+            perm_view::{PermViewEdgeRaw, ViewPerm},
+            EdgeRaw,
+        },
+        node::{
+            pages::{PagesNodePrivateRaw, PagesNodePublicRaw, PagesNodeRaw},
+            perm_group::{PermGroupNodePrivateRaw, PermGroupNodePublicRaw, PermGroupNodeRaw},
+            user::{UserNodePrivateRaw, UserNodePublicRaw, UserNodeRaw},
+            NodeRaw,
+        },
+    },
+};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -66,7 +81,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             NodeId: big_integer not_null primary_key,
             Name: text not_null,
             Iden: text not_null,
-        })
+        }),
     );
     tables.insert(
         format!("node_pages"),
@@ -103,7 +118,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         table_create!(iden::node::iden::Iden, {
             NodeId: big_integer not_null primary_key,
             Iden: text not_null,
-        })
+        }),
     );
     tables.insert(
         format!("edge"),
@@ -153,6 +168,15 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             EdgeId: big_integer not_null primary_key,
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
+        }),
+    );
+    tables.insert(
+        format!("edge_iden"),
+        table_create!(iden::edge::iden::Iden, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
+
         }),
     );
     return tables;
@@ -361,14 +385,22 @@ pub async fn init(
         let home_page = PagesNodeRaw {
             iden: "home".to_string(),
             public: PagesNodePublicRaw {},
-            private: PagesNodePrivateRaw { name: "home".to_string()},
-        }.save(&db).await?;
+            private: PagesNodePrivateRaw {
+                name: "home".to_string(),
+            },
+        }
+        .save(&db)
+        .await?;
         log::info!("Creating about page");
         let about_page = PagesNodeRaw {
             iden: "about".to_string(),
             public: PagesNodePublicRaw {},
-            private: PagesNodePrivateRaw { name: "about".to_string()},
-        }.save(&db).await?;
+            private: PagesNodePrivateRaw {
+                name: "about".to_string(),
+            },
+        }
+        .save(&db)
+        .await?;
         default_pages.push(home_page.node_id);
         default_pages.push(about_page.node_id);
     } else {
@@ -380,15 +412,21 @@ pub async fn init(
             iden: "default".to_string(),
             service: "default".to_string(),
             public: PermGroupNodePublicRaw {},
-            private: PermGroupNodePrivateRaw { name: "default strategy".to_string() },
-        }.save(&db).await?;
+            private: PermGroupNodePrivateRaw {
+                name: "default strategy".to_string(),
+            },
+        }
+        .save(&db)
+        .await?;
         log::info!("Perm group -> default pages");
         for i in default_pages.clone() {
             PermViewEdgeRaw {
                 u: default_strategy.node_id,
                 v: i,
                 perms: ViewPermRaw::Perms(vec![ViewPerm::ViewPublic, ViewPerm::ReadProblem]),
-            }.save(&db).await?;
+            }
+            .save(&db)
+            .await?;
         }
     } else {
         log::warn!("Skipping default perm group creation, This may lead to unexpected behavior.");
@@ -408,22 +446,32 @@ pub async fn init(
             private: UserNodePrivateRaw {
                 password: "".to_string(),
             },
-        }.save(&db).await?;
+        }
+        .save(&db)
+        .await?;
         guest_user_id = guest_user.node_id;
     } else {
         log::warn!("Skipping default user creation, This may lead to unexpected behavior.");
     }
-    if up.contains(&"all") || (up.contains(&"node_perm_group") && up.contains(&"edge_perm_view") && up.contains(&"node_pages")) {
+    if up.contains(&"all")
+        || (up.contains(&"node_perm_group")
+            && up.contains(&"edge_perm_view")
+            && up.contains(&"node_pages"))
+    {
         log::info!("default user -> default pages");
         for i in default_pages {
             PermViewEdgeRaw {
                 u: guest_user_id,
                 v: i,
                 perms: ViewPermRaw::Perms(vec![ViewPerm::ViewPublic, ViewPerm::ReadProblem]),
-            }.save(&db).await?;
+            }
+            .save(&db)
+            .await?;
         }
     } else {
-        log::warn!("Skipping default perm view edge creation, This may lead to unexpected behavior.");
+        log::warn!(
+            "Skipping default perm view edge creation, This may lead to unexpected behavior."
+        );
     }
     log::info!("Database migrated");
     Ok(())
