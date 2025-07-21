@@ -1,6 +1,3 @@
-use crate::db::entity::edge::problem_statement::{ActiveModel, Column, Entity, Model};
-use crate::graph::edge::{Edge, EdgeQuery, EdgeRaw};
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProblemStatementEdge {
     pub id: i64,
@@ -64,3 +61,6 @@ impl EdgeQuery<ActiveModel, Model, Entity, ProblemStatementEdge> for ProblemStat
         "problem_statement"
     }
 }
+
+use crate::db::entity::edge::problem_statement::{ActiveModel, Column, Entity, Model};
+use crate::graph::edge::{Edge, EdgeQuery, EdgeRaw};

@@ -1,7 +1,3 @@
-use crate::db::entity::edge::iden::{ActiveModel, Column, Entity, Model};
-use crate::graph::edge::Edge;
-use crate::graph::edge::{EdgeQuery, EdgeRaw};
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct IdenEdge {
     pub id: i64,
@@ -55,3 +51,7 @@ impl EdgeQuery<ActiveModel, Model, Entity, IdenEdge> for IdenEdgeQuery {
         "iden"
     }
 }
+
+use crate::db::entity::edge::iden::{ActiveModel, Column, Entity, Model};
+use crate::graph::edge::Edge;
+use crate::graph::edge::{EdgeQuery, EdgeRaw};

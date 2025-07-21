@@ -1,14 +1,3 @@
-use crate::db::entity::edge::perm_view::{ActiveModel, Column, Entity, Model};
-use crate::graph::edge::EdgeQuery;
-use crate::graph::edge::EdgeRaw;
-use crate::graph::edge::{Edge, EdgeQueryPerm};
-use crate::utils::perm::Perm;
-use crate::Result;
-use enum_const::EnumConst;
-use sea_orm::DatabaseConnection;
-use strum::IntoEnumIterator;
-use strum_macros::EnumIter;
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct PermViewEdge {
     pub id: i64,
@@ -169,3 +158,14 @@ impl EdgeQueryPerm for PermViewEdgeQuery {
             .collect())
     }
 }
+
+use crate::db::entity::edge::perm_view::{ActiveModel, Column, Entity, Model};
+use crate::graph::edge::EdgeQuery;
+use crate::graph::edge::EdgeRaw;
+use crate::graph::edge::{Edge, EdgeQueryPerm};
+use crate::utils::perm::Perm;
+use crate::Result;
+use enum_const::EnumConst;
+use sea_orm::DatabaseConnection;
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;

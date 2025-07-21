@@ -1,6 +1,3 @@
-use crate::db::entity::edge::problem_limit::{ActiveModel, Column, Entity, Model};
-use crate::graph::edge::{Edge, EdgeQuery, EdgeRaw};
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProblemLimitEdge {
     pub id: i64,
@@ -60,3 +57,6 @@ impl EdgeQuery<ActiveModel, Model, Entity, ProblemLimitEdge> for ProblemLimitEdg
         "problem_limit"
     }
 }
+
+use crate::db::entity::edge::problem_limit::{ActiveModel, Column, Entity, Model};
+use crate::graph::edge::{Edge, EdgeQuery, EdgeRaw};

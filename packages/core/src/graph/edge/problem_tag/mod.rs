@@ -1,6 +1,3 @@
-use crate::db::entity::edge::problem_tag;
-use crate::graph::edge::EdgeRaw;
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProblemTagEdge {
     pub id: i64,
@@ -36,3 +33,6 @@ impl From<ProblemTagEdgeRaw> for problem_tag::ActiveModel {
 }
 
 pub struct ProblemTagEdgeQuery;
+
+use crate::db::entity::edge::problem_tag;
+use crate::graph::edge::EdgeRaw;
