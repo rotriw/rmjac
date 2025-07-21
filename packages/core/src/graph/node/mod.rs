@@ -82,7 +82,7 @@ where
                 .one(db)
                 .await?
                 .ok_or_else(|| {
-                    CoreError::NotFound(format!("Node with id {} not found", node_id))
+                    CoreError::NotFound(format!("Node with id {node_id} not found"))
                 })?;
             Ok(model.conv::<DbModel>().into())
         }

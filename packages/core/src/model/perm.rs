@@ -11,7 +11,7 @@ pub async fn check_perm<
     DbModel,
     DbEntity,
     EdgeA,
-    T: EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm,
+    T,
     K: Into<i64>,
 >(
     db: &DatabaseConnection,
@@ -34,7 +34,7 @@ where
     <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
     EdgeA: Edge<DbActive, DbModel, DbEntity>,
     DbEntity: EntityTrait,
-    T: Sized + Send + Sync + Clone,
+    T: Sized + Send + Sync + Clone + EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm,
 {
     has_path(db, u, v, &edge_type, perm.into()).await
 }

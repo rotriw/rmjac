@@ -5,6 +5,7 @@ use sea_orm::{
 };
 use tap::Conv;
 
+#[allow(clippy::module_inception)]
 pub mod edge;
 pub mod perm_manage;
 pub mod perm_view;

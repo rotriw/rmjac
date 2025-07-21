@@ -16,7 +16,7 @@ pub fn run(
     down: Option<String>,
     log_level: Option<String>,
     mode: Option<String>,
-) -> () {
+) {
     let mode = mode.unwrap_or("prod".to_string());
     let url = url.unwrap_or("postgresql://localhost:5432".to_string());
     let schema = schema.unwrap_or("public".to_string());
@@ -35,6 +35,5 @@ pub fn run(
     let data = core::db::init::init(url.as_str(), schema.as_str(), mode.as_str(), up, down);
     if data.is_err() {
         log::error!("Database initialization failed: {:?}", data.err());
-        return;
     }
 }

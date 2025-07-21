@@ -132,7 +132,7 @@ pub struct UserBeforeCreate {
 pub async fn before_create(path: web::Query<UserBeforeCreate>) -> ResultHandler<String> {
     let (challenge_text, challenge_img) = gen_captcha(path.dark_mode);
     let time = chrono::Utc::now().naive_utc();
-    let code = (*CONFIG.lock().unwrap()).secret_challenge_code.clone();
+    let code = CONFIG.lock().unwrap().secret_challenge_code.clone();
     let challenge_code = gen_verify_captcha(
         &challenge_text,
         path.email.as_str(),

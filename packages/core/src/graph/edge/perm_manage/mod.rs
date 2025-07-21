@@ -140,7 +140,7 @@ impl EdgeQueryPerm for PermManageEdgeQuery {
         let edges = Entity::find().filter(Column::UNodeId.eq(u)).all(db).await?;
         Ok(edges
             .into_iter()
-            .map(|edge| (edge.v_node_id, edge.perm.into()))
+            .map(|edge| (edge.v_node_id, edge.perm))
             .collect())
     }
 }

@@ -57,8 +57,7 @@ pub async fn create_default_user(
     let default_node_id = env::DEFAULT_NODES
         .lock()
         .unwrap()
-        .default_strategy_node
-        .clone();
+        .default_strategy_node;
     if default_node_id != -1 {
         PermViewEdgeRaw {
             u: result.node_id,
@@ -74,7 +73,7 @@ pub async fn create_default_user(
 }
 
 pub async fn check_iden_exists(db: &DatabaseConnection, iden: &str) -> Result<bool, CoreError> {
-    let exists = entity::node::user::check_iden_exists(&db, iden).await?;
+    let exists = entity::node::user::check_iden_exists(db, iden).await?;
     Ok(exists)
 }
 
@@ -87,11 +86,11 @@ pub async fn user_login(
 ) -> Result<(UserNode, TokenNode), CoreError> {
     use db::entity::node::token::gen_token;
 
-    let user = get_user_by_iden(&db, iden).await;
+    let user = get_user_by_iden(db, iden).await;
     let user = if let Ok(user) = user {
         user
     } else {
-        get_user_by_email(&db, iden).await?
+        get_user_by_email(db, iden).await?
     }
     .conv::<UserNode>();
     if user.private.password != encode_password(&password.to_string()) {
@@ -131,5 +130,5 @@ pub async fn user_login(
     }
     .save(db)
     .await?;
-    Ok((user.into(), token.into()))
+    Ok((user, token))
 }

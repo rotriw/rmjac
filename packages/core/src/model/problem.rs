@@ -161,7 +161,7 @@ pub async fn get_problem(
     use db::entity::node::problem_source::Column as ProblemSourceColumn;
     let mut saved = false;
     let node_id = 'scope: {
-        if let Ok(value) = redis.get::<_, String>(format!("pi_{}", iden)) {
+        if let Ok(value) = redis.get::<_, String>(format!("pi_{iden}")) {
             if let Ok(problem_model) = value.as_str().parse::<i64>() {
                 saved = true;
                 break 'scope problem_model;
@@ -190,8 +190,7 @@ pub async fn get_problem(
         return Err(CoreError::NotFound("Problem not found".to_string()));
     }
     if !saved {
-        redis.set::<_, _, ()>(format!("pi_{}", iden), node_id.to_string())?;
-        redis.expire::<_, ()>(format!("pi_{}", iden), 3600)?;
+        redis.set::<_, _, ()>(format!("pi_{iden}"), node_id.to_string())?;
     }
     let node_type = get_node_type(db, node_id).await?;
     let problem_node = if node_type == "problem_statement" {
@@ -207,7 +206,7 @@ pub async fn view_problem(
     redis: &mut redis::Connection,
     problem_node_id: i64,
 ) -> Result<ProblemModel> {
-    if let Ok(value) = redis.get::<_, String>(format!("p_{}", problem_node_id)) {
+    if let Ok(value) = redis.get::<_, String>(format!("p_{problem_node_id}")) {
         if let Ok(problem_model) = serde_json::from_str::<ProblemModel>(value.as_str()) {
             return Ok(problem_model);
         }
@@ -245,7 +244,7 @@ pub async fn view_problem(
         tag,
     };
     let serialized = serde_json::to_string(&problem_model)?;
-    redis.set::<_, _, ()>(format!("p_{}", problem_node_id), serialized)?;
-    redis.expire::<_, ()>(format!("p_{}", problem_node_id), 3600)?;
+    redis.set::<_, _, ()>(format!("p_{problem_node_id}"), serialized)?;
+    redis.expire::<_, ()>(format!("p_{problem_node_id}"), 3600)?;
     Ok(problem_model)
 }

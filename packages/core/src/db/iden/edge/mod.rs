@@ -1,3 +1,4 @@
+#[allow(clippy::module_inception)]
 pub mod edge;
 pub mod iden;
 pub mod perm_manage;

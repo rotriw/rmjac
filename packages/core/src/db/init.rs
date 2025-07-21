@@ -30,14 +30,14 @@ pub struct Migration;
 fn get_tables() -> HashMap<String, TableCreateStatement> {
     let mut tables = HashMap::new();
     tables.insert(
-        format!("node"),
+        "node".to_string(),
         table_create!(iden::node::node::Node, {
             NodeId: big_integer not_null primary_key auto_increment,
             NodeType: text not_null,
         }),
     );
     tables.insert(
-        format!("node_user"),
+        "node_user".to_string(),
         table_create!(iden::node::user::User, {
             NodeId: big_integer not_null primary_key,
             UserName: text not_null,
@@ -54,7 +54,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
-        format!("node_token"),
+        "node_token".to_string(),
         table_create!(iden::node::token::Token, {
             NodeId: big_integer not_null primary_key,
             Token: text not_null,
@@ -65,7 +65,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
-        format!("node_problem_statement"),
+        "node_problem_statement".to_string(),
         table_create!(iden::node::problem_statement::ProblemStatement, {
             NodeId: big_integer not_null primary_key,
             Iden: text not_null,
@@ -76,7 +76,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
-        format!("node_problem_source"),
+        "node_problem_source".to_string(),
         table_create!(iden::node::problem_source::ProblemSource, {
             NodeId: big_integer not_null primary_key,
             Name: text not_null,
@@ -84,21 +84,21 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
-        format!("node_pages"),
+        "node_pages".to_string(),
         table_create!(iden::node::pages::Pages, {
             NodeId: big_integer not_null primary_key,
             Iden: text not_null,
         }),
     );
     tables.insert(
-        format!("node_perm_group"),
+        "node_perm_group".to_string(),
         table_create!(iden::node::perm_group::PermGroup, {
             NodeId: big_integer not_null primary_key,
             Iden: text not_null,
         }),
     );
     tables.insert(
-        format!("node_problem_limit"),
+        "node_problem_limit".to_string(),
         table_create!(iden::node::problem_limit::ProblemLimit, {
             NodeId: big_integer not_null primary_key,
             TimeLimit: big_integer not_null,
@@ -106,7 +106,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
-        format!("node_problem_tag"),
+        "node_problem_tag".to_string(),
         table_create!(iden::node::problem_tag::ProblemTag, {
             NodeId: big_integer not_null primary_key,
             TagName: text not_null,
@@ -114,21 +114,21 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
-        format!("node_iden"),
+        "node_iden".to_string(),
         table_create!(iden::node::iden::Iden, {
             NodeId: big_integer not_null primary_key,
             Iden: text not_null,
         }),
     );
     tables.insert(
-        format!("edge"),
+        "edge".to_string(),
         table_create!(iden::edge::edge::Edge, {
             EdgeId: big_integer not_null primary_key auto_increment,
             EdgeType: text not_null,
         }),
     );
     tables.insert(
-        format!("edge_perm_view"),
+        "edge_perm_view".to_string(),
         table_create!(iden::edge::perm_view::PermView, {
             EdgeId: big_integer not_null primary_key,
             UNodeId: big_integer not_null,
@@ -137,7 +137,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
-        format!("edge_perm_manage"),
+        "edge_perm_manage".to_string(),
         table_create!(iden::edge::perm_manage::PermManage, {
             EdgeId: big_integer not_null primary_key,
             UNodeId: big_integer not_null,
@@ -146,7 +146,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
-        format!("edge_problem_statement"),
+        "edge_problem_statement".to_string(),
         table_create!(iden::edge::problem_statement::ProblemStatement, {
             EdgeId: big_integer not_null primary_key,
             UNodeId: big_integer not_null,
@@ -155,7 +155,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
-        format!("edge_problem_limit"),
+        "edge_problem_limit".to_string(),
         table_create!(iden::edge::problem_limit::ProblemLimit, {
             EdgeId: big_integer not_null primary_key,
             UNodeId: big_integer not_null,
@@ -163,7 +163,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
-        format!("edge_problem_tag"),
+        "edge_problem_tag".to_string(),
         table_create!(iden::edge::problem_tag::ProblemTag, {
             EdgeId: big_integer not_null primary_key,
             UNodeId: big_integer not_null,
@@ -171,7 +171,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
-        format!("edge_iden"),
+        "edge_iden".to_string(),
         table_create!(iden::edge::iden::Iden, {
             EdgeId: big_integer not_null primary_key,
             UNodeId: big_integer not_null,
@@ -179,124 +179,124 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
 
         }),
     );
-    return tables;
+    tables
 }
 
 fn get_drop_tables() -> HashMap<String, TableDropStatement> {
     let mut tables = HashMap::new();
     tables.insert(
-        format!("node"),
+        "node".to_string(),
         Table::drop()
             .table(iden::node::node::Node::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("node_user"),
+        "node_user".to_string(),
         Table::drop()
             .table(iden::node::user::User::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("node_token"),
+        "node_token".to_string(),
         Table::drop()
             .table(iden::node::token::Token::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("node_problem_statement"),
+        "node_problem_statement".to_string(),
         Table::drop()
             .table(iden::node::problem_statement::ProblemStatement::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("node_pages"),
+        "node_pages".to_string(),
         Table::drop()
             .table(iden::node::pages::Pages::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("node_perm_group"),
+        "node_perm_group".to_string(),
         Table::drop()
             .table(iden::node::perm_group::PermGroup::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("node_problem_limit"),
+        "node_problem_limit".to_string(),
         Table::drop()
             .table(iden::node::problem_limit::ProblemLimit::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("node_problem_tag"),
+        "node_problem_tag".to_string(),
         Table::drop()
             .table(iden::node::problem_tag::ProblemTag::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("node_problem_source"),
+        "node_problem_source".to_string(),
         Table::drop()
             .table(iden::node::problem_source::ProblemSource::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("node_iden"),
+        "node_iden".to_string(),
         Table::drop()
             .table(iden::node::iden::Iden::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("edge"),
+        "edge".to_string(),
         Table::drop()
             .table(iden::edge::edge::Edge::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("edge_perm_view"),
+        "edge_perm_view".to_string(),
         Table::drop()
             .table(iden::edge::perm_view::PermView::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("edge_perm_manage"),
+        "edge_perm_manage".to_string(),
         Table::drop()
             .table(iden::edge::perm_manage::PermManage::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("edge_problem_statement"),
+        "edge_problem_statement".to_string(),
         Table::drop()
             .table(iden::edge::problem_statement::ProblemStatement::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("edge_problem_limit"),
+        "edge_problem_limit".to_string(),
         Table::drop()
             .table(iden::edge::problem_limit::ProblemLimit::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        format!("edge_problem_tag"),
+        "edge_problem_tag".to_string(),
         Table::drop()
             .table(iden::edge::problem_tag::ProblemTag::Table)
             .if_exists()
             .to_owned(),
     );
-    return tables;
+    tables
 }
 
 #[async_trait]
@@ -304,7 +304,7 @@ impl MigrationTrait for Migration {
     async fn up(&self, manage: &SchemaManager) -> Result<(), DbErr> {
         let tables = get_tables();
         for (name, table) in tables {
-            log::info!("Creating table: {}", name);
+            log::info!("Creating table: {name}");
             manage.create_table(table).await?;
         }
         Ok(())
@@ -313,7 +313,7 @@ impl MigrationTrait for Migration {
     async fn down(&self, manage: &SchemaManager) -> Result<(), DbErr> {
         let tables = get_drop_tables();
         for (name, table) in tables {
-            log::info!("Dropping table: {}", name);
+            log::info!("Dropping table: {name}");
             manage.drop_table(table).await?;
         }
         Ok(())
@@ -361,7 +361,7 @@ pub async fn init(
         let tables = get_drop_tables();
         for (name, table) in tables {
             if down.contains(&name.as_str()) {
-                log::info!("Dropping table: {}", name);
+                log::info!("Dropping table: {name}");
                 manager.drop_table(table).await?;
             }
         }
@@ -373,7 +373,7 @@ pub async fn init(
         let tables = get_tables();
         for (name, table) in tables {
             if up.contains(&name.as_str()) {
-                log::info!("Creating table: {}", name);
+                log::info!("Creating table: {name}");
                 manager.create_table(table).await?;
             }
         }

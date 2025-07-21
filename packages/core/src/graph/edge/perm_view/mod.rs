@@ -5,7 +5,6 @@ use crate::graph::edge::{Edge, EdgeQueryPerm};
 use crate::utils::perm::Perm;
 use crate::Result;
 use enum_const::EnumConst;
-use sea_orm::ColumnTrait;
 use sea_orm::DatabaseConnection;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;

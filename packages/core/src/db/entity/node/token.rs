@@ -23,8 +23,8 @@ impl ActiveModelBehavior for ActiveModel {}
 pub fn gen_token() -> String {
     use uuid::Uuid;
     let uuid = Uuid::new_v4();
-    let token = uuid.to_string();
-    token
+    
+    uuid.to_string()
 }
 
 impl DbNodeActiveModel<Model, TokenNode> for ActiveModel {}

@@ -35,18 +35,19 @@ macro_rules! path_vis_insert {
     };
 }
 
+#[allow(clippy::too_many_arguments)]
 #[async_recursion(?Send)]
 pub async fn has_path_dfs<
     DbActive,
     DbModel,
     DbEntity,
     EdgeA,
-    T: EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm,
+    T,
 >(
     db: &DatabaseConnection,
     u: i64,
     v: i64,
-    edge_type: &T,
+    _edge_type: &T,
     required_perm: i64,
     ckid: i32,
     step: i64,
@@ -66,7 +67,7 @@ where
     <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
     EdgeA: Edge<DbActive, DbModel, DbEntity>,
     DbEntity: EntityTrait,
-    T: Sized + Send + Sync + Clone,
+    T: Sized + Send + Sync + Clone + EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm,
 {
     if step > max_step {
         return Ok(-1);
@@ -74,8 +75,7 @@ where
     if let Some(x) = SAVED_NODE_PATH
         .lock()
         .unwrap()
-        .get(&(u, T::get_edge_type().to_string()))
-        .and_then(|m| m.get(&u))
+        .get(&(u, T::get_edge_type().to_string())) && let Some(x) = x.get(&v)
     {
         if T::check_perm(required_perm, *x) {
             return Ok(1);
@@ -101,7 +101,7 @@ where
             db,
             ver.0,
             v,
-            edge_type,
+            _edge_type,
             required_perm,
             ckid,
             step + 1,
@@ -127,7 +127,7 @@ pub fn gen_ckid() -> i32 {
         d.remove(&(*ckid));
     }
     d.insert(*ckid, std::collections::HashMap::new());
-    (*ckid).clone()
+    *ckid
 }
 
 pub async fn has_path<
@@ -135,7 +135,7 @@ pub async fn has_path<
     DbModel,
     DbEntity,
     EdgeA,
-    T: EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm,
+    T,
 >(
     db: &DatabaseConnection,
     u: i64,
@@ -157,13 +157,11 @@ where
     <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
     EdgeA: Edge<DbActive, DbModel, DbEntity>,
     DbEntity: EntityTrait,
-    T: Sized + Send + Sync + Clone,
+    T: EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm + Sized + Send + Sync + Clone,
 {
     let empty = vec![];
-    let value = SAVED_NODE_PATH_LIST.lock().unwrap();
-    let data = value.get(T::get_edge_type()).unwrap_or(&empty);
+    let data = SAVED_NODE_PATH_LIST.lock().unwrap().get(T::get_edge_type()).unwrap_or(&empty).clone();
     for path in data {
-        let path = *path;
         if let Some(x) = SAVED_NODE_PATH
             .lock()
             .unwrap()
@@ -185,7 +183,7 @@ where
         }
     }
     let ckid = gen_ckid();
-    Ok(has_path_dfs(&db, u, v, edge_type, required_perm, ckid, 0, 100).await?)
+    has_path_dfs(db, u, v, edge_type, required_perm, ckid, 0, 100).await
 }
 
 // 暂时想不到怎么优化。
@@ -281,8 +279,7 @@ pub async fn get_node_type(db: &DatabaseConnection, node_id: i64) -> Result<Stri
         Ok(node.node_type)
     } else {
         Err(CoreError::NotFound(format!(
-            "Node with id {} not found",
-            node_id
+            "Node with id {node_id} not found"
         )))
     }
 }

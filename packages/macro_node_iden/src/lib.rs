@@ -46,6 +46,7 @@ fn extract_node_type(attrs: &[Attribute], default_name: &str) -> String {
     for attr in attrs {
         if attr.path().is_ident("node_raw") {
             let meta = attr.meta.clone();
+            #[allow(clippy::single_match)]
             match meta {
                 Meta::List(meta_list) => {
                     let tokens = meta_list.tokens;

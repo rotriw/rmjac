@@ -1,5 +1,4 @@
 use crate::db::entity::edge::{edge::create_edge, DbEdgeActiveModel, DbEdgeInfo};
-use crate::db::entity::node::DbNodeActiveModel;
 use crate::error::CoreError;
 use crate::Result;
 use sea_orm::sea_query::IntoCondition;
@@ -14,7 +13,7 @@ pub enum EdgeType {
     PermView,
 }
 
-impl<'a> From<EdgeType> for &'a str {
+impl From<EdgeType> for &str {
     fn from(edge_type: EdgeType) -> Self {
         match edge_type {
             EdgeType::PermView => "perm_view",
@@ -221,7 +220,7 @@ where
                 .one(db)
                 .await?
                 .ok_or_else(|| {
-                    CoreError::NotFound(format!("Edge with id {} not found", edge_id))
+                    CoreError::NotFound(format!("Edge with id {edge_id} not found"))
                 })?;
             Ok(model.conv::<DbModel>().into())
         }

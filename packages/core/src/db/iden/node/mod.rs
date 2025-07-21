@@ -1,4 +1,5 @@
 pub mod iden;
+#[allow(clippy::module_inception)]
 pub mod node;
 pub mod pages;
 pub mod perm_group;

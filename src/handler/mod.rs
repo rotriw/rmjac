@@ -82,7 +82,7 @@ pub async fn main(host: &str, port: u16) -> std::io::Result<()> {
     if data.is_err() {
         log::error!("Failed to start service: {:?}", data.err());
     }
-    log::info!("Server is running on port {}", port);
+    log::info!("Server is running on port {port}");
     HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin()
