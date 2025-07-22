@@ -1,9 +1,12 @@
-use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo};
+pub mod topo;
+
+use crate::db::entity::edge::{self, DbEdgeActiveModel, DbEdgeInfo};
 use crate::db::entity::node::node;
 use crate::env::{
     PATH_VIS, SAVED_NODE_CIRCLE_ID, SAVED_NODE_PATH, SAVED_NODE_PATH_LIST, SAVED_NODE_PATH_REV,
 };
 use crate::error::CoreError;
+use crate::graph::action::topo::TopoGraph;
 use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryPerm};
 use crate::{db, Result};
 use async_recursion::async_recursion;
@@ -52,6 +55,7 @@ pub async fn has_path_dfs<
     ckid: i32,
     step: i64,
     max_step: i64,
+    no_check: bool,
 ) -> Result<i8>
 where
     DbActive: DbEdgeActiveModel<DbModel, EdgeA>
@@ -72,7 +76,7 @@ where
     if step > max_step {
         return Ok(-1);
     }
-    if let Some(x) = SAVED_NODE_PATH
+    if !no_check && let Some(x) = SAVED_NODE_PATH
         .lock()
         .unwrap()
         .get(&(u, T::get_edge_type().to_string())) && let Some(x) = x.get(&v)
@@ -106,6 +110,7 @@ where
             ckid,
             step + 1,
             max_step,
+            no_check
         )
         .await?;
         if val == -1 {
@@ -175,6 +180,7 @@ where
                     .get(&(path, T::get_edge_type().to_string()))
                     .and_then(|m| m.get(&u))
                 {
+                    log::debug!("Cache hit.{u} -> {v}, perm: {x}");
                     if T::check_perm(required_perm, *x) {
                         return Ok(1);
                     }
@@ -183,74 +189,108 @@ where
         }
     }
     let ckid = gen_ckid();
-    has_path_dfs(db, u, v, edge_type, required_perm, ckid, 0, 100).await
+    let mut required_perm = required_perm;
+    while required_perm > 0 {
+        let res = has_path_dfs(db, u, v, edge_type, lowbit(required_perm), ckid, 0, 100, false).await?;
+        if res < 1 {
+            return Ok(res);
+        }
+        required_perm -= lowbit(required_perm);
+    }
+    Ok(1)
 }
 
-// 暂时想不到怎么优化。
-// pub async fn init_spot_forward<T: EdgeQuery + EdgeQueryPerm>(
-//     db: &DatabaseConnection,
-//     edge_type: &T,
-//     spot_node_id: i64,
-//     ckid: i32,
-// ) -> Result<()> {
-//     let mut que = Queue::new();
-//     que.queue(spot_node_id);
-//     while let Some(u)= que.dequeue() {
-//         if path_vis![ckid, u] {
-//             continue;
-//         }
-//         path_vis_insert![ckid, u];
-//         let nv = T::get_perm_v(u, db).await?;
-//         for ver in nv {
-//             if ver.0 == spot_node_id {
-//                 continue;
-//             }
-//             if !T::check_perm(ver.1, 1) {
-//                 continue;
-//             }
-//             if let Some(x) = SAVED_NODE_PATH
-//                  .lock()
-//                 .unwrap()
-//                 .get(&(ver.0, T::get_edge_type().to_string()))
-//             {
-//                 if x.contains_key(&spot_node_id) {
-//                     continue;
-//                 }
-//             }
-//             que.queue(ver.0);
-//         }
-//     }
-//     Ok(())
-// }
+pub fn lowbit(x: i64) -> i64 {
+    x & (-x)
+}
 
-// pub async fn init_spot_reverse<T: EdgeQuery + EdgeQueryPerm>(
-//     db: &DatabaseConnection,
-//     edge_type: &T,
-//     spot_node_id: i64,
-// ) -> Result<()> {
-// }
-
-// pub async fn init_spot<T: EdgeQuery + EdgeQueryPerm>(
-//     db: &DatabaseConnection,
-//     edge_type: &T,
-//     spot_node_id: i64,
-// ) -> Result<()> {
-//     let ckid = gen_ckid();
-//     init_spot_forward(db, edge_type, spot_node_id).await?;
-//     init_spot_reverse(db, edge_type, spot_node_id).await?;
-//     let mut save_path_list = SAVED_NODE_PATH_LIST.lock().unwrap();
-//     if (*save_path_list)
-//         .get_mut(T::get_edge_type())
-//         .is_none()
-//     {
-//         save_path_list.insert(T::get_edge_type().to_string(), vec![]);
-//     }
-//     save_path_list
-//         .get_mut(T::get_edge_type())
-//         .unwrap()
-//         .push(spot_node_id);
-//     Ok(())
-// }
+#[allow(unused_variables)]
+pub async fn init_spot<
+DbActive,
+DbModel,
+DbEntity,
+EdgeA,
+T,
+>(
+    db: &DatabaseConnection,
+    edge_type: &T,
+    spot_node_id: i64,
+    node_number: i64,
+)-> Result<()>
+where
+DbActive: DbEdgeActiveModel<DbModel, EdgeA>
+    + Sized
+    + Send
+    + Sync
+    + ActiveModelTrait
+    + ActiveModelBehavior
+    + DbEdgeInfo,
+DbModel: Into<EdgeA>
+    + From<<<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+<DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
+<DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
+EdgeA: Edge<DbActive, DbModel, DbEntity>,
+DbEntity: EntityTrait,
+T: Sized + Send + Sync + Clone + EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm
+{
+    // 正向建图。
+    let mut edge_data = vec![];
+    log::info!("init spot, node_number: {node_number}");
+    log::info!("start to collect graph data from db");
+    let data = T::get_all(db).await?;
+    log::info!("edge number: {}", data.len());
+    for i in data {
+        edge_data.push((i.0, i.1, i.2));
+    }
+    log::info!("end collected");
+    log::info!("start to run in each perm");
+    for i in T::get_perm_iter() {
+        if i == -1 {
+            continue;
+        }
+        log::info!("start to run perm(number: {i})");
+        log::info!("start to build graph");
+        let (mut graph, mut anti_graph) = (TopoGraph::new(node_number), TopoGraph::new(node_number));
+        for &(u, v, perm) in &edge_data {
+            let perm = i & perm;
+            graph.add_edge(u, v, (perm != 0) as i8);
+            anti_graph.add_edge(v, u, (perm != 0) as i8);
+        }
+        log::info!("end to build graph");
+        log::info!("start to get topo sort");
+        graph.init(spot_node_id);
+        anti_graph.init(spot_node_id);
+        for j in 1..=node_number {
+            let result = graph.result.get(&j).unwrap_or(&0);
+            let anti_result = anti_graph.result.get(&j).unwrap_or(&0);
+            // save graph into SAVED_NODE_PATH
+            if ((*result) as i64) > 0 {
+                *SAVED_NODE_PATH
+                    .lock()
+                    .unwrap()
+                    .entry((spot_node_id, T::get_edge_type().to_string()))
+                    .or_default()
+                    .entry(j).or_insert(0) |= i;
+            }
+            if ((*anti_result) as i64) > 0 {
+                *SAVED_NODE_PATH_REV
+                    .lock()
+                    .unwrap()
+                    .entry((spot_node_id, T::get_edge_type().to_string()))
+                    .or_default()
+                    .entry(j).or_insert(0) |= i;
+            }
+        }
+        log::info!("end to get topo sort");
+    }
+    SAVED_NODE_PATH_LIST
+        .lock()
+        .unwrap()
+        .entry(T::get_edge_type().to_string())
+        .or_default()
+        .push(spot_node_id);
+    Ok(())
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefaultNodes {

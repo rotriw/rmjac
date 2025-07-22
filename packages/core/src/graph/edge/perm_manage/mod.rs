@@ -143,6 +143,19 @@ impl EdgeQueryPerm for PermManageEdgeQuery {
             .map(|edge| (edge.v_node_id, edge.perm))
             .collect())
     }
+
+    fn get_perm_iter() -> impl Iterator<Item = i64> {
+        ManagePerm::iter().map(|perm| perm.get_const_isize().unwrap() as i64)
+    }
+
+    async fn get_all(db: &DatabaseConnection) -> Result<Vec<(i64, i64, i64)>> {
+        let edges = Entity::find().all(db).await?;
+        Ok(edges
+            .into_iter()
+            .map(|edge| (edge.u_node_id, edge.v_node_id, edge.perm))
+            .collect())
+    }
+
 }
 
 use crate::db::entity::edge::perm_manage::{ActiveModel, Column, Entity, Model};

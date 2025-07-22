@@ -12,7 +12,20 @@
 //     env::env_load, utils,
 // };
 
-pub fn run() -> Option<()> {
+use core::{async_run, graph::{action::{has_path, init_spot}, edge::perm_view::{PermViewEdgeQuery, Perms, ViewPerm}}, model::user::create_default_user};
+
+use log::LevelFilter;
+use tap::Conv;
+
+use crate::utils;
+
+pub fn run(log_level: Option<String>) -> Option<()> {
+        let log_level: LevelFilter = log_level
+            .unwrap_or_else(|| "info".to_string())
+            .parse()
+            .unwrap_or(LevelFilter::Info);
+        let _ = utils::logger::setup_logger_with_stdout(log_level);
+
     // let config = config.unwrap_or_else(|| "config.json".to_string());
     /*  let log_level: LevelFilter = log_level
             .unwrap_or_else(|| "info".to_string())
@@ -64,5 +77,22 @@ pub fn run() -> Option<()> {
     //             ViewPerm::All as i64
     //         ).await);
         } */
+    let conn = std::env::var("DB").unwrap(); async_run! {
+        let db = sea_orm::Database::connect(conn).await.unwrap();
+        let _ = core::service::service_start(&db).await;
+        log::warn!("start");
+        /* for i in 1..=20000 {
+            let _ = create_default_user(&db, format!("test_user_{i}").as_str(), format!("test_user_{i}").as_str(), format!("test_user_{i}@126.com").as_str(), format!("example.com/a.png").as_str(), "123456").await;
+        } */
+        init_spot(&db, &PermViewEdgeQuery, 3, 20004).await.unwrap();
+        log::warn!("start");
+        for i in 4..=20000 {
+            let a = has_path(&db, i, 0, &PermViewEdgeQuery, vec![ViewPerm::ReadProblem].conv::<Perms>().into()).await;
+            if i % 1000 == 0 {
+                log::info!("{i} done.");
+            }
+        }
+        log::warn!("end");
+    }
     Some(())
 }

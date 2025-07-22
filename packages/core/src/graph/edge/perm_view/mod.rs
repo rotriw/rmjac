@@ -33,7 +33,9 @@ impl From<ViewPermRaw> for i32 {
             ViewPermRaw::All => {
                 let mut res = 0;
                 for i in ViewPerm::iter() {
-                    res |= i.get_const_isize().unwrap() as i32;
+                    if i != ViewPerm::All {
+                        res |= i.get_const_isize().unwrap() as i32;
+                    }
                 }
                 res
             }
@@ -72,8 +74,6 @@ impl From<PermViewEdgeRaw> for ActiveModel {
         }
     }
 }
-
-use crate::db::entity::edge::perm_view::Column as PermViewColumn;
 
 impl From<Model> for PermViewEdge {
     fn from(model: Model) -> Self {
@@ -149,12 +149,28 @@ impl EdgeQueryPerm for PermViewEdgeQuery {
         use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 
         let edges = PermViewEntity::find()
-            .filter(PermViewColumn::UNodeId.eq(i))
+            .filter(Column::UNodeId.eq(i))
             .all(db)
             .await?;
         Ok(edges
             .into_iter()
             .map(|edge| (edge.v_node_id, edge.perm))
+            .collect())
+    }
+
+    fn get_perm_iter() -> impl Iterator<Item = i64> {
+        ViewPerm::iter().map(|perm| perm.get_const_isize().unwrap() as i64)
+    }
+
+    async fn get_all(db: &DatabaseConnection) -> Result<Vec<(i64, i64, i64)>> {
+        use crate::db::entity::edge::perm_view::Entity as PermViewEntity;
+        use sea_orm::EntityTrait;
+            let edges = PermViewEntity::find()
+            .all(db)
+            .await?;
+        Ok(edges
+            .into_iter()
+            .map(|edge| (edge.u_node_id, edge.v_node_id, edge.perm))
             .collect())
     }
 }

@@ -77,6 +77,7 @@ where
             let node_id_column = Self::get_node_id_column();
             use sea_orm::ColumnTrait;
             use sea_orm::QueryFilter;
+            log::trace!("Querying node with id {node_id}");
             let model = DbEntity::find()
                 .filter(node_id_column.eq(node_id))
                 .one(db)
@@ -98,6 +99,7 @@ where
         async move {
             use sea_orm::QueryFilter;
             use tap::Conv;
+            log::trace!("Querying node with filter");
             let models = DbEntity::find().filter(filter).all(db).await?;
             Ok(models
                 .into_iter()
@@ -115,7 +117,7 @@ where
         async move {
             use tap::Conv;
             let mut new_model = DbNodeActive::new();
-            log::trace!(
+            log::info!(
                 "Modifying node {}: setting {} to {:?}",
                 self.get_node_id(),
                 column.enum_type_name().unwrap_or("unknown"),
@@ -130,7 +132,7 @@ where
 
 pub trait NodeRaw<Node, DbModel, DbNodeActive>
 where
-    Self: Into<DbNodeActive> + Clone,
+    Self: Into<DbNodeActive> + Clone + Debug,
     DbModel: Into<Node>
         + From<<<DbNodeActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
     DbNodeActive: DbNodeActiveModel<DbModel, Node>
@@ -149,6 +151,7 @@ where
             use tap::Conv;
             let node_type = self.get_node_type();
             let node_id = create_node(db, node_type).await?.node_id;
+            log::info!("Saving NodeType({node_type}) with id {node_id} with data: {:?}", *self);
             let mut value = (*self).clone().conv::<DbNodeActive>();
             value.set(self.get_node_id_column(), node_id.into());
             Ok(value.save_into_db(db).await?.into())

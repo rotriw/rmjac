@@ -37,6 +37,9 @@ pub fn setup_logger_with_stdout(level: LevelFilter) -> Result<(), fern::InitErro
             ))
         })
         .level(level)
+        .filter(move |metadata| {
+            !metadata.target().starts_with("sqlx") || level == log::Level::Trace
+        })
         .chain(std::io::stdout())
         .apply()?;
     Ok(())

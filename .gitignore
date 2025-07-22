@@ -3,6 +3,8 @@ node_modules
 .vscode
 .next
 
+*.out
+
 .local.rs
 
 .DS_Store
@@ -14,3 +16,5 @@ node_modules
 *.json
 !*.example.json
 !package.json
+
+flamegraph.svg

@@ -182,6 +182,12 @@ pub trait EdgeQueryPerm {
         i: i64,
         db: &DatabaseConnection,
     ) -> impl std::future::Future<Output = Result<Vec<(i64, i64)>>>;
+
+    fn get_perm_iter() -> impl Iterator<Item = i64>;
+
+    fn get_all(
+        db: &DatabaseConnection,
+    ) -> impl std::future::Future<Output = Result<Vec<(i64, i64, i64)>>>;
 }
 
 pub trait Edge<DbActive, DbModel, DbEntity>
@@ -229,7 +235,7 @@ where
 
 pub trait EdgeRaw<Edge, EdgeModel, EdgeActive>
 where
-    Self: Into<EdgeActive> + Clone + Send + Sync,
+    Self: Into<EdgeActive> + Clone + Send + Sync + std::fmt::Debug,
     EdgeModel: Into<Edge>
         + Send
         + Sync
@@ -250,6 +256,7 @@ where
             use tap::Conv;
             let edge_type = self.get_edge_type();
             let edge_id = create_edge(db, edge_type).await?.edge_id;
+            log::info!("Saving edge({edge_type}), data:{:?}", *self);
             let mut value = (*self).clone().conv::<EdgeActive>();
             value.set(self.get_edge_id_column(), edge_id.into());
             Ok(value.save_into_db(db).await?.into())
