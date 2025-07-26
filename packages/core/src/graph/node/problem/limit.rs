@@ -26,7 +26,6 @@ pub struct ProblemLimitNode {
 #[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
 #[node_raw(node_type = "problem_limit")]
 pub struct ProblemLimitNodeRaw {
-    pub iden: String,
     pub public: ProblemLimitNodePublicRaw,
     pub private: ProblemLimitNodePrivateRaw,
 }

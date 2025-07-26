@@ -46,13 +46,13 @@ where
     <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
 {
     fn get_u_edge_id_column() -> <DbEntity as EntityTrait>::Column {
-        <DbEntity as EntityTrait>::Column::from_str("u_edge_id")
+        <DbEntity as EntityTrait>::Column::from_str("u_node_id")
             .ok()
             .unwrap()
     }
 
     fn get_v_edge_id_column() -> <DbEntity as EntityTrait>::Column {
-        <DbEntity as EntityTrait>::Column::from_str("v_edge_id")
+        <DbEntity as EntityTrait>::Column::from_str("v_node_id")
             .ok()
             .unwrap()
     }
@@ -70,7 +70,7 @@ where
             use tap::Conv;
             Ok(edges
                 .into_iter()
-                .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_edge_id())
+                .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_v_node_id())
                 .collect())
         }
     }
@@ -90,7 +90,7 @@ where
             use tap::Conv;
             Ok(edges
                 .into_iter()
-                .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_edge_id())
+                .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_v_node_id())
                 .collect())
         }
     }
@@ -108,7 +108,7 @@ where
             use tap::Conv;
             Ok(edges
                 .into_iter()
-                .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_edge_id())
+                .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_u_node_id())
                 .collect())
         }
     }
@@ -127,7 +127,7 @@ where
                 return Err(NotFound("Not Found Edge id".to_string()));
             }
             use tap::Conv;
-            Ok(edge.unwrap().conv::<DbModel>().conv::<EdgeA>().get_edge_id())
+            Ok(edge.unwrap().conv::<DbModel>().conv::<EdgeA>().get_u_node_id())
         }
     }
 
@@ -145,7 +145,7 @@ where
                 return Err(NotFound("Not Found Edge id".to_string()));
             }
             use tap::Conv;
-            Ok(edge.unwrap().conv::<DbModel>().conv::<EdgeA>().get_edge_id())
+            Ok(edge.unwrap().conv::<DbModel>().conv::<EdgeA>().get_v_node_id())
         }
     }
 
@@ -164,7 +164,7 @@ where
             use tap::Conv;
             Ok(edges
                 .into_iter()
-                .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_edge_id())
+                .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_u_node_id())
                 .collect())
         }
     }
@@ -212,6 +212,9 @@ where
             .unwrap()
     }
     fn get_edge_id(&self) -> i64;
+    fn get_u_node_id(&self) -> i64;
+    fn get_v_node_id(&self) -> i64;
+    
     fn from_db(
         db: &DatabaseConnection,
         edge_id: i64,

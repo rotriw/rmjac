@@ -55,6 +55,8 @@ impl Edge<ActiveModel, Model, Entity> for ProblemStatementEdge {
     fn get_edge_id(&self) -> i64 {
         self.id
     }
+    fn get_u_node_id(&self) -> i64 { self.u }
+    fn get_v_node_id(&self) -> i64 { self.v }
 }
 impl EdgeQuery<ActiveModel, Model, Entity, ProblemStatementEdge> for ProblemStatementEdgeQuery {
     fn get_edge_type() -> &'static str {

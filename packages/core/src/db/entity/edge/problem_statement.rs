@@ -15,9 +15,7 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {}
-
 impl ActiveModelBehavior for ActiveModel {}
-
 impl DbEdgeActiveModel<Model, ProblemStatementEdge> for ActiveModel {}
 impl DbEdgeInfo for ActiveModel {
     fn get_edge_type(&self) -> &str {

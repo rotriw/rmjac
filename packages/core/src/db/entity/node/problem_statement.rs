@@ -16,6 +16,7 @@ pub struct Model {
     pub node_id: i64,
     pub iden: String,
     pub source: String,
+    #[sea_orm(column_type = "Json")]
     pub content: Vec<ContentType>,
     pub creation_time: DateTime,
     pub update_time: DateTime,

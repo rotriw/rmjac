@@ -1,6 +1,6 @@
 pub mod topo;
 
-use crate::db::entity::edge::{self, DbEdgeActiveModel, DbEdgeInfo};
+use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo};
 use crate::db::entity::node::node;
 use crate::env::{
     PATH_VIS, SAVED_NODE_CIRCLE_ID, SAVED_NODE_PATH, SAVED_NODE_PATH_LIST, SAVED_NODE_PATH_REV,
@@ -73,6 +73,7 @@ where
     DbEntity: EntityTrait,
     T: Sized + Send + Sync + Clone + EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm,
 {
+    log::trace!("Check perm from {u} -> {v}, now_step: {step}, required_perm: {required_perm}");
     if step > max_step {
         return Ok(-1);
     }

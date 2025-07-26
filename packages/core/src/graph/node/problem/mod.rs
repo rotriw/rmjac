@@ -51,8 +51,8 @@ impl From<ProblemNodeRaw> for ActiveModel {
         Self {
             node_id: NotSet,
             name: Set(value.public.name),
-            content_public: NotSet,
-            content_private: NotSet,
+            content_public: Set("".to_string()),
+            content_private: Set("".to_string()),
             creation_time: Set(value.public.creation_time),
             creation_order: NotSet,
         }

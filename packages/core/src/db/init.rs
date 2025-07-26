@@ -23,6 +23,7 @@ use crate::{
         },
     },
 };
+use crate::graph::node::problem_source::{ProblemSourceNodePrivateRaw, ProblemSourceNodePublicRaw, ProblemSourceNodeRaw};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -70,7 +71,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             NodeId: big_integer not_null primary_key,
             Iden: text not_null,
             Source: text not_null,
-            Content: text not_null,
+            Content: json not_null,
             CreationTime: date_time not_null,
             UpdateTime: date_time not_null,
         }),
@@ -95,6 +96,17 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         table_create!(iden::node::perm_group::PermGroup, {
             NodeId: big_integer not_null primary_key,
             Iden: text not_null,
+        }),
+    );
+    tables.insert(
+        "node_problem".to_string(),
+        table_create!(iden::node::problem::Problem, {
+            NodeId: big_integer not_null primary_key,
+            Name: text not_null,
+            ContentPublic: text not_null,
+            ContentPrivate: text not_null,
+            CreationTime: date_time not_null,
+            CreationOrder: big_integer not_null auto_increment,
         }),
     );
     tables.insert(
@@ -151,7 +163,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             EdgeId: big_integer not_null primary_key,
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
-            CopyrightRisk: text not_null,
+            CopyrightRisk: big_integer not_null,
         }),
     );
     tables.insert(
@@ -176,7 +188,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             EdgeId: big_integer not_null primary_key,
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
-
+            Iden: text not_null,
         }),
     );
     tables
@@ -202,6 +214,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         "node_token".to_string(),
         Table::drop()
             .table(iden::node::token::Token::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        "node_problem".to_string(),
+        Table::drop()
+            .table(iden::node::problem::Problem::Table)
             .if_exists()
             .to_owned(),
     );
@@ -293,6 +312,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         "edge_problem_tag".to_string(),
         Table::drop()
             .table(iden::edge::problem_tag::ProblemTag::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        "edge_iden".to_string(),
+        Table::drop()
+            .table(iden::edge::iden::Iden::Table)
             .if_exists()
             .to_owned(),
     );
@@ -472,6 +498,23 @@ pub async fn init(
         log::warn!(
             "Skipping default perm view edge creation, This may lead to unexpected behavior."
         );
+    }
+    if up.contains(&"all") {
+        log::info!("Create default problem_source");
+        ProblemSourceNodeRaw {
+            public: ProblemSourceNodePublicRaw {
+                iden: "rmj".to_string(),
+                name: "Rmj.ac".to_string(),
+            },
+            private: ProblemSourceNodePrivateRaw {}
+        }.save(&db).await?;
+        ProblemSourceNodeRaw {
+            public: ProblemSourceNodePublicRaw {
+                iden: "LG".to_string(),
+                name: "洛谷".to_string(),
+            },
+            private: ProblemSourceNodePrivateRaw {}
+        }.save(&db).await?;
     }
     log::info!("Database migrated");
     Ok(())
