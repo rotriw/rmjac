@@ -11,14 +11,14 @@ use crate::{
     error::{CoreError, QueryExists},
     graph::{
         edge::{
+            EdgeRaw,
             perm_manage::{ManagePermRaw, PermManageEdgeRaw},
             perm_view::PermViewEdgeRaw,
-            EdgeRaw,
         },
         node::{
+            NodeRaw,
             token::{TokenNode, TokenNodePrivateRaw, TokenNodePublicRaw, TokenNodeRaw},
             user::{UserNode, UserNodePrivateRaw, UserNodePublicRaw, UserNodeRaw},
-            NodeRaw,
         },
     },
     utils::encrypt::encode_password,
@@ -54,10 +54,7 @@ pub async fn create_default_user(
         },
     };
     let result = user.save(db).await?;
-    let default_node_id = env::DEFAULT_NODES
-        .lock()
-        .unwrap()
-        .default_strategy_node;
+    let default_node_id = env::DEFAULT_NODES.lock().unwrap().default_strategy_node;
     if default_node_id != -1 {
         PermViewEdgeRaw {
             u: result.node_id,

@@ -1,12 +1,12 @@
-use crate::db::entity::edge::{edge::create_edge, DbEdgeActiveModel, DbEdgeInfo};
-use crate::error::CoreError;
 use crate::Result;
+use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo, edge::create_edge};
+use crate::error::CoreError;
+use crate::error::CoreError::NotFound;
 use sea_orm::sea_query::IntoCondition;
 use sea_orm::{
     ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
 };
 use std::str::FromStr;
-use crate::error::CoreError::NotFound;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EdgeType {
@@ -127,7 +127,11 @@ where
                 return Err(NotFound("Not Found Edge id".to_string()));
             }
             use tap::Conv;
-            Ok(edge.unwrap().conv::<DbModel>().conv::<EdgeA>().get_u_node_id())
+            Ok(edge
+                .unwrap()
+                .conv::<DbModel>()
+                .conv::<EdgeA>()
+                .get_u_node_id())
         }
     }
 
@@ -145,7 +149,11 @@ where
                 return Err(NotFound("Not Found Edge id".to_string()));
             }
             use tap::Conv;
-            Ok(edge.unwrap().conv::<DbModel>().conv::<EdgeA>().get_v_node_id())
+            Ok(edge
+                .unwrap()
+                .conv::<DbModel>()
+                .conv::<EdgeA>()
+                .get_v_node_id())
         }
     }
 
@@ -168,7 +176,6 @@ where
                 .collect())
         }
     }
-
 
     fn get_edge_type() -> &'static str;
     fn check_perm(perm_a: i64, perm_b: i64) -> bool {
@@ -214,7 +221,7 @@ where
     fn get_edge_id(&self) -> i64;
     fn get_u_node_id(&self) -> i64;
     fn get_v_node_id(&self) -> i64;
-    
+
     fn from_db(
         db: &DatabaseConnection,
         edge_id: i64,
@@ -228,9 +235,7 @@ where
                 .filter(edge_id_column.eq(edge_id))
                 .one(db)
                 .await?
-                .ok_or_else(|| {
-                    CoreError::NotFound(format!("Edge with id {edge_id} not found"))
-                })?;
+                .ok_or_else(|| CoreError::NotFound(format!("Edge with id {edge_id} not found")))?;
             Ok(model.conv::<DbModel>().into())
         }
     }

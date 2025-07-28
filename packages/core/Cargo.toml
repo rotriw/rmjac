@@ -31,6 +31,7 @@ redis = "0.32.2"
 futures = "0.3.31"
 async-recursion = "1.1.1"
 queue = "0.3.1"
+deno_core = "0.353.0"
 
 
 [dependencies.sea-orm-migration]

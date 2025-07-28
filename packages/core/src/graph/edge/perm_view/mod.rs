@@ -136,8 +136,12 @@ impl Edge<ActiveModel, Model, Entity> for PermViewEdge {
     fn get_edge_id(&self) -> i64 {
         self.id
     }
-    fn get_u_node_id(&self) -> i64 { self.u }
-    fn get_v_node_id(&self) -> i64 { self.v }
+    fn get_u_node_id(&self) -> i64 {
+        self.u
+    }
+    fn get_v_node_id(&self) -> i64 {
+        self.v
+    }
 }
 impl EdgeQuery<ActiveModel, Model, Entity, PermViewEdge> for PermViewEdgeQuery {
     fn get_edge_type() -> &'static str {
@@ -167,9 +171,7 @@ impl EdgeQueryPerm for PermViewEdgeQuery {
     async fn get_all(db: &DatabaseConnection) -> Result<Vec<(i64, i64, i64)>> {
         use crate::db::entity::edge::perm_view::Entity as PermViewEntity;
         use sea_orm::EntityTrait;
-            let edges = PermViewEntity::find()
-            .all(db)
-            .await?;
+        let edges = PermViewEntity::find().all(db).await?;
         Ok(edges
             .into_iter()
             .map(|edge| (edge.u_node_id, edge.v_node_id, edge.perm))
@@ -177,12 +179,12 @@ impl EdgeQueryPerm for PermViewEdgeQuery {
     }
 }
 
+use crate::Result;
 use crate::db::entity::edge::perm_view::{ActiveModel, Column, Entity, Model};
 use crate::graph::edge::EdgeQuery;
 use crate::graph::edge::EdgeRaw;
 use crate::graph::edge::{Edge, EdgeQueryPerm};
 use crate::utils::perm::Perm;
-use crate::Result;
 use enum_const::EnumConst;
 use sea_orm::DatabaseConnection;
 use strum::IntoEnumIterator;

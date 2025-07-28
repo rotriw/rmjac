@@ -1,19 +1,12 @@
+use crate::Result;
 use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo};
 use crate::graph::action::has_path;
 use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryPerm};
-use crate::Result;
 use sea_orm::{
     ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
 };
 
-pub async fn check_perm<
-    DbActive,
-    DbModel,
-    DbEntity,
-    EdgeA,
-    T,
-    K: Into<i64>,
->(
+pub async fn check_perm<DbActive, DbModel, DbEntity, EdgeA, T, K: Into<i64>>(
     db: &DatabaseConnection,
     u: i64,
     v: i64,

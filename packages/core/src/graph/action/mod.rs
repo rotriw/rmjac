@@ -8,7 +8,7 @@ use crate::env::{
 use crate::error::CoreError;
 use crate::graph::action::topo::TopoGraph;
 use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryPerm};
-use crate::{db, Result};
+use crate::{Result, db};
 use async_recursion::async_recursion;
 use sea_orm::ColumnTrait;
 use sea_orm::DatabaseConnection;
@@ -40,13 +40,7 @@ macro_rules! path_vis_insert {
 
 #[allow(clippy::too_many_arguments)]
 #[async_recursion(?Send)]
-pub async fn has_path_dfs<
-    DbActive,
-    DbModel,
-    DbEntity,
-    EdgeA,
-    T,
->(
+pub async fn has_path_dfs<DbActive, DbModel, DbEntity, EdgeA, T>(
     db: &DatabaseConnection,
     u: i64,
     v: i64,
@@ -77,10 +71,12 @@ where
     if step > max_step {
         return Ok(-1);
     }
-    if !no_check && let Some(x) = SAVED_NODE_PATH
-        .lock()
-        .unwrap()
-        .get(&(u, T::get_edge_type().to_string())) && let Some(x) = x.get(&v)
+    if !no_check
+        && let Some(x) = SAVED_NODE_PATH
+            .lock()
+            .unwrap()
+            .get(&(u, T::get_edge_type().to_string()))
+        && let Some(x) = x.get(&v)
     {
         if T::check_perm(required_perm, *x) {
             return Ok(1);
@@ -111,7 +107,7 @@ where
             ckid,
             step + 1,
             max_step,
-            no_check
+            no_check,
         )
         .await?;
         if val == -1 {
@@ -136,13 +132,7 @@ pub fn gen_ckid() -> i32 {
     *ckid
 }
 
-pub async fn has_path<
-    DbActive,
-    DbModel,
-    DbEntity,
-    EdgeA,
-    T,
->(
+pub async fn has_path<DbActive, DbModel, DbEntity, EdgeA, T>(
     db: &DatabaseConnection,
     u: i64,
     v: i64,
@@ -166,7 +156,12 @@ where
     T: EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm + Sized + Send + Sync + Clone,
 {
     let empty = vec![];
-    let data = SAVED_NODE_PATH_LIST.lock().unwrap().get(T::get_edge_type()).unwrap_or(&empty).clone();
+    let data = SAVED_NODE_PATH_LIST
+        .lock()
+        .unwrap()
+        .get(T::get_edge_type())
+        .unwrap_or(&empty)
+        .clone();
     for path in data {
         if let Some(x) = SAVED_NODE_PATH
             .lock()
@@ -192,7 +187,18 @@ where
     let ckid = gen_ckid();
     let mut required_perm = required_perm;
     while required_perm > 0 {
-        let res = has_path_dfs(db, u, v, edge_type, lowbit(required_perm), ckid, 0, 100, false).await?;
+        let res = has_path_dfs(
+            db,
+            u,
+            v,
+            edge_type,
+            lowbit(required_perm),
+            ckid,
+            0,
+            100,
+            false,
+        )
+        .await?;
         if res < 1 {
             return Ok(res);
         }
@@ -206,33 +212,27 @@ pub fn lowbit(x: i64) -> i64 {
 }
 
 #[allow(unused_variables)]
-pub async fn init_spot<
-DbActive,
-DbModel,
-DbEntity,
-EdgeA,
-T,
->(
+pub async fn init_spot<DbActive, DbModel, DbEntity, EdgeA, T>(
     db: &DatabaseConnection,
     edge_type: &T,
     spot_node_id: i64,
     node_number: i64,
-)-> Result<()>
+) -> Result<()>
 where
-DbActive: DbEdgeActiveModel<DbModel, EdgeA>
-    + Sized
-    + Send
-    + Sync
-    + ActiveModelTrait
-    + ActiveModelBehavior
-    + DbEdgeInfo,
-DbModel: Into<EdgeA>
-    + From<<<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
-<DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
-<DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
-EdgeA: Edge<DbActive, DbModel, DbEntity>,
-DbEntity: EntityTrait,
-T: Sized + Send + Sync + Clone + EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm
+    DbActive: DbEdgeActiveModel<DbModel, EdgeA>
+        + Sized
+        + Send
+        + Sync
+        + ActiveModelTrait
+        + ActiveModelBehavior
+        + DbEdgeInfo,
+    DbModel: Into<EdgeA>
+        + From<<<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+    <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
+    <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
+    EdgeA: Edge<DbActive, DbModel, DbEntity>,
+    DbEntity: EntityTrait,
+    T: Sized + Send + Sync + Clone + EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm,
 {
     // 正向建图。
     let mut edge_data = vec![];
@@ -251,7 +251,8 @@ T: Sized + Send + Sync + Clone + EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> +
         }
         log::info!("start to run perm(number: {i})");
         log::info!("start to build graph");
-        let (mut graph, mut anti_graph) = (TopoGraph::new(node_number), TopoGraph::new(node_number));
+        let (mut graph, mut anti_graph) =
+            (TopoGraph::new(node_number), TopoGraph::new(node_number));
         for &(u, v, perm) in &edge_data {
             let perm = i & perm;
             graph.add_edge(u, v, (perm != 0) as i8);
@@ -271,7 +272,8 @@ T: Sized + Send + Sync + Clone + EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> +
                     .unwrap()
                     .entry((spot_node_id, T::get_edge_type().to_string()))
                     .or_default()
-                    .entry(j).or_insert(0) |= i;
+                    .entry(j)
+                    .or_insert(0) |= i;
             }
             if ((*anti_result) as i64) > 0 {
                 *SAVED_NODE_PATH_REV
@@ -279,7 +281,8 @@ T: Sized + Send + Sync + Clone + EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> +
                     .unwrap()
                     .entry((spot_node_id, T::get_edge_type().to_string()))
                     .or_default()
-                    .entry(j).or_insert(0) |= i;
+                    .entry(j)
+                    .or_insert(0) |= i;
             }
         }
         log::info!("end to get topo sort");

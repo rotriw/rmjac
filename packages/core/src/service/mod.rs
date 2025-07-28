@@ -2,6 +2,9 @@ use sea_orm::DatabaseConnection;
 
 use crate::error::CoreError;
 
+pub mod judge;
+pub mod track;
+
 pub async fn service_start(db: &DatabaseConnection) -> Result<(), CoreError> {
     log::info!("init the default nodes");
     let default_nodes = crate::graph::action::get_default_node(db).await?;

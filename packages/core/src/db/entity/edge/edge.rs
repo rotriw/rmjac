@@ -1,5 +1,5 @@
-use sea_orm::entity::prelude::*;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter};
 
 use crate::error::CoreError;

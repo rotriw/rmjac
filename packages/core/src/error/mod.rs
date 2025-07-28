@@ -36,6 +36,10 @@ pub enum CoreError {
     SerdeError(serde_json::Error),
     #[display("Redis Error: {}", _0)]
     RedisError(redis::RedisError),
+    #[display("Error: {}", _0)]
+    StringError(String),
+    #[display("Invalid Function: {}", _0)]
+    InvalidFunction(String),
 }
 
 impl From<&CoreError> for i64 {
@@ -55,6 +59,8 @@ impl From<&CoreError> for i64 {
                 QueryNotFound::ProblemIdenNotFound => 61001,
             },
             CoreError::SerdeError(_) => 70000,
+            CoreError::StringError(_) => 80000,
+            CoreError::InvalidFunction(_) => 80001,
         }
     }
 }

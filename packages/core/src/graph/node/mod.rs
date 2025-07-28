@@ -4,13 +4,14 @@ pub mod pages;
 pub mod perm_group;
 pub mod problem;
 pub mod problem_source;
+pub mod record;
 pub mod token;
 pub mod user;
 
 use crate::{
-    db::entity::node::{node::create_node, DbNodeActiveModel, DbNodeInfo},
-    error::CoreError,
     Result,
+    db::entity::node::{DbNodeActiveModel, DbNodeInfo, node::create_node},
+    error::CoreError,
 };
 use sea_orm::sea_query::IntoCondition;
 use sea_orm::{
@@ -82,9 +83,7 @@ where
                 .filter(node_id_column.eq(node_id))
                 .one(db)
                 .await?
-                .ok_or_else(|| {
-                    CoreError::NotFound(format!("Node with id {node_id} not found"))
-                })?;
+                .ok_or_else(|| CoreError::NotFound(format!("Node with id {node_id} not found")))?;
             Ok(model.conv::<DbModel>().into())
         }
     }
@@ -151,7 +150,10 @@ where
             use tap::Conv;
             let node_type = self.get_node_type();
             let node_id = create_node(db, node_type).await?.node_id;
-            log::info!("Saving NodeType({node_type}) with id {node_id} with data: {:?}", *self);
+            log::info!(
+                "Saving NodeType({node_type}) with id {node_id} with data: {:?}",
+                *self
+            );
             let mut value = (*self).clone().conv::<DbNodeActive>();
             value.set(self.get_node_id_column(), node_id.into());
             Ok(value.save_into_db(db).await?.into())

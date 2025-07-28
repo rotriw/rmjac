@@ -7,23 +7,25 @@ use sea_orm::{ConnectOptions, Database};
 use sea_orm_migration::prelude::*;
 
 use crate::graph::edge::perm_view::ViewPermRaw;
+use crate::graph::node::problem_source::{
+    ProblemSourceNodePrivateRaw, ProblemSourceNodePublicRaw, ProblemSourceNodeRaw,
+};
 use crate::{
     db::iden,
     error::CoreError,
     graph::{
         edge::{
-            perm_view::{PermViewEdgeRaw, ViewPerm},
             EdgeRaw,
+            perm_view::{PermViewEdgeRaw, ViewPerm},
         },
         node::{
+            NodeRaw,
             pages::{PagesNodePrivateRaw, PagesNodePublicRaw, PagesNodeRaw},
             perm_group::{PermGroupNodePrivateRaw, PermGroupNodePublicRaw, PermGroupNodeRaw},
             user::{UserNodePrivateRaw, UserNodePublicRaw, UserNodeRaw},
-            NodeRaw,
         },
     },
 };
-use crate::graph::node::problem_source::{ProblemSourceNodePrivateRaw, ProblemSourceNodePublicRaw, ProblemSourceNodeRaw};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -376,7 +378,9 @@ pub async fn init(
     if down.contains(&"all") {
         log::error!("Dropping all tables, this will delete all data in the database!");
         if mode != "dev" {
-            log::error!("Dropping all is only available in development mode!(use --mode dev to confirm this action)");
+            log::error!(
+                "Dropping all is only available in development mode!(use --mode dev to confirm this action)"
+            );
             return Err(CoreError::DbError(sea_orm::error::DbErr::Custom(
                 "Cannot drop all tables in non-development mode".to_string(),
             )));
@@ -506,15 +510,19 @@ pub async fn init(
                 iden: "rmj".to_string(),
                 name: "Rmj.ac".to_string(),
             },
-            private: ProblemSourceNodePrivateRaw {}
-        }.save(&db).await?;
+            private: ProblemSourceNodePrivateRaw {},
+        }
+        .save(&db)
+        .await?;
         ProblemSourceNodeRaw {
             public: ProblemSourceNodePublicRaw {
                 iden: "LG".to_string(),
                 name: "洛谷".to_string(),
             },
-            private: ProblemSourceNodePrivateRaw {}
-        }.save(&db).await?;
+            private: ProblemSourceNodePrivateRaw {},
+        }
+        .save(&db)
+        .await?;
     }
     log::info!("Database migrated");
     Ok(())
