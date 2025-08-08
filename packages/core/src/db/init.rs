@@ -135,6 +135,17 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
+        "node_training".to_string(),
+        table_create!(iden::node::training::Training, {
+            NodeId: big_integer not_null primary_key,
+            DescriptionPublic: text not_null,
+            DescriptionPrivate: text not_null,
+            StartTime: date_time not_null,
+            EndTime: date_time not_null,
+            TrainingType: text not_null,
+        }),
+    );
+    tables.insert(
         "edge".to_string(),
         table_create!(iden::edge::edge::Edge, {
             EdgeId: big_integer not_null primary_key auto_increment,
@@ -272,6 +283,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         "node_iden".to_string(),
         Table::drop()
             .table(iden::node::iden::Iden::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        "node_training".to_string(),
+        Table::drop()
+            .table(iden::node::training::Training::Table)
             .if_exists()
             .to_owned(),
     );
