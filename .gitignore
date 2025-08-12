@@ -3,6 +3,11 @@ node_modules
 .vscode
 .next
 
+
+# redis cache
+
+dump.rdb
+
 *.out
 
 .local.rs
