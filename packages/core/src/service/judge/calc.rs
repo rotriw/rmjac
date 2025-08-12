@@ -5,13 +5,15 @@ use crate::graph::node::record::subtask::SubtaskCalcMethod;
 use deno_core::RuntimeOptions;
 use deno_core::v8;
 use deno_core::{JsRuntime, serde_v8};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 type TaskScore = f64;
 type TaskTime = i64; // ms
 type TaskMemory = i64; // KB
 type TaskDetail = (TaskScore, TaskTime, TaskMemory, RecordStatus);
 
-pub async fn handle_score(
+pub fn handle_score(
     method: SubtaskCalcMethod,
     calc_function: Option<String>,
     task_detail: Vec<TaskDetail>,
@@ -78,6 +80,13 @@ pub async fn handle_score(
         }
         Function => {
             log::trace!("Using custom function for score calculation");
+            #[derive(Serialize, Deserialize, Debug, Clone)]
+            struct TaskDetailObject {
+                score: TaskScore,
+                time: TaskTime,
+                memory: TaskMemory,
+                status: String,
+            }
             let mut runtime = JsRuntime::new(RuntimeOptions::default());
             let default_code = r#"
                 function calculateScore(detail) {
@@ -105,21 +114,24 @@ pub async fn handle_score(
                 &mut runtime,
                 format!(r#"
                 let detail = {};
+                let now_time = {};
                 {}
             "#,
-                    Json! {
-                        "task_detail": task_detail.iter().map(|(s, t, m, r)| {
-                            Json! {
-                                "score": s,
-                                "time": t,
-                                "memory": m,
-                                "status": r.to_string(),
+                    json!(
+                        task_detail.iter().map(|(s, t, m, r)| {
+                            TaskDetailObject {
+                                score: *s,
+                                time: *t,
+                                memory: *m,
+                                status: r.to_string(),
                             }
                         }).collect::<Vec<_>>()
-                    },
+                    ),
+                    now_time!().and_utc().timestamp(),
                     calc_function.unwrap_or(default_code.to_string())
                 ),
             )?;
+            dbg!(&result);
             if let Some(result) = result.as_object()
                 && let Some(score) = result.get("score")
                 && let Some(score) = score.as_f64()

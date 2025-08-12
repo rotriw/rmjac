@@ -12,6 +12,9 @@
 //     env::env_load, utils,
 // };
 
+use core::graph::node::record::subtask::SubtaskCalcMethod;
+use core::service::judge::calc::handle_score;
+use core::graph::node::record::RecordStatus::Accepted;
 use core::model::problem::get_problem;
 use core::model::problem::view_problem;
 use core::model::problem::ProblemStatementProp;
@@ -74,6 +77,13 @@ pub async fn test_create_problem(db: &DatabaseConnection) {
     }
 }
 
+pub fn test_handle_score() {
+    let test_detail = vec![(10f64, 1, 1, Accepted), (90f64, 1, 1, Accepted)];
+    dbg!(handle_score(SubtaskCalcMethod::Sum, None, test_detail));
+    let test_detail = vec![(10f64, 1, 1, Accepted), (90f64, 1, 1, Accepted)];
+    dbg!(handle_score(SubtaskCalcMethod::Function, None, test_detail));
+}
+
 pub fn run(log_level: Option<String>) -> Option<()> {
         let log_level: LevelFilter = log_level
             .unwrap_or_else(|| "info".to_string())
@@ -132,10 +142,10 @@ pub fn run(log_level: Option<String>) -> Option<()> {
     //             ViewPerm::All as i64
     //         ).await);
         } */
-    let conn = std::env::var("DB").unwrap(); async_run! {
-        let db = sea_orm::Database::connect(conn).await.unwrap();
-        let _ = core::service::service_start(&db).await;
-        test_get_problem(&db).await;
+    // let conn = std::env::var("DB").unwrap(); async_run! {
+        // let db = sea_orm::Database::connect(conn).await.unwrap();
+        // let _ = core::service::service_start(&db).await;
+        // test_get_problem(&db).await;
         //test_create_problem(&db).await;
         // log::warn!("start");
         // /* for i in 1..=20000 {
@@ -150,6 +160,7 @@ pub fn run(log_level: Option<String>) -> Option<()> {
         //     }
         // }
         // log::warn!("end");
-    }
+    // }
+    test_handle_score();
     Some(())
 }

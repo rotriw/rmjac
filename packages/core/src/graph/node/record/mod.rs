@@ -135,6 +135,7 @@ use serde::{Deserialize, Serialize};
 use strum_macros::EnumIter;
 
 pub mod subtask;
+pub mod testcase;
 
 impl From<i64> for RecordStatus {
     fn from(value: i64) -> Self {
