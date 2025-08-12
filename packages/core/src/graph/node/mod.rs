@@ -7,6 +7,7 @@ pub mod problem_source;
 pub mod record;
 pub mod token;
 pub mod user;
+pub mod training;
 
 use crate::{
     Result,

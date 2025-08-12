@@ -16,7 +16,7 @@ use crate::{
             perm_view::PermViewEdgeRaw,
         },
         node::{
-            NodeRaw,
+            Node, NodeRaw,
             token::{TokenNode, TokenNodePrivateRaw, TokenNodePublicRaw, TokenNodeRaw},
             user::{UserNode, UserNodePrivateRaw, UserNodePublicRaw, UserNodeRaw},
         },
@@ -129,3 +129,44 @@ pub async fn user_login(
     .await?;
     Ok((user, token))
 }
+
+pub async fn change_user_config(
+    db: &DatabaseConnection,
+    node_id: i64,
+    name: Option<String>,
+    email: Option<String>,
+    avater: Option<String>,
+    description: Option<String>,
+    bio: Option<String>,
+) -> Result<UserNode, CoreError> {
+    use db::entity::node::user::Column::{UserName, UserEmail, UserAvatar, UserDescription, UserBio};
+    let user = UserNode::from_db(db, node_id).await?;
+    if let Some(name) = name {
+        user.modify(db, UserName, name).await?;
+    }
+    if let Some(email) = email {
+        user.modify(db, UserEmail, email).await?;
+    }
+    if let Some(avater) = avater {
+        user.modify(db, UserAvatar, avater).await?;
+    }
+    if let Some(description) = description {
+        user.modify(db, UserDescription, description).await?;
+    }
+    if let Some(bio) = bio {
+        user.modify(db, UserBio, bio).await?;
+    }
+    Ok(user)
+}
+
+pub async fn change_user_password(
+    db: &DatabaseConnection,
+    node_id: i64,
+    password: String,
+) -> Result<UserNode, CoreError> {
+    use db::entity::node::user::Column::UserPassword;
+    let user = UserNode::from_db(db, node_id).await?;
+    user.modify(db, UserPassword, encode_password(&password)).await?;
+    Ok(user)
+}
+
