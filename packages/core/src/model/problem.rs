@@ -33,12 +33,15 @@ use redis::Commands;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
 
+type ProblemSourceString = String;
+type ProblemIdenString = String;
+
 pub async fn create_problem_schema(
     db: &DatabaseConnection,
     problem_statement: Vec<(
         ProblemStatementNodeRaw,
         ProblemLimitNodeRaw,
-        (Option<String>, Option<String>),
+        (Option<ProblemSourceString>, Option<ProblemIdenString>),
     )>,
     tag_node_id: Vec<i64>,
     problem_name: String,
@@ -53,42 +56,9 @@ pub async fn create_problem_schema(
     }
     .save(db)
     .await?;
+    let problem_node_id = problem_node.node_id;
     for data in problem_statement {
-        log::debug!("Creating problem statement node and limit node");
-        let (problem_statement_node_raw, problem_limit_node_raw, (source, iden)) = data;
-        let problem_statement_node = problem_statement_node_raw.save(db).await?;
-        let problem_limit_node = problem_limit_node_raw.save(db).await?;
-        // problem -statement-> statement
-        log::debug!("Creating problem statement edge");
-        ProblemStatementEdgeRaw {
-            u: problem_node.node_id,
-            v: problem_statement_node.node_id,
-            copyright_risk: 0, // default
-        }
-        .save(db)
-        .await?;
-        if let Some(source) = source
-            && let Some(iden) = iden
-        {
-            log::debug!("create problem_statement iden connection");
-            let problem_iden_node = create_problem_iden(
-                db,
-                source.as_str(),
-                iden.as_str(),
-                problem_statement_node.node_id,
-            )
-            .await?;
-            log::debug!("Iden Node have been created. {problem_iden_node:?}");
-        }
-        // 暂时允许访问题目 = 访问所有题面
-        // statement -limit-> limit
-        log::debug!("Add problem limit edge");
-        ProblemLimitEdgeRaw {
-            u: problem_statement_node.node_id,
-            v: problem_limit_node.node_id,
-        }
-        .save(db)
-        .await?;
+        add_problem_statement_for_problem(db, problem_node_id, data).await?;
     }
     for tag_node in tag_node_id {
         ProblemTagEdgeRaw {
@@ -103,6 +73,68 @@ pub async fn create_problem_schema(
         problem_node.node_id
     );
     Ok(problem_node)
+}
+
+pub async fn add_problem_statement_for_problem(
+    db: &DatabaseConnection,
+    problem_node_id: i64,
+    problem_statement: (
+        ProblemStatementNodeRaw,
+        ProblemLimitNodeRaw,
+        (Option<ProblemSourceString>, Option<ProblemIdenString>),
+    ),
+) -> Result<()> {
+    log::debug!("Creating problem statement node and limit node");
+    let (
+        problem_statement_node_raw,
+        problem_limit_node_raw,
+        (source, iden)
+    ) = problem_statement;
+    let problem_statement_node = problem_statement_node_raw.save(db).await?;
+    let problem_limit_node = problem_limit_node_raw.save(db).await?;
+    // problem -statement-> statement
+    log::debug!("Creating problem statement edge");
+    ProblemStatementEdgeRaw {
+        u: problem_node_id,
+        v: problem_statement_node.node_id,
+        copyright_risk: 0, // default
+    }
+        .save(db)
+        .await?;
+    if let Some(source) = source
+        && let Some(iden) = iden
+    {
+        log::debug!("create problem_statement iden connection");
+        let problem_iden_node = create_problem_iden(
+            db,
+            source.as_str(),
+            iden.as_str(),
+            problem_statement_node.node_id,
+        )
+            .await?;
+        log::debug!("Iden Node have been created. {problem_iden_node:?}");
+    }
+    // 暂时允许访问题目 = 访问所有题面
+    // statement -limit-> limit
+    log::debug!("Add problem limit edge");
+    ProblemLimitEdgeRaw {
+        u: problem_statement_node.node_id,
+        v: problem_limit_node.node_id,
+    }
+    .save(db)
+    .await?;
+    Ok(())
+}
+
+pub async fn delete_problem_statement_for_problem(
+    db: &DatabaseConnection,
+    problem_node_id: i64,
+    problem_statement_node_id: i64,
+) -> Result<()> {
+    log::debug!("Deleting problem statement node and limit node");
+    ProblemStatementEdgeQuery::destroy_edge(db, problem_node_id, problem_statement_node_id).await?;
+    log::debug!("Problem statement edge have been deleted");
+    Ok(())
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

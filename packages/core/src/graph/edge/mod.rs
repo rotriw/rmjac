@@ -1,11 +1,9 @@
 use crate::Result;
 use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo, edge::create_edge};
 use crate::error::CoreError;
-use crate::error::CoreError::NotFound;
+use crate::error::CoreError::{NotFound, StringError};
 use sea_orm::sea_query::IntoCondition;
-use sea_orm::{
-    ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
-};
+use sea_orm::{ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel, ModelTrait};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,6 +51,18 @@ where
 
     fn get_v_edge_id_column() -> <DbEntity as EntityTrait>::Column {
         <DbEntity as EntityTrait>::Column::from_str("v_node_id")
+            .ok()
+            .unwrap()
+    }
+
+    fn get_u_edge_id_column_2() -> <<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+        <<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column::from_str("u_node_id")
+            .ok()
+            .unwrap()
+    }
+
+    fn get_v_edge_id_column_2() -> <<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
+        <<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column::from_str("v_node_id")
             .ok()
             .unwrap()
     }
@@ -177,6 +187,21 @@ where
         }
     }
 
+    fn destroy_edge(
+        db: &DatabaseConnection,
+        u: i64,
+        v: i64,
+    ) -> impl std::future::Future<Output = Result<()>>{
+        async move {
+            use sea_orm::{ColumnTrait, QueryFilter};
+            let mut edge = DbActive::new();
+            edge.set(Self::get_u_edge_id_column_2(), u.into());
+            edge.set(Self::get_v_edge_id_column_2(), v.into());
+            edge.delete(db).await?;
+            Ok(())
+        }
+    }
+
     fn get_edge_type() -> &'static str;
     fn check_perm(perm_a: i64, perm_b: i64) -> bool {
         // perm_b require perm_A ?
@@ -235,7 +260,7 @@ where
                 .filter(edge_id_column.eq(edge_id))
                 .one(db)
                 .await?
-                .ok_or_else(|| CoreError::NotFound(format!("Edge with id {edge_id} not found")))?;
+                .ok_or_else(|| NotFound(format!("Edge with id {edge_id} not found")))?;
             Ok(model.conv::<DbModel>().into())
         }
     }
