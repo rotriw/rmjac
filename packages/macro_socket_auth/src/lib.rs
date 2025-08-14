@@ -1,12 +1,11 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use quote::{quote, ToTokens};
-use std::fs;
+use quote::quote;
 use syn::{parse_macro_input, ItemFn};
 
 #[proc_macro_attribute]
-pub fn auth_socket_connect(attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn auth_socket_connect(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as ItemFn);
     let func_name = &input.sig.ident;
     let func_args = &input.sig.inputs;

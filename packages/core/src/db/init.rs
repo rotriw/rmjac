@@ -391,7 +391,7 @@ pub async fn init(
     log::info!("Database Update: {}", up.join(", "));
     log::info!("Database Drop: {}", down.join(", "));
     log::info!("Database connecting...");
-    let db = Database::connect(connection_options).await.unwrap();
+    let db = Database::connect(connection_options).await?;
     log::info!("Database connected");
     if down.contains(&"all") {
         log::error!("Dropping all tables, this will delete all data in the database!");
@@ -399,7 +399,7 @@ pub async fn init(
             log::error!(
                 "Dropping all is only available in development mode!(use --mode dev to confirm this action)"
             );
-            return Err(CoreError::DbError(sea_orm::error::DbErr::Custom(
+            return Err(CoreError::DbError(DbErr::Custom(
                 "Cannot drop all tables in non-development mode".to_string(),
             )));
         }

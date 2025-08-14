@@ -35,7 +35,7 @@ pub enum CoreError {
     #[display("Serde Error: {}", _0)]
     SerdeError(serde_json::Error),
     #[display("Redis Error: {}", _0)]
-    RedisError(redis::RedisError),
+    RedisError(RedisError),
     #[display("Error: {}", _0)]
     StringError(String),
     #[display("Invalid Function: {}", _0)]

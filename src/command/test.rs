@@ -16,20 +16,17 @@ use core::graph::node::record::subtask::SubtaskCalcMethod;
 use core::service::judge::calc::handle_score;
 use core::graph::node::record::RecordStatus::Accepted;
 use core::model::problem::get_problem;
-use core::model::problem::view_problem;
 use core::model::problem::ProblemStatementProp;
 use core::model::problem::CreateProblemProps;
-use core::{async_run, graph::{action::{has_path, init_spot}, edge::perm_view::{PermViewEdgeQuery, Perms, ViewPerm}}, model::user::create_default_user};
 use core::model::problem::create_problem;
 
 use log::LevelFilter;
 use sea_orm::DatabaseConnection;
-use tap::Conv;
 
 use crate::utils;
 
 pub async fn test_get_problem(db: &DatabaseConnection) {
-    let mut redis = redis::Client::open("redis://127.0.0.1/").unwrap();
+    let redis = redis::Client::open("redis://127.0.0.1/").unwrap();
     let x = get_problem(db, &mut redis.get_connection().unwrap(), "rmj1000").await;
     log::info!("{:?}", x);
     let x = get_problem(db, &mut redis.get_connection().unwrap(), "LGP1001").await;
@@ -39,7 +36,7 @@ pub async fn test_get_problem(db: &DatabaseConnection) {
 pub async fn test_create_problem(db: &DatabaseConnection) {
     use core::db::entity::node::problem_statement::ContentType;
     let conn = std::env::var("DB").unwrap(); {
-        let v = create_problem(&db, CreateProblemProps {
+        let v = create_problem(db, CreateProblemProps {
             problem_name: "Test Problem".to_string(),
             problem_source: "rmj".to_string(),
             problem_iden: "1000".to_string(),
@@ -79,9 +76,9 @@ pub async fn test_create_problem(db: &DatabaseConnection) {
 
 pub fn test_handle_score() {
     let test_detail = vec![(10f64, 1, 1, Accepted), (90f64, 1, 1, Accepted)];
-    dbg!(handle_score(SubtaskCalcMethod::Sum, None, test_detail));
+    let _ = dbg!(handle_score(SubtaskCalcMethod::Sum, None, test_detail));
     let test_detail = vec![(10f64, 1, 1, Accepted), (90f64, 1, 1, Accepted)];
-    dbg!(handle_score(SubtaskCalcMethod::Function, None, test_detail));
+    let _ = dbg!(handle_score(SubtaskCalcMethod::Function, None, test_detail));
 }
 
 pub fn run(log_level: Option<String>) -> Option<()> {

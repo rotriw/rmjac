@@ -60,9 +60,9 @@ where
         + ActiveModelBehavior
         + DbEdgeInfo,
     DbModel: Into<EdgeA>
-        + From<<<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+        + From<<<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
-    <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
+    <DbEntity as EntityTrait>::Model: Into<DbModel>,
     EdgeA: Edge<DbActive, DbModel, DbEntity>,
     DbEntity: EntityTrait,
     T: Sized + Send + Sync + Clone + EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm,
@@ -122,8 +122,8 @@ where
 
 pub fn gen_ckid() -> i32 {
     let mut ckid = SAVED_NODE_CIRCLE_ID.lock().unwrap();
-    (*ckid) += 1;
-    (*ckid) %= 1000;
+    *ckid += 1;
+    *ckid %= 1000;
     let mut d = (*PATH_VIS).lock().unwrap();
     if d.contains_key(&(*ckid)) {
         d.remove(&(*ckid));
@@ -148,9 +148,9 @@ where
         + ActiveModelBehavior
         + DbEdgeInfo,
     DbModel: Into<EdgeA>
-        + From<<<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+        + From<<<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
-    <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
+    <DbEntity as EntityTrait>::Model: Into<DbModel>,
     EdgeA: Edge<DbActive, DbModel, DbEntity>,
     DbEntity: EntityTrait,
     T: EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm + Sized + Send + Sync + Clone,
@@ -167,20 +167,15 @@ where
             .lock()
             .unwrap()
             .get(&(path, T::get_edge_type().to_string()))
-            .and_then(|m| m.get(&v))
+            .and_then(|m| m.get(&v)) && T::check_perm(required_perm, *x) && let Some(x) = SAVED_NODE_PATH_REV
+            .lock()
+            .unwrap()
+            .get(&(path, T::get_edge_type().to_string()))
+            .and_then(|m| m.get(&u))
         {
+            log::debug!("Cache hit.{u} -> {v}, perm: {x}");
             if T::check_perm(required_perm, *x) {
-                if let Some(x) = SAVED_NODE_PATH_REV
-                    .lock()
-                    .unwrap()
-                    .get(&(path, T::get_edge_type().to_string()))
-                    .and_then(|m| m.get(&u))
-                {
-                    log::debug!("Cache hit.{u} -> {v}, perm: {x}");
-                    if T::check_perm(required_perm, *x) {
-                        return Ok(1);
-                    }
-                }
+                return Ok(1);
             }
         }
     }
@@ -227,9 +222,9 @@ where
         + ActiveModelBehavior
         + DbEdgeInfo,
     DbModel: Into<EdgeA>
-        + From<<<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+        + From<<<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
-    <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
+    <DbEntity as EntityTrait>::Model: Into<DbModel>,
     EdgeA: Edge<DbActive, DbModel, DbEntity>,
     DbEntity: EntityTrait,
     T: Sized + Send + Sync + Clone + EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm,

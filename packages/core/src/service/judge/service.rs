@@ -16,7 +16,7 @@ async fn auth(socket: SocketRef, Data(key): Data<String>) {
         30,
         Secret::Encoded(env::EDGE_AUTH.lock().unwrap().clone()).to_bytes().unwrap()
     );
-    if let Err(err) = totp {
+    if totp.is_err() {
         return ;
     }
     let totp = totp.unwrap();
@@ -29,7 +29,7 @@ async fn auth(socket: SocketRef, Data(key): Data<String>) {
     env::EDGE_AUTH_MAP.lock().unwrap().entry(socket.id.to_string()).or_insert(1);
     env::EDGE_SOCKETS.lock().unwrap().entry(socket.id.to_string()).or_insert(socket.clone());
     env::EDGE_VEC.lock().unwrap().push(socket.id.to_string());
-    socket.emit("auth_response", "Authentication successful");
+    let _ = socket.emit("auth_response", "Authentication successful");
 }
 
 fn check_auth(socket: SocketRef) -> bool {
@@ -44,12 +44,12 @@ fn check_auth(socket: SocketRef) -> bool {
 }
 
 #[auth_socket_connect]
-async fn update_status(Data(key): Data<String>) {
+async fn update_status(Data(_key): Data<String>) {
     // todo
 }
 
 #[auth_socket_connect]
-async fn create_problem(Data(key): Data<String>) {
+async fn create_problem(Data(_key): Data<String>) {
     // todo
 }
 
@@ -63,7 +63,7 @@ fn erase_socket(socket: &SocketRef) {
 
 pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
     let now_id = *env::EDGE_NUM.lock().unwrap();
-    if env::EDGE_SOCKETS.lock().unwrap().len() == 0 {
+    if env::EDGE_SOCKETS.lock().unwrap().is_empty() {
         log::error!("No edge sockets available to add task.");
         return false;
     }
@@ -75,7 +75,7 @@ pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
         if let Err(err) = socket.emit("task", task) {
             log::error!("Failed to emit task: {}", err);
             // erase this socket.
-            erase_socket(&socket);
+            erase_socket(socket);
             return false;
         }
     } else {
@@ -86,7 +86,7 @@ pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
     true
 }
 
-async fn on_connect(socket: SocketRef, Data(data): Data<Value>) {
+async fn on_connect(socket: SocketRef, Data(_data): Data<Value>) {
     log::info!("socket io connected: {:?} {:?}", socket.ns(), socket.id);
     socket.on("auth", auth);
     socket.on("update_status", update_status);
@@ -96,7 +96,7 @@ async fn on_connect(socket: SocketRef, Data(data): Data<Value>) {
 #[tokio::main]
 pub async fn service_start(port: i8) -> Result<()> {
     log::info!("VJudge Task server will be started at ::{port}");
-    let (layer, io) = SocketIo::new_layer();
+    let (_layer, io) = SocketIo::new_layer();
     io.ns("/", on_connect);
     Ok(())
 }

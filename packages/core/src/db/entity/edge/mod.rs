@@ -22,13 +22,13 @@ pub trait DbEdgeInfo {
 pub trait DbEdgeActiveModel<MODEL, EDGE>
 where
     MODEL: Into<EDGE>
-        + From<<<Self as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+        + From<<<Self as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     Self: Sized + Send + Sync + ActiveModelTrait + ActiveModelBehavior,
 {
     fn save_into_db(
         &self,
         db: &DatabaseConnection,
-    ) -> impl std::future::Future<Output = Result<MODEL>> + Send
+    ) -> impl Future<Output = Result<MODEL>> + Send
     where
         <Self::Entity as EntityTrait>::Model: IntoActiveModel<Self>,
     {
@@ -48,7 +48,7 @@ where
         &self,
         db: &DatabaseConnection,
         u_node_id: i64,
-    ) -> impl std::future::Future<Output = Result<Vec<Model>>> + Send {
+    ) -> impl Future<Output = Result<Vec<Model>>> + Send {
         async move {
             let id_column = self.get_u_edge_id_column();
             let edges = Self::find().filter(id_column.eq(u_node_id)).all(db).await?;
@@ -60,7 +60,7 @@ where
         &self,
         db: &DatabaseConnection,
         v_node_id: i64,
-    ) -> impl std::future::Future<Output = Result<Vec<Model>>> {
+    ) -> impl Future<Output = Result<Vec<Model>>> {
         async move {
             let id_column = self.get_v_edge_id_column();
             let edges = Self::find().filter(id_column.eq(v_node_id)).all(db).await?;

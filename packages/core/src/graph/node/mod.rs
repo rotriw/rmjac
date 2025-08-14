@@ -53,11 +53,11 @@ where
         + ActiveModelBehavior
         + DbNodeInfo,
     DbModel: Into<Self>
-        + From<<<DbNodeActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+        + From<<<DbNodeActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     <DbNodeActive::Entity as EntityTrait>::Model: IntoActiveModel<DbNodeActive>,
     Self: Sized + Send + Sync + Clone,
     DbEntity: EntityTrait,
-    <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
+    <DbEntity as EntityTrait>::Model: Into<DbModel>,
 {
     fn get_node_id(&self) -> i64;
 
@@ -70,7 +70,7 @@ where
     fn from_db(
         db: &DatabaseConnection,
         node_id: i64,
-    ) -> impl std::future::Future<Output = Result<Self>>
+    ) -> impl Future<Output = Result<Self>>
     where
         Self: Sized,
     {
@@ -92,7 +92,7 @@ where
     fn from_db_filter<F: IntoCondition>(
         db: &DatabaseConnection,
         filter: F,
-    ) -> impl std::future::Future<Output = Result<Vec<Self>>>
+    ) -> impl Future<Output = Result<Vec<Self>>>
     where
         Self: Sized,
     {
@@ -113,7 +113,7 @@ where
         db: &DatabaseConnection,
         column: <DbNodeActive::Entity as EntityTrait>::Column,
         data: T,
-    ) -> impl std::future::Future<Output = Result<Self>> {
+    ) -> impl Future<Output = Result<Self>> {
         async move {
             use tap::Conv;
             let mut new_model = DbNodeActive::new();
@@ -134,7 +134,7 @@ pub trait NodeRaw<Node, DbModel, DbNodeActive>
 where
     Self: Into<DbNodeActive> + Clone + Debug,
     DbModel: Into<Node>
-        + From<<<DbNodeActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+        + From<<<DbNodeActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     DbNodeActive: DbNodeActiveModel<DbModel, Node>
         + Sized
         + Send
@@ -146,7 +146,7 @@ where
 {
     fn get_node_type(&self) -> &str;
     fn get_node_id_column(&self) -> <DbNodeActive::Entity as EntityTrait>::Column;
-    fn save(&self, db: &DatabaseConnection) -> impl std::future::Future<Output = Result<Node>> {
+    fn save(&self, db: &DatabaseConnection) -> impl Future<Output = Result<Node>> {
         async {
             use tap::Conv;
             let node_type = self.get_node_type();

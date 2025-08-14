@@ -29,13 +29,13 @@ pub trait DbNodeInfo {
 pub trait DbNodeActiveModel<MODEL, NODE>
 where
     MODEL: Into<NODE>
-        + From<<<Self as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+        + From<<<Self as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     Self: Sized + Send + Sync + ActiveModelTrait + ActiveModelBehavior + DbNodeInfo,
 {
     fn save_into_db(
         &self,
         db: &DatabaseConnection,
-    ) -> impl std::future::Future<Output = Result<MODEL>> + Send
+    ) -> impl Future<Output = Result<MODEL>> + Send
     where
         <Self::Entity as EntityTrait>::Model: IntoActiveModel<Self>,
     {

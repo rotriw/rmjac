@@ -22,9 +22,9 @@ where
         + ActiveModelBehavior
         + DbEdgeInfo,
     DbModel: Into<EdgeA>
-        + From<<<DbActive as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Model>,
+        + From<<<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
-    <DbEntity as sea_orm::EntityTrait>::Model: Into<DbModel>,
+    <DbEntity as EntityTrait>::Model: Into<DbModel>,
     EdgeA: Edge<DbActive, DbModel, DbEntity>,
     DbEntity: EntityTrait,
     T: Sized + Send + Sync + Clone + EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm,

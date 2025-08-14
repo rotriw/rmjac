@@ -50,7 +50,7 @@ pub async fn create_problem_schema(
     let problem_node = ProblemNodeRaw {
         public: ProblemNodePublicRaw {
             name: problem_name,
-            creation_time: chrono::Utc::now().naive_utc(),
+            creation_time: Utc::now().naive_utc(),
         },
         private: ProblemNodePrivateRaw {},
     }

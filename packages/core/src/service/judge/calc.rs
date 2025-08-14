@@ -59,7 +59,7 @@ pub fn handle_score(
                 if score as i32 == -1 {
                     0f64
                 } else {
-                    score as f64
+                    score
                 },
                 if time == -1 { 0 } else { time },
                 if memory == -1 { 0 } else { memory },
@@ -161,7 +161,7 @@ fn eval(context: &mut JsRuntime, code: String) -> Result<serde_json::Value> {
             let deserialized_value = serde_v8::from_v8::<serde_json::Value>(scope, local);
             match deserialized_value {
                 Ok(value) => Ok(value),
-                Err(err) => Err(CoreError::InvalidFunction(
+                Err(_err) => Err(CoreError::InvalidFunction(
                     "Failed to deserialize v8 value".to_string(),
                 )),
             }

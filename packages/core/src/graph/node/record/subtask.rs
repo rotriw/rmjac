@@ -24,6 +24,7 @@ impl From<String> for SubtaskCalcMethod {
     }
 }
 
+//noinspection ALL
 impl ToString for SubtaskCalcMethod {
     fn to_string(&self) -> String {
         match self {
@@ -121,7 +122,6 @@ impl From<Model> for SubtaskNode {
 use crate::db;
 use crate::graph::node::Node;
 use crate::graph::node::NodeRaw;
-use chrono::NaiveDateTime;
 use db::entity::node::testcase_subtask::{ActiveModel, Column, Entity, Model};
 use enum_const::EnumConst;
 use macro_node_iden::{Node, NodeRaw};

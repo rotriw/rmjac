@@ -58,7 +58,7 @@ impl Parse for Column {
 }
 
 impl Column {
-    fn with_table(&self, table_name: &Path) -> ColumnWithTable {
+    fn with_table(&self, table_name: &Path) -> ColumnWithTable<'_> {
         ColumnWithTable {
             table_name: table_name.clone(),
             column: self,
