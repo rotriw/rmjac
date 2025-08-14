@@ -17,6 +17,7 @@ serde = { version = "1.0.219", features = ["derive", "serde_derive"] }
 serde_json = "1.0.140"
 macro_db_init = { path = "../macro_db_init" }
 macro_node_iden = { path = "../macro_node_iden" }
+macro_socket_auth = { path = "../macro_socket_auth" }
 tokio = "1.45.1"
 mongodb = "3.2.3"
 enumx = "0.4.3"
@@ -32,6 +33,9 @@ futures = "0.3.31"
 async-recursion = "1.1.1"
 queue = "0.3.1"
 deno_core = "0.353.0"
+socketioxide = "0.17.2"
+axum = "0.8.4"
+totp-rs = { version = "5.7.0", features = ["steam"]}
 
 
 [dependencies.sea-orm-migration]

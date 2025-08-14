@@ -10,6 +10,7 @@
       <sourceFolder url="file://$MODULE_DIR$/packages/vjudge/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/packages/docs_parser/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/packages/macro_socket_auth/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/packages/core/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
