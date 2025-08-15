@@ -128,6 +128,23 @@ where
             Ok(data.into())
         }
     }
+    
+    fn modify_from_active_model(
+        &self,
+        db: &DatabaseConnection,
+        active_model: DbNodeActive,
+    ) -> impl Future<Output = Result<Self>> {
+        async move {
+            use tap::Conv;
+            log::info!(
+                "Modifying node {} with active model: {:?}",
+                self.get_node_id(),
+                active_model
+            );
+            let data = active_model.update(db).await?.conv::<DbModel>();
+            Ok(data.into())
+        }
+    }
 }
 
 pub trait NodeRaw<Node, DbModel, DbNodeActive>

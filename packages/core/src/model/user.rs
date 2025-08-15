@@ -24,6 +24,7 @@ use crate::{
     utils::encrypt::encode_password,
 };
 use sea_orm::DatabaseConnection;
+use serde::{Deserialize, Serialize};
 use tap::Conv;
 
 pub async fn create_default_user(
@@ -130,32 +131,46 @@ pub async fn user_login(
     Ok((user, token))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserUpdateProps {
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub avatar: Option<String>,
+    pub description: Option<String>,
+    pub bio: Option<String>,
+    pub user_profile_show: Option<String>,
+}
+
+impl From<UserUpdateProps> for db::entity::node::user::ActiveModel {
+    fn from(value: UserUpdateProps) -> Self {
+        use sea_orm::ActiveValue::{NotSet, Set};
+
+        Self {
+            node_id: NotSet,
+            user_name: value.name.map(Set).unwrap_or(NotSet),
+            user_email: value.email.map(Set).unwrap_or(NotSet),
+            user_avatar: value.avatar.map(Set).unwrap_or(NotSet),
+            user_description: value.description.map(Some).map(Set).unwrap_or(NotSet),
+            user_bio: value.bio.map(Some).map(Set).unwrap_or(NotSet),
+            user_profile_show: value.user_profile_show.map(Some).map(Set).unwrap_or(NotSet),
+            user_password: NotSet,
+            user_iden: NotSet,
+            user_creation_time: NotSet,
+            user_last_login_time: NotSet,
+            user_creation_order: NotSet,
+        }
+    }
+}
+
 pub async fn change_user_config(
     db: &DatabaseConnection,
     node_id: i64,
-    name: Option<String>,
-    email: Option<String>,
-    avater: Option<String>,
-    description: Option<String>,
-    bio: Option<String>,
+    update_data: UserUpdateProps,
 ) -> Result<UserNode, CoreError> {
     use db::entity::node::user::Column::{UserName, UserEmail, UserAvatar, UserDescription, UserBio};
     let user = UserNode::from_db(db, node_id).await?;
-    if let Some(name) = name {
-        user.modify(db, UserName, name).await?;
-    }
-    if let Some(email) = email {
-        user.modify(db, UserEmail, email).await?;
-    }
-    if let Some(avater) = avater {
-        user.modify(db, UserAvatar, avater).await?;
-    }
-    if let Some(description) = description {
-        user.modify(db, UserDescription, description).await?;
-    }
-    if let Some(bio) = bio {
-        user.modify(db, UserBio, bio).await?;
-    }
+    let active = update_data.into();
+    user.modify_from_active_model(db, active);
     Ok(user)
 }
 
