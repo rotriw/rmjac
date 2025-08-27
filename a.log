@@ -1,0 +1,342 @@
+[2025-08-27 12:53:54.390 INFO rmjac::env] Loading config from: config.json
+[2025-08-27 12:53:54.400 TRACE mio::poll] registering event source with poller: token=Token(1), interests=READABLE
+[2025-08-27 12:53:54.402 INFO rmjac::handler] Connecting to database postgresql://postgres:postgres@localhost:5432/rmjac?schema=public...
+[2025-08-27 12:53:54.405 TRACE tracing::span] connect;
+[2025-08-27 12:53:54.406 TRACE sea_orm::driver::sqlx_postgres] connect; options=ConnectOptions { url: "postgresql://postgres:postgres@localhost:5432/rmjac?schema=public", max_connections: None, min_connections: None, connect_timeout: None, idle_timeout: None, acquire_timeout: None, max_lifetime: None, sqlx_logging: true, sqlx_logging_level: Trace, sqlx_slow_statements_logging_level: Off, sqlx_slow_statements_logging_threshold: 1s, sqlcipher_key: None, schema_search_path: None, test_before_acquire: true, connect_lazy: false }
+[2025-08-27 12:53:54.410 WARN sqlx_postgres::options::parse] ignoring unrecognized connect parameter key=schema value=public
+[2025-08-27 12:53:54.414 TRACE mio::poll] registering event source with poller: token=Token(4918888576), interests=READABLE | WRITABLE
+[2025-08-27 12:53:54.449 TRACE tracing::span] -- connect;
+[2025-08-27 12:53:54.449 TRACE tracing::span] -- connect;
+[2025-08-27 12:53:54.449 INFO rmjac::handler] Connected to database
+[2025-08-27 12:53:54.449 INFO core::service] init the default nodes
+[2025-08-27 12:53:54.451 TRACE sea_orm::database::db_connection] query_one; self=SqlxPostgresPoolConnection stmt=Statement { sql: "SELECT \"node_user\".\"node_id\", \"node_user\".\"user_name\", \"node_user\".\"user_email\", \"node_user\".\"user_password\", \"node_user\".\"user_avatar\", \"node_user\".\"user_creation_time\", \"node_user\".\"user_creation_order\", \"node_user\".\"user_last_login_time\", \"node_user\".\"user_description\", \"node_user\".\"user_iden\", \"node_user\".\"user_bio\", \"node_user\".\"user_profile_show\" FROM \"node_user\" WHERE \"node_user\".\"user_iden\" = $1 LIMIT $2", values: Some(Values([String(Some("guest")), BigUnsigned(Some(1))])), db_backend: Postgres }
+[2025-08-27 12:53:54.451 TRACE sea_orm::driver::sqlx_postgres] query_one; self=SqlxPostgresPoolConnection { pool: Pool { size: 1, num_idle: 1, is_closed: false, options: PoolOptions { max_connections: 10, min_connections: 0, connect_timeout: 30s, max_lifetime: Some(1800s), idle_timeout: Some(600s), test_before_acquire: true } } } stmt=Statement { sql: "SELECT \"node_user\".\"node_id\", \"node_user\".\"user_name\", \"node_user\".\"user_email\", \"node_user\".\"user_password\", \"node_user\".\"user_avatar\", \"node_user\".\"user_creation_time\", \"node_user\".\"user_creation_order\", \"node_user\".\"user_last_login_time\", \"node_user\".\"user_description\", \"node_user\".\"user_iden\", \"node_user\".\"user_bio\", \"node_user\".\"user_profile_show\" FROM \"node_user\" WHERE \"node_user\".\"user_iden\" = $1 LIMIT $2", values: Some(Values([String(Some("guest")), BigUnsigned(Some(1))])), db_backend: Postgres }
+[2025-08-27 12:53:54.454 TRACE sqlx::query] summary="SELECT \"node_user\".\"node_id\", \"node_user\".\"user_name\", \"node_user\".\"user_email\", …" db.statement="\n\nSELECT \"node_user\".\"node_id\", \"node_user\".\"user_name\", \"node_user\".\"user_email\", \"node_user\".\"user_password\", \"node_user\".\"user_avatar\", \"node_user\".\"user_creation_time\", \"node_user\".\"user_creation_order\", \"node_user\".\"user_last_login_time\", \"node_user\".\"user_description\", \"node_user\".\"user_iden\", \"node_user\".\"user_bio\", \"node_user\".\"user_profile_show\" FROM \"node_user\" WHERE \"node_user\".\"user_iden\" = $1 LIMIT $2\n" rows_affected=1 rows_returned=1 elapsed=2.181292ms elapsed_secs=0.002181292
+[2025-08-27 12:53:54.454 TRACE tracing::span] -- query_one;
+[2025-08-27 12:53:54.454 TRACE tracing::span] -- query_one;
+[2025-08-27 12:53:54.454 TRACE sea_orm::database::db_connection] query_one; self=SqlxPostgresPoolConnection stmt=Statement { sql: "SELECT \"node_perm_group\".\"node_id\", \"node_perm_group\".\"iden\" FROM \"node_perm_group\" WHERE \"node_perm_group\".\"iden\" = $1 LIMIT $2", values: Some(Values([String(Some("default")), BigUnsigned(Some(1))])), db_backend: Postgres }
+[2025-08-27 12:53:54.454 TRACE sea_orm::driver::sqlx_postgres] query_one; self=SqlxPostgresPoolConnection { pool: Pool { size: 1, num_idle: 0, is_closed: false, options: PoolOptions { max_connections: 10, min_connections: 0, connect_timeout: 30s, max_lifetime: Some(1800s), idle_timeout: Some(600s), test_before_acquire: true } } } stmt=Statement { sql: "SELECT \"node_perm_group\".\"node_id\", \"node_perm_group\".\"iden\" FROM \"node_perm_group\" WHERE \"node_perm_group\".\"iden\" = $1 LIMIT $2", values: Some(Values([String(Some("default")), BigUnsigned(Some(1))])), db_backend: Postgres }
+[2025-08-27 12:53:54.455 TRACE mio::poll] registering event source with poller: token=Token(4915740928), interests=READABLE | WRITABLE
+[2025-08-27 12:53:54.490 TRACE sqlx::query] summary="SELECT \"node_perm_group\".\"node_id\", \"node_perm_group\".\"iden\" FROM …" db.statement="\n\nSELECT \"node_perm_group\".\"node_id\", \"node_perm_group\".\"iden\" FROM \"node_perm_group\" WHERE \"node_perm_group\".\"iden\" = $1 LIMIT $2\n" rows_affected=1 rows_returned=1 elapsed=2.011208ms elapsed_secs=0.002011208
+[2025-08-27 12:53:54.490 TRACE tracing::span] -- query_one;
+[2025-08-27 12:53:54.490 TRACE tracing::span] -- query_one;
+[2025-08-27 12:53:54.490 INFO core::service] Default nodes: DefaultNodes { guest_user_node: 4, default_strategy_node: 3 }
+[2025-08-27 12:53:54.490 INFO core::service] load db connection: postgresql://postgres:postgres@localhost:5432/rmjac?schema=public, schema: public
+[2025-08-27 12:53:54.495 DEBUG pgp::packet::many] found header: Old { header: OldPacketHeader { padding: 1, version: 0, tag: PublicKey, length_type: 0 }, length: Fixed(51) }
+[2025-08-27 12:53:54.495 DEBUG pgp::composed::message::reader::packet_body] fixed packet 51
+[2025-08-27 12:53:54.495 DEBUG pgp::packet::public_key_parser] public params for key version V4
+[2025-08-27 12:53:54.496 DEBUG pgp::composed::message::reader::packet_body] body source done: Old { header: OldPacketHeader { padding: 1, version: 0, tag: PublicKey, length_type: 0 }, length: Fixed(51) }
+[2025-08-27 12:53:54.496 DEBUG pgp::composed::signed_key::key_parser]   signatures
+[2025-08-27 12:53:54.496 DEBUG pgp::packet::many] found header: Old { header: OldPacketHeader { padding: 1, version: 0, tag: UserId, length_type: 0 }, length: Fixed(18) }
+[2025-08-27 12:53:54.497 DEBUG pgp::composed::message::reader::packet_body] fixed packet 18
+[2025-08-27 12:53:54.497 DEBUG pgp::composed::message::reader::packet_body] body source done: Old { header: OldPacketHeader { padding: 1, version: 0, tag: UserId, length_type: 0 }, length: Fixed(18) }
+[2025-08-27 12:53:54.497 DEBUG pgp::composed::signed_key::key_parser]   user
+[2025-08-27 12:53:54.497 DEBUG pgp::composed::signed_key::key_parser] peek UserId
+[2025-08-27 12:53:54.497 DEBUG pgp::composed::signed_key::key_parser]   user data: UserId
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::many] found header: Old { header: OldPacketHeader { padding: 1, version: 0, tag: Signature, length_type: 0 }, length: Fixed(153) }
+[2025-08-27 12:53:54.497 DEBUG pgp::composed::message::reader::packet_body] fixed packet 153
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] reading subpacket IssuerFingerprint: critical? false, len: 21
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] parsing subpacket: IssuerFingerprint
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: IssuerFingerprint(1b2dd7bc548f912a695d61d087ec31954278d0ff), len: One(22) }
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] reading subpacket SignatureCreationTime: critical? false, len: 4
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] parsing subpacket: SignatureCreationTime
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: SignatureCreationTime(2025-08-27T03:12:57Z), len: One(5) }
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] reading subpacket KeyFlags: critical? false, len: 1
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] parsing subpacket: KeyFlags
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: KeyFlags(KeyFlags { known: KnownKeyFlags { _padding2: 0, timestamping: 0, adsk: 0, _padding1: 0, group: 0, _padding0: 0, authentication: 0, shared: 0, encrypt_storage: 0, encrypt_comms: 0, sign: 1, certify: 1 }, rest: None, original_len: 1 }), len: One(2) }
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] reading subpacket KeyExpirationTime: critical? false, len: 4
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] parsing subpacket: KeyExpirationTime
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: KeyExpirationTime(TimeDelta { secs: 94608000, nanos: 0 }), len: One(5) }
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] reading subpacket PreferredSymmetricAlgorithms: critical? false, len: 4
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] parsing subpacket: PreferredSymmetricAlgorithms
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: PreferredSymmetricAlgorithms([AES256, AES192, AES128, TripleDES]), len: One(5) }
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] reading subpacket PreferredEncryptionModes: critical? false, len: 1
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] parsing subpacket: PreferredEncryptionModes
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: PreferredEncryptionModes([Ocb]), len: One(2) }
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] reading subpacket PreferredHashAlgorithms: critical? false, len: 5
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] parsing subpacket: PreferredHashAlgorithms
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: PreferredHashAlgorithms([Sha512, Sha384, Sha256, Sha224, Sha1]), len: One(6) }
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] reading subpacket PreferredCompressionAlgorithms: critical? false, len: 3
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] parsing subpacket: PreferredCompressionAlgorithms
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: PreferredCompressionAlgorithms([ZLIB, BZip2, ZIP]), len: One(4) }
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] reading subpacket Features: critical? false, len: 1
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] parsing subpacket: Features
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: Features(Features { first: Some(KnownFeatures { _padding: 0, seipd_v2: 0, _libre_v5_keys: 1, _libre_ocb: 1, seipd_v1: 1 }), rest: [] }), len: One(2) }
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] reading subpacket KeyServerPreferences: critical? false, len: 1
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] parsing subpacket: KeyServerPreferences
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: KeyServerPreferences(80), len: One(2) }
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] found 10 hashed subpackets in 65 bytes
+[2025-08-27 12:53:54.497 DEBUG pgp::packet::signature::de] reading subpacket Issuer: critical? false, len: 8
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] parsing subpacket: Issuer
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: Issuer(KeyId(87ec31954278d0ff)), len: One(9) }
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] found 1 unhashed subpackets in 10 bytes
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] signature data Mpis([Mpi(b07aa5a97d47251cd9049be763d72842e52cf95176d4ebbc03d5df3eeb0fd37d), Mpi(d6bc010df41ed0ea40a697ffd9575fc6577b09e380b4f0cfe170e3dd6431480f)])
+[2025-08-27 12:53:54.498 DEBUG pgp::composed::message::reader::packet_body] body source done: Old { header: OldPacketHeader { padding: 1, version: 0, tag: Signature, length_type: 0 }, length: Fixed(153) }
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::many] found header: Old { header: OldPacketHeader { padding: 1, version: 0, tag: PublicSubkey, length_type: 0 }, length: Fixed(56) }
+[2025-08-27 12:53:54.498 DEBUG pgp::composed::message::reader::packet_body] fixed packet 56
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::public_key_parser] public params for key version V4
+[2025-08-27 12:53:54.498 DEBUG pgp::composed::message::reader::packet_body] body source done: Old { header: OldPacketHeader { padding: 1, version: 0, tag: PublicSubkey, length_type: 0 }, length: Fixed(56) }
+[2025-08-27 12:53:54.498 DEBUG pgp::composed::signed_key::key_parser] peek PublicSubkey
+[2025-08-27 12:53:54.498 DEBUG pgp::composed::signed_key::key_parser]   subkeys
+[2025-08-27 12:53:54.498 DEBUG pgp::composed::signed_key::key_parser]   peek PublicSubkey
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::many] found header: Old { header: OldPacketHeader { padding: 1, version: 0, tag: Signature, length_type: 0 }, length: Fixed(126) }
+[2025-08-27 12:53:54.498 DEBUG pgp::composed::message::reader::packet_body] fixed packet 126
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] reading subpacket IssuerFingerprint: critical? false, len: 21
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] parsing subpacket: IssuerFingerprint
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: IssuerFingerprint(1b2dd7bc548f912a695d61d087ec31954278d0ff), len: One(22) }
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] reading subpacket SignatureCreationTime: critical? false, len: 4
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] parsing subpacket: SignatureCreationTime
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: SignatureCreationTime(2025-08-27T03:12:57Z), len: One(5) }
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] reading subpacket KeyFlags: critical? false, len: 1
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] parsing subpacket: KeyFlags
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: KeyFlags(KeyFlags { known: KnownKeyFlags { _padding2: 0, timestamping: 0, adsk: 0, _padding1: 0, group: 0, _padding0: 0, authentication: 0, shared: 0, encrypt_storage: 1, encrypt_comms: 1, sign: 0, certify: 0 }, rest: None, original_len: 1 }), len: One(2) }
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] reading subpacket KeyExpirationTime: critical? false, len: 4
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] parsing subpacket: KeyExpirationTime
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: KeyExpirationTime(TimeDelta { secs: 94608000, nanos: 0 }), len: One(5) }
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] found 4 hashed subpackets in 38 bytes
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] reading subpacket Issuer: critical? false, len: 8
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] parsing subpacket: Issuer
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] found subpacket Subpacket { is_critical: false, data: Issuer(KeyId(87ec31954278d0ff)), len: One(9) }
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] found 1 unhashed subpackets in 10 bytes
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::signature::de] signature data Mpis([Mpi(36d0d13e0ca029d59884a576371c9d4027d70409ac202e11f64321d0613a4859), Mpi(cc3ba0146461152352e4687e2b634eed11d9460421f90cedfda87df420b87b0a)])
+[2025-08-27 12:53:54.498 DEBUG pgp::composed::message::reader::packet_body] body source done: Old { header: OldPacketHeader { padding: 1, version: 0, tag: Signature, length_type: 0 }, length: Fixed(126) }
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::many] found header: Old { header: OldPacketHeader { padding: 1, version: 0, tag: OnePassSignature, length_type: 0 }, length: Fixed(13) }
+[2025-08-27 12:53:54.498 DEBUG pgp::composed::message::reader::packet_body] fixed packet 13
+[2025-08-27 12:53:54.498 DEBUG pgp::packet::many] found header: Old { header: OldPacketHeader { padding: 1, version: 0, tag: LiteralData, length_type: 0 }, length: Fixed(31) }
+[2025-08-27 12:53:54.498 DEBUG pgp::composed::message::reader::packet_body] fixed packet 31
+[2025-08-27 12:53:54.499 INFO core::utils::encrypt] Err(Message { message: "cannot verify message before reading it to the end", backtrace: None })
+[2025-08-27 12:53:54.499 INFO core::service] Ok(false)
+[2025-08-27 12:53:54.499 INFO core::service] start judge service on port: 1825
+[2025-08-27 12:53:54.499 INFO core::service::judge::service] VJudge Task server will be started at ::1825
+[2025-08-27 12:53:54.502 TRACE mio::poll] registering event source with poller: token=Token(4917843584), interests=READABLE | WRITABLE
+[2025-08-27 12:53:56.380 TRACE mio::poll] registering event source with poller: token=Token(4919935232), interests=READABLE | WRITABLE
+[2025-08-27 12:53:56.380 TRACE axum::serve] connection 127.0.0.1:55857 accepted
+[2025-08-27 12:53:56.391 TRACE mio::poll] registering event source with poller: token=Token(4919938944), interests=READABLE | WRITABLE
+[2025-08-27 12:53:56.391 TRACE axum::serve] connection 127.0.0.1:55859 accepted
+[2025-08-27 12:53:56.391 TRACE mio::poll] registering event source with poller: token=Token(4920984192), interests=READABLE | WRITABLE
+[2025-08-27 12:53:56.391 TRACE axum::serve] connection 127.0.0.1:55861 accepted
+[2025-08-27 12:53:56.393 INFO core::service::judge::service] socket io connected: "/" XfWBKmluHnPF7SEa
+[2025-08-27 12:53:56.393 TRACE tokio_tungstenite::handshake] Setting context when skipping handshake
+[2025-08-27 12:53:56.393 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:287 Stream.poll_next
+[2025-08-27 12:53:56.393 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:53:56.393 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:297 Stream.with_context poll_next -> read()
+[2025-08-27 12:53:56.393 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:149 Read.read
+[2025-08-27 12:53:56.393 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:53:56.393 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:152 Read.with_context read -> poll_read
+[2025-08-27 12:53:56.393 TRACE tokio_tungstenite::compat] WouldBlock
+[2025-08-27 12:53:56.396 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:287 Stream.poll_next
+[2025-08-27 12:53:56.396 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:53:56.396 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:297 Stream.with_context poll_next -> read()
+[2025-08-27 12:53:56.396 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:149 Read.read
+[2025-08-27 12:53:56.396 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:53:56.396 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:152 Read.with_context read -> poll_read
+[2025-08-27 12:53:56.396 TRACE tungstenite::protocol::frame::frame] Parsed headers [129, 134]
+[2025-08-27 12:53:56.396 TRACE tungstenite::protocol::frame::frame] First: 10000001
+[2025-08-27 12:53:56.396 TRACE tungstenite::protocol::frame::frame] Second: 10000110
+[2025-08-27 12:53:56.396 TRACE tungstenite::protocol::frame::frame] Opcode: Data(Text)
+[2025-08-27 12:53:56.396 TRACE tungstenite::protocol::frame::frame] Masked: true
+[2025-08-27 12:53:56.396 TRACE tungstenite::protocol::frame] received frame 
+<FRAME>
+final: true
+reserved: false false false
+opcode: TEXT
+length: 8
+payload length: 6
+payload: 0x3270726f6265
+            
+[2025-08-27 12:53:56.396 TRACE tungstenite::protocol] Received message 2probe
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:53:56.397 TRACE tungstenite::protocol] Sending frame: Frame { header: FrameHeader { is_final: true, rsv1: false, rsv2: false, rsv3: false, opcode: Data(Text), mask: None }, payload: b"3probe" }
+[2025-08-27 12:53:56.397 TRACE tungstenite::protocol::frame] writing frame 
+<FRAME>
+final: true
+reserved: false false false
+opcode: TEXT
+length: 8
+payload length: 6
+payload: 0x3370726f6265
+            
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:167 Write.write
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:169 Write.with_context write -> poll_write
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:178 Write.flush
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:180 Write.with_context flush -> poll_flush
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:287 Stream.poll_next
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:297 Stream.with_context poll_next -> read()
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:149 Read.read
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:152 Read.with_context read -> poll_read
+[2025-08-27 12:53:56.397 TRACE tokio_tungstenite::compat] WouldBlock
+[2025-08-27 12:53:56.399 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:287 Stream.poll_next
+[2025-08-27 12:53:56.399 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:53:56.399 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:297 Stream.with_context poll_next -> read()
+[2025-08-27 12:53:56.399 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:149 Read.read
+[2025-08-27 12:53:56.399 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:53:56.399 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:152 Read.with_context read -> poll_read
+[2025-08-27 12:53:56.399 TRACE tungstenite::protocol::frame::frame] Parsed headers [129, 129]
+[2025-08-27 12:53:56.399 TRACE tungstenite::protocol::frame::frame] First: 10000001
+[2025-08-27 12:53:56.399 TRACE tungstenite::protocol::frame::frame] Second: 10000001
+[2025-08-27 12:53:56.399 TRACE tungstenite::protocol::frame::frame] Opcode: Data(Text)
+[2025-08-27 12:53:56.399 TRACE tungstenite::protocol::frame::frame] Masked: true
+[2025-08-27 12:53:56.399 TRACE tungstenite::protocol::frame] received frame 
+<FRAME>
+final: true
+reserved: false false false
+opcode: TEXT
+length: 3
+payload length: 1
+payload: 0x35
+            
+[2025-08-27 12:53:56.399 TRACE tungstenite::protocol] Received message 5
+[2025-08-27 12:53:56.399 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:287 Stream.poll_next
+[2025-08-27 12:53:56.399 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:53:56.399 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:297 Stream.with_context poll_next -> read()
+[2025-08-27 12:53:56.399 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:149 Read.read
+[2025-08-27 12:53:56.399 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:53:56.400 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:152 Read.with_context read -> poll_read
+[2025-08-27 12:53:56.400 TRACE tokio_tungstenite::compat] WouldBlock
+[2025-08-27 12:53:56.400 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:53:56.400 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:178 Write.flush
+[2025-08-27 12:53:56.400 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:53:56.400 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:180 Write.with_context flush -> poll_flush
+[2025-08-27 12:54:21.387 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:54:21.387 TRACE tungstenite::protocol] Sending frame: Frame { header: FrameHeader { is_final: true, rsv1: false, rsv2: false, rsv3: false, opcode: Data(Text), mask: None }, payload: b"2" }
+[2025-08-27 12:54:21.387 TRACE tungstenite::protocol::frame] writing frame 
+<FRAME>
+final: true
+reserved: false false false
+opcode: TEXT
+length: 3
+payload length: 1
+payload: 0x32
+            
+[2025-08-27 12:54:21.387 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:54:21.387 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:167 Write.write
+[2025-08-27 12:54:21.387 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:54:21.387 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:169 Write.with_context write -> poll_write
+[2025-08-27 12:54:21.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:178 Write.flush
+[2025-08-27 12:54:21.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:54:21.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:180 Write.with_context flush -> poll_flush
+[2025-08-27 12:54:21.388 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:287 Stream.poll_next
+[2025-08-27 12:54:21.388 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:54:21.388 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:297 Stream.with_context poll_next -> read()
+[2025-08-27 12:54:21.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:149 Read.read
+[2025-08-27 12:54:21.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:54:21.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:152 Read.with_context read -> poll_read
+[2025-08-27 12:54:21.388 TRACE tungstenite::protocol::frame::frame] Parsed headers [129, 129]
+[2025-08-27 12:54:21.388 TRACE tungstenite::protocol::frame::frame] First: 10000001
+[2025-08-27 12:54:21.388 TRACE tungstenite::protocol::frame::frame] Second: 10000001
+[2025-08-27 12:54:21.388 TRACE tungstenite::protocol::frame::frame] Opcode: Data(Text)
+[2025-08-27 12:54:21.388 TRACE tungstenite::protocol::frame::frame] Masked: true
+[2025-08-27 12:54:21.388 TRACE tungstenite::protocol::frame] received frame 
+<FRAME>
+final: true
+reserved: false false false
+opcode: TEXT
+length: 3
+payload length: 1
+payload: 0x33
+            
+[2025-08-27 12:54:21.388 TRACE tungstenite::protocol] Received message 3
+[2025-08-27 12:54:21.388 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:287 Stream.poll_next
+[2025-08-27 12:54:21.388 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:54:21.388 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:297 Stream.with_context poll_next -> read()
+[2025-08-27 12:54:21.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:149 Read.read
+[2025-08-27 12:54:21.392 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:54:21.392 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:152 Read.with_context read -> poll_read
+[2025-08-27 12:54:21.392 TRACE tokio_tungstenite::compat] WouldBlock
+[2025-08-27 12:54:46.387 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:54:46.387 TRACE tungstenite::protocol] Sending frame: Frame { header: FrameHeader { is_final: true, rsv1: false, rsv2: false, rsv3: false, opcode: Data(Text), mask: None }, payload: b"2" }
+[2025-08-27 12:54:46.387 TRACE tungstenite::protocol::frame] writing frame 
+<FRAME>
+final: true
+reserved: false false false
+opcode: TEXT
+length: 3
+payload length: 1
+payload: 0x32
+            
+[2025-08-27 12:54:46.388 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:54:46.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:167 Write.write
+[2025-08-27 12:54:46.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:54:46.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:169 Write.with_context write -> poll_write
+[2025-08-27 12:54:46.389 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:178 Write.flush
+[2025-08-27 12:54:46.390 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:54:46.390 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:180 Write.with_context flush -> poll_flush
+[2025-08-27 12:54:46.390 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:287 Stream.poll_next
+[2025-08-27 12:54:46.390 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:54:46.390 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:297 Stream.with_context poll_next -> read()
+[2025-08-27 12:54:46.390 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:149 Read.read
+[2025-08-27 12:54:46.390 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:54:46.390 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:152 Read.with_context read -> poll_read
+[2025-08-27 12:54:46.391 TRACE tungstenite::protocol::frame::frame] Parsed headers [129, 129]
+[2025-08-27 12:54:46.391 TRACE tungstenite::protocol::frame::frame] First: 10000001
+[2025-08-27 12:54:46.391 TRACE tungstenite::protocol::frame::frame] Second: 10000001
+[2025-08-27 12:54:46.391 TRACE tungstenite::protocol::frame::frame] Opcode: Data(Text)
+[2025-08-27 12:54:46.391 TRACE tungstenite::protocol::frame::frame] Masked: true
+[2025-08-27 12:54:46.391 TRACE tungstenite::protocol::frame] received frame 
+<FRAME>
+final: true
+reserved: false false false
+opcode: TEXT
+length: 3
+payload length: 1
+payload: 0x33
+            
+[2025-08-27 12:54:46.391 TRACE tungstenite::protocol] Received message 3
+[2025-08-27 12:54:46.391 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:287 Stream.poll_next
+[2025-08-27 12:54:46.391 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:54:46.391 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:297 Stream.with_context poll_next -> read()
+[2025-08-27 12:54:46.391 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:149 Read.read
+[2025-08-27 12:54:46.391 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:54:46.391 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:152 Read.with_context read -> poll_read
+[2025-08-27 12:54:46.391 TRACE tokio_tungstenite::compat] WouldBlock
+[2025-08-27 12:55:11.387 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:55:11.388 TRACE tungstenite::protocol] Sending frame: Frame { header: FrameHeader { is_final: true, rsv1: false, rsv2: false, rsv3: false, opcode: Data(Text), mask: None }, payload: b"2" }
+[2025-08-27 12:55:11.388 TRACE tungstenite::protocol::frame] writing frame 
+<FRAME>
+final: true
+reserved: false false false
+opcode: TEXT
+length: 3
+payload length: 1
+payload: 0x32
+            
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:167 Write.write
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:169 Write.with_context write -> poll_write
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:178 Write.flush
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:180 Write.with_context flush -> poll_flush
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:287 Stream.poll_next
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:297 Stream.with_context poll_next -> read()
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:149 Read.read
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:152 Read.with_context read -> poll_read
+[2025-08-27 12:55:11.388 TRACE tungstenite::protocol::frame::frame] Parsed headers [129, 129]
+[2025-08-27 12:55:11.388 TRACE tungstenite::protocol::frame::frame] First: 10000001
+[2025-08-27 12:55:11.388 TRACE tungstenite::protocol::frame::frame] Second: 10000001
+[2025-08-27 12:55:11.388 TRACE tungstenite::protocol::frame::frame] Opcode: Data(Text)
+[2025-08-27 12:55:11.388 TRACE tungstenite::protocol::frame::frame] Masked: true
+[2025-08-27 12:55:11.388 TRACE tungstenite::protocol::frame] received frame 
+<FRAME>
+final: true
+reserved: false false false
+opcode: TEXT
+length: 3
+payload length: 1
+payload: 0x33
+            
+[2025-08-27 12:55:11.388 TRACE tungstenite::protocol] Received message 3
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:287 Stream.poll_next
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:243 WebSocketStream.with_context
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/lib.rs:297 Stream.with_context poll_next -> read()
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:149 Read.read
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:126 AllowStd.with_context
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite::compat] /Users/smallfang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compat.rs:152 Read.with_context read -> poll_read
+[2025-08-27 12:55:11.388 TRACE tokio_tungstenite::compat] WouldBlock

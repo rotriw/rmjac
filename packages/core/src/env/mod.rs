@@ -1,5 +1,7 @@
 use lazy_static::lazy_static;
 use std::{collections::HashMap, sync::Mutex};
+use std::sync::Arc;
+use sea_orm::{sqlx, DatabaseConnection};
 use socketioxide::extract::SocketRef;
 use crate::graph::action::DefaultNodes;
 
@@ -23,9 +25,15 @@ lazy_static! {
         default_strategy_node: -1
     });
 
-    pub static ref EDGE_AUTH: Mutex<String> = Mutex::new("".to_string());
+    pub static ref DB_URL: Mutex<String> = Mutex::new("postgres://localhost/rmjac".to_string());
+    pub static ref DB_SCHEMA: Mutex<String> = Mutex::new("public".to_string());
+    pub static ref CONNECTION_POOL: Arc<Mutex<Option<DatabaseConnection>>> = Arc::new(Mutex::new(None));
+
+    pub static ref EDGE_AUTH_PUBLICKEY: Mutex<String> = Mutex::new("".to_string());
     pub static ref EDGE_AUTH_MAP: Mutex<HashMap<String, i32>> = Mutex::new(HashMap::new());
     pub static ref EDGE_SOCKETS: Mutex<HashMap<String, SocketRef>> = Mutex::new(HashMap::new());
     pub static ref EDGE_VEC: Mutex<Vec<String>> = Mutex::new(vec![]);
     pub static ref EDGE_NUM: Mutex<i32> = Mutex::new(0);
 }
+
+pub mod db;

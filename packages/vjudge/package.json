@@ -1,0 +1,21 @@
+{
+  "name": "rmjac_vjudge",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/jsdom": "^21.1.7",
+    "@types/log4js": "^2.3.5",
+    "axios": "^1.11.0",
+    "dotenv": "^17.2.1",
+    "jsdom": "^26.1.0",
+    "log4js": "^6.9.1",
+    "openpgp": "^6.2.1",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
+  }
+}

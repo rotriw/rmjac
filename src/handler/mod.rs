@@ -63,7 +63,7 @@ impl From<CoreError> for HttpError {
 pub type ResultHandler<T> = Result<T, HttpError>;
 
 #[actix_web::main]
-pub async fn main(host: &str, port: u16) -> std::io::Result<()> {
+pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) -> std::io::Result<()> {
     let database_url = crate::env::CONFIG
         .lock()
         .unwrap()
@@ -73,12 +73,12 @@ pub async fn main(host: &str, port: u16) -> std::io::Result<()> {
             std::io::Error::new(std::io::ErrorKind::NotFound, "Postgres URL not found")
         })?;
     log::info!("Connecting to database {}...", &database_url);
-    let connection_options = ConnectOptions::new(database_url)
+    let connection_options = ConnectOptions::new(database_url.clone())
         .sqlx_logging_level(LevelFilter::Trace)
         .to_owned();
     let conn = Database::connect(connection_options).await.unwrap();
     log::info!("Connected to database");
-    let data = core::service::service_start(&conn).await;
+    let data = core::service::service_start(&conn, database_url.as_str(), "public", vjudge_port, vjudge_auth).await;
     if data.is_err() {
         log::error!("Failed to start service: {:?}", data.err());
     }

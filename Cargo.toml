@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "packages/core"
-, "packages/docs_parser", "packages/macro_db_init", "packages/macro_node_iden", "packages/macro_socket_auth", "packages/vjudge"]
+, "packages/docs_parser", "packages/macro_db_init", "packages/macro_node_iden", "packages/macro_socket_auth"]
 
 [package]
 name = "rmjac"
@@ -27,3 +27,4 @@ captcha-rs = "0.2.11"
 actix-cors = "0.7.1"
 redis = "0.32.2"
 tap = "1.0.1"
+tower-http = "0.6.6"

@@ -1,5 +1,6 @@
 use derive_more::Display;
 use enum_const::EnumConst;
+use pgp::errors::Error;
 use redis::RedisError;
 
 #[derive(Debug, Display, EnumConst)]
@@ -34,6 +35,10 @@ pub enum CoreError {
     NotFound(String),
     #[display("Serde Error: {}", _0)]
     SerdeError(serde_json::Error),
+    #[display("PGP Error: {}", _0)]
+    PGPError(pgp::errors::Error),
+    #[display("IO Error: {}", _0)]
+    IOError(std::io::Error),
     #[display("Redis Error: {}", _0)]
     RedisError(RedisError),
     #[display("Error: {}", _0)]
@@ -46,6 +51,7 @@ impl From<&CoreError> for i64 {
     fn from(value: &CoreError) -> Self {
         match value {
             CoreError::StdError => 10000,
+            CoreError::IOError(_) => 10001,
             CoreError::DbError(_) => 20000,
             CoreError::RedisError(_) => 21000,
             CoreError::UserNotFound => 60003,
@@ -59,9 +65,22 @@ impl From<&CoreError> for i64 {
                 QueryNotFound::ProblemIdenNotFound => 61001,
             },
             CoreError::SerdeError(_) => 70000,
+            CoreError::PGPError(_) => 75000,
             CoreError::StringError(_) => 80000,
             CoreError::InvalidFunction(_) => 80001,
         }
+    }
+}
+
+impl From<std::io::Error> for CoreError {
+    fn from(err: std::io::Error) -> Self {
+        CoreError::IOError(err)
+    }
+}
+
+impl From<pgp::errors::Error> for CoreError {
+    fn from(err: Error) -> Self {
+        CoreError::PGPError(err)
     }
 }
 

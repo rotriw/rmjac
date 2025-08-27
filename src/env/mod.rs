@@ -6,6 +6,7 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub secret_challenge_code: String,
+    pub secret_edge_pwd: String,
     pub redis_url: Option<String>,
     pub postgres_url: Option<String>,
 }
@@ -15,6 +16,7 @@ lazy_static! {
         secret_challenge_code: "default_secret".to_string(),
         postgres_url: Some("postgresql://localhost:5432".to_string()),
         redis_url: Some("redis://localhost:6379".to_string()),
+        secret_edge_pwd: "default_edge_pwd".to_string(),
     });
 }
 
@@ -30,6 +32,7 @@ pub fn env_load(path: &str) -> Result<(), String> {
             env.secret_challenge_code = cfg.secret_challenge_code;
             env.postgres_url = cfg.postgres_url;
             env.redis_url = cfg.redis_url;
+            env.secret_edge_pwd = cfg.secret_edge_pwd;
             Ok(())
         }
         Err(e) => {

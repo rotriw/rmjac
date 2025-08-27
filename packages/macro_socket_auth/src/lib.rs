@@ -13,8 +13,8 @@ pub fn auth_socket_connect(_attr: TokenStream, item: TokenStream) -> TokenStream
     let func_return = &input.sig.output;
 
     let expanded = quote! {
-        async fn #func_name(___socket: SocketRef, #func_args) #func_return {
-            let has_permission = check_auth(___socket);
+        async fn #func_name(#func_args) #func_return {
+            let has_permission = check_auth(socket.clone());
             if !has_permission {
                 return ;
             }

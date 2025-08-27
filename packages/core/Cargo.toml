@@ -30,6 +30,9 @@ queue = "0.3.1"
 deno_core = "0.353.0"
 socketioxide = "0.17.2"
 totp-rs = { version = "5.7.0", features = ["steam"]}
+axum = "0.8.4"
+tower-http = { version = "0.6.6", features = ["cors"] }
+pgp = "0.16.0"
 
 
 [dependencies.sea-orm-migration]
