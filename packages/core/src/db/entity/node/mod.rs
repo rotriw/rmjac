@@ -19,6 +19,7 @@ pub mod token;
 pub mod user;
 pub mod testcase;
 pub mod training;
+pub mod training_problem;
 
 use crate::Result;
 

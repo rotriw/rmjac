@@ -24,6 +24,7 @@ pub mod perm_view;
 pub mod problem_limit;
 pub mod problem_statement;
 pub mod problem_tag;
+pub mod training_problem;
 
 pub trait EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>
 where

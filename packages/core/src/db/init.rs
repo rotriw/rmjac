@@ -146,6 +146,13 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
+        "node_training_problem".to_string(),
+        table_create!(iden::node::training_problem::TrainingProblem, {
+            NodeId: big_integer not_null primary_key,
+            Description: text not_null,
+        }),
+    );
+    tables.insert(
         "edge".to_string(),
         table_create!(iden::edge::edge::Edge, {
             EdgeId: big_integer not_null primary_key auto_increment,
@@ -203,6 +210,15 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             VNodeId: big_integer not_null,
             Iden: text not_null,
         }),
+    );
+    tables.insert(
+        "edge_training_problem".to_string(),
+        table_create!(iden::edge::training_problem::TrainingProblem, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
+            Order: big_integer not_null,
+        })
     );
     tables
 }
@@ -294,6 +310,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
             .to_owned(),
     );
     tables.insert(
+        "node_training_problem".to_string(),
+        Table::drop()
+            .table(iden::node::training_problem::TrainingProblem::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
         "edge".to_string(),
         Table::drop()
             .table(iden::edge::edge::Edge::Table)
@@ -341,6 +364,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
             .table(iden::edge::iden::Iden::Table)
             .if_exists()
             .to_owned(),
+    );
+    tables.insert(
+        "edge_training_problem".to_string(),
+        Table::drop()
+            .table(iden::edge::training_problem::TrainingProblem::Table)
+            .if_exists()
+            .to_owned()
     );
     tables
 }

@@ -14,6 +14,7 @@ pub mod iden;
 pub mod problem_limit;
 pub mod problem_statement;
 pub mod problem_tag;
+pub mod training_problem;
 
 pub trait DbEdgeInfo {
     fn get_edge_type(&self) -> &str;

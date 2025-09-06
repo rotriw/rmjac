@@ -7,17 +7,17 @@ use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct RecordNewProp<'a> {
-    pub platform: &'a str,
-    pub code: &'a str,
-    pub code_language: &'a str,
-    pub url: &'a str,
+pub struct RecordNewProp {
+    pub platform: String,
+    pub code: String,
+    pub code_language: String,
+    pub url: String,
     pub statement_node_id: i64,
     pub public_status: bool,
 }
-pub async fn create_record<'a>(
+pub async fn create_record(
     db: &DatabaseConnection,
-    record: RecordNewProp<'a>,
+    record: RecordNewProp,
     track_service_id: i64,
 ) -> Result<RecordNode> {
     log::debug!("creating record schema with properties: {:?}", record);
