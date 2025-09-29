@@ -10,6 +10,7 @@ pub struct Model {
     pub edge_id: i64,
     pub u_node_id: i64,
     pub v_node_id: i64,
+    pub weight: i64,
     pub iden: String,
 }
 
@@ -32,6 +33,7 @@ impl From<Model> for IdenEdge {
             u: model.u_node_id,
             v: model.v_node_id,
             iden: model.iden,
+            weight: model.weight,
         }
     }
 }

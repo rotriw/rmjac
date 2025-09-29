@@ -1,6 +1,7 @@
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct IdenNodePublic {
     pub iden: String,
+    pub weight: i64,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -9,6 +10,7 @@ pub struct IdenNodePrivate {}
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct IdenNodePublicRaw {
     pub iden: String,
+    pub weight: i64,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -32,7 +34,7 @@ impl From<Model> for IdenNode {
     fn from(model: Model) -> Self {
         IdenNode {
             node_id: model.node_id,
-            public: IdenNodePublic { iden: model.iden },
+            public: IdenNodePublic { iden: model.iden, weight: model.weight },
             private: IdenNodePrivate {},
         }
     }
@@ -43,6 +45,7 @@ impl From<IdenNodeRaw> for ActiveModel {
         ActiveModel {
             node_id: NotSet,
             iden: Set(value.public.iden),
+            weight: Set(value.public.weight)
         }
     }
 }

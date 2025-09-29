@@ -1,3 +1,5 @@
+use sea_orm::{QueryFilter, QueryOrder};
+use sea_orm::ColumnTrait;
 #[derive(Clone, Debug, PartialEq)]
 pub struct TrainingProblemEdge {
     pub id: i64,
@@ -68,5 +70,42 @@ impl EdgeQuery<ActiveModel, Model, Entity, TrainingProblemEdge> for TrainingProb
     }
 }
 
+impl EdgeQueryOrder<ActiveModel, Model, Entity, TrainingProblemEdge> for TrainingProblemEdgeQuery {
+    async fn get_order_id(u: i64, order: i64, db: &DatabaseConnection) -> Result<i64> {
+        let val = Entity::find()
+            .filter(Column::UNodeId.eq(u))
+            .filter(Column::Order.eq(order))
+            .one(db)
+            .await?;
+        if let Some(val) = val {
+            Ok(val.v_node_id)
+        } else {
+            Err(CoreError::NotFound("Cannot found specific order.".to_string()))
+        }
+    }
+
+    async fn get_order_asc(u: i64, db: &DatabaseConnection) -> Result<Vec<i64>> {
+        Ok(Entity::find()
+            .filter(Column::UNodeId.eq(u))
+            .order_by_asc(Column::Order)
+            .all(db)
+            .await?
+            .into_iter().map(|m| m.v_node_id).collect())
+    }
+
+    async fn get_order_desc(u: i64, db: &DatabaseConnection) -> Result<Vec<i64>> {
+        Ok(Entity::find()
+            .filter(Column::UNodeId.eq(u))
+            .order_by_desc(Column::Order)
+            .all(db)
+            .await?
+            .into_iter().map(|m| m.v_node_id).collect())
+    }
+}
+
+use crate::Result;
+use sea_orm::{DatabaseConnection, EntityTrait};
 use crate::db::entity::edge::training_problem::{ActiveModel, Column, Entity, Model};
-use crate::graph::edge::{Edge, EdgeQuery, EdgeRaw};
+use crate::db::iden::edge::iden::Iden::UNodeId;
+use crate::error::CoreError;
+use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryOrder, EdgeRaw};

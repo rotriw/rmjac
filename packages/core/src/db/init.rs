@@ -132,6 +132,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         table_create!(iden::node::iden::Iden, {
             NodeId: big_integer not_null primary_key,
             Iden: text not_null,
+            Weight: big_integer not_null,
         }),
     );
     tables.insert(

@@ -3,6 +3,7 @@ use crate::graph::node::iden::IdenNode;
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter, FromJsonQueryResult};
 use serde::{Deserialize, Serialize};
+use crate::error::CoreError;
 
 #[derive(
     Clone, Debug, PartialEq, DeriveEntityModel, Deserialize, Serialize, FromJsonQueryResult,
@@ -12,6 +13,7 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub node_id: i64,
     pub iden: String,
+    pub weight: i64,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -25,3 +27,14 @@ impl DbNodeInfo for ActiveModel {
     }
 }
 impl DbNodeActiveModel<Model, IdenNode> for ActiveModel {}
+
+pub async fn get_default_training_iden_node(db: &DatabaseConnection) -> Result<i64, CoreError> {
+    let node = Entity::find()
+        .filter(Column::Iden.eq("training_start"))
+        .one(db)
+        .await?
+        .ok_or(CoreError::NotFound(
+            "Default training iden start node not found".to_string(),
+        ))?;
+    Ok(node.node_id)
+}

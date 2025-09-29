@@ -22,7 +22,8 @@ lazy_static! {
     pub static ref SAVED_NODE_CIRCLE_ID: Mutex<i32> = Mutex::new(0);
     pub static ref DEFAULT_NODES: Mutex<DefaultNodes> = Mutex::new(DefaultNodes {
         guest_user_node: -1,
-        default_strategy_node: -1
+        default_strategy_node: -1,
+        default_training_iden_node: -1,
     });
 
     pub static ref DB_URL: Mutex<String> = Mutex::new("postgres://localhost/rmjac".to_string());

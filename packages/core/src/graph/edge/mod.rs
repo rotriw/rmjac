@@ -2,8 +2,9 @@ use crate::Result;
 use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo, edge::create_edge};
 use crate::error::CoreError::NotFound;
 use sea_orm::sea_query::IntoCondition;
-use sea_orm::{ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel};
+use sea_orm::{ActiveModelBehavior, ActiveModelTrait, Database, DatabaseConnection, EntityTrait, IntoActiveModel};
 use std::str::FromStr;
+use deno_core::v8::Data;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EdgeType {
@@ -84,7 +85,7 @@ where
                 .collect())
         }
     }
-
+    
     fn get_v_filter<T: IntoCondition>(
         u: i64,
         filter: T,
@@ -220,6 +221,13 @@ pub trait EdgeQueryPerm {
         db: &DatabaseConnection,
     ) -> impl Future<Output = Result<Vec<(i64, i64, i64)>>>;
 }
+
+pub trait EdgeQueryOrder<DbActive, DbModel, DbEntity, Edge> {
+    fn get_order_id(u: i64, order: i64, db: &DatabaseConnection) -> impl Future<Output = Result<i64>>;
+    fn get_order_desc(u: i64, db: &DatabaseConnection) -> impl Future<Output = Result<Vec<i64>>>;
+    fn get_order_asc(u: i64, db: &DatabaseConnection) -> impl Future<Output = Result<Vec<i64>>>;
+}
+
 
 pub trait Edge<DbActive, DbModel, DbEntity>
 where

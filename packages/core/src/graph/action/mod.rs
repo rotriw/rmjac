@@ -295,17 +295,20 @@ where
 pub struct DefaultNodes {
     pub guest_user_node: i64,
     pub default_strategy_node: i64,
+    pub default_training_iden_node: i64
 }
 
 pub async fn get_default_node(db: &DatabaseConnection) -> Result<DefaultNodes> {
     let mut result = DefaultNodes {
         guest_user_node: -1,
         default_strategy_node: -1,
+        default_training_iden_node: -1,
     };
 
     result.guest_user_node = db::entity::node::user::get_guest_user_node(db).await?;
     result.default_strategy_node =
         db::entity::node::perm_group::get_default_strategy_node(db).await?;
+    result.default_training_iden_node = db::entity::node::iden::get_default_training_iden_node(db).await?;
     Ok(result)
 }
 

@@ -270,6 +270,7 @@ pub async fn create_problem_iden(
     let iden_node = IdenNodeRaw {
         public: IdenNodePublicRaw {
             iden: iden.to_string(),
+            weight: 1,
         },
         private: IdenNodePrivateRaw {},
     }
@@ -281,6 +282,7 @@ pub async fn create_problem_iden(
         u: problem_source_node[0].node_id,
         v: iden_node.node_id,
         iden: iden.to_string(),
+        weight: 1,
     }
     .save(db)
     .await?;
@@ -288,6 +290,7 @@ pub async fn create_problem_iden(
         u: iden_node.node_id,
         v: problem_node_or_statement_id,
         iden: "DONE_FOUND_FROM_DATABASE".to_string(),
+        weight: 1,
     }
     .save(db)
     .await?;
@@ -378,6 +381,69 @@ pub async fn get_problem(
     Ok((view_problem(db, redis, problem_node).await?, node_id))
 }
 
+/*
+* pref: 倾向于指定什么 ID (原理是遇到指定的id直接对其权值+10000，其次是在DAG上根据weight找最短路(bfs) 禁止成环，在图上最多跑max_times次。)
+* pref: 越大越好。
+*/
+pub async fn get_statement_string_iden(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64, pref: Option<&str>, max_times: i16) -> Result<String> {
+    const INF: i64 = 1 << 30;
+    let pref = pref.unwrap_or("");
+    if let Ok(value) = redis.get::<_, String>(format!("node_iden_{node_id}_{pref}")) {
+        return Ok(value);
+    }
+    let name = 'scope: {
+        let mut times = 0;
+        let mut result = "UNKNOWN".to_string();
+        let mut pref_value = -INF;
+        use priority_queue::PriorityQueue;
+        let mut que = PriorityQueue::new();
+        que.push((node_id, "".to_string()), 0);
+        while !que.is_empty() {
+            let value = que.peek().unwrap();
+            let now_node_id = value.0.0;
+            let now_iden = value.0.1.clone();
+            let now_weight = *value.1;
+            que.pop();
+            if times > max_times {
+                break;
+            }
+            times += 1;
+            let node_type = get_node_type(db, now_node_id).await?;
+            if node_type == "problem_source" {
+                let now_weight = if now_iden == pref {
+                    now_weight + 10000
+                } else {
+                    now_weight
+                };
+                if now_weight > pref_value {
+                    pref_value = now_weight;
+                    result = now_iden.clone();
+                }
+                continue;
+            }
+            log::trace!("Now at node_id: {}, iden: {}, weight: {}", now_node_id, now_iden, now_weight);
+            use db::entity::edge::iden::Column as IdenColumn;
+            let graph_next = IdenEdgeQuery::get_u_for_all(now_node_id, db).await?;
+            for ver in graph_next {
+                let node_type = get_node_type(db, ver.v).await?;
+                if node_type != "problem_source" && node_type != "iden" {
+                    continue;
+                }
+                let new_iden = now_iden.clone() + ver.iden.as_str();
+                let mut new_weight = now_weight + ver.weight;
+                que.push((ver.v, new_iden), new_weight);
+            }
+        }
+        result
+    };
+    redis.set::<_, _, ()>(format!("node_iden_{node_id}_{pref}"), name.clone())?;
+    redis.expire::<_, ()>(format!("node_iden_{node_id}_{pref}"), 3600)?;
+    Ok(name)
+}
+
+/**
+* 题目获取接口，返回题目模型
+*/
 pub async fn view_problem(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,

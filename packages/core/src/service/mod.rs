@@ -19,6 +19,8 @@ pub async fn service_start(db: &DatabaseConnection, db_url: &str, db_schema: &st
     let data = fs::read_to_string(vjudge_secret_path)?;
     *EDGE_AUTH_PUBLICKEY.lock().unwrap() = data.clone();
     log::info!("start judge service on port: {vjudge_port}");
-    judge::service::service_start(vjudge_port).await?;
+    tokio::spawn(async move {
+        judge::service::service_start(vjudge_port).await.unwrap();
+    });
     Ok(())
 }

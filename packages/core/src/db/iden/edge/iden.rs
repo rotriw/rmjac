@@ -12,4 +12,6 @@ pub enum Iden {
     VNodeId,
     #[sea_orm(iden = "iden")]
     Iden,
+    #[sea_orm(iden = "weight")]
+    Weight,
 }
