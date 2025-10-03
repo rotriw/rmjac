@@ -114,6 +114,13 @@ pub async fn add_problem_statement_for_problem(
             .await?;
         log::debug!("Iden Node have been created. {problem_iden_node:?}");
     }
+    // 为了让题目能找到他自己的id，所以我们可以支持题目有一个指向statement的反向iden.
+    let _ = IdenEdgeRaw {
+        u: problem_statement_node.node_id,
+        v: problem_node_id,
+        iden: "DONE_FOUND_FROM_DATABASE".to_string(),
+        weight: 1,
+    }.save(db).await?;
     // 暂时允许访问题目 = 访问所有题面
     // statement -limit-> limit
     log::debug!("Add problem limit edge");
@@ -408,30 +415,38 @@ pub async fn get_statement_string_iden(db: &DatabaseConnection, redis: &mut redi
                 break;
             }
             times += 1;
+            log::debug!("Popped node_id: {}, iden: {}, weight: {}", now_node_id, now_iden, now_weight);
             let node_type = get_node_type(db, now_node_id).await?;
             if node_type == "problem_source" {
-                let now_weight = if now_iden == pref {
+                let idenw = ProblemSourceNode::from_db(db, now_node_id).await?.public.iden;
+                let now_weight = if idenw == pref {
                     now_weight + 10000
                 } else {
                     now_weight
                 };
+                let now_iden = idenw + now_iden.as_str();
                 if now_weight > pref_value {
                     pref_value = now_weight;
                     result = now_iden.clone();
                 }
                 continue;
             }
-            log::trace!("Now at node_id: {}, iden: {}, weight: {}", now_node_id, now_iden, now_weight);
+            log::debug!("Now at node_id: {}, iden: {}, weight: {}", now_node_id, now_iden, now_weight);
             use db::entity::edge::iden::Column as IdenColumn;
             let graph_next = IdenEdgeQuery::get_u_for_all(now_node_id, db).await?;
             for ver in graph_next {
-                let node_type = get_node_type(db, ver.v).await?;
-                if node_type != "problem_source" && node_type != "iden" {
+                let node_type = get_node_type(db, ver.u).await?;
+                log::debug!("{} Node type: {}", ver.u, node_type);
+                if node_type != "problem_source" && node_type != "iden" && node_type != "problem_statement" {
                     continue;
                 }
-                let new_iden = now_iden.clone() + ver.iden.as_str();
+                let new_iden = if ver.iden.as_str() != "DONE_FOUND_FROM_DATABASE" {
+                    now_iden.clone() + ver.iden.as_str()
+                } else {
+                    now_iden.clone()
+                };
                 let mut new_weight = now_weight + ver.weight;
-                que.push((ver.v, new_iden), new_weight);
+                que.push((ver.u, new_iden), new_weight);
             }
         }
         result

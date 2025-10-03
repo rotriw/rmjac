@@ -12,6 +12,7 @@
 //     env::env_load, utils,
 // };
 
+use core::async_run;
 use core::graph::node::record::subtask::SubtaskCalcMethod;
 use core::service::judge::calc::handle_score;
 use core::graph::node::record::RecordStatus::Accepted;
@@ -21,7 +22,7 @@ use core::model::problem::CreateProblemProps;
 use core::model::problem::create_problem;
 
 use log::LevelFilter;
-use sea_orm::DatabaseConnection;
+use sea_orm::{DatabaseConnection, Iden};
 
 use crate::utils;
 
@@ -31,6 +32,34 @@ pub async fn test_get_problem(db: &DatabaseConnection) {
     log::info!("{:?}", x);
     let x = get_problem(db, &mut redis.get_connection().unwrap(), "LGP1001").await;
     log::info!("{:?}", x);
+}
+
+
+pub async fn test_create_training(db: &DatabaseConnection) {
+    let redis = redis::Client::open("redis://127.0.0.1/").unwrap();
+    let conn = std::env::var("DB").unwrap();
+    use core::model::training::TrainingProblem::*;
+    use core::model::training::TrainingList;
+    {
+        let v = core::model::training::create_training(
+            db,
+            &mut redis.get_connection().unwrap(),
+        "Test Training",
+        "test_training",
+        "This is a test training.",
+        "This is a private description.",
+        chrono::Utc::now().naive_utc(),
+        chrono::Utc::now().naive_utc() + chrono::Duration::days(4),
+            "public",
+            &TrainingList {
+                description: "开始".to_string(),
+                own_problem: vec![ProblemIden("LGP1001".to_string()), ProblemTraining(TrainingList {
+                    description: "中间".to_string(),
+                    own_problem: vec![ProblemIden("rmj1000".to_string())],
+                })],
+            }, vec![], vec![]).await;
+        log::info!("Training created: {:?}", v);
+    }
 }
 
 pub async fn test_create_problem(db: &DatabaseConnection) {
@@ -139,15 +168,20 @@ pub fn run(log_level: Option<String>) -> Option<()> {
     //             ViewPerm::All as i64
     //         ).await);
         } */
-    // let conn = std::env::var("DB").unwrap(); async_run! {
-        // let db = sea_orm::Database::connect(conn).await.unwrap();
-        // let _ = core::service::service_start(&db).await;
+    let conn = std::env::var("DB").unwrap(); async_run! {
+        let db = sea_orm::Database::connect(&conn).await.unwrap();
+        let _ = core::service::service_start(&db, &conn, "public", 1825, "").await;
         // test_get_problem(&db).await;
-        //test_create_problem(&db).await;
-        // log::warn!("start");
-        // /* for i in 1..=20000 {
-        //     let _ = create_default_user(&db, format!("test_user_{i}").as_str(), format!("test_user_{i}").as_str(), format!("test_user_{i}@126.com").as_str(), format!("example.com/a.png").as_str(), "123456").await;
-        // } */
+        let redis = redis::Client::open("redis://127.0.0.1/").unwrap();
+        let x = core::model::problem::get_statement_string_iden(&db, &mut redis.get_connection().unwrap(), 9, Some("LG"), 1000).await;
+        log::info!("{:?}", x);
+        // test_create_problem(&db).await;
+        // test_create_training(&db).await;
+
+        log::warn!("start");
+        /* for i in 1..=20000 {
+            let _ = create_default_user(&db, format!("test_user_{i}").as_str(), format!("test_user_{i}").as_str(), format!("test_user_{i}@126.com").as_str(), format!("example.com/a.png").as_str(), "123456").await;
+        } */
         // init_spot(&db, &PermViewEdgeQuery, 3, 20004).await.unwrap();
         // log::warn!("start");
         // for i in 4..=20000 {
@@ -157,7 +191,7 @@ pub fn run(log_level: Option<String>) -> Option<()> {
         //     }
         // }
         // log::warn!("end");
-    // }
+    }
     test_handle_score();
     Some(())
 }

@@ -6,6 +6,10 @@ pub enum Training {
     Table,
     #[sea_orm(iden = "node_id")]
     NodeId,
+    #[sea_orm(iden = "name")]
+    Name,
+    #[sea_orm(iden = "iden")]
+    Iden,
     #[sea_orm(iden = "description_public")]
     DescriptionPublic,
     #[sea_orm(iden = "description_private")]
@@ -16,4 +20,5 @@ pub enum Training {
     EndTime,
     #[sea_orm(iden = "training_type")]
     TrainingType,
+
 }

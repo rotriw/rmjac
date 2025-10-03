@@ -68,10 +68,10 @@ impl From<TrainingNodeRaw> for ActiveModel {
             node_id: NotSet,
             name: Set(value.public.name),
             iden: Set(value.public.iden),
-            description_public: Set("".to_string()),
-            description_private: Set("".to_string()),
-            start_time: NotSet,
-            end_time: NotSet,
+            description_public: Set(value.public.description),
+            description_private: Set(value.private.description),
+            start_time: Set(value.public.start_time),
+            end_time: Set(value.public.end_time),
             training_type: Set(value.public.training_type),
         }
     }

@@ -139,6 +139,8 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         "node_training".to_string(),
         table_create!(iden::node::training::Training, {
             NodeId: big_integer not_null primary_key,
+            Name: text not_null,
+            Iden: text not_null,
             DescriptionPublic: text not_null,
             DescriptionPrivate: text not_null,
             StartTime: date_time not_null,
@@ -210,6 +212,8 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
             Iden: text not_null,
+            Weight: big_integer not_null,
+
         }),
     );
     tables.insert(

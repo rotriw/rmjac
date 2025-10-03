@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use crate::db::entity::node::{DbNodeActiveModel, DbNodeInfo};
 use crate::graph::node::training::TrainingNode;
 use sea_orm::entity::prelude::*;
@@ -15,8 +16,8 @@ pub struct Model {
     pub iden: String,
     pub description_public: String,
     pub description_private: String,
-    pub start_time: DateTime,
-    pub end_time: DateTime,
+    pub start_time: NaiveDateTime,
+    pub end_time: NaiveDateTime,
     pub training_type: String,
 }
 

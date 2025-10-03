@@ -15,6 +15,7 @@ use crate::graph::node::training::{TrainingNode, TrainingNodePrivateRaw, Trainin
 use crate::graph::node::training::problem::{TrainingProblemNode, TrainingProblemNodePrivateRaw, TrainingProblemNodePublicRaw, TrainingProblemNodeRaw};
 use crate::model::problem::{get_problem, get_statement_string_iden};
 
+#[allow(clippy::too_many_arguments)]
 pub async fn create_training(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,
