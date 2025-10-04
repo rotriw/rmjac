@@ -167,10 +167,10 @@ pub async fn change_user_config(
     node_id: i64,
     update_data: UserUpdateProps,
 ) -> Result<UserNode, CoreError> {
-    use db::entity::node::user::Column::{UserName, UserEmail, UserAvatar, UserDescription, UserBio};
+    
     let user = UserNode::from_db(db, node_id).await?;
     let active = update_data.into();
-    user.modify_from_active_model(db, active);
+    user.modify_from_active_model(db, active).await?;
     Ok(user)
 }
 

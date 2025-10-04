@@ -2,12 +2,10 @@ use crate::db::entity::edge::{problem_statement, problem_tag};
 use crate::db::entity::node::problem_statement::ContentType;
 use crate::error::CoreError;
 use crate::graph::action::get_node_type;
-use crate::graph::edge::iden::{IdenEdgeQuery, IdenEdgeRaw};
 use crate::graph::edge::problem_limit::{ProblemLimitEdgeQuery, ProblemLimitEdgeRaw};
 use crate::graph::edge::problem_statement::{ProblemStatementEdgeQuery, ProblemStatementEdgeRaw};
 use crate::graph::edge::problem_tag::ProblemTagEdgeRaw;
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
-use crate::graph::node::iden::{IdenNode, IdenNodePrivateRaw, IdenNodePublicRaw, IdenNodeRaw};
 use crate::graph::node::problem::limit::{
     ProblemLimitNode, ProblemLimitNodePrivateRaw, ProblemLimitNodePublicRaw, ProblemLimitNodeRaw,
 };
@@ -21,20 +19,14 @@ use crate::graph::node::problem::tag::{
 use crate::graph::node::problem::{
     ProblemNode, ProblemNodePrivateRaw, ProblemNodePublicRaw, ProblemNodeRaw,
 };
-use crate::graph::node::problem_source::{
-    ProblemSourceNode, ProblemSourceNodePrivateRaw, ProblemSourceNodePublicRaw,
-    ProblemSourceNodeRaw,
-};
 use crate::graph::node::{Node, NodeRaw};
 use crate::{Result, db};
-use async_recursion::async_recursion;
 use chrono::Utc;
 use redis::Commands;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
 use crate::service::iden::{create_iden, get_node_ids_from_iden};
 
-type ProblemSourceString = String;
 type ProblemIdenString = String;
 
 pub async fn create_problem_schema(
@@ -219,7 +211,7 @@ pub async fn create_problem(
         format!("problem/{}", problem.problem_iden).as_str(),
         vec![result.node_id],
         db,
-    );
+    ).await?;
     log::info!("The problem {} have been created.", &problem.problem_name);
     Ok(result)
 }

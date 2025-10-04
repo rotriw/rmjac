@@ -76,7 +76,6 @@ impl IdenEdgeQuery {
 
 
 use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter};
-use tap::Conv;
 use sea_orm::ColumnTrait;
 use crate::Result;
 use crate::db::entity::edge::iden::{ActiveModel, Column, Entity, Model};

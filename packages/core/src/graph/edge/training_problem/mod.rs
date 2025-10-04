@@ -106,6 +106,5 @@ impl EdgeQueryOrder<ActiveModel, Model, Entity, TrainingProblemEdge> for Trainin
 use crate::Result;
 use sea_orm::{DatabaseConnection, EntityTrait};
 use crate::db::entity::edge::training_problem::{ActiveModel, Column, Entity, Model};
-use crate::db::iden::edge::iden::Iden::UNodeId;
 use crate::error::CoreError;
 use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryOrder, EdgeRaw};

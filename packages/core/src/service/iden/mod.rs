@@ -131,7 +131,6 @@ pub async fn get_node_ids_from_iden(iden: &str, db: &DatabaseConnection, redis: 
 }
 
 pub async fn get_node_ids_from_iden_slice(iden_slice: Vec<&str>, db: &DatabaseConnection) -> Result<Vec<i64>> {
-    let iden = iden_slice.join("#");
     let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
     let mut id_list = vec![];
     for iden_part in iden_slice {

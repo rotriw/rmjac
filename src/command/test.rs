@@ -22,7 +22,7 @@ use core::model::problem::CreateProblemProps;
 use core::model::problem::create_problem;
 
 use log::LevelFilter;
-use sea_orm::{DatabaseConnection, Iden};
+use sea_orm::DatabaseConnection;
 
 use crate::utils;
 
@@ -37,7 +37,7 @@ pub async fn test_get_problem(db: &DatabaseConnection) {
 
 pub async fn test_create_training(db: &DatabaseConnection) {
     let redis = redis::Client::open("redis://127.0.0.1/").unwrap();
-    let conn = std::env::var("DB").unwrap();
+    let _conn = std::env::var("DB").unwrap();
     use core::model::training::TrainingProblem::*;
     use core::model::training::TrainingList;
     {
@@ -45,6 +45,7 @@ pub async fn test_create_training(db: &DatabaseConnection) {
             db,
             &mut redis.get_connection().unwrap(),
         "Test Training",
+            "user1",
         "test_training",
         "This is a test training.",
         "This is a private description.",
@@ -64,7 +65,7 @@ pub async fn test_create_training(db: &DatabaseConnection) {
 
 pub async fn test_create_problem(db: &DatabaseConnection) {
     use core::db::entity::node::problem_statement::ContentType;
-    let conn = std::env::var("DB").unwrap(); {
+    let _conn = std::env::var("DB").unwrap(); {
         let v = create_problem(db, CreateProblemProps {
             problem_name: "Test Problem".to_string(),
             problem_iden: "rmj1000".to_string(),

@@ -6,6 +6,8 @@ use crate::graph::node::record::{
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 
+#[allow(unused)]
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecordNewProp {
     pub platform: String,
@@ -15,6 +17,9 @@ pub struct RecordNewProp {
     pub statement_node_id: i64,
     pub public_status: bool,
 }
+
+
+#[allow(unused)]
 pub async fn create_record(
     db: &DatabaseConnection,
     record: RecordNewProp,

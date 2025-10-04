@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use crate::env::{CONNECTION_POOL, DB_SCHEMA, DB_URL};
 use crate::Result;

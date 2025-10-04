@@ -2,7 +2,6 @@ use std::fs;
 use sea_orm::DatabaseConnection;
 use crate::env::{DB_SCHEMA, DB_URL, EDGE_AUTH_PUBLICKEY};
 use crate::error::CoreError;
-use crate::utils::encrypt::verify;
 
 pub mod judge;
 pub mod track;

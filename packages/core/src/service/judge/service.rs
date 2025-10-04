@@ -1,11 +1,9 @@
 use std::fmt::Debug;
-use axum::http::HeaderValue;
 use axum::routing::get;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use socketioxide::extract::{SocketRef, Data};
 use socketioxide::SocketIo;
 use serde_json::Value;
-use totp_rs::{Algorithm, Secret, TOTP};
 use macro_socket_auth::auth_socket_connect;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use crate::{env, Result};
@@ -30,12 +28,12 @@ async fn auth(socket: SocketRef, Data(key): Data<String>) {
     if let Ok(auth) = auth {
         if auth == false {
             log::error!("Wrong sign code! private key LEAK?");
-            socket.emit("auth_response", "Authentication Error");
+            let _ = socket.emit("auth_response", "Authentication Error");
             return ;
         }
     } else {
         log::info!("{} auth error: {:?}", socket.id, auth);
-        socket.emit("auth_response", "Authentication Error/Failed");
+        let _ = socket.emit("auth_response", "Authentication Error/Failed");
         return ;
     }
     trust_auth(&socket);

@@ -1,4 +1,4 @@
-use sea_orm::{ColumnTrait, Database};
+use sea_orm::ColumnTrait;
 use async_recursion::async_recursion;
 use chrono::NaiveDateTime;
 use redis::Commands;
@@ -6,15 +6,17 @@ use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use crate::graph::edge::{EdgeQuery, EdgeQueryOrder, EdgeRaw};
 use crate::graph::edge::iden::IdenEdgeQuery;
-use crate::graph::edge::training_problem::{TrainingProblemEdge, TrainingProblemEdgeQuery, TrainingProblemEdgeRaw};
+use crate::graph::edge::training_problem::{TrainingProblemEdgeQuery, TrainingProblemEdgeRaw};
 use crate::graph::node::{Node, NodeRaw};
-use crate::{db, env, Result};
+use crate::{db, Result};
 use crate::error::{CoreError, QueryExists};
 use crate::graph::action::get_node_type;
 use crate::graph::node::training::{TrainingNode, TrainingNodePrivateRaw, TrainingNodePublicRaw, TrainingNodeRaw};
 use crate::graph::node::training::problem::{TrainingProblemNode, TrainingProblemNodePrivateRaw, TrainingProblemNodePublicRaw, TrainingProblemNodeRaw};
 use crate::model::problem::get_problem;
-use crate::service::iden::{create_iden, create_words, get_node_id_iden, get_node_ids_from_iden};
+use crate::service::iden::{create_iden, get_node_id_iden, get_node_ids_from_iden};
+
+#[allow(unused)]
 
 #[allow(clippy::too_many_arguments)]
 pub async fn create_training(
@@ -152,7 +154,7 @@ pub async fn get_training(db: &DatabaseConnection, redis: &mut redis::Connection
         training_node,
         problem_list,
     };
-    redis.set::<_, _, ()>(format!("training_{iden_id}"), serde_json::to_string(&result).unwrap());
+    let _ = redis.set::<_, _, ()>(format!("training_{iden_id}"), serde_json::to_string(&result).unwrap());
     Ok(result)
 }
 

@@ -55,7 +55,6 @@ impl From<TrainingProblemNodeRaw> for ActiveModel {
 
 use crate::db::entity::node::training_problem::{ActiveModel, Column, Entity, Model};
 use crate::graph::node::{Node, NodeRaw};
-use chrono::NaiveDateTime;
 use macro_node_iden::{Node, NodeRaw};
 use sea_orm::EntityTrait;
 use serde::{Deserialize, Serialize};

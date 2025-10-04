@@ -2,9 +2,8 @@ use crate::Result;
 use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo, edge::create_edge};
 use crate::error::CoreError::NotFound;
 use sea_orm::sea_query::IntoCondition;
-use sea_orm::{ActiveModelBehavior, ActiveModelTrait, Database, DatabaseConnection, EntityTrait, IntoActiveModel};
+use sea_orm::{ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel};
 use std::str::FromStr;
-use deno_core::v8::Data;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EdgeType {

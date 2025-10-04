@@ -114,7 +114,7 @@ impl AcMachine {
     pub fn query(&self, str: &str) -> usize {
         let mut res = 0;
         let mut p = 0;
-        for (i, c) in str.char_indices() {
+        for c in str.chars() {
             let nu = get_num_from_char(c);
             p = self.p[p][nu];
             let mut tp = p;
