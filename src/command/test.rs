@@ -67,11 +67,9 @@ pub async fn test_create_problem(db: &DatabaseConnection) {
     let conn = std::env::var("DB").unwrap(); {
         let v = create_problem(db, CreateProblemProps {
             problem_name: "Test Problem".to_string(),
-            problem_source: "rmj".to_string(),
-            problem_iden: "1000".to_string(),
+            problem_iden: "rmj1000".to_string(),
             problem_statement: vec![ProblemStatementProp {
                 statement_source: "Rmjac".to_string(),
-                problem_source: None,
                 problem_iden: None,
                 problem_statements: vec![ContentType {
                     iden: "Background".to_string(),
@@ -84,8 +82,7 @@ pub async fn test_create_problem(db: &DatabaseConnection) {
                 memory_limit: 1024,
             }, ProblemStatementProp {
                 statement_source: "洛谷".to_string(),
-                problem_source: Some("LG".to_string()),
-                problem_iden: Some("P1001".to_string()),
+                problem_iden: Some("LGP1001".to_string()),
                 problem_statements: vec![ContentType {
                     iden: "Background".to_string(),
                     content: "== Background\nasdf".to_string()
@@ -169,11 +166,13 @@ pub fn run(log_level: Option<String>) -> Option<()> {
     //         ).await);
         } */
     let conn = std::env::var("DB").unwrap(); async_run! {
+
+        core::service::iden::create_words(vec!["LG"]);
         let db = sea_orm::Database::connect(&conn).await.unwrap();
         let _ = core::service::service_start(&db, &conn, "public", 1825, "").await;
         // test_get_problem(&db).await;
         let redis = redis::Client::open("redis://127.0.0.1/").unwrap();
-        let x = core::model::problem::get_statement_string_iden(&db, &mut redis.get_connection().unwrap(), 9, Some("LG"), 1000).await;
+        let x = core::service::iden::get_node_id_iden(10, &db, &mut redis.get_connection().unwrap()).await;
         log::info!("{:?}", x);
         // test_create_problem(&db).await;
         // test_create_training(&db).await;

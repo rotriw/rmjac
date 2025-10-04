@@ -26,6 +26,7 @@ use crate::{
         },
     },
 };
+use crate::graph::node::iden::{IdenNodePrivateRaw, IdenNodePublicRaw, IdenNodeRaw};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -576,6 +577,14 @@ pub async fn init(
         }
         .save(&db)
         .await?;
+        log::info!("Create default iden super node");
+        IdenNodeRaw {
+            public: IdenNodePublicRaw {
+                iden: "".to_string(),
+                weight: -191919,
+            },
+            private: IdenNodePrivateRaw {},
+        }.save(&db).await?;
     }
     log::info!("Database migrated");
     Ok(())

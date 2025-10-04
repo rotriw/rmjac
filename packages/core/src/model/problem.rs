@@ -32,6 +32,7 @@ use chrono::Utc;
 use redis::Commands;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
+use crate::service::iden::{create_iden, get_node_ids_from_iden};
 
 type ProblemSourceString = String;
 type ProblemIdenString = String;
@@ -41,7 +42,7 @@ pub async fn create_problem_schema(
     problem_statement: Vec<(
         ProblemStatementNodeRaw,
         ProblemLimitNodeRaw,
-        (Option<ProblemSourceString>, Option<ProblemIdenString>),
+        Option<ProblemIdenString>,
     )>,
     tag_node_id: Vec<i64>,
     problem_name: String,
@@ -81,14 +82,14 @@ pub async fn add_problem_statement_for_problem(
     problem_statement: (
         ProblemStatementNodeRaw,
         ProblemLimitNodeRaw,
-        (Option<ProblemSourceString>, Option<ProblemIdenString>),
+        Option<ProblemIdenString>,
     ),
 ) -> Result<()> {
     log::debug!("Creating problem statement node and limit node");
     let (
         problem_statement_node_raw,
         problem_limit_node_raw,
-        (source, iden)
+        iden
     ) = problem_statement;
     let problem_statement_node = problem_statement_node_raw.save(db).await?;
     let problem_limit_node = problem_limit_node_raw.save(db).await?;
@@ -101,26 +102,9 @@ pub async fn add_problem_statement_for_problem(
     }
         .save(db)
         .await?;
-    if let Some(source) = source
-        && let Some(iden) = iden
-    {
-        log::debug!("create problem_statement iden connection");
-        let problem_iden_node = create_problem_iden(
-            db,
-            source.as_str(),
-            iden.as_str(),
-            problem_statement_node.node_id,
-        )
-            .await?;
-        log::debug!("Iden Node have been created. {problem_iden_node:?}");
+    if let Some(iden) = iden {
+        create_iden(format!("problem/{}", iden).as_str(), vec![problem_statement_node.node_id, problem_node_id], db).await?;
     }
-    // 为了让题目能找到他自己的id，所以我们可以支持题目有一个指向statement的反向iden.
-    let _ = IdenEdgeRaw {
-        u: problem_statement_node.node_id,
-        v: problem_node_id,
-        iden: "DONE_FOUND_FROM_DATABASE".to_string(),
-        weight: 1,
-    }.save(db).await?;
     // 暂时允许访问题目 = 访问所有题面
     // statement -limit-> limit
     log::debug!("Add problem limit edge");
@@ -147,7 +131,6 @@ pub async fn delete_problem_statement_for_problem(
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemStatementProp {
     pub statement_source: String,       // used to statement description
-    pub problem_source: Option<String>, // used to create problem_source node
     pub problem_iden: Option<String>,   // used to create problem_iden node
     pub problem_statements: Vec<ContentType>,
     pub time_limit: i64,
@@ -156,7 +139,6 @@ pub struct ProblemStatementProp {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct CreateProblemProps {
-    pub problem_source: String,
     pub problem_iden: String,
     pub problem_name: String,
     pub problem_statement: Vec<ProblemStatementProp>,
@@ -198,7 +180,7 @@ pub async fn create_problem(
                 private: ProblemLimitNodePrivateRaw {},
             }
             .clone(),
-            (statement.problem_source, statement.problem_iden),
+            statement.problem_iden,
         ));
     }
     log::info!("Problem Statements Raw: {problem_statement_node_raw:?}");
@@ -233,13 +215,11 @@ pub async fn create_problem(
     )
     .await?;
     log::info!("Start to create problem_source for problem");
-    create_problem_iden(
+    create_iden(
+        format!("problem/{}", problem.problem_iden).as_str(),
+        vec![result.node_id],
         db,
-        &problem.problem_source,
-        &problem.problem_iden,
-        result.node_id,
-    )
-    .await?;
+    );
     log::info!("The problem {} have been created.", &problem.problem_name);
     Ok(result)
 }
@@ -251,90 +231,7 @@ pub struct ProblemModel {
     pub tag: Vec<ProblemTagNode>,
 }
 
-pub async fn create_problem_source(
-    db: &DatabaseConnection,
-    name: &str,
-    iden: &str,
-) -> Result<ProblemSourceNode> {
-    ProblemSourceNodeRaw {
-        public: ProblemSourceNodePublicRaw {
-            name: name.to_string(),
-            iden: iden.to_string(),
-        },
-        private: ProblemSourceNodePrivateRaw {},
-    }
-    .save(db)
-    .await
-}
-
-pub async fn create_problem_iden(
-    db: &DatabaseConnection,
-    problem_source: &str,
-    iden: &str,
-    problem_node_or_statement_id: i64,
-) -> Result<IdenNode> {
-    use db::entity::node::problem_source::Column as ProblemSourceColumn;
-    let iden_node = IdenNodeRaw {
-        public: IdenNodePublicRaw {
-            iden: iden.to_string(),
-            weight: 1,
-        },
-        private: IdenNodePrivateRaw {},
-    }
-    .save(db)
-    .await?;
-    let problem_source_node =
-        ProblemSourceNode::from_db_filter(db, ProblemSourceColumn::Iden.eq(problem_source)).await?;
-    IdenEdgeRaw {
-        u: problem_source_node[0].node_id,
-        v: iden_node.node_id,
-        iden: iden.to_string(),
-        weight: 1,
-    }
-    .save(db)
-    .await?;
-    IdenEdgeRaw {
-        u: iden_node.node_id,
-        v: problem_node_or_statement_id,
-        iden: "DONE_FOUND_FROM_DATABASE".to_string(),
-        weight: 1,
-    }
-    .save(db)
-    .await?;
-    Ok(iden_node)
-}
-
-#[async_recursion(?Send)]
-pub async fn get_end_iden(db: &DatabaseConnection, iden: &str, id: i64) -> Result<i64> {
-    use db::entity::edge::iden::Column as IdenColumn;
-    if iden == "" {
-        log::trace!("Found iden, node_id:{}", id);
-        return Ok(IdenEdgeQuery::get_v_filter(
-            id,
-            IdenColumn::Iden.eq("DONE_FOUND_FROM_DATABASE"),
-            db,
-        )
-        .await?[0]);
-    }
-    log::trace!("Find end iden for id: {}, iden: {}", id, iden);
-    let mut now_iden = "".to_string();
-    for i in 0..iden.len() {
-        now_iden.push(iden.chars().nth(i).unwrap());
-        let result =
-            IdenEdgeQuery::get_v_filter(id, IdenColumn::Iden.eq(now_iden.as_str()), db).await?;
-        if !result.is_empty() {
-            let next_iden = iden[i + 1..].to_string();
-            let result = get_end_iden(db, &next_iden, result[0]).await?;
-            if result != 0 {
-                return Ok(result);
-            }
-        }
-    }
-    Ok(0)
-}
-
 /**
-Result<(ProblemModel, i64)>: 最终题目的模型，选中的题面(若指向题目则返回problem_id）。
 
 */
 pub async fn get_problem(
@@ -342,124 +239,38 @@ pub async fn get_problem(
     redis: &mut redis::Connection,
     iden: &str,
 ) -> Result<(ProblemModel, i64)> {
-    use db::entity::node::problem_source::Column as ProblemSourceColumn;
-    let mut saved = false;
-    let node_id = 'scope: {
-        if let Ok(value) = redis.get::<_, String>(format!("pi_{iden}")) {
-            log::trace!("load from redis: pi_{iden}");
-            if let Ok(problem_model) = value.as_str().parse::<i64>() {
-                saved = true;
-                break 'scope problem_model;
-            }
-        }
-        let mut now_iden = "".to_string();
-        for i in 0..iden.len() {
-            now_iden.push(iden.chars().nth(i).unwrap());
-            let result = ProblemSourceNode::from_db_filter(
-                db,
-                ProblemSourceColumn::Iden.eq(now_iden.as_str()),
-            )
-            .await?;
-            if !result.is_empty() {
-                let problem_source_node = result[0].clone();
-                log::trace!("Problem source node id: {}", problem_source_node.node_id);
-                let next_iden = iden[i + 1..].to_string();
-                let result = get_end_iden(db, &next_iden, problem_source_node.node_id).await?;
-                if result != 0 {
-                    break 'scope result;
-                }
-            }
-        }
-        -1
-    };
-    log::trace!("Problem node id: {node_id}");
-    if node_id == -1 {
-        return Err(CoreError::NotFound("Problem not found".to_string()));
+    let node_ids = get_node_ids_from_iden(iden, db, redis).await?;
+    if node_ids.len() == 0 {
+        return Err(CoreError::NotFound("Cannot find problem with this iden".to_string()));
     }
-    if !saved {
-        redis.set::<_, _, ()>(format!("pi_{iden}"), node_id.to_string())?;
-    }
-    let node_type = get_node_type(db, node_id).await?;
-    let problem_node = if node_type == "problem_statement" {
-        ProblemStatementEdgeQuery::get_u_one(node_id, db).await?
+    let (problem_node, statement_node) = if node_ids.len() == 1 {
+        (node_ids[0], node_ids[0])
     } else {
-        node_id
-    };
-    Ok((view_problem(db, redis, problem_node).await?, node_id))
-}
-
-/*
-* pref: 倾向于指定什么 ID (原理是遇到指定的id直接对其权值+10000，其次是在DAG上根据weight找最短路(bfs) 禁止成环，在图上最多跑max_times次。)
-* pref: 越大越好。
-*/
-pub async fn get_statement_string_iden(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64, pref: Option<&str>, max_times: i16) -> Result<String> {
-    const INF: i64 = 1 << 30;
-    let pref = pref.unwrap_or("");
-    if let Ok(value) = redis.get::<_, String>(format!("node_iden_{node_id}_{pref}")) {
-        return Ok(value);
-    }
-    let name = 'scope: {
-        let mut times = 0;
-        let mut result = "UNKNOWN".to_string();
-        let mut pref_value = -INF;
-        use priority_queue::PriorityQueue;
-        let mut que = PriorityQueue::new();
-        que.push((node_id, "".to_string()), 0);
-        while !que.is_empty() {
-            let value = que.peek().unwrap();
-            let now_node_id = value.0.0;
-            let now_iden = value.0.1.clone();
-            let now_weight = *value.1;
-            que.pop();
-            if times > max_times {
-                break;
-            }
-            times += 1;
-            log::debug!("Popped node_id: {}, iden: {}, weight: {}", now_node_id, now_iden, now_weight);
-            let node_type = get_node_type(db, now_node_id).await?;
-            if node_type == "problem_source" {
-                let idenw = ProblemSourceNode::from_db(db, now_node_id).await?.public.iden;
-                let now_weight = if idenw == pref {
-                    now_weight + 10000
-                } else {
-                    now_weight
-                };
-                let now_iden = idenw + now_iden.as_str();
-                if now_weight > pref_value {
-                    pref_value = now_weight;
-                    result = now_iden.clone();
-                }
-                continue;
-            }
-            log::debug!("Now at node_id: {}, iden: {}, weight: {}", now_node_id, now_iden, now_weight);
-            use db::entity::edge::iden::Column as IdenColumn;
-            let graph_next = IdenEdgeQuery::get_u_for_all(now_node_id, db).await?;
-            for ver in graph_next {
-                let node_type = get_node_type(db, ver.u).await?;
-                log::debug!("{} Node type: {}", ver.u, node_type);
-                if node_type != "problem_source" && node_type != "iden" && node_type != "problem_statement" {
-                    continue;
-                }
-                let new_iden = if ver.iden.as_str() != "DONE_FOUND_FROM_DATABASE" {
-                    now_iden.clone() + ver.iden.as_str()
-                } else {
-                    now_iden.clone()
-                };
-                let mut new_weight = now_weight + ver.weight;
-                que.push((ver.u, new_iden), new_weight);
+        let mut problem_node = -1;
+        let mut statement_node = -1;
+        for node_id in node_ids {
+            let node_type = get_node_type(db, node_id).await?;
+            if node_type == "problem" {
+                problem_node = node_id;
+            } else if node_type == "problem_statement" {
+                statement_node = node_id;
             }
         }
-        result
+        if problem_node == -1 {
+            return Err(CoreError::NotFound("Cannot find problem with this iden".to_string()));
+        }
+        if statement_node == -1 {
+            log::warn!("{iden} There are many node for this iden, We can find a problem node, and there are many other iden, but we cannot find a statement node!");
+        }
+        (problem_node, statement_node)
     };
-    redis.set::<_, _, ()>(format!("node_iden_{node_id}_{pref}"), name.clone())?;
-    redis.expire::<_, ()>(format!("node_iden_{node_id}_{pref}"), 3600)?;
-    Ok(name)
+    Ok((get_problem_model(db, redis, problem_node).await?, statement_node))
 }
 
 /**
-* 题目获取接口，返回题目模型
+* 题目数据
 */
-pub async fn view_problem(
+pub async fn get_problem_model(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,
     problem_node_id: i64,

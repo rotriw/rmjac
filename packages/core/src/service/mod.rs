@@ -6,6 +6,7 @@ use crate::utils::encrypt::verify;
 
 pub mod judge;
 pub mod track;
+pub mod iden;
 
 pub async fn service_start(db: &DatabaseConnection, db_url: &str, db_schema: &str, vjudge_port: u16, vjudge_secret_path: &str) -> Result<(), CoreError> {
     log::info!("init the default nodes");

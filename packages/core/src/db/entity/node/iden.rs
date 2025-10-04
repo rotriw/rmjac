@@ -28,13 +28,13 @@ impl DbNodeInfo for ActiveModel {
 }
 impl DbNodeActiveModel<Model, IdenNode> for ActiveModel {}
 
-pub async fn get_default_training_iden_node(db: &DatabaseConnection) -> Result<i64, CoreError> {
+pub async fn default_iden_node(db: &DatabaseConnection) -> Result<i64, CoreError> {
     let node = Entity::find()
-        .filter(Column::Iden.eq("training_start"))
+        .filter(Column::Weight.eq(-191919))
         .one(db)
         .await?
         .ok_or(CoreError::NotFound(
-            "Default training iden start node not found".to_string(),
+            "Default iden super node not found".to_string(),
         ))?;
     Ok(node.node_id)
 }

@@ -13,14 +13,16 @@ use crate::error::{CoreError, QueryExists};
 use crate::graph::action::get_node_type;
 use crate::graph::node::training::{TrainingNode, TrainingNodePrivateRaw, TrainingNodePublicRaw, TrainingNodeRaw};
 use crate::graph::node::training::problem::{TrainingProblemNode, TrainingProblemNodePrivateRaw, TrainingProblemNodePublicRaw, TrainingProblemNodeRaw};
-use crate::model::problem::{get_problem, get_statement_string_iden};
+use crate::model::problem::get_problem;
+use crate::service::iden::{create_iden, create_words, get_node_id_iden, get_node_ids_from_iden};
 
 #[allow(clippy::too_many_arguments)]
 pub async fn create_training(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,
     title: &str,
-    iden: &str,
+    user_iden: &str,
+    pb_iden: &str,
     description_public: &str,
     description_private: &str,
     start_time: NaiveDateTime,
@@ -33,7 +35,7 @@ pub async fn create_training(
     let node = TrainingNodeRaw {
         public: TrainingNodePublicRaw {
             name: title.to_string(),
-            iden: iden.to_string(),
+            iden: pb_iden.to_string(),
             description: description_public.to_string(),
             start_time: start_time,
             end_time: end_time,
@@ -52,7 +54,7 @@ pub async fn create_training(
         }.save(db).await?;
     }
     // create node iden
-    
+    create_iden(format!("training#{user_iden}#{pb_iden}").as_str(), vec![node.node_id], db).await?;
     Ok(node)
 }
 
@@ -132,7 +134,7 @@ pub async fn get_training_problem_list(db: &DatabaseConnection, redis: &mut redi
     for next_node_id in node_ids {
         let node_type = get_node_type(db, next_node_id).await?;
         if node_type == "problem" || node_type == "problem_statement" {
-            let problem_iden = get_statement_string_iden(db, redis, node_id, None, 200).await?;
+            let problem_iden = get_node_id_iden(node_id, db, redis).await?[0].clone();
             result.own_problem.push(TrainingProblem::ProblemIden(problem_iden));
         } else {
             let sub_problem = get_training_problem_list(db, redis, next_node_id).await?;
@@ -143,27 +145,7 @@ pub async fn get_training_problem_list(db: &DatabaseConnection, redis: &mut redi
 }
 
 pub async fn get_training(db: &DatabaseConnection, redis: &mut redis::Connection, user_iden: &str, pb_iden: &str) -> Result<Training> {
-    let mut usable = false;
-    let iden_id = 'scope: {
-        if let Ok(value) = redis.get::<_, String>(format!("iden_{user_iden}/{pb_iden}")) {
-            if let Ok(id) = value.as_str().parse::<i64>() {
-                break 'scope id;
-            }
-        }
-        let env_node_id = env::DEFAULT_NODES.lock().unwrap().default_training_iden_node.clone();
-        let iden = get_training_node_id_by_iden(db, redis, user_iden, env_node_id, "user").await?;
-        let iden = get_training_node_id_by_iden(db, redis, pb_iden, iden, "training").await?;
-        usable = true;
-        iden
-    };
-    if usable == false {
-        redis.set::<_, _, ()>(format!("iden_{user_iden}/{pb_iden}"), iden_id.to_string());
-    }
-    if let Ok(value) = redis.get::<_, String>(format!("training_{iden_id}")) {
-        if let Ok(result) = serde_json::from_str::<Training>(&value) {
-            return Ok(result);
-        }
-    }
+    let iden_id = get_node_ids_from_iden(format!("training#{user_iden}#{pb_iden}").as_str(), db, redis).await?[0];
     let training_node = TrainingNode::from_db(db, iden_id).await?;
     let problem_list = get_training_problem_list(db, redis, training_node.node_id).await?;
     let result = Training {

@@ -14,11 +14,9 @@ pub fn test_create_problem() {
         let db = sea_orm::Database::connect(conn).await.unwrap();
         let _ = create_problem(&db, CreateProblemProps {
             problem_name: "Test Problem".to_string(),
-            problem_source: "rmj".to_string(),
-            problem_iden: "1000".to_string(),
+            problem_iden: "rmj1000".to_string(),
             problem_statement: vec![ProblemStatementProp {
                 statement_source: "Rmjac".to_string(),
-                problem_source: None,
                 problem_iden: None,
                 problem_statements: vec![ContentType {
                     iden: "Background".to_string(),
@@ -31,8 +29,7 @@ pub fn test_create_problem() {
                 memory_limit: 1024,
             }, ProblemStatementProp {
                 statement_source: "洛谷".to_string(),
-                problem_source: Some("LG".to_string()),
-                problem_iden: Some("P1001".to_string()),
+                problem_iden: Some("LGP1001".to_string()),
                 problem_statements: vec![ContentType {
                     iden: "Background".to_string(),
                     content: "== Background\nasdf".to_string()

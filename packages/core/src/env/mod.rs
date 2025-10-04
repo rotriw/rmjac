@@ -4,6 +4,7 @@ use std::sync::Arc;
 use sea_orm::{sqlx, DatabaseConnection};
 use socketioxide::extract::SocketRef;
 use crate::graph::action::DefaultNodes;
+use crate::service::iden::ac_automaton::AcMachine;
 
 lazy_static! {
     pub static ref REDIS_URL: Mutex<String> = Mutex::new("redis://localhost:6379".to_string());
@@ -23,7 +24,7 @@ lazy_static! {
     pub static ref DEFAULT_NODES: Mutex<DefaultNodes> = Mutex::new(DefaultNodes {
         guest_user_node: -1,
         default_strategy_node: -1,
-        default_training_iden_node: -1,
+        default_iden_node: -1,
     });
 
     pub static ref DB_URL: Mutex<String> = Mutex::new("postgres://localhost/rmjac".to_string());
@@ -35,6 +36,9 @@ lazy_static! {
     pub static ref EDGE_SOCKETS: Mutex<HashMap<String, SocketRef>> = Mutex::new(HashMap::new());
     pub static ref EDGE_VEC: Mutex<Vec<String>> = Mutex::new(vec![]);
     pub static ref EDGE_NUM: Mutex<i32> = Mutex::new(0);
+
+    pub static ref SLICE_WORD_LIST: Mutex<Vec<String>> = Mutex::new(vec![]);
+    pub static ref SLICE_WORD_ACMAC: Mutex<AcMachine> = Mutex::new(AcMachine::build(SLICE_WORD_LIST.lock().unwrap().clone().iter().map(AsRef::as_ref).collect()));
 }
 
 pub mod db;
