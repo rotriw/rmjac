@@ -9,6 +9,8 @@ pub enum QueryExists {
     RegisterIDENExist,
     #[display("User Email already exists")]
     RegisterEmailExist,
+    #[display("Problem already exists")]
+    ProblemExist,
 }
 
 #[derive(Debug, Display, EnumConst)]
@@ -60,6 +62,7 @@ impl From<&CoreError> for i64 {
             CoreError::QueryExists(data) => match data {
                 QueryExists::RegisterIDENExist => 60001,
                 QueryExists::RegisterEmailExist => 60002,
+                QueryExists::ProblemExist => 60005,
             },
             CoreError::QueryNotFound(data) => match data {
                 QueryNotFound::ProblemIdenNotFound => 61001,

@@ -9,7 +9,7 @@ use crate::graph::edge::iden::IdenEdgeQuery;
 use crate::graph::edge::training_problem::{TrainingProblemEdge, TrainingProblemEdgeQuery, TrainingProblemEdgeRaw};
 use crate::graph::node::{Node, NodeRaw};
 use crate::{db, env, Result};
-use crate::error::CoreError;
+use crate::error::{CoreError, QueryExists};
 use crate::graph::action::get_node_type;
 use crate::graph::node::training::{TrainingNode, TrainingNodePrivateRaw, TrainingNodePublicRaw, TrainingNodeRaw};
 use crate::graph::node::training::problem::{TrainingProblemNode, TrainingProblemNodePrivateRaw, TrainingProblemNodePublicRaw, TrainingProblemNodeRaw};
@@ -173,3 +173,46 @@ pub async fn get_training(db: &DatabaseConnection, redis: &mut redis::Connection
     redis.set::<_, _, ()>(format!("training_{iden_id}"), serde_json::to_string(&result).unwrap());
     Ok(result)
 }
+
+/*
+将一道题目加入到一个训练中，并且更新redis缓存，返回更新后的训练题单
+node_id: 训练的节点编号, problem_iden: 题目标识
+*/
+pub async fn add_problem_into_training_list(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64, problem_iden: &String) -> Result<TrainingList> {
+    let mut problem_list = get_training_problem_list(db, redis, node_id).await?;
+    let problem = get_problem(db, redis, problem_iden).await?;
+    for p in &problem_list.own_problem {
+        if let TrainingProblem::ProblemIden(iden) = p {
+            if iden == problem_iden {
+                return Err(CoreError::QueryExists(QueryExists::ProblemExist));
+            }
+        }
+    }
+    TrainingProblemEdgeRaw {
+        u: node_id,
+        v: problem.1,
+        order: problem_list.own_problem.len() as i64,
+    }.save(db).await?;
+    problem_list.own_problem.push(TrainingProblem::ProblemIden(problem_iden.to_string()));
+    Ok(problem_list)
+}
+
+// pub async fn remove_problem_into_training_list(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64, problem_iden: &String) -> Result<TrainingList> {
+//     let mut problem_list = get_training_problem_list(db, redis, node_id).await?;
+//     let problem = get_problem(db, redis, problem_iden).await?;
+//     let mut found = false;
+//     for (i, p) in problem_list.own_problem.iter().enumerate() {
+//         if let TrainingProblem::ProblemIden(iden) = p {
+//             if iden == problem_iden {
+//                 found = true;
+             
+//                 problem_list.own_problem.remove(i);
+//                 break;
+//             }
+//         }
+//     }
+//     if !found {
+//         return Err(CoreError::NotFound(format!("Problem {problem_iden} not found in training.")));
+//     }
+//     Ok(problem_list)
+// }
