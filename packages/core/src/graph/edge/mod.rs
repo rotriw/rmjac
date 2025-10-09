@@ -188,7 +188,7 @@ where
         }
     }
 
-    fn destroy_edge(
+    fn delete(
         db: &DatabaseConnection,
         u: i64,
         v: i64,
@@ -198,6 +198,7 @@ where
             edge.set(Self::get_u_edge_id_column_2(), u.into());
             edge.set(Self::get_v_edge_id_column_2(), v.into());
             edge.delete(db).await?;
+            log::warn!("(Edge Delete){}, u: {}, v: {}", Self::get_edge_type(), u, v);
             Ok(())
         }
     }

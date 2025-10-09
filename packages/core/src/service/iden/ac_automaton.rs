@@ -126,4 +126,18 @@ impl AcMachine {
 
         res
     }
+
+    pub fn query_from_p(&self, str: char, p: usize) -> (bool, usize) {
+        let nu = get_num_from_char(str);
+        let np = self.p[p][nu];
+        let mut res = 0;
+        let mut tp = np;
+        while tp != 0 {
+            if self.wd[tp] > 0 {
+                return (true, 0);
+            }
+            tp = self.fail[tp];
+        }
+        (false, np)
+    }
 }

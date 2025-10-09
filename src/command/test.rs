@@ -166,9 +166,13 @@ pub fn run(log_level: Option<String>) -> Option<()> {
     //             ViewPerm::All as i64
     //         ).await);
         } */
+
+    core::service::iden::create_words(vec!["LG"]);
+    dbg!(core::service::iden::auto_slice_iden("LGP1001"));
+    dbg!(core::service::iden::auto_slice_iden("LG/P1001"));
+    dbg!(core::service::iden::auto_slice_iden("problem/LG/P1001"));
     let conn = std::env::var("DB").unwrap(); async_run! {
 
-        core::service::iden::create_words(vec!["LG"]);
         let db = sea_orm::Database::connect(&conn).await.unwrap();
         let _ = core::service::service_start(&db, &conn, "public", 1825, "").await;
         // test_get_problem(&db).await;

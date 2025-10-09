@@ -145,6 +145,20 @@ where
             Ok(data.into())
         }
     }
+
+    // Delete the node from the database.
+    // Note that you should not to call this function directly, if you want to delete a node,
+    // you should delete all the edges connected to this node.
+    fn delete(&self, db: &DatabaseConnection, node_id: i64) -> impl Future<Output = Result<()>> {
+        async move {
+            log::error!("Deleting node {}.", self.get_node_id());
+            let node_id_column = Self::get_node_id_column();
+            let mut active = DbNodeActive::new();
+            active.set(node_id_column, node_id.into());
+            active.delete(db).await?;
+            Ok(())
+        }
+    }
 }
 
 pub trait NodeRaw<Node, DbModel, DbNodeActive>

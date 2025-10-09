@@ -115,7 +115,7 @@ pub async fn delete_problem_statement_for_problem(
     problem_statement_node_id: i64,
 ) -> Result<()> {
     log::debug!("Deleting problem statement node and limit node");
-    ProblemStatementEdgeQuery::destroy_edge(db, problem_node_id, problem_statement_node_id).await?;
+    ProblemStatementEdgeQuery::delete(db, problem_node_id, problem_statement_node_id).await?;
     log::debug!("Problem statement edge have been deleted");
     Ok(())
 }

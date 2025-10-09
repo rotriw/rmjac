@@ -84,6 +84,7 @@ pub fn auto_slice_iden(iden: &str) -> Vec<&str> {
     }
     let mut result = vec![];
     let mut last_v = 0;
+    let mut now_p = 0;
     for (i, c) in iden.char_indices() {
         fn ck_group(a: char, b: char) -> bool {
             (a.is_ascii_alphabetic() && b.is_ascii_alphabetic()) ||
@@ -95,15 +96,23 @@ pub fn auto_slice_iden(iden: &str) -> Vec<&str> {
                     result.push(&iden[last_v..i]);
                 }
                 last_v = i + 1;
+                now_p = 0;
             }
 
             '0'..='9' | 'a'..='z' | 'A'..='Z' => {
-                if !ck_group(c, iden.chars().nth(last_v).unwrap()) ||
-                    SLICE_WORD_ACMAC.lock().unwrap().query(&iden[last_v..i]) > 0 { // new word.
+                if !ck_group(c, iden.chars().nth(last_v).unwrap()) { // new word.
                     if i > last_v {
-                        result.push(&iden[(last_v.clone())..i]);
+                        result.push(&iden[last_v..i]);
                     }
                     last_v = i;
+                    now_p = 0;
+                } else {
+                    let (_res, pp) = SLICE_WORD_ACMAC.lock().unwrap().query_from_p(iden.chars().nth(i).unwrap(), now_p);
+                    if _res == true {
+                        result.push(&iden[last_v..=i]);
+                        last_v = i + 1;
+                    }
+                    now_p = pp;
                 }
             }
 
