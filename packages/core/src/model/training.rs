@@ -169,7 +169,7 @@ pub async fn get_training(db: &DatabaseConnection, redis: &mut redis::Connection
 }
 
 /*
-将一道题目加入到一个训练中，并且更新redis缓存，返回更新后的训练题单
+将一道题目加入到一个训练中，返回更新后的训练题单
 node_id: 训练的节点编号, problem_iden: 题目标识
 */
 pub async fn add_problem_into_training_list(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64, problem_iden: &String) -> Result<TrainingList> {
@@ -190,6 +190,7 @@ pub async fn add_problem_into_training_list(db: &DatabaseConnection, redis: &mut
     Ok(problem_list)
 }
 
+<<<<<<< HEAD
 /// Delete all connections for a training (edges only)
 /// This function removes all training-problem edges while keeping the training node intact
 pub async fn delete_training_connections(
@@ -497,3 +498,24 @@ pub async fn check_training_manage_permission(
         _ => Ok(false),
     }
 }
+=======
+// pub async fn remove_problem_from_training_list(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64, problem_iden: &String) -> Result<TrainingList> {
+//     let mut problem_list = get_training_problem_list(db, redis, node_id).await?;
+//     let problem = get_problem(db, redis, problem_iden).await?;
+//     let mut found = false;
+//     for (i, p) in problem_list.own_problem.iter().enumerate() {
+//         if let TrainingProblem::ProblemIden(iden) = p {
+//             if iden == problem_iden {
+//                 found = true;
+             
+//                 problem_list.own_problem.remove(i);
+//                 break;
+//             }
+//         }
+//     }
+//     if !found {
+//         return Err(CoreError::NotFound(format!("Problem {problem_iden} not found in training.")));
+//     }
+//     Ok(problem_list)
+// }
+>>>>>>> a61cc26476bcab4cbcef28edd399decaac9d3617
