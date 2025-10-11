@@ -9,19 +9,16 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Plus, Save, Eye, Search, GripVertical, BookOpen, Target, Calendar, Clock, Settings } from "lucide-react"
+import { ArrowLeft, Plus, Save, Eye, X, Search, GripVertical } from "lucide-react"
 import Link from "next/link"
 
 // Mock problems data
 const mockProblems = [
-  { id: "P1001", name: "A+B Problem", difficulty: "入门", tags: ["模拟", "数学"] },
-  { id: "P1002", name: "消消乐", difficulty: "简单", tags: ["搜索", "递归"] },
-  { id: "P1003", name: "动态规划练习", difficulty: "中等", tags: ["动态规划", "状态压缩"] },
-  { id: "P1004", name: "图论基础", difficulty: "简单", tags: ["图论", "BFS"] },
-  { id: "P1005", name: "最短路算法", difficulty: "中等", tags: ["图论", "最短路"] },
-  { id: "P1006", name: "排序练习", difficulty: "入门", tags: ["排序", "基础算法"] },
-  { id: "P1007", name: "二分查找", difficulty: "简单", tags: ["二分", "查找"] },
-  { id: "P1008", name: "背包问题", difficulty: "中等", tags: ["动态规划", "背包"] },
+  { id: "P1001", name: "A+B Problem", difficulty: "入门" },
+  { id: "P1002", name: "消消乐", difficulty: "简单" },
+  { id: "P1003", name: "动态规划练习", difficulty: "中等" },
+  { id: "P1004", name: "图论基础", difficulty: "简单" },
+  { id: "P1005", name: "最短路算法", difficulty: "中等" },
 ]
 
 export default function CreateTrainingPage() {
@@ -29,9 +26,11 @@ export default function CreateTrainingPage() {
     title: "",
     trainingIden: "",
     description: "",
+    privateDescription: "",
     type: "公开",
     startTime: "",
-    endTime: ""
+    endTime: "",
+    status: "draft"
   })
 
   const [problems, setProblems] = useState([])
@@ -88,8 +87,7 @@ export default function CreateTrainingPage() {
 
   const filteredProblems = mockProblems.filter(problem =>
     problem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    problem.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    problem.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    problem.id.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -98,104 +96,104 @@ export default function CreateTrainingPage() {
     console.log("Creating training:", { ...formData, chapters })
   }
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "入门": return "bg-green-100 text-green-800"
-      case "简单": return "bg-blue-100 text-blue-800"
-      case "中等": return "bg-yellow-100 text-yellow-800"
-      case "困难": return "bg-red-100 text-red-800"
-      case "极限": return "bg-purple-100 text-purple-800"
-      default: return "bg-gray-100 text-gray-800"
-    }
-  }
-
   return (
     <div className="container mx-auto py-6 px-4 md:px-6">
-      <div className="flex items-center gap-4 mb-2">
-        <Link href="/training">
+      <div className="flex items-center gap-4 mb-6">
+        <Link href="/admin/trainings">
           <Button variant="outline" size="sm">
-            <ArrowLeft className="mr-2 h-3 w-3" />
+            <ArrowLeft className="mr-2 h-4 w-4" />
             返回
           </Button>
         </Link>
         <div>
-          <CardTitle>创建训练</CardTitle>
-          <CardDescription className="text-xs text-muted-foreground">
-            创建新的训练计划
-          </CardDescription>
+          <h1 className="text-3xl font-bold">创建训练</h1>
+          <p className="text-muted-foreground">创建新的训练或题单</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className="shadow-none rounded-sm p-0">
-            <CardContent className="p-3">
-              <CardTitle className="text-sm mb-2">基本信息</CardTitle>
-              <CardDescription className="text-xs mb-3">训练的基本信息</CardDescription>
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="title">训练标题 *</Label>
-                  <Input
-                    id="title"
-                    placeholder="请输入训练标题"
-                    value={formData.title}
-                    onChange={(e) => handleInputChange("title", e.target.value)}
-                    required
-                  />
-                </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>基本信息</CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mb-2">训练的基本信息</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">训练标题 *</Label>
+                <Input
+                  id="title"
+                  placeholder="请输入训练标题"
+                  value={formData.title}
+                  onChange={(e) => handleInputChange("title", e.target.value)}
+                  required
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="trainingIden">训练标识符 *</Label>
-                  <Input
-                    id="trainingIden"
-                    placeholder="如: cpp-basic"
-                    value={formData.trainingIden}
-                    onChange={(e) => handleInputChange("trainingIden", e.target.value)}
-                    required
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="trainingIden">训练标识符 *</Label>
+                <Input
+                  id="trainingIden"
+                  placeholder="如: cpp-basic"
+                  value={formData.trainingIden}
+                  onChange={(e) => handleInputChange("trainingIden", e.target.value)}
+                  required
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="type">训练类型</Label>
-                  <Select value={formData.type} onValueChange={(value) => handleInputChange("type", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="选择类型" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="公开">公开训练</SelectItem>
-                      <SelectItem value="私有">私有训练</SelectItem>
-                      <SelectItem value="限时">限时训练</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="type">训练类型</Label>
+                <Select value={formData.type} onValueChange={(value) => handleInputChange("type", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择类型" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="公开">公开训练</SelectItem>
+                    <SelectItem value="私有">私有训练</SelectItem>
+                    <SelectItem value="限时">限时训练</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="status">状态</Label>
+                <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择状态" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">草稿</SelectItem>
+                    <SelectItem value="published">发布</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-none rounded-sm p-0">
-            <CardContent className="p-3">
-              <CardTitle className="text-sm mb-2">时间设置</CardTitle>
-              <CardDescription className="text-xs mb-3">设置训练的时间范围（可选）</CardDescription>
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="startTime">开始时间</Label>
-                  <Input
-                    id="startTime"
-                    type="datetime-local"
-                    value={formData.startTime}
-                    onChange={(e) => handleInputChange("startTime", e.target.value)}
-                  />
-                </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>时间设置</CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mb-2">设置训练的时间范围</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="startTime">开始时间</Label>
+                <Input
+                  id="startTime"
+                  type="datetime-local"
+                  value={formData.startTime}
+                  onChange={(e) => handleInputChange("startTime", e.target.value)}
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="endTime">结束时间</Label>
-                  <Input
-                    id="endTime"
-                    type="datetime-local"
-                    value={formData.endTime}
-                    onChange={(e) => handleInputChange("endTime", e.target.value)}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="endTime">结束时间</Label>
+                <Input
+                  id="endTime"
+                  type="datetime-local"
+                  value={formData.endTime}
+                  onChange={(e) => handleInputChange("endTime", e.target.value)}
+                />
               </div>
             </CardContent>
           </Card>
@@ -205,7 +203,7 @@ export default function CreateTrainingPage() {
           <TabsList>
             <TabsTrigger value="content">内容设置</TabsTrigger>
             <TabsTrigger value="description">描述信息</TabsTrigger>
-            <TabsTrigger value="settings">其他设置</TabsTrigger>
+            <TabsTrigger value="permissions">权限设置</TabsTrigger>
           </TabsList>
 
           <TabsContent value="content" className="space-y-4">
@@ -241,7 +239,7 @@ export default function CreateTrainingPage() {
                         variant="ghost"
                         size="sm"
                       >
-                        删除
+                        <X className="h-4 w-4" />
                       </Button>
                     </div>
                     <Textarea
@@ -252,34 +250,29 @@ export default function CreateTrainingPage() {
                       rows={2}
                     />
                     <div className="space-y-2">
-                      <Label>章节题目 ({chapter.problems.length})</Label>
+                      <Label>章节题目</Label>
                       <div className="border rounded-md p-3 min-h-[100px]">
                         {chapter.problems.length > 0 ? (
                           <div className="space-y-2">
                             {chapter.problems.map((problem) => (
                               <div key={problem.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                                <div>
-                                  <span className="text-sm font-medium">{problem.id} {problem.name}</span>
-                                  <div className="flex gap-1 mt-1">
-                                    <Badge variant="outline" className="text-xs">{problem.difficulty}</Badge>
-                                    {problem.tags.map((tag) => (
-                                      <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
-                                    ))}
-                                  </div>
+                                <span className="text-sm">{problem.id} {problem.name}</span>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs">{problem.difficulty}</Badge>
+                                  <Button
+                                    type="button"
+                                    onClick={() => removeProblemFromChapter(chapter.id, problem.id)}
+                                    variant="ghost"
+                                    size="sm"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
                                 </div>
-                                <Button
-                                  type="button"
-                                  onClick={() => removeProblemFromChapter(chapter.id, problem.id)}
-                                  variant="ghost"
-                                  size="sm"
-                                >
-                                  移除
-                                </Button>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-muted-foreground text-sm">点击下方题目添加到章节</p>
+                          <p className="text-muted-foreground text-sm">拖拽题目到此处或点击下方题目添加</p>
                         )}
                       </div>
                     </div>
@@ -287,15 +280,12 @@ export default function CreateTrainingPage() {
                 ))}
 
                 <Card className="p-4">
-                  <CardTitle className="text-lg mb-3 flex items-center gap-2">
-                    <BookOpen className="h-5 w-5" />
-                    题目库
-                  </CardTitle>
+                  <CardTitle className="text-lg mb-3">题目库</CardTitle>
                   <div className="space-y-3">
                     <div className="relative">
                       <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="搜索题目、标签..."
+                        placeholder="搜索题目..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-8"
@@ -313,20 +303,8 @@ export default function CreateTrainingPage() {
                             }
                           }}
                         >
-                          <div>
-                            <span className="text-sm font-medium">{problem.id} {problem.name}</span>
-                            <div className="flex gap-1 mt-1">
-                              <Badge variant="outline" className={`text-xs ${getDifficultyColor(problem.difficulty)}`}>
-                                {problem.difficulty}
-                              </Badge>
-                              {problem.tags.slice(0, 2).map((tag) => (
-                                <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
-                              ))}
-                              {problem.tags.length > 2 && (
-                                <Badge variant="secondary" className="text-xs">+{problem.tags.length - 2}</Badge>
-                              )}
-                            </div>
-                          </div>
+                          <span className="text-sm">{problem.id} {problem.name}</span>
+                          <Badge variant="outline" className="text-xs">{problem.difficulty}</Badge>
                         </div>
                       ))}
                     </div>
@@ -339,52 +317,57 @@ export default function CreateTrainingPage() {
           <TabsContent value="description" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>训练描述</CardTitle>
-                <CardDescription className="text-xs text-muted-foreground mb-2">设置训练的描述信息</CardDescription>
+                <CardTitle>描述信息</CardTitle>
+                <CardDescription className="text-xs text-muted-foreground mb-2">设置训练的公开和私有描述</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="description">描述</Label>
+                  <Label htmlFor="description">公开描述</Label>
                   <Textarea
                     id="description"
-                    placeholder="请输入训练的描述，支持 Markdown 格式"
+                    placeholder="请输入训练的公开描述，所有用户都可以看到"
                     value={formData.description}
                     onChange={(e) => handleInputChange("description", e.target.value)}
-                    rows={8}
+                    rows={6}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="privateDescription">私有描述</Label>
+                  <Textarea
+                    id="privateDescription"
+                    placeholder="请输入训练的私有描述，仅管理员和创建者可以看到"
+                    value={formData.privateDescription}
+                    onChange={(e) => handleInputChange("privateDescription", e.target.value)}
+                    rows={6}
                   />
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="settings" className="space-y-4">
+          <TabsContent value="permissions" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>其他设置</CardTitle>
-                <CardDescription className="text-xs text-muted-foreground mb-2">训练的其他配置选项</CardDescription>
+                <CardTitle>权限设置</CardTitle>
+                <CardDescription className="text-xs text-muted-foreground mb-2">设置训练的访问和编辑权限</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8">
-                  <Settings className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">
-                    更多设置选项正在开发中...
-                  </p>
-                </div>
+                <p className="text-muted-foreground">权限设置功能正在开发中...</p>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
 
         <div className="flex justify-end space-x-4">
-          <Button variant="outline" type="button">
-            保存草稿
-          </Button>
+          <Link href="/admin/trainings">
+            <Button variant="outline">取消</Button>
+          </Link>
           <Button type="button" variant="outline">
             <Eye className="mr-2 h-4 w-4" />
             预览
           </Button>
           <Button type="submit">
-            <Target className="mr-2 h-4 w-4" />
+            <Save className="mr-2 h-4 w-4" />
             创建训练
           </Button>
         </div>

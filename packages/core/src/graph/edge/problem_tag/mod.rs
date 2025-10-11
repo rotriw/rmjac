@@ -32,7 +32,26 @@ impl From<ProblemTagEdgeRaw> for problem_tag::ActiveModel {
     }
 }
 
+#[derive(Clone)]
 pub struct ProblemTagEdgeQuery;
 
+impl Edge<problem_tag::ActiveModel, problem_tag::Model, problem_tag::Entity> for ProblemTagEdge {
+    fn get_edge_id(&self) -> i64 {
+        self.id
+    }
+    fn get_u_node_id(&self) -> i64 {
+        self.u
+    }
+    fn get_v_node_id(&self) -> i64 {
+        self.v
+    }
+}
+
+impl EdgeQuery<problem_tag::ActiveModel, problem_tag::Model, problem_tag::Entity, ProblemTagEdge> for ProblemTagEdgeQuery {
+    fn get_edge_type() -> &'static str {
+        "problem_tag"
+    }
+}
+
 use crate::db::entity::edge::problem_tag;
-use crate::graph::edge::EdgeRaw;
+use crate::graph::edge::{Edge, EdgeQuery, EdgeRaw};

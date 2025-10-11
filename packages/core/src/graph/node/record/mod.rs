@@ -17,6 +17,7 @@ pub enum RecordStatus {
     Waiting = 800,
     UnknownError = 900,
     Unverified = 901,
+    Deleted = 902,
 }
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct RecordNodePublic {
@@ -157,6 +158,7 @@ impl From<i64> for RecordStatus {
             800 => RecordStatus::Waiting,
             900 => RecordStatus::UnknownError,
             901 => RecordStatus::Unverified,
+            902 => RecordStatus::Deleted,
             _ => RecordStatus::UnknownError,
         }
     }
@@ -190,6 +192,7 @@ impl ToString for RecordStatus {
             RecordStatus::Waiting => "Waiting".to_string(),
             RecordStatus::UnknownError => "Unknown Error".to_string(),
             RecordStatus::Unverified => "Unverified".to_string(),
+            RecordStatus::Deleted => "Deleted".to_string(),
         }
     }
 }
@@ -214,6 +217,7 @@ impl From<String> for RecordStatus {
             "Waiting" => RecordStatus::Waiting,
             "Unknown Error" => RecordStatus::UnknownError,
             "Unverified" => RecordStatus::Unverified,
+            "Deleted" => RecordStatus::Deleted,
             _ => RecordStatus::UnknownError,
         }
     }

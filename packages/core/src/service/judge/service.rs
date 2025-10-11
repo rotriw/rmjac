@@ -26,7 +26,7 @@ async fn auth(socket: SocketRef, Data(key): Data<String>) {
     let pub_key = env::EDGE_AUTH_PUBLICKEY.lock().unwrap().clone();
     let auth = verify(pub_key, key, socket.id.to_string());
     if let Ok(auth) = auth {
-        if auth == false {
+        if !auth {
             log::error!("Wrong sign code! private key LEAK?");
             let _ = socket.emit("auth_response", "Authentication Error");
             return ;

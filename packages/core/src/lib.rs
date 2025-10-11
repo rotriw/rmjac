@@ -1,4 +1,4 @@
-type Result<T, E = error::CoreError> = std::result::Result<T, E>;
+pub type Result<T, E = error::CoreError> = std::result::Result<T, E>;
 
 pub mod env;
 pub mod error;
@@ -9,3 +9,4 @@ pub mod graph;
 pub mod model;
 pub mod service;
 pub mod utils;
+pub mod auth;

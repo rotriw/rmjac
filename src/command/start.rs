@@ -24,6 +24,7 @@ pub fn run(
     let vjudge_port = vjudge_port.unwrap_or("1825".to_string()).parse::<u16>().unwrap();
     let host = host.unwrap_or("127.0.0.1".to_string());
     let config = config.unwrap_or_else(|| "config.json".to_string());
+    core::service::iden::create_words(vec!["LG"]);
     let log_level: LevelFilter = log_level
         .unwrap_or_else(|| "info".to_string())
         .parse()
@@ -31,8 +32,7 @@ pub fn run(
     let _ = utils::logger::setup_logger_with_stdout(log_level);
     let _ = env_load(&config);
     let redis_url = CONFIG.lock().unwrap().redis_url.clone().unwrap();
-    let mut env_redis_url = core::env::REDIS_URL.lock().unwrap();
-    *env_redis_url = redis_url;
+    *core::env::REDIS_URL.lock().unwrap() = redis_url;
     let vjudge_auth = CONFIG.lock().unwrap().secret_edge_pwd.clone();
     let _ = handler::main(host.as_str(), port, vjudge_port, vjudge_auth.as_str());
     Some(())

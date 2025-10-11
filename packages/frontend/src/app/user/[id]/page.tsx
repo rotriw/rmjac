@@ -27,7 +27,7 @@ export default function ProfilePage() {
                     <AvatarFallback></AvatarFallback>
                 </Avatar>
                 <div className="space-y-1 text-center">
-                    <h2 className="text-2xl font-bold">{data.name}</h2>
+                    <h2 className="font-semibold">{data.name}</h2>
                     <span className="font-light">𝚃𝚑𝚎 𝚏𝚞𝚝𝚞𝚛𝚎 𝚒𝚜 𝚒𝚗 𝚜𝚒𝚐𝚑𝚝</span>
                     
                 </div>
@@ -96,7 +96,7 @@ export default function ProfilePage() {
                 <Card>
                 <CardHeader>
                     <CardTitle>awesome-project</CardTitle>
-                    <CardDescription>一个很棒的开源项目</CardDescription>
+                    <CardDescription className="text-xs text-muted-foreground mb-2">一个很棒的开源项目</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-center justify-between">
@@ -111,7 +111,7 @@ export default function ProfilePage() {
                 <Card>
                 <CardHeader>
                     <CardTitle>cool-app</CardTitle>
-                    <CardDescription>一个很酷的应用程序</CardDescription>
+                    <CardDescription className="text-xs text-muted-foreground mb-2">一个很酷的应用程序</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-center justify-between">
@@ -128,7 +128,7 @@ export default function ProfilePage() {
                 <Card>
                 <CardHeader>
                     <CardTitle>项目列表</CardTitle>
-                    <CardDescription>用户参与的项目</CardDescription>
+                    <CardDescription className="text-xs text-muted-foreground mb-2">用户参与的项目</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <p>暂无项目数据</p>
@@ -139,7 +139,7 @@ export default function ProfilePage() {
                 <Card>
                 <CardHeader>
                     <CardTitle>最近活动</CardTitle>
-                    <CardDescription>用户的最近活动</CardDescription>
+                    <CardDescription className="text-xs text-muted-foreground mb-2">用户的最近活动</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                 </CardContent>

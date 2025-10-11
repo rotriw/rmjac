@@ -31,3 +31,4 @@ where
 {
     has_path(db, u, v, &edge_type, perm.into()).await
 }
+

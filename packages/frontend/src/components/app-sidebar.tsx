@@ -22,6 +22,10 @@ import {
   TableOfContentsIcon,
   Trash2,
   User2,
+  Users,
+  BookOpen,
+  Target,
+  BarChart3,
 } from "lucide-react"
 
 import { NavFavorites } from "@/components/nav-favorites"
@@ -92,6 +96,28 @@ const data = {
       badge: "102",
     }
   ],
+  navAdmin: [
+    {
+      title: "管理面板",
+      url: "/admin/dashboard",
+      icon: BarChart3,
+    },
+    {
+      title: "用户管理",
+      url: "/admin/users",
+      icon: Users,
+    },
+    {
+      title: "题目管理",
+      url: "/admin/problems",
+      icon: BookOpen,
+    },
+    {
+      title: "训练管理",
+      url: "/admin/trainings",
+      icon: Target,
+    },
+  ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -102,6 +128,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} />
       </SidebarHeader>
       <SidebarContent>
+        <NavMain items={data.navAdmin} />
       </SidebarContent>
       <SidebarRail />
     </Sidebar>

@@ -27,7 +27,7 @@ pub async fn create_iden_with_slice(iden_slice: Vec<&str>, node_ids: Vec<i64>, d
         } else {
             IdenEdgeQuery::get_v_filter(now_id, Column::Iden.eq(*iden_part), db).await?
         };
-        if val.len() > 0 {
+        if !val.is_empty() {
             now_id = val[0];
         } else {
             // check step
@@ -60,7 +60,7 @@ pub async fn create_iden_with_slice(iden_slice: Vec<&str>, node_ids: Vec<i64>, d
             }
         }
     }
-    if flag == false {
+    if !flag {
         Err(QueryExists::IdenExist)?;
     }
     Ok(())
@@ -108,7 +108,7 @@ pub fn auto_slice_iden(iden: &str) -> Vec<&str> {
                     now_p = 0;
                 } else {
                     let (_res, pp) = SLICE_WORD_ACMAC.lock().unwrap().query_from_p(iden.chars().nth(i).unwrap(), now_p);
-                    if _res == true {
+                    if _res {
                         result.push(&iden[last_v..=i]);
                         last_v = i + 1;
                     }
@@ -136,6 +136,7 @@ pub async fn get_node_ids_from_iden(iden: &str, db: &DatabaseConnection, redis: 
     let iden_slice = auto_slice_iden(iden);
     let now_id = get_node_ids_from_iden_slice(iden_slice, db).await?;
     redis.set(format!("iden_to_id_{}", iden), serde_json::to_string(&now_id)?)?;
+    log::debug!("auto iden: {} to {:?}", iden, now_id);
     Ok(now_id)
 }
 
@@ -143,12 +144,14 @@ pub async fn get_node_ids_from_iden_slice(iden_slice: Vec<&str>, db: &DatabaseCo
     let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
     let mut id_list = vec![];
     for iden_part in iden_slice {
+        log::trace!("iden: {}", iden_part);
         let val = IdenEdgeQuery::get_v_filter(now_id, crate::db::entity::edge::iden::Column::Iden.eq(iden_part), db).await?;
-        if val.len() == 0 {
+        if val.is_empty() {
             return Err(crate::error::CoreError::NotFound("Cannot found specific iden.".to_string()));
         }
         now_id = val[0];
         id_list = val;
+        log::debug!("part iden: {} now_id: {:?}", iden_part, now_id);
     }
     Ok(id_list)
 }

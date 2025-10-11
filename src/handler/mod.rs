@@ -72,6 +72,9 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
         .ok_or_else(|| {
             std::io::Error::new(std::io::ErrorKind::NotFound, "Postgres URL not found")
         })?;
+    let url = core::env::REDIS_URL.lock().unwrap().clone();
+    log::info!("connect to redis: {url}");
+    *core::env::REDIS_CLIENT.lock().unwrap() = redis::Client::open(url).unwrap();
     log::info!("Connecting to database {}...", &database_url);
     let connection_options = ConnectOptions::new(database_url.clone())
         .sqlx_logging_level(LevelFilter::Trace)
@@ -91,6 +94,10 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
             .max_age(3600);
         App::new()
             .service(user::service())
+            .service(problem::service())
+            .service(training::service())
+            .service(record::service())
+            .service(auth::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {
                 error::InternalError::from_response(
                     "",
@@ -109,3 +116,7 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
 }
 
 pub mod user;
+pub mod problem;
+pub mod training;
+pub mod record;
+pub mod auth;

@@ -5,7 +5,7 @@ use crate::{
     handler::ResultHandler,
     utils::challenge::{self, gen_captcha, gen_verify_captcha},
 };
-use actix_web::{HttpRequest, Scope, get, post, services, web};
+use actix_web::{HttpRequest, Scope, get, post, delete, services, web};
 use sea_orm::DatabaseConnection;
 use serde::Deserialize;
 
@@ -115,11 +115,139 @@ pub async fn user_login(
         data.long_token.unwrap_or(false),
     )
     .await?;
-    Ok(Json! {
+    Ok(serde_json::to_string(&serde_json::json!({
         "user_public": user.public,
         "token_public": token.public,
         "token_private": token.private,
-    })
+    })).unwrap())
+}
+
+#[derive(Deserialize)]
+pub struct UserUpdateRequest {
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub avatar: Option<String>,
+    pub description: Option<String>,
+    pub bio: Option<String>,
+    pub user_profile_show: Option<String>,
+}
+
+#[post("/{node_id}/update")]
+pub async fn update_user_handler(
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<i64>,
+    req: web::Json<UserUpdateRequest>,
+) -> ResultHandler<String> {
+    let node_id = path.into_inner();
+    let update_props = core::model::user::UserUpdateProps {
+        name: req.name.clone(),
+        email: req.email.clone(),
+        avatar: req.avatar.clone(),
+        description: req.description.clone(),
+        bio: req.bio.clone(),
+        user_profile_show: req.user_profile_show.clone(),
+    };
+
+    match core::model::user::change_user_config(&db, node_id, update_props).await {
+        Ok(user) => Ok(serde_json::to_string(&serde_json::json!({
+            "message": "User updated successfully",
+            "user": user.public
+        })).unwrap()),
+        Err(e) => Ok(Json! {
+            "error": format!("Failed to update user: {}", e)
+        }),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct UserPasswordUpdateRequest {
+    pub password: String,
+}
+
+#[post("/{node_id}/password")]
+pub async fn update_user_password_handler(
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<i64>,
+    req: web::Json<UserPasswordUpdateRequest>,
+) -> ResultHandler<String> {
+    let node_id = path.into_inner();
+
+    match core::model::user::change_user_password(&db, node_id, req.password.clone()).await {
+        Ok(_) => Ok(Json! {
+            "message": "Password updated successfully"
+        }),
+        Err(e) => Ok(Json! {
+            "error": format!("Failed to update password: {}", e)
+        }),
+    }
+}
+
+#[delete("/{node_id}")]
+pub async fn delete_user_connections_handler(
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<i64>,
+) -> ResultHandler<String> {
+    let node_id = path.into_inner();
+
+    match core::model::user::delete_user_connections(&db, node_id).await {
+        Ok(_) => Ok(Json! {
+            "message": "User connections deleted successfully"
+        }),
+        Err(e) => Ok(Json! {
+            "error": format!("Failed to delete user connections: {}", e)
+        }),
+    }
+}
+
+#[delete("/{user_node_id}/permission/view/{resource_node_id}")]
+pub async fn remove_user_view_permission_handler(
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<(i64, i64)>,
+) -> ResultHandler<String> {
+    let (user_node_id, resource_node_id) = path.into_inner();
+
+    match core::model::user::remove_user_view_permission(&db, user_node_id, resource_node_id).await {
+        Ok(_) => Ok(Json! {
+            "message": "View permission removed successfully"
+        }),
+        Err(e) => Ok(Json! {
+            "error": format!("Failed to remove view permission: {}", e)
+        }),
+    }
+}
+
+#[delete("/{user_node_id}/permission/manage/{resource_node_id}")]
+pub async fn remove_user_manage_permission_handler(
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<(i64, i64)>,
+) -> ResultHandler<String> {
+    let (user_node_id, resource_node_id) = path.into_inner();
+
+    match core::model::user::remove_user_manage_permission(&db, user_node_id, resource_node_id).await {
+        Ok(_) => Ok(Json! {
+            "message": "Manage permission removed successfully"
+        }),
+        Err(e) => Ok(Json! {
+            "error": format!("Failed to remove manage permission: {}", e)
+        }),
+    }
+}
+
+#[delete("/{user_node_id}/tokens")]
+pub async fn revoke_all_user_tokens_handler(
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<i64>,
+) -> ResultHandler<String> {
+    let user_node_id = path.into_inner();
+
+    match core::model::user::revoke_all_user_tokens(&db, user_node_id).await {
+        Ok(_) => Ok(Json! {
+            "message": "All user tokens revoked successfully"
+        }),
+        Err(e) => Ok(Json! {
+            "error": format!("Failed to revoke user tokens: {}", e)
+        }),
+    }
 }
 
 #[derive(Deserialize)]
@@ -153,7 +281,13 @@ pub fn service() -> Scope {
         create_user,
         before_create,
         check_iden_exist,
-        user_login
+        user_login,
+        update_user_handler,
+        update_user_password_handler,
+        delete_user_connections_handler,
+        remove_user_view_permission_handler,
+        remove_user_manage_permission_handler,
+        revoke_all_user_tokens_handler
     ];
     web::scope("/api/user").service(service)
 }
