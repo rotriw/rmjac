@@ -8,12 +8,14 @@ use std::str::FromStr;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EdgeType {
     PermView,
+    Record,
 }
 
 impl From<EdgeType> for &str {
     fn from(edge_type: EdgeType) -> Self {
         match edge_type {
             EdgeType::PermView => "perm_view",
+            EdgeType::Record => "record",
         }
     }
 }
@@ -24,6 +26,7 @@ pub mod perm_view;
 pub mod problem_limit;
 pub mod problem_statement;
 pub mod problem_tag;
+pub mod record;
 pub mod training_problem;
 
 pub trait EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>

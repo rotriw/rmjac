@@ -275,11 +275,6 @@ pub async fn get_all_record_statuses_handler() -> ActixResult<HttpResponse> {
             "description": "Unknown error occurred"
         }),
         serde_json::json!({
-            "name": RecordStatus::Unverified.to_string(),
-            "code": i64::from(RecordStatus::Unverified),
-            "description": "Submission has not been verified"
-        }),
-        serde_json::json!({
             "name": RecordStatus::Deleted.to_string(),
             "code": i64::from(RecordStatus::Deleted),
             "description": "Submission has been deleted"

@@ -226,6 +226,19 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             Order: big_integer not_null,
         })
     );
+    tables.insert(
+        "edge_record".to_string(),
+        table_create!(iden::edge::record::Record, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
+            RecordStatus: big_integer not_null,
+            CodeLength: big_integer not_null,
+            Score: big_integer not_null,
+            SubmitTime: date_time not_null,
+            Platform: text not_null,
+        })
+    );
     tables
 }
 
@@ -375,6 +388,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         "edge_training_problem".to_string(),
         Table::drop()
             .table(iden::edge::training_problem::TrainingProblem::Table)
+            .if_exists()
+            .to_owned()
+    );
+    tables.insert(
+        "edge_record".to_string(),
+        Table::drop()
+            .table(iden::edge::record::Record::Table)
             .if_exists()
             .to_owned()
     );

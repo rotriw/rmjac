@@ -16,8 +16,8 @@ pub enum RecordStatus {
     RemotePlatformUnknownError = 702,
     Waiting = 800,
     UnknownError = 900,
-    Unverified = 901,
     Deleted = 902,
+    OnlyArchived = 1000,
 }
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct RecordNodePublic {
@@ -157,8 +157,8 @@ impl From<i64> for RecordStatus {
             702 => RecordStatus::RemotePlatformUnknownError,
             800 => RecordStatus::Waiting,
             900 => RecordStatus::UnknownError,
-            901 => RecordStatus::Unverified,
             902 => RecordStatus::Deleted,
+            1000 => RecordStatus::OnlyArchived,
             _ => RecordStatus::UnknownError,
         }
     }
@@ -191,8 +191,9 @@ impl ToString for RecordStatus {
             RecordStatus::RemotePlatformUnknownError => "Remote Platform Unknown Error".to_string(),
             RecordStatus::Waiting => "Waiting".to_string(),
             RecordStatus::UnknownError => "Unknown Error".to_string(),
-            RecordStatus::Unverified => "Unverified".to_string(),
             RecordStatus::Deleted => "Deleted".to_string(),
+            RecordStatus::OnlyArchived => "OnlyArchived".to_string(),
+
         }
     }
 }
@@ -216,8 +217,8 @@ impl From<String> for RecordStatus {
             "Remote Platform Unknown Error" => RecordStatus::RemotePlatformUnknownError,
             "Waiting" => RecordStatus::Waiting,
             "Unknown Error" => RecordStatus::UnknownError,
-            "Unverified" => RecordStatus::Unverified,
             "Deleted" => RecordStatus::Deleted,
+            "OnlyArchived" => RecordStatus::OnlyArchived,
             _ => RecordStatus::UnknownError,
         }
     }
