@@ -32,7 +32,7 @@ pub fn run(
     if mode == "dev" {
         log::warn!("Debug mode is enabled.");
     }
-    let data = core::db::init::init(url.as_str(), schema.as_str(), mode.as_str(), up, down);
+    let data = rmjac_core::db::init::init(url.as_str(), schema.as_str(), mode.as_str(), up, down);
     if data.is_err() {
         log::error!("Database initialization failed: {:?}", data.err());
     }

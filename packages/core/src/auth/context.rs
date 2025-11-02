@@ -30,29 +30,29 @@ impl AuthContext {
         required_view_perm: Option<i64>,
         required_manage_perm: Option<i64>,
     ) -> Result<bool> {
-        use crate::graph::edge::perm_view::ViewPerm;
-        use crate::graph::edge::perm_manage::ManagePerm;
+        use crate::graph::edge::perm_problem::ProblemPerm;
+        use crate::graph::edge::perm_pages::PagesPerm;
 
         // 转换权限类型
-        let view_perm = required_view_perm.map(|_perm_value| ViewPerm::ReadProblem);
-        let manage_perm = required_manage_perm.map(|_perm_value| ManagePerm::ManagePublicDescription);
+        let problem_perm = required_view_perm.map(|_perm_value| ProblemPerm::ReadProblem);
+        let pages_perm = required_manage_perm.map(|_perm_value| PagesPerm::ReadPages);
 
         // 使用PermissionUtils检查权限
         let has_permission = PermissionUtils::check_user_permission(
             db,
             self.user_node_id,
             resource_node_id,
-            view_perm,
-            manage_perm,
+            problem_perm,
+            pages_perm,
         ).await?;
 
         // 如果有权限，记录并返回
         if has_permission {
-            if view_perm.is_some() {
-                self.add_permission("view", resource_node_id);
+            if problem_perm.is_some() {
+                self.add_permission("problem", resource_node_id);
             }
-            if manage_perm.is_some() {
-                self.add_permission("manage", resource_node_id);
+            if pages_perm.is_some() {
+                self.add_permission("pages", resource_node_id);
             }
         }
 
@@ -127,18 +127,18 @@ impl AuthManager {
         required_view_perm: Option<i64>,
         required_manage_perm: Option<i64>,
     ) -> Result<bool> {
-        use crate::graph::edge::perm_view::ViewPerm;
-        use crate::graph::edge::perm_manage::ManagePerm;
+        use crate::graph::edge::perm_problem::ProblemPerm;
+        use crate::graph::edge::perm_pages::PagesPerm;
 
         // 转换权限类型
-        let view_perm = if let Some(_perm_value) = required_view_perm {
-            Some(ViewPerm::ReadProblem) // 简化实现
+        let problem_perm = if let Some(_perm_value) = required_view_perm {
+            Some(ProblemPerm::ReadProblem) // 简化实现
         } else {
             None
         };
 
-        let manage_perm = if let Some(_perm_value) = required_manage_perm {
-            Some(ManagePerm::ManagePublicDescription) // 简化实现
+        let pages_perm = if let Some(_perm_value) = required_manage_perm {
+            Some(PagesPerm::ReadPages) // 简化实现
         } else {
             None
         };
@@ -148,8 +148,8 @@ impl AuthManager {
             db,
             user_node_id,
             resource_node_id,
-            view_perm,
-            manage_perm,
+            problem_perm,
+            pages_perm,
         ).await
     }
 }

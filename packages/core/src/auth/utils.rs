@@ -1,7 +1,7 @@
 use enum_const::EnumConst;
 use crate::{
-    graph::edge::perm_view::{PermViewEdgeQuery, ViewPerm},
-    graph::edge::perm_manage::{PermManageEdgeQuery, ManagePerm},
+    graph::edge::perm_problem::{PermProblemEdgeQuery, ProblemPerm},
+    graph::edge::perm_pages::{PermPagesEdgeQuery, PagesPerm},
     graph::edge::EdgeQuery,
     service::iden::get_node_ids_from_iden,
     model::perm::check_perm,
@@ -19,19 +19,19 @@ impl PermissionUtils {
         db: &DatabaseConnection,
         user_node_id: i64,
         resource_node_id: i64,
-        view_perm: Option<ViewPerm>,
-        manage_perm: Option<ManagePerm>,
+        problem_perm: Option<ProblemPerm>,
+        pages_perm: Option<PagesPerm>,
     ) -> Result<bool> {
-        let mut has_required_view = true;
-        let mut has_required_manage = true;
+        let mut has_required_problem = true;
+        let mut has_required_pages = true;
 
-        // 检查查看权限
-        if let Some(perm) = view_perm {
-            has_required_view = match check_perm(
+        // 检查题目权限
+        if let Some(perm) = problem_perm {
+            has_required_problem = match check_perm(
                 db,
                 user_node_id,
                 resource_node_id,
-                PermViewEdgeQuery,
+                PermProblemEdgeQuery,
                 perm.get_const_isize().unwrap() as i64,
             ).await? {
                 1 => true,
@@ -39,13 +39,13 @@ impl PermissionUtils {
             };
         }
 
-        // 检查管理权限
-        if let Some(perm) = manage_perm {
-            has_required_manage = match check_perm(
+        // 检查页面权限
+        if let Some(perm) = pages_perm {
+            has_required_pages = match check_perm(
                 db,
                 user_node_id,
                 resource_node_id,
-                PermManageEdgeQuery,
+                PermPagesEdgeQuery,
                 perm.get_const_isize().unwrap() as i64,
             ).await? {
                 1 => true,
@@ -54,7 +54,7 @@ impl PermissionUtils {
         }
 
         // 必须满足所有要求的权限
-        Ok(has_required_view && has_required_manage)
+        Ok(has_required_problem && has_required_pages)
     }
 
     /// 批量检查用户权限
@@ -62,8 +62,8 @@ impl PermissionUtils {
         db: &DatabaseConnection,
         user_node_id: i64,
         resource_node_ids: &[i64],
-        view_perm: Option<ViewPerm>,
-        manage_perm: Option<ManagePerm>,
+        problem_perm: Option<ProblemPerm>,
+        pages_perm: Option<PagesPerm>,
     ) -> Result<HashMap<i64, bool>> {
         let mut results = HashMap::new();
 
@@ -72,8 +72,8 @@ impl PermissionUtils {
                 db,
                 user_node_id,
                 resource_node_id,
-                view_perm,
-                manage_perm,
+                problem_perm,
+                pages_perm,
             ).await?;
             results.insert(resource_node_id, has_permission);
         }
@@ -87,8 +87,8 @@ impl PermissionUtils {
         redis: &mut redis::Connection,
         user_iden: &str,
         resource_iden: &str,
-        view_perm: Option<ViewPerm>,
-        manage_perm: Option<ManagePerm>,
+        problem_perm: Option<ProblemPerm>,
+        pages_perm: Option<PagesPerm>,
     ) -> Result<bool> {
         // 获取用户节点ID
         let user_node_ids = get_node_ids_from_iden(user_iden, db, redis).await?;
@@ -106,8 +106,8 @@ impl PermissionUtils {
             db,
             user_node_ids[0],
             resource_node_ids[0],
-            view_perm,
-            manage_perm,
+            problem_perm,
+            pages_perm,
         ).await
     }
 
@@ -116,30 +116,30 @@ impl PermissionUtils {
         db: &DatabaseConnection,
         user_node_id: i64,
     ) -> Result<UserPermissionOverview> {
-        // 使用库函数获取用户的所有查看权限
-        let view_permissions = match PermViewEdgeQuery::get_v(user_node_id, db).await {
+        // 使用库函数获取用户的所有题目权限
+        let problem_permissions = match PermProblemEdgeQuery::get_v(user_node_id, db).await {
             Ok(node_ids) => node_ids.len(),
             Err(e) => {
-                log::error!("Failed to get view permissions: {}", e);
+                log::error!("Failed to get problem permissions: {}", e);
                 0
             }
         };
 
-        // 使用库函数获取用户的所有管理权限
-        let manage_permissions = match PermManageEdgeQuery::get_v(user_node_id, db).await {
+        // 使用库函数获取用户的所有页面权限
+        let pages_permissions = match PermPagesEdgeQuery::get_v(user_node_id, db).await {
             Ok(node_ids) => node_ids.len(),
             Err(e) => {
-                log::error!("Failed to get manage permissions: {}", e);
+                log::error!("Failed to get pages permissions: {}", e);
                 0
             }
         };
 
         Ok(UserPermissionOverview {
             user_node_id,
-            view_resources: view_permissions,
-            manage_resources: manage_permissions,
-            total_view_permission_value: view_permissions as i64,
-            total_manage_permission_value: manage_permissions as i64,
+            problem_resources: problem_permissions,
+            pages_resources: pages_permissions,
+            total_problem_permission_value: problem_permissions as i64,
+            total_pages_permission_value: pages_permissions as i64,
         })
     }
 }
@@ -163,8 +163,8 @@ impl ResourcePermissionAnalyzer {
             &mut self,
             db: &DatabaseConnection,
             resource_node_id: i64,
-            view_perm: Option<ViewPerm>,
-            manage_perm: Option<ManagePerm>,
+            problem_perm: Option<ProblemPerm>,
+            pages_perm: Option<PagesPerm>,
         ) -> Result<PermissionCheck> {
             // 检查缓存
             if let Some(cached) = self.cache.get(&resource_node_id) {
@@ -172,22 +172,22 @@ impl ResourcePermissionAnalyzer {
             }
 
             // 执行权限检查
-            let has_view = if let Some(perm) = view_perm {
+            let has_problem = if let Some(perm) = problem_perm {
                 PermissionUtils::check_user_permission(db, self.user_node_id, resource_node_id, Some(perm), None).await?
             } else {
-                true // 如果不要求查看权限，默认为有权限
+                true // 如果不要求题目权限，默认为有权限
             };
 
-            let has_manage = if let Some(perm) = manage_perm {
+            let has_pages = if let Some(perm) = pages_perm {
                 PermissionUtils::check_user_permission(db, self.user_node_id, resource_node_id, None, Some(perm)).await?
             } else {
-                true // 如果不要求管理权限，默认为有权限
+                true // 如果不要求页面权限，默认为有权限
             };
 
             let check_result = PermissionCheck {
                 resource_node_id,
-                has_view,
-                has_manage,
+                has_problem,
+                has_pages,
             };
 
             // 缓存结果
@@ -201,13 +201,13 @@ impl ResourcePermissionAnalyzer {
             &mut self,
             db: &DatabaseConnection,
             resource_node_ids: &[i64],
-            view_perm: Option<ViewPerm>,
-            manage_perm: Option<ManagePerm>,
+            problem_perm: Option<ProblemPerm>,
+            pages_perm: Option<PagesPerm>,
         ) -> Result<Vec<PermissionCheck>> {
             let mut results = Vec::new();
 
             for &resource_node_id in resource_node_ids {
-                let check = self.check_resource(db, resource_node_id, view_perm, manage_perm).await?;
+                let check = self.check_resource(db, resource_node_id, problem_perm, pages_perm).await?;
                 results.push(check);
             }
 
@@ -224,18 +224,18 @@ impl ResourcePermissionAnalyzer {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UserPermissionOverview {
     pub user_node_id: i64,
-    pub view_resources: usize,
-    pub manage_resources: usize,
-    pub total_view_permission_value: i64,
-    pub total_manage_permission_value: i64,
+    pub problem_resources: usize,
+    pub pages_resources: usize,
+    pub total_problem_permission_value: i64,
+    pub total_pages_permission_value: i64,
 }
 
 /// 权限检查结果
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PermissionCheck {
     pub resource_node_id: i64,
-    pub has_view: bool,
-    pub has_manage: bool,
+    pub has_problem: bool,
+    pub has_pages: bool,
 }
 
 /// 权限预设组合
@@ -243,23 +243,23 @@ pub struct PermissionPresets;
 
 impl PermissionPresets {
     /// 题目读者权限
-    pub fn problem_reader() -> (ViewPerm, ManagePerm) {
-        (ViewPerm::ReadProblem, ManagePerm::ManagePublicDescription)
+    pub fn problem_reader() -> (ProblemPerm, PagesPerm) {
+        (ProblemPerm::ReadProblem, PagesPerm::ReadPages)
     }
 
     /// 题目作者权限
-    pub fn problem_author() -> (ViewPerm, ManagePerm) {
-        (ViewPerm::ReadProblem, ManagePerm::ManageStatement)
+    pub fn problem_author() -> (ProblemPerm, PagesPerm) {
+        (ProblemPerm::ReadProblem, PagesPerm::EditPages)
     }
 
     /// 训练参与者权限
-    pub fn training_participant() -> (ViewPerm, ManagePerm) {
-        (ViewPerm::ViewPublic, ManagePerm::ManagePublicDescription)
+    pub fn training_participant() -> (ProblemPerm, PagesPerm) {
+        (ProblemPerm::ReadProblem, PagesPerm::ReadPages)
     }
 
     /// 训练组织者权限
-    pub fn training_organizer() -> (ViewPerm, ManagePerm) {
-        (ViewPerm::ViewPublic, ManagePerm::ManagePublicDescription)
+    pub fn training_organizer() -> (ProblemPerm, PagesPerm) {
+        (ProblemPerm::ReadProblem, PagesPerm::EditPages)
     }
 }
 
@@ -277,7 +277,7 @@ pub mod checks {
             db,
             user_node_id,
             problem_node_id,
-            Some(ViewPerm::ReadProblem),
+            Some(ProblemPerm::ReadProblem),
             None,
         ).await
     }
@@ -292,8 +292,8 @@ pub mod checks {
             db,
             user_node_id,
             problem_node_id,
+            Some(ProblemPerm::EditProblem),
             None,
-            Some(ManagePerm::ManageStatement),
         ).await
     }
 
@@ -307,8 +307,8 @@ pub mod checks {
             db,
             user_node_id,
             training_node_id,
-            Some(ViewPerm::ViewPublic),
             None,
+            Some(PagesPerm::ReadPages),
         ).await
     }
 
@@ -323,7 +323,7 @@ pub mod checks {
             user_node_id,
             training_node_id,
             None,
-            Some(ManagePerm::ManagePublicDescription),
+            Some(PagesPerm::EditPages),
         ).await
     }
 }

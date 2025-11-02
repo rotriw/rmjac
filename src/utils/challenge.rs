@@ -1,4 +1,4 @@
-use core::utils::encrypt::encode_password;
+use rmjac_core::utils::encrypt::encode_password;
 
 use captcha_rs::CaptchaBuilder;
 use chrono::NaiveDateTime;

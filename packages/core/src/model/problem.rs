@@ -5,8 +5,8 @@ use crate::graph::edge::problem_limit::{ProblemLimitEdgeQuery, ProblemLimitEdgeR
 use crate::graph::edge::problem_statement::{ProblemStatementEdgeQuery, ProblemStatementEdgeRaw};
 use crate::graph::edge::problem_tag::{ProblemTagEdgeQuery, ProblemTagEdgeRaw};
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
-use crate::graph::edge::perm_view::{PermViewEdgeRaw, ViewPerm};
-use crate::graph::edge::perm_manage::{PermManageEdgeRaw, ManagePerm};
+use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPerm};
+use crate::graph::edge::perm_pages::{PermPagesEdgeRaw, PagesPerm};
 use enum_const::EnumConst;
 use crate::graph::node::problem::limit::{
     ProblemLimitNode, ProblemLimitNodePrivateRaw, ProblemLimitNodePublicRaw, ProblemLimitNodeRaw,
@@ -489,27 +489,28 @@ pub async fn grant_problem_creator_permissions(
 ) -> Result<()> {
     log::info!("Granting problem creator permissions: user {} -> problem {}", user_node_id, problem_node_id);
 
-    // 授予查看权限
-    PermViewEdgeRaw {
+    // 授予题目权限
+    PermProblemEdgeRaw {
         u: user_node_id,
         v: problem_node_id,
-        perms: crate::graph::edge::perm_view::ViewPermRaw::Perms(vec![
-            ViewPerm::ReadProblem,
-            ViewPerm::ViewPublic,
-            ViewPerm::ViewPrivate,
+        perms: crate::graph::edge::perm_problem::ProblemPermRaw::Perms(vec![
+            ProblemPerm::ReadProblem,
+            ProblemPerm::EditProblem,
+            ProblemPerm::DeleteProblem,
+            ProblemPerm::ManageProblemPermissions,
         ]),
     }
     .save(db)
     .await?;
 
-    // 授予管理权限
-    PermManageEdgeRaw {
+    // 授予页面权限
+    PermPagesEdgeRaw {
         u: user_node_id,
         v: problem_node_id,
-        perms: crate::graph::edge::perm_manage::ManagePermRaw::Perms(vec![
-            ManagePerm::ManageStatement,
-            ManagePerm::ManagePublicDescription,
-            ManagePerm::ManagePrivateDescription,
+        perms: crate::graph::edge::perm_pages::PagesPermRaw::Perms(vec![
+            PagesPerm::ReadPages,
+            PagesPerm::EditPages,
+            PagesPerm::PublishPages,
         ]),
     }
     .save(db)
@@ -568,16 +569,17 @@ pub async fn grant_problem_access(
 ) -> Result<()> {
     log::info!("Granting problem access: user {} -> problem {}, private: {}", user_node_id, problem_node_id, can_view_private);
 
-    let mut view_perms = vec![ViewPerm::ReadProblem, ViewPerm::ViewPublic];
+    let mut problem_perms = vec![ProblemPerm::ReadProblem];
     if can_view_private {
-        view_perms.push(ViewPerm::ViewPrivate);
+        // 如果可以查看私有内容，也授予编辑权限
+        problem_perms.push(ProblemPerm::EditProblem);
     }
 
-    // 授予查看权限
-    PermViewEdgeRaw {
+    // 授予题目权限
+    PermProblemEdgeRaw {
         u: user_node_id,
         v: problem_node_id,
-        perms: crate::graph::edge::perm_view::ViewPermRaw::Perms(view_perms),
+        perms: crate::graph::edge::perm_problem::ProblemPermRaw::Perms(problem_perms),
     }
     .save(db)
     .await?;
@@ -586,12 +588,11 @@ pub async fn grant_problem_access(
     Ok(())
 }
 
-/// 检查用户是否有题目权限
 pub async fn check_problem_permission(
     db: &DatabaseConnection,
     user_node_id: i64,
     problem_node_id: i64,
-    required_view_perm: ViewPerm,
+    required_problem_perm: ProblemPerm,
 ) -> Result<bool> {
     use crate::model::perm::check_perm;
 
@@ -599,8 +600,8 @@ pub async fn check_problem_permission(
         db,
         user_node_id,
         problem_node_id,
-        crate::graph::edge::perm_view::PermViewEdgeQuery,
-        required_view_perm.get_const_isize().unwrap() as i64,
+        crate::graph::edge::perm_problem::PermProblemEdgeQuery,
+        required_problem_perm.get_const_isize().unwrap() as i64,
     ).await? {
         1 => Ok(true),
         _ => Ok(false),

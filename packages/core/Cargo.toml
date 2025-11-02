@@ -1,6 +1,6 @@
 [package]
 edition = "2024"
-name = "core"
+name = "rmjac_core"
 version = "0.0.0"
 
 [lib]

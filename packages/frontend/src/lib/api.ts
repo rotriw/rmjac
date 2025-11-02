@@ -126,7 +126,7 @@ export async function createProblem(problemData: {
   tags: string[]
 }): Promise<any> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/problem`, {
+    const response = await fetch(`${API_BASE_URL}/api/problem/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -329,7 +329,7 @@ export async function addProblemToTraining(training_node_id: number, problem_ide
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ problem_iden }),
+      body: JSON.stringify({problem_iden}),
     })
 
     if (!response.ok) {

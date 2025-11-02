@@ -1,11 +1,9 @@
-use core::error::CoreError;
+use crate::utils::perm::AuthTool;
+use rmjac_core::error::CoreError;
 
 use actix_cors::Cors;
-use actix_web::{
-    App, HttpResponse, HttpServer, error,
-    http::{StatusCode, header::ContentType},
-    web,
-};
+use actix_service::ServiceFactory;
+use actix_web::{App, HttpResponse, HttpServer, error, http::{StatusCode, header::ContentType}, web, Scope};
 use derive_more::derive::Display;
 use log::LevelFilter;
 use sea_orm::{ConnectOptions, Database};
@@ -62,6 +60,7 @@ impl From<CoreError> for HttpError {
 
 pub type ResultHandler<T> = Result<T, HttpError>;
 
+
 #[actix_web::main]
 pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) -> std::io::Result<()> {
     let database_url = crate::env::CONFIG
@@ -72,16 +71,16 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
         .ok_or_else(|| {
             std::io::Error::new(std::io::ErrorKind::NotFound, "Postgres URL not found")
         })?;
-    let url = core::env::REDIS_URL.lock().unwrap().clone();
+    let url = rmjac_core::env::REDIS_URL.lock().unwrap().clone();
     log::info!("connect to redis: {url}");
-    *core::env::REDIS_CLIENT.lock().unwrap() = redis::Client::open(url).unwrap();
+    *rmjac_core::env::REDIS_CLIENT.lock().unwrap() = redis::Client::open(url).unwrap();
     log::info!("Connecting to database {}...", &database_url);
     let connection_options = ConnectOptions::new(database_url.clone())
         .sqlx_logging_level(LevelFilter::Trace)
         .to_owned();
     let conn = Database::connect(connection_options).await.unwrap();
     log::info!("Connected to database");
-    let data = core::service::service_start(&conn, database_url.as_str(), "public", vjudge_port, vjudge_auth).await;
+    let data = rmjac_core::service::service_start(&conn, database_url.as_str(), "public", vjudge_port, vjudge_auth).await;
     if data.is_err() {
         log::error!("Failed to start service: {:?}", data.err());
     }
@@ -92,12 +91,10 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
             .allow_any_method()
             .allow_any_header()
             .max_age(3600);
+        let auth = AuthTool {};
         App::new()
             .service(user::service())
             .service(problem::service())
-            .service(training::service())
-            .service(record::service())
-            .service(auth::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {
                 error::InternalError::from_response(
                     "",
@@ -108,6 +105,7 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
                 .into()
             }))
             .app_data(web::Data::new(conn.clone()))
+            .wrap(auth)
             .wrap(cors)
     })
     .bind((host, port))?
@@ -117,6 +115,4 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
 
 pub mod user;
 pub mod problem;
-pub mod training;
-pub mod record;
-pub mod auth;
+pub mod entry;

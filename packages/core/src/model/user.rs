@@ -1,3 +1,4 @@
+use redis::TypedCommands;
 use crate::graph::edge::perm_view::ViewPermRaw;
 use crate::{
     db::{
@@ -27,6 +28,8 @@ use crate::{
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use tap::Conv;
+use crate::env::db::{get_connect, refresh_redis};
+use crate::utils::get_redis_connection;
 
 pub async fn create_default_user(
     db: &DatabaseConnection,
@@ -292,3 +295,16 @@ pub async fn revoke_all_user_tokens(
     Ok(())
 }
 
+
+
+pub async fn check_user_token(user_id: i64, user_token: &str) -> bool {
+    let mut redis = get_redis_connection();
+    let data = redis.get(format!("user_token:{}:{}", user_id, user_token));
+    if let Ok(data) = data
+    && let Some(data) = data
+    && let Ok(data) = data.parse::<i64>() {
+        data == user_id
+    } else {
+        false
+    }
+}

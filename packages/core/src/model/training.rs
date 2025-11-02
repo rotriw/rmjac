@@ -7,8 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::graph::edge::{EdgeQuery, EdgeQueryOrder, EdgeRaw};
 use crate::graph::edge::iden::IdenEdgeQuery;
 use crate::graph::edge::training_problem::{TrainingProblemEdgeQuery, TrainingProblemEdgeRaw};
-use crate::graph::edge::perm_view::{PermViewEdgeRaw, ViewPerm};
-use crate::graph::edge::perm_manage::{PermManageEdgeRaw, ManagePerm};
+use crate::graph::edge::perm_pages::{PermPagesEdgeRaw, PagesPerm};
 use enum_const::EnumConst;
 use crate::graph::node::{Node, NodeRaw};
 use crate::{db, Result};
@@ -304,25 +303,16 @@ pub async fn grant_training_creator_permissions(
 ) -> Result<()> {
     log::info!("Granting training creator permissions: user {} -> training {}", user_node_id, training_node_id);
 
-    // 授予查看权限
-    PermViewEdgeRaw {
+    // 授予页面权限（包含查看和管理）
+    PermPagesEdgeRaw {
         u: user_node_id,
         v: training_node_id,
-        perms: crate::graph::edge::perm_view::ViewPermRaw::Perms(vec![
-            ViewPerm::ViewPublic,
-        ]),
-    }
-    .save(db)
-    .await?;
-
-    // 授予管理权限
-    PermManageEdgeRaw {
-        u: user_node_id,
-        v: training_node_id,
-        perms: crate::graph::edge::perm_manage::ManagePermRaw::Perms(vec![
-            ManagePerm::ManagePublicDescription,
-            ManagePerm::ManagePrivateDescription,
-            ManagePerm::ManageEdge,  // 可以添加/删除题目
+        perms: crate::graph::edge::perm_pages::PagesPermRaw::Perms(vec![
+            PagesPerm::ReadPages,
+            PagesPerm::EditPages,
+            PagesPerm::DeletePages,
+            PagesPerm::ManagePagesPermissions,
+            PagesPerm::PublishPages,
         ]),
     }
     .save(db)
@@ -441,12 +431,12 @@ pub async fn grant_training_access(
 ) -> Result<()> {
     log::info!("Granting training access: user {} -> training {}", user_node_id, training_node_id);
 
-    // 授予查看权限
-    PermViewEdgeRaw {
+    // 授予页面权限（读取权限）
+    PermPagesEdgeRaw {
         u: user_node_id,
         v: training_node_id,
-        perms: crate::graph::edge::perm_view::ViewPermRaw::Perms(vec![
-            ViewPerm::ViewPublic,
+        perms: crate::graph::edge::perm_pages::PagesPermRaw::Perms(vec![
+            PagesPerm::ReadPages,
         ]),
     }
     .save(db)
@@ -461,7 +451,7 @@ pub async fn check_training_permission(
     db: &DatabaseConnection,
     user_node_id: i64,
     training_node_id: i64,
-    required_view_perm: ViewPerm,
+    required_pages_perm: PagesPerm,
 ) -> Result<bool> {
     use crate::model::perm::check_perm;
 
@@ -469,34 +459,14 @@ pub async fn check_training_permission(
         db,
         user_node_id,
         training_node_id,
-        crate::graph::edge::perm_view::PermViewEdgeQuery,
-        required_view_perm.get_const_isize().unwrap() as i64,
+        crate::graph::edge::perm_pages::PermPagesEdgeQuery,
+        required_pages_perm.get_const_isize().unwrap() as i64,
     ).await? {
         1 => Ok(true),
         _ => Ok(false),
     }
 }
 
-/// 检查用户是否有训练管理权限
-pub async fn check_training_manage_permission(
-    db: &DatabaseConnection,
-    user_node_id: i64,
-    training_node_id: i64,
-    required_manage_perm: ManagePerm,
-) -> Result<bool> {
-    use crate::model::perm::check_perm;
-
-    match check_perm(
-        db,
-        user_node_id,
-        training_node_id,
-        crate::graph::edge::perm_manage::PermManageEdgeQuery,
-        required_manage_perm.get_const_isize().unwrap() as i64,
-    ).await? {
-        1 => Ok(true),
-        _ => Ok(false),
-    }
-}
 // pub async fn remove_problem_from_training_list(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64, problem_iden: &String) -> Result<TrainingList> {
 //     let mut problem_list = get_training_problem_list(db, redis, node_id).await?;
 //     let problem = get_problem(db, redis, problem_iden).await?;

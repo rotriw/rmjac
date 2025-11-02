@@ -1152,41 +1152,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "core"
-version = "0.0.0"
-dependencies = [
- "async-recursion",
- "axum",
- "base16ct",
- "chrono",
- "deno_core",
- "derive_more",
- "enum_const",
- "lazy_static",
- "log",
- "macro_db_init",
- "macro_node_iden",
- "macro_socket_auth",
- "pgp",
- "priority-queue",
- "queue",
- "redis",
- "sea-orm",
- "sea-orm-migration",
- "serde",
- "serde_json",
- "sha2",
- "socketioxide",
- "strum 0.27.1",
- "strum_macros",
- "tap",
- "tokio",
- "totp-rs",
- "tower-http",
- "uuid",
-]
-
-[[package]]
 name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2768,7 +2733,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "macro_handler"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.103",
+]
+
+[[package]]
 name = "macro_node_iden"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.103",
+]
+
+[[package]]
+name = "macro_perm"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
@@ -3819,18 +3802,22 @@ name = "rmjac"
 version = "0.1.0"
 dependencies = [
  "actix-cors",
+ "actix-service",
  "actix-web",
  "captcha-rs",
  "chrono",
  "clap",
  "colored",
  "command_tool",
- "core",
  "derive_more",
  "fern",
+ "futures-util",
  "lazy_static",
  "log",
+ "macro_handler",
+ "macro_perm",
  "redis",
+ "rmjac_core",
  "sea-orm",
  "serde",
  "serde_json",
@@ -3838,6 +3825,41 @@ dependencies = [
  "tap",
  "tokio",
  "tower-http",
+]
+
+[[package]]
+name = "rmjac_core"
+version = "0.0.0"
+dependencies = [
+ "async-recursion",
+ "axum",
+ "base16ct",
+ "chrono",
+ "deno_core",
+ "derive_more",
+ "enum_const",
+ "lazy_static",
+ "log",
+ "macro_db_init",
+ "macro_node_iden",
+ "macro_socket_auth",
+ "pgp",
+ "priority-queue",
+ "queue",
+ "redis",
+ "sea-orm",
+ "sea-orm-migration",
+ "serde",
+ "serde_json",
+ "sha2",
+ "socketioxide",
+ "strum 0.27.1",
+ "strum_macros",
+ "tap",
+ "tokio",
+ "totp-rs",
+ "tower-http",
+ "uuid",
 ]
 
 [[package]]

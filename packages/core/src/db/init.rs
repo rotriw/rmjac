@@ -6,7 +6,7 @@ use macro_db_init::table_create;
 use sea_orm::{ConnectOptions, Database};
 use sea_orm_migration::prelude::*;
 
-use crate::graph::edge::perm_view::ViewPermRaw;
+use crate::graph::edge::perm_pages::PagesPermRaw;
 use crate::graph::node::problem_source::{
     ProblemSourceNodePrivateRaw, ProblemSourceNodePublicRaw, ProblemSourceNodeRaw,
 };
@@ -16,7 +16,7 @@ use crate::{
     graph::{
         edge::{
             EdgeRaw,
-            perm_view::{PermViewEdgeRaw, ViewPerm},
+            perm_pages::{PermPagesEdgeRaw, PagesPerm},
         },
         node::{
             NodeRaw,
@@ -164,8 +164,8 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
-        "edge_perm_view".to_string(),
-        table_create!(iden::edge::perm_view::PermView, {
+        "edge_perm_problem".to_string(),
+        table_create!(iden::edge::perm_problem::PermProblem, {
             EdgeId: big_integer not_null primary_key,
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
@@ -173,8 +173,8 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
-        "edge_perm_manage".to_string(),
-        table_create!(iden::edge::perm_manage::PermManage, {
+        "edge_perm_pages".to_string(),
+        table_create!(iden::edge::perm_pages::PermPages, {
             EdgeId: big_integer not_null primary_key,
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
@@ -343,16 +343,16 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
             .to_owned(),
     );
     tables.insert(
-        "edge_perm_view".to_string(),
+        "edge_perm_problem".to_string(),
         Table::drop()
-            .table(iden::edge::perm_view::PermView::Table)
+            .table(iden::edge::perm_problem::PermProblem::Table)
             .if_exists()
             .to_owned(),
     );
     tables.insert(
-        "edge_perm_manage".to_string(),
+        "edge_perm_pages".to_string(),
         Table::drop()
-            .table(iden::edge::perm_manage::PermManage::Table)
+            .table(iden::edge::perm_pages::PermPages::Table)
             .if_exists()
             .to_owned(),
     );
@@ -524,10 +524,10 @@ pub async fn init(
         .await?;
         log::info!("Perm group -> default pages");
         for i in default_pages.clone() {
-            PermViewEdgeRaw {
+            PermPagesEdgeRaw {
                 u: default_strategy.node_id,
                 v: i,
-                perms: ViewPermRaw::Perms(vec![ViewPerm::ViewPublic, ViewPerm::ReadProblem]),
+                perms: PagesPermRaw::Perms(vec![PagesPerm::ReadPages]),
             }
             .save(&db)
             .await?;
@@ -559,22 +559,22 @@ pub async fn init(
     }
     if up.contains(&"all")
         || (up.contains(&"node_perm_group")
-            && up.contains(&"edge_perm_view")
+            && up.contains(&"edge_perm_pages")
             && up.contains(&"node_pages"))
     {
         log::info!("default user -> default pages");
         for i in default_pages {
-            PermViewEdgeRaw {
+            PermPagesEdgeRaw {
                 u: guest_user_id,
                 v: i,
-                perms: ViewPermRaw::Perms(vec![ViewPerm::ViewPublic, ViewPerm::ReadProblem]),
+                perms: PagesPermRaw::Perms(vec![PagesPerm::ReadPages]),
             }
             .save(&db)
             .await?;
         }
     } else {
         log::warn!(
-            "Skipping default perm view edge creation, This may lead to unexpected behavior."
+            "Skipping default perm pages edge creation, This may lead to unexpected behavior."
         );
     }
     if up.contains(&"all") {

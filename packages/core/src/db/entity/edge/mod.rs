@@ -8,6 +8,8 @@ use tap::Conv;
 #[allow(clippy::module_inception)]
 pub mod edge;
 pub mod perm_manage;
+pub mod perm_pages;
+pub mod perm_problem;
 pub mod perm_view;
 
 pub mod iden;

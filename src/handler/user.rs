@@ -1,13 +1,15 @@
-use core::now_time;
+use rmjac_core::now_time;
 
 use crate::{
     env::CONFIG,
     handler::ResultHandler,
     utils::challenge::{self, gen_captcha, gen_verify_captcha},
 };
-use actix_web::{HttpRequest, Scope, get, post, delete, services, web};
+use actix_web::{HttpRequest, Scope, get, post, delete, services, web, HttpMessage};
 use sea_orm::DatabaseConnection;
 use serde::Deserialize;
+use rmjac_core::auth::AuthContext;
+use crate::utils::perm::UserAuthCotext;
 
 #[get("/view/{id}")]
 pub async fn get_user(_req: HttpRequest) -> ResultHandler<String> {
@@ -25,7 +27,7 @@ pub async fn check_iden_exist(
     db: web::Data<DatabaseConnection>,
 ) -> ResultHandler<String> {
     let iden = data.into_inner().id;
-    let exists = core::model::user::check_iden_exists(&db, iden.as_str()).await?;
+    let exists = rmjac_core::model::user::check_iden_exists(&db, iden.as_str()).await?;
     Ok(Json! {
         "exists": exists
     })
@@ -75,7 +77,7 @@ pub async fn create_user(
             "error": "Captcha is invalid"
         });
     }
-    let res = core::model::user::create_default_user(
+    let res = rmjac_core::model::user::create_default_user(
         &db,
         user.iden.as_str(),
         user.name.as_str(),
@@ -107,7 +109,7 @@ pub async fn user_login(
         }
         None => "Unknow Device",
     };
-    let (user, token) = core::model::user::user_login(
+    let (user, token) = rmjac_core::model::user::user_login(
         &db,
         data.iden.as_str(),
         data.password.as_str(),
@@ -139,7 +141,7 @@ pub async fn update_user_handler(
     req: web::Json<UserUpdateRequest>,
 ) -> ResultHandler<String> {
     let node_id = path.into_inner();
-    let update_props = core::model::user::UserUpdateProps {
+    let update_props = rmjac_core::model::user::UserUpdateProps {
         name: req.name.clone(),
         email: req.email.clone(),
         avatar: req.avatar.clone(),
@@ -148,7 +150,7 @@ pub async fn update_user_handler(
         user_profile_show: req.user_profile_show.clone(),
     };
 
-    match core::model::user::change_user_config(&db, node_id, update_props).await {
+    match rmjac_core::model::user::change_user_config(&db, node_id, update_props).await {
         Ok(user) => Ok(serde_json::to_string(&serde_json::json!({
             "message": "User updated successfully",
             "user": user.public
@@ -172,7 +174,7 @@ pub async fn update_user_password_handler(
 ) -> ResultHandler<String> {
     let node_id = path.into_inner();
 
-    match core::model::user::change_user_password(&db, node_id, req.password.clone()).await {
+    match rmjac_core::model::user::change_user_password(&db, node_id, req.password.clone()).await {
         Ok(_) => Ok(Json! {
             "message": "Password updated successfully"
         }),
@@ -189,7 +191,7 @@ pub async fn delete_user_connections_handler(
 ) -> ResultHandler<String> {
     let node_id = path.into_inner();
 
-    match core::model::user::delete_user_connections(&db, node_id).await {
+    match rmjac_core::model::user::delete_user_connections(&db, node_id).await {
         Ok(_) => Ok(Json! {
             "message": "User connections deleted successfully"
         }),
@@ -206,7 +208,7 @@ pub async fn remove_user_view_permission_handler(
 ) -> ResultHandler<String> {
     let (user_node_id, resource_node_id) = path.into_inner();
 
-    match core::model::user::remove_user_view_permission(&db, user_node_id, resource_node_id).await {
+    match rmjac_core::model::user::remove_user_view_permission(&db, user_node_id, resource_node_id).await {
         Ok(_) => Ok(Json! {
             "message": "View permission removed successfully"
         }),
@@ -223,7 +225,7 @@ pub async fn remove_user_manage_permission_handler(
 ) -> ResultHandler<String> {
     let (user_node_id, resource_node_id) = path.into_inner();
 
-    match core::model::user::remove_user_manage_permission(&db, user_node_id, resource_node_id).await {
+    match rmjac_core::model::user::remove_user_manage_permission(&db, user_node_id, resource_node_id).await {
         Ok(_) => Ok(Json! {
             "message": "Manage permission removed successfully"
         }),
@@ -240,7 +242,7 @@ pub async fn revoke_all_user_tokens_handler(
 ) -> ResultHandler<String> {
     let user_node_id = path.into_inner();
 
-    match core::model::user::revoke_all_user_tokens(&db, user_node_id).await {
+    match rmjac_core::model::user::revoke_all_user_tokens(&db, user_node_id).await {
         Ok(_) => Ok(Json! {
             "message": "All user tokens revoked successfully"
         }),
@@ -257,10 +259,11 @@ pub struct UserBeforeCreate {
 }
 
 #[get("/before_create")]
-pub async fn before_create(path: web::Query<UserBeforeCreate>) -> ResultHandler<String> {
+pub async fn before_create(req: HttpRequest, path: web::Query<UserBeforeCreate>) -> ResultHandler<String> {
     let (challenge_text, challenge_img) = gen_captcha(path.dark_mode);
     let time = chrono::Utc::now().naive_utc();
     let code = CONFIG.lock().unwrap().secret_challenge_code.clone();
+    log::info!("{:?}", req.extensions().get::<UserAuthCotext>());
     let challenge_code = gen_verify_captcha(
         &challenge_text,
         path.email.as_str(),

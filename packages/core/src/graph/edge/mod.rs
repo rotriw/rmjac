@@ -7,14 +7,16 @@ use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EdgeType {
-    PermView,
+    PermProblem,
+    PermPages,
     Record,
 }
 
 impl From<EdgeType> for &str {
     fn from(edge_type: EdgeType) -> Self {
         match edge_type {
-            EdgeType::PermView => "perm_view",
+            EdgeType::PermProblem => "perm_problem",
+            EdgeType::PermPages => "perm_pages",
             EdgeType::Record => "record",
         }
     }
@@ -22,6 +24,8 @@ impl From<EdgeType> for &str {
 
 pub mod iden;
 pub mod perm_manage;
+pub mod perm_pages;
+pub mod perm_problem;
 pub mod perm_view;
 pub mod problem_limit;
 pub mod problem_statement;

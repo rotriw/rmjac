@@ -3,7 +3,7 @@
 //! log_level required
 //! --config -c <config>, Server will use this config file
 
-// use core::async_run;
+// use rmjac_core::async_run;
 
 // use log::LevelFilter;
 // use sea_orm::ConnectOptions;
@@ -12,14 +12,14 @@
 //     env::env_load, utils,
 // };
 
-use core::async_run;
-use core::graph::node::record::subtask::SubtaskCalcMethod;
-use core::service::judge::calc::handle_score;
-use core::graph::node::record::RecordStatus::Accepted;
-use core::model::problem::get_problem;
-use core::model::problem::ProblemStatementProp;
-use core::model::problem::CreateProblemProps;
-use core::model::problem::create_problem;
+use rmjac_core::async_run;
+use rmjac_core::graph::node::record::subtask::SubtaskCalcMethod;
+use rmjac_core::service::judge::calc::handle_score;
+use rmjac_core::graph::node::record::RecordStatus::Accepted;
+use rmjac_core::model::problem::get_problem;
+use rmjac_core::model::problem::ProblemStatementProp;
+use rmjac_core::model::problem::CreateProblemProps;
+use rmjac_core::model::problem::create_problem;
 
 use log::LevelFilter;
 use sea_orm::DatabaseConnection;
@@ -38,10 +38,10 @@ pub async fn test_get_problem(db: &DatabaseConnection) {
 pub async fn test_create_training(db: &DatabaseConnection) {
     let redis = redis::Client::open("redis://127.0.0.1/").unwrap();
     let _conn = std::env::var("DB").unwrap();
-    use core::model::training::TrainingProblem::*;
-    use core::model::training::TrainingList;
+    use rmjac_core::model::training::TrainingProblem::*;
+    use rmjac_core::model::training::TrainingList;
     {
-        let v = core::model::training::create_training(
+        let v = rmjac_core::model::training::create_training(
             db,
             &mut redis.get_connection().unwrap(),
         "Test Training",
@@ -64,7 +64,7 @@ pub async fn test_create_training(db: &DatabaseConnection) {
 }
 
 pub async fn test_create_problem(db: &DatabaseConnection) {
-    use core::db::entity::node::problem_statement::ContentType;
+    use rmjac_core::db::entity::node::problem_statement::ContentType;
     let _conn = std::env::var("DB").unwrap(); {
         let v = create_problem(db, CreateProblemProps {
             problem_name: "Test Problem".to_string(),
@@ -167,17 +167,17 @@ pub fn run(log_level: Option<String>) -> Option<()> {
     //         ).await);
         } */
 
-    core::service::iden::create_words(vec!["LG"]);
-    dbg!(core::service::iden::auto_slice_iden("LGP1001"));
-    dbg!(core::service::iden::auto_slice_iden("LG/P1001"));
-    dbg!(core::service::iden::auto_slice_iden("problem/LG/P1001"));
+    rmjac_core::service::iden::create_words(vec!["LG"]);
+    dbg!(rmjac_core::service::iden::auto_slice_iden("LGP1001"));
+    dbg!(rmjac_core::service::iden::auto_slice_iden("LG/P1001"));
+    dbg!(rmjac_core::service::iden::auto_slice_iden("problem/LG/P1001"));
     let conn = std::env::var("DB").unwrap(); async_run! {
 
         let db = sea_orm::Database::connect(&conn).await.unwrap();
-        let _ = core::service::service_start(&db, &conn, "public", 1825, "").await;
+        let _ = rmjac_core::service::service_start(&db, &conn, "public", 1825, "").await;
         // test_get_problem(&db).await;
         let redis = redis::Client::open("redis://127.0.0.1/").unwrap();
-        let x = core::service::iden::get_node_id_iden(10, &db, &mut redis.get_connection().unwrap()).await;
+        let x = rmjac_core::service::iden::get_node_id_iden(10, &db, &mut redis.get_connection().unwrap()).await;
         log::info!("{:?}", x);
         // test_create_problem(&db).await;
         // test_create_training(&db).await;
