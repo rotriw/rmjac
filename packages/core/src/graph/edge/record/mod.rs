@@ -2,7 +2,7 @@ use crate::graph::node::record::RecordStatus;
 use sea_orm::{QueryFilter, QueryOrder};
 use sea_orm::ColumnTrait;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RecordEdge {
     pub id: i64,
     pub u: i64,
@@ -14,7 +14,7 @@ pub struct RecordEdge {
     pub platform: String,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RecordEdgeRaw {
     pub u: i64,
     pub v: i64,
@@ -208,5 +208,6 @@ impl RecordEdgeQuery {
 
 use crate::Result;
 use sea_orm::{DatabaseConnection, EntityTrait, PaginatorTrait};
+use serde::{Deserialize, Serialize};
 use crate::db::entity::edge::record::{ActiveModel, Column, Entity, Model};
 use crate::graph::edge::{Edge, EdgeQuery, EdgeRaw};

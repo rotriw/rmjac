@@ -9,8 +9,11 @@ import {
   User2,
 } from "lucide-react"
 import { NavMain } from "@/components/nav-main"
+import { UserAvatar } from "@/components/user-avatar"
 import {
   Sidebar,
+  SidebarContent,
+  SidebarFooter,
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
@@ -61,6 +64,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {/* <TeamSwitcher teams={data.teams} /> */}
         <NavMain items={data.navMain} />
       </SidebarHeader>
+      <SidebarContent />
+      <UserAvatar />
       <SidebarRail />
     </Sidebar>
   )

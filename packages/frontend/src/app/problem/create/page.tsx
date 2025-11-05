@@ -539,7 +539,6 @@ export default function ProblemPage() {
         type: "button",
         title: isSubmitting ? "提交中..." : "提交题目",
         onClick: handleSubmit,
-        disabled: isSubmitting
       }]
     },
 

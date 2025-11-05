@@ -2,7 +2,6 @@ use std::future::{ready, Ready};
 use std::rc::Rc;
 use actix_web::{dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, Error, HttpMessage};
 use futures_util::future::LocalBoxFuture;
-use rmjac_core::auth::AuthContext;
 use rmjac_core::model::user::check_user_token;
 
 pub struct AuthTool;
@@ -46,7 +45,6 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        println!("Hi from start. You requested: {}", req.path());
         let service = Rc::clone(&self.service);
         Box::pin(async move {
             let uid = req.cookie("_uid");

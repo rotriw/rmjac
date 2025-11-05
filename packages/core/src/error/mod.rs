@@ -78,6 +78,12 @@ impl From<&CoreError> for i64 {
     }
 }
 
+impl From<QueryNotFound> for CoreError {
+    fn from(err: QueryNotFound) -> Self {
+        CoreError::QueryNotFound(err)
+    }
+}
+
 impl From<QueryExists> for CoreError {
     fn from(err: QueryExists) -> Self {
         CoreError::QueryExists(err)

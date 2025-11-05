@@ -2,16 +2,30 @@ use crate::utils::perm::AuthTool;
 use rmjac_core::error::CoreError;
 
 use actix_cors::Cors;
-use actix_service::ServiceFactory;
-use actix_web::{App, HttpResponse, HttpServer, error, http::{StatusCode, header::ContentType}, web, Scope};
+use actix_web::{App, HttpResponse, HttpServer, error, http::{StatusCode, header::ContentType}, web};
 use derive_more::derive::Display;
 use log::LevelFilter;
 use sea_orm::{ConnectOptions, Database};
 
 #[derive(Debug, Display)]
+pub enum HandlerError {
+    #[display("Permission Denied")]
+    PermissionDenied,
+    #[display("Invalid Input: {}", _0)]
+    InvalidInput(String),
+    #[display("Not Found: {}", _0)]
+    NotFound(String),
+    #[display("Conflict: {}", _0)]
+    Conflict(String),
+}
+
+
+#[derive(Debug, Display)]
 pub enum HttpError {
     #[display("(Core Error){}", _0)]
     CoreError(CoreError),
+    #[display("(Handler Error){}", _0)]
+    HandlerError(HandlerError),
     #[display("IO Error")]
     IOError,
     #[display("Actix Error")]
@@ -21,9 +35,15 @@ pub enum HttpError {
 fn error_code(error: &HttpError) -> i64 {
     use tap::Conv;
     match error {
+        HttpError::HandlerError(handler_error) => match handler_error {
+            HandlerError::PermissionDenied => 100,
+            HandlerError::InvalidInput(_) => 200,
+            HandlerError::NotFound(_) => 300,
+            HandlerError::Conflict(_) => 400,
+        },
         HttpError::CoreError(core_error) => core_error.conv::<i64>(),
-        HttpError::IOError => 10000,
-        HttpError::ActixError => 20000,
+        HttpError::IOError => 500,
+        HttpError::ActixError => 600,
     }
 }
 
@@ -39,7 +59,8 @@ impl error::ResponseError for HttpError {
 
     fn status_code(&self) -> StatusCode {
         match *self {
-            HttpError::CoreError(_) | HttpError::IOError | HttpError::ActixError => {
+            HttpError::HandlerError(HandlerError::PermissionDenied) => StatusCode::FORBIDDEN,
+            HttpError::CoreError(_) | HttpError::IOError | HttpError::ActixError | HttpError::HandlerError(_) => {
                 StatusCode::INTERNAL_SERVER_ERROR
             }
         }
@@ -115,4 +136,3 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
 
 pub mod user;
 pub mod problem;
-pub mod entry;

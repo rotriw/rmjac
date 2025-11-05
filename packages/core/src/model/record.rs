@@ -4,7 +4,10 @@ use crate::graph::node::record::{
     RecordNode, RecordNodePrivateRaw, RecordNodePublicRaw, RecordNodeRaw, RecordStatus,
 };
 use sea_orm::{DatabaseConnection, ColumnTrait};
+use sea_orm::sea_query::IntoCondition;
 use serde::{Deserialize, Serialize};
+use crate::graph::edge::{EdgeQuery, EdgeRaw};
+use crate::graph::edge::record::{RecordEdge, RecordEdgeQuery, RecordEdgeRaw};
 
 #[allow(unused)]
 
@@ -19,11 +22,11 @@ pub struct RecordNewProp {
 }
 
 
-#[allow(unused)]
-pub async fn create_record(
+pub async fn create_record_only_archived(
     db: &DatabaseConnection,
     record: RecordNewProp,
-    track_service_id: i64,
+    user_node_id: i64,
+    problem_node_id: i64,
 ) -> Result<RecordNode> {
     log::debug!("creating record schema with properties: {:?}", record);
     let record_node = RecordNodeRaw {
@@ -34,7 +37,7 @@ pub async fn create_record(
             record_time: chrono::Utc::now().naive_utc(),
             public_status: record.public_status,
             record_score: 0,
-            record_status: RecordStatus::Waiting,
+            record_status: RecordStatus::OnlyArchived,
             statement_id: record.statement_node_id,
         },
         private: RecordNodePrivateRaw {
@@ -44,11 +47,27 @@ pub async fn create_record(
     }
     .save(db)
     .await?;
-    log::debug!(
-        "add judge task for record:{}, bind_track_service {track_service_id}",
-        record_node.node_id
-    );
-      // todo!
+
+    let user_edge = RecordEdgeRaw {
+        u: user_node_id,
+        v: record_node.node_id,
+        record_status: RecordStatus::OnlyArchived,
+        code_length: record_node.private.code.len() as i64,
+        score: 0,
+        submit_time: Default::default(),
+        platform: "archived".to_string(),
+    }.save(db).await?;
+
+    let problem_edge = RecordEdgeRaw {
+        u: problem_node_id,
+        v: record_node.node_id,
+        record_status: RecordStatus::OnlyArchived,
+        code_length: record_node.private.code.len() as i64,
+        score: 0,
+        submit_time: Default::default(),
+        platform: "archived".to_string(),
+    }.save(db).await?;
+
     Ok(record_node)
 }
 
@@ -147,4 +166,29 @@ pub async fn update_record_message(
 
     log::debug!("Successfully updated record {} message", record_node_id);
     Ok(updated_record)
+}
+
+pub async fn get_specific_node_records<T: IntoCondition>(
+    db: &DatabaseConnection,
+    node_id: i64,
+    number_per_page: u64,
+    page: u64,
+    filter: Vec<T>,
+) -> Result<Vec<RecordEdge>> {
+    log::debug!("Getting public records for id: {}", node_id);
+    use sea_orm::{QueryFilter, QueryOrder, PaginatorTrait, ColumnTrait};
+    let page = if page < 1 {
+        1
+    } else {
+        page
+    };
+    let mut offset = number_per_page * (page - 1);
+    let data = RecordEdgeQuery::get_v_filter_extend_content(
+        node_id,
+        filter,
+        db,
+        Some(number_per_page),
+        Some(offset)
+    ).await?;
+    Ok(data)
 }

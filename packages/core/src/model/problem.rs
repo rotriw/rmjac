@@ -97,7 +97,7 @@ pub async fn add_problem_statement_for_problem(
         .save(db)
         .await?;
     if let Some(iden) = iden {
-        create_iden(format!("problem/{}", iden).as_str(), vec![problem_statement_node.node_id, problem_node_id], db).await?;
+        create_iden(&format!("problem/{}", iden), vec![problem_statement_node.node_id, problem_node_id], db).await?;
     }
     // 暂时允许访问题目 = 访问所有题面
     // statement -limit-> limit
@@ -210,7 +210,7 @@ pub async fn create_problem(
     .await?;
     log::info!("Start to create problem_source for problem");
     create_iden(
-        format!("problem/{}", problem.problem_iden).as_str(),
+        &format!("problem/{}", problem.problem_iden),
         vec![result.node_id],
         db,
     ).await?;
@@ -232,18 +232,17 @@ pub struct ProblemModel {
     pub tag: Vec<ProblemTagNode>,
 }
 
-/// Get problem data by identifier
-pub async fn get_problem(
+pub async fn get_problem_node_and_statement(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,
     iden: &str,
-) -> Result<(ProblemModel, i64)> {
+) -> Result<(i64, i64)> {
     let node_ids = get_node_ids_from_iden(format!("problem/{iden}").as_str(), db, redis).await?;
     if node_ids.is_empty() {
         return Err(CoreError::NotFound("Cannot find problem with this iden".to_string()));
     }
-    let (problem_node, statement_node) = if node_ids.len() == 1 {
-        (node_ids[0], node_ids[0])
+    if node_ids.len() == 1 {
+        Ok((node_ids[0], node_ids[0]))
     } else {
         let mut problem_node = -1;
         let mut statement_node = -1;
@@ -261,14 +260,29 @@ pub async fn get_problem(
         if statement_node == -1 {
             log::warn!("{iden} There are many node for this iden, We can find a problem node, and there are many other iden, but we cannot find a statement node!");
         }
-        (problem_node, statement_node)
-    };
+        Ok((problem_node, statement_node))
+    }
+}
+
+/// Get problem data by identifier
+pub async fn get_problem(
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    iden: &str,
+) -> Result<(ProblemModel, i64)> {
+    let (problem_node, statement_node) = get_problem_node_and_statement(db, redis, iden).await?;
     Ok((get_problem_model(db, redis, problem_node).await?, statement_node))
 }
 
-/**
-* 题目数据
-*/
+pub async fn get_problem_with_info(
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    node_info: (i64, i64)
+) -> Result<(ProblemModel, i64)> {
+    let (problem_node, statement_node) = node_info;
+    Ok((get_problem_model(db, redis, problem_node).await?, statement_node))
+}
+
 pub async fn get_problem_model(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,

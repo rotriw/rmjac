@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "packages/core"
-, "packages/docs_parser", "packages/macro_db_init", "packages/macro_node_iden", "packages/macro_perm", "packages/macro_socket_auth", "packages/macro_handler"]
+, "packages/docs_parser", "packages/macro_db_init", "packages/macro_node_iden", "packages/macro_perm", "packages/macro_socket_auth"]
 
 [package]
 name = "rmjac"
@@ -13,7 +13,6 @@ edition = "2024"
 clap = "4.5.40"
 command_tool = { git = "https://github.com/rotriw/rust_command_tool_macro", version = "0.1.0" }
 macro_perm = { path = "packages/macro_perm" }
-macro_handler = { path = "packages/macro_handler" }
 log = "0.4.27"
 rmjac_core = { path = "packages/core" }
 fern = "0.7.1"

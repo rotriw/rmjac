@@ -2,7 +2,7 @@ use crate::Result;
 use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo, edge::create_edge};
 use crate::error::CoreError::NotFound;
 use sea_orm::sea_query::IntoCondition;
-use sea_orm::{ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel};
+use sea_orm::{ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel, QuerySelect};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -112,6 +112,67 @@ where
         }
     }
 
+    fn get_v_filter_extend<T: IntoCondition>(
+        u: i64,
+        filter: Vec<T>,
+        db: &DatabaseConnection,
+        number_per_page: Option<u64>,
+        offset: Option<u64>,
+    ) -> impl Future<Output = Result<Vec<(i64, i64)>>> {
+        async move {
+            use sea_orm::{ColumnTrait, QueryFilter};
+            let mut edges = DbEntity::find();
+            for f in filter {
+                edges = edges.filter(f);
+            }
+            edges = edges.filter(Self::get_v_edge_id_column().eq(u));
+            edges = if let (Some(number_per_page), Some(offset)) = (number_per_page, offset) {
+                edges.offset(offset).limit(number_per_page)
+            } else {
+                edges
+            };
+            let edges = edges.all(db).await?;
+            use tap::Conv;
+            Ok(edges
+                .into_iter()
+                .map(|edge| {
+                    let edge_a = edge.conv::<DbModel>().conv::<EdgeA>();
+                    (edge_a.get_v_node_id(), edge_a.get_edge_id())
+                })
+                .collect())
+        }
+    }
+
+    fn get_v_filter_extend_content<T: IntoCondition>(
+        u: i64,
+        filter: Vec<T>,
+        db: &DatabaseConnection,
+        number_per_page: Option<u64>,
+        offset: Option<u64>,
+    ) -> impl Future<Output = Result<Vec<EdgeA>>> {
+        async move {
+            use sea_orm::{ColumnTrait, QueryFilter};
+            let mut edges = DbEntity::find();
+            for f in filter {
+                edges = edges.filter(f);
+            }
+            edges = edges.filter(Self::get_v_edge_id_column().eq(u));
+            edges = if let (Some(number_per_page), Some(offset)) = (number_per_page, offset) {
+                edges.offset(offset).limit(number_per_page)
+            } else {
+                edges
+            };
+            let edges = edges.all(db).await?;
+            use tap::Conv;
+            Ok(edges
+                .into_iter()
+                .map(|edge| {
+                    edge.into().into()
+                })
+                .collect())
+        }
+    }
+
     fn get_u(
         v: i64,
         db: &DatabaseConnection,
@@ -191,6 +252,67 @@ where
             Ok(edges
                 .into_iter()
                 .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_u_node_id())
+                .collect())
+        }
+    }
+
+    fn get_u_filter_extend<T: IntoCondition>(
+        v: i64,
+        filter: Vec<T>,
+        db: &DatabaseConnection,
+        number_per_page: Option<u64>,
+        offset: Option<u64>,
+    ) -> impl Future<Output = Result<Vec<(i64, i64)>>> {
+        async move {
+            use sea_orm::{ColumnTrait, QueryFilter};
+            let mut edges = DbEntity::find();
+            for f in filter {
+                edges = edges.filter(f);
+            }
+            edges = edges.filter(Self::get_v_edge_id_column().eq(v));
+            edges = if let (Some(number_per_page), Some(offset)) = (number_per_page, offset) {
+                edges.offset(offset).limit(number_per_page)
+            } else {
+                edges
+            };
+            let edges = edges.all(db).await?;
+            use tap::Conv;
+            Ok(edges
+                .into_iter()
+                .map(|edge| {
+                    let edge_a = edge.conv::<DbModel>().conv::<EdgeA>();
+                    (edge_a.get_v_node_id(), edge_a.get_edge_id())
+                })
+                .collect())
+        }
+    }
+
+    fn get_u_filter_extend_content<T: IntoCondition>(
+        v: i64,
+        filter: Vec<T>,
+        db: &DatabaseConnection,
+        number_per_page: Option<u64>,
+        offset: Option<u64>,
+    ) -> impl Future<Output = Result<Vec<EdgeA>>> {
+        async move {
+            use sea_orm::{ColumnTrait, QueryFilter};
+            let mut edges = DbEntity::find();
+            for f in filter {
+                edges = edges.filter(f);
+            }
+            edges = edges.filter(Self::get_v_edge_id_column().eq(v));
+            edges = if let (Some(number_per_page), Some(offset)) = (number_per_page, offset) {
+                edges.offset(offset).limit(number_per_page)
+            } else {
+                edges
+            };
+            let edges = edges.all(db).await?;
+            use tap::Conv;
+            Ok(edges
+                .into_iter()
+                .map(|edge| {
+                    edge.into().into()
+                })
                 .collect())
         }
     }

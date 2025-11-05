@@ -2733,15 +2733,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "macro_handler"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.103",
-]
-
-[[package]]
 name = "macro_node_iden"
 version = "0.1.0"
 dependencies = [
@@ -3814,7 +3805,6 @@ dependencies = [
  "futures-util",
  "lazy_static",
  "log",
- "macro_handler",
  "macro_perm",
  "redis",
  "rmjac_core",
