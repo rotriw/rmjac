@@ -8,6 +8,7 @@ use crate::graph::edge::{EdgeQuery, EdgeRaw};
 use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPerm};
 use crate::graph::edge::perm_pages::{PermPagesEdgeRaw, PagesPerm};
 use enum_const::EnumConst;
+use db::entity::edge::misc::Column as MiscColumn;
 use crate::graph::node::problem::limit::{
     ProblemLimitNode, ProblemLimitNodePrivateRaw, ProblemLimitNodePublicRaw, ProblemLimitNodeRaw,
 };
@@ -27,6 +28,8 @@ use chrono::Utc;
 use redis::Commands;
 use sea_orm::{ColumnTrait, DatabaseConnection};
 use serde::{Deserialize, Serialize};
+use crate::graph::edge::misc::{MiscEdgeQuery, MiscEdgeRaw};
+use crate::model::user::SimplyUser;
 use crate::service::iden::{create_iden, get_node_ids_from_iden};
 
 type ProblemIdenString = String;
@@ -39,12 +42,12 @@ pub async fn create_problem_schema(
         Option<ProblemIdenString>,
     )>,
     tag_node_id: Vec<i64>,
-    problem_name: String,
+    problem_name: &str,
 ) -> Result<ProblemNode> {
     log::info!("Start to create problem schema");
     let problem_node = ProblemNodeRaw {
         public: ProblemNodePublicRaw {
-            name: problem_name,
+            name: problem_name.to_string(),
             creation_time: Utc::now().naive_utc(),
         },
         private: ProblemNodePrivateRaw {},
@@ -133,6 +136,7 @@ pub struct ProblemStatementProp {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct CreateProblemProps {
+    pub user_id: i64,
     pub problem_iden: String,
     pub problem_name: String,
     pub problem_statement: Vec<ProblemStatementProp>,
@@ -140,9 +144,10 @@ pub struct CreateProblemProps {
     pub tags: Vec<String>,
 }
 
-pub async fn create_problem(
+pub async fn create_problem_with_user(
     db: &DatabaseConnection,
     problem: CreateProblemProps,
+    public_view: bool,
 ) -> Result<ProblemNode> {
     log::info!("Creating new problem, name:{}.", &problem.problem_name);
     let problem_node_raw = ProblemNodeRaw {
@@ -199,13 +204,13 @@ pub async fn create_problem(
             id[0].node_id
         });
     }
-    log::info!("Final Problem Tags ids: {problem_statement_node_raw:?}");
+    log::info!("Final Problem Tags id list: {problem_statement_node_raw:?}");
     log::info!("Data collected");
     let result = create_problem_schema(
         db,
         problem_statement_node_raw,
         tag_ids,
-        problem.problem_name.clone(),
+        &problem.problem_name,
     )
     .await?;
     log::info!("Start to create problem_source for problem");
@@ -214,22 +219,33 @@ pub async fn create_problem(
         vec![result.node_id],
         db,
     ).await?;
-
-    // 注释掉权限授予，因为基础创建函数不需要认证
-    // log::info!("Granting permissions to problem creator");
-    // if let Some(creator_node_id) = get_current_user_node_id(db).await? {
-    //     grant_problem_creator_permissions(db, creator_node_id, result.node_id).await?;
-    // }
-
     log::info!("The problem {} have been created.", &problem.problem_name);
+    grant_problem_creator_permissions(db, problem.user_id, result.node_id).await?;
+    MiscEdgeRaw {
+        u: problem.user_id,
+        v: result.node_id,
+        misc_type: "author".to_string(),
+    }.save(db).await?;
+    if public_view { // give default public view permission
+        let u = crate::env::DEFAULT_NODES.lock().unwrap().guest_user_node;
+        PermProblemEdgeRaw {
+            u,
+            v: result.node_id,
+            perms: crate::graph::edge::perm_problem::ProblemPermRaw::Perms(vec![
+                ProblemPerm::ReadProblem,
+            ]),
+        }.save(db).await?;
+    }
     Ok(result)
 }
+
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemModel {
     pub problem_node: ProblemNode,
     pub problem_statement_node: Vec<(ProblemStatementNode, ProblemLimitNode)>,
     pub tag: Vec<ProblemTagNode>,
+    pub author: Option<SimplyUser>,
 }
 
 pub async fn get_problem_node_and_statement(
@@ -264,7 +280,6 @@ pub async fn get_problem_node_and_statement(
     }
 }
 
-/// Get problem data by identifier
 pub async fn get_problem(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,
@@ -274,13 +289,12 @@ pub async fn get_problem(
     Ok((get_problem_model(db, redis, problem_node).await?, statement_node))
 }
 
-pub async fn get_problem_with_info(
+pub async fn get_problem_with_node_id(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,
-    node_info: (i64, i64)
-) -> Result<(ProblemModel, i64)> {
-    let (problem_node, statement_node) = node_info;
-    Ok((get_problem_model(db, redis, problem_node).await?, statement_node))
+    node_id: i64,
+) -> Result<ProblemModel> {
+    Ok(get_problem_model(db, redis, node_id).await?)
 }
 
 pub async fn get_problem_model(
@@ -313,10 +327,18 @@ pub async fn get_problem_model(
         let tag_node = ProblemTagNode::from_db(db, tag_node_id).await?;
         tag.push(tag_node);
     }
+    let author_node_id = MiscEdgeQuery::get_u_filter(problem_node.node_id, MiscColumn::MiscType.eq("author"), db).await?;
+    let author = if !author_node_id.is_empty() {
+        let author_node = crate::model::user::SimplyUser::from_db(db, author_node_id[0]).await?;
+        Some(author_node)
+    } else {
+        None
+    };
     let problem_model = ProblemModel {
         problem_node,
         problem_statement_node,
         tag,
+        author,
     };
     let serialized = serde_json::to_string(&problem_model)?;
     redis.set::<_, _, ()>(format!("p_{problem_node_id}"), serialized)?;
@@ -473,29 +495,6 @@ pub async fn remove_tag_from_problem(
     Ok(())
 }
 
-/// 获取当前用户节点ID
-/// 从请求上下文中获取当前用户，实际应用中需要配合中间件使用
-pub async fn get_current_user_node_id_from_context(
-    _db: &DatabaseConnection,
-    auth_context: Option<&crate::auth::context::AuthContext>,
-) -> Option<i64> {
-    auth_context.map(|ctx| ctx.user_node_id)
-}
-
-/// 从token获取当前用户节点ID
-pub async fn get_current_user_node_id_from_token(
-    db: &DatabaseConnection,
-    token: &str,
-) -> Result<Option<i64>> {
-    let mut redis = crate::env::REDIS_CLIENT.lock().unwrap().get_connection().unwrap();
-    match crate::auth::context::AuthManager::authenticate_user(db, &mut redis, token).await {
-        Ok(Some(ctx)) => Ok(Some(ctx.user_node_id)),
-        Ok(None) => Ok(None),
-        Err(e) => Err(e),
-    }
-}
-
-/// 为题目创建者授予必要的权限
 pub async fn grant_problem_creator_permissions(
     db: &DatabaseConnection,
     user_node_id: i64,
@@ -533,48 +532,6 @@ pub async fn grant_problem_creator_permissions(
     log::info!("Successfully granted problem creator permissions: user {} -> problem {}", user_node_id, problem_node_id);
     Ok(())
 }
-
-/// 带认证上下文的题目创建函数
-pub async fn create_problem_with_auth(
-    db: &DatabaseConnection,
-    problem: CreateProblemProps,
-    auth_context: Option<&crate::auth::context::AuthContext>,
-) -> Result<ProblemNode> {
-    log::info!("Creating new problem with auth context, name:{}", &problem.problem_name);
-
-    let problem_node = create_problem(db, problem).await?;
-
-    // 如果有认证上下文，为创建者授予权限
-    if let Some(ctx) = auth_context {
-        log::info!("Granting problem creator permissions for user {}", ctx.user_iden);
-        grant_problem_creator_permissions(db, ctx.user_node_id, problem_node.node_id).await?;
-    }
-
-    Ok(problem_node)
-}
-
-/// 从token创建题目
-pub async fn create_problem_with_token(
-    db: &DatabaseConnection,
-    problem: CreateProblemProps,
-    token: &str,
-) -> Result<ProblemNode> {
-    log::info!("Creating new problem with token, name:{}", &problem.problem_name);
-
-    let problem_node = create_problem(db, problem).await?;
-
-    // 尝试从token获取用户并授予权限
-    if let Ok(Some(user_node_id)) = get_current_user_node_id_from_token(db, token).await {
-        log::info!("Granting problem creator permissions for user from token");
-        grant_problem_creator_permissions(db, user_node_id, problem_node.node_id).await?;
-    } else {
-        log::warn!("Could not authenticate user from token, no permissions granted");
-    }
-
-    Ok(problem_node)
-}
-
-/// 为用户授予题目访问权限
 pub async fn grant_problem_access(
     db: &DatabaseConnection,
     user_node_id: i64,
@@ -585,7 +542,6 @@ pub async fn grant_problem_access(
 
     let mut problem_perms = vec![ProblemPerm::ReadProblem];
     if can_view_private {
-        // 如果可以查看私有内容，也授予编辑权限
         problem_perms.push(ProblemPerm::EditProblem);
     }
 
@@ -600,24 +556,4 @@ pub async fn grant_problem_access(
 
     log::info!("Successfully granted problem access: user {} -> problem {}", user_node_id, problem_node_id);
     Ok(())
-}
-
-pub async fn check_problem_permission(
-    db: &DatabaseConnection,
-    user_node_id: i64,
-    problem_node_id: i64,
-    required_problem_perm: ProblemPerm,
-) -> Result<bool> {
-    use crate::model::perm::check_perm;
-
-    match check_perm(
-        db,
-        user_node_id,
-        problem_node_id,
-        crate::graph::edge::perm_problem::PermProblemEdgeQuery,
-        required_problem_perm.get_const_isize().unwrap() as i64,
-    ).await? {
-        1 => Ok(true),
-        _ => Ok(false),
-    }
 }

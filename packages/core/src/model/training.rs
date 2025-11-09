@@ -322,52 +322,9 @@ pub async fn grant_training_creator_permissions(
     Ok(())
 }
 
-/// 带认证上下文的训练创建函数
-pub async fn create_training_with_auth(
-    db: &DatabaseConnection,
-    redis: &mut redis::Connection,
-    title: &str,
-    user_iden: &str,
-    pb_iden: &str,
-    description_public: &str,
-    description_private: &str,
-    start_time: NaiveDateTime,
-    end_time: NaiveDateTime,
-    training_type: &str,
-    problem_list: &TrainingList,
-    write_perm_user: Vec<i64>,
-    read_perm_user: Vec<i64>,
-    auth_context: Option<&crate::auth::context::AuthContext>,
-) -> Result<TrainingNode> {
-    log::info!("Creating new training with auth context, title:{}", title);
-
-    let training_node = create_training(
-        db,
-        redis,
-        title,
-        user_iden,
-        pb_iden,
-        description_public,
-        description_private,
-        start_time,
-        end_time,
-        training_type,
-        problem_list,
-        write_perm_user,
-        read_perm_user,
-    ).await?;
-
-    // 如果有认证上下文，为创建者授予权限
-    if let Some(ctx) = auth_context {
-        log::info!("Granting training creator permissions for user {}", ctx.user_iden);
-        grant_training_creator_permissions(db, ctx.user_node_id, training_node.node_id).await?;
-    }
-
-    Ok(training_node)
-}
 
 /// 从token创建训练
-pub async fn create_training_with_token(
+pub async fn create_training_with_user(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,
     title: &str,
@@ -381,7 +338,7 @@ pub async fn create_training_with_token(
     problem_list: &TrainingList,
     write_perm_user: Vec<i64>,
     read_perm_user: Vec<i64>,
-    token: &str,
+    user_node_id: i64,
 ) -> Result<TrainingNode> {
     log::info!("Creating new training with token, title:{}", title);
 
@@ -400,26 +357,7 @@ pub async fn create_training_with_token(
         write_perm_user,
         read_perm_user,
     ).await?;
-
-    // 尝试从token获取用户并授予权限
-    let user_node_id = match crate::service::iden::get_node_ids_from_iden(user_iden, db, redis).await {
-        Ok(ids) => ids.first().copied(),
-        Err(_) => {
-            // 尝试从token获取
-            match crate::auth::context::AuthManager::authenticate_user(db, redis, token).await {
-                Ok(Some(ctx)) => Some(ctx.user_node_id),
-                _ => None,
-            }
-        }
-    };
-
-    if let Some(user_node_id) = user_node_id {
-        log::info!("Granting training creator permissions for user from token");
-        grant_training_creator_permissions(db, user_node_id, training_node.node_id).await?;
-    } else {
-        log::warn!("Could not authenticate user, no permissions granted");
-    }
-
+    grant_training_creator_permissions(db, user_node_id, training_node.node_id).await?;
     Ok(training_node)
 }
 

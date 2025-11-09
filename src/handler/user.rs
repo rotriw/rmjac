@@ -7,10 +7,11 @@ use crate::{
 };
 use actix_web::{HttpRequest, Scope, get, post, services, web, HttpMessage};
 use sea_orm::DatabaseConnection;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use rmjac_core::db::entity::node::user::{get_user_by_email, get_user_by_iden};
 use rmjac_core::error::CoreError;
-use rmjac_core::model::user::{change_user_password, create_default_user, revoke_all_user_tokens, UserUpdateProps};
+use rmjac_core::model::user::{change_user_password, create_default_user, revoke_all_user_tokens, SimplyUser, UserUpdateProps};
+use rmjac_core::utils::get_redis_connection;
 use crate::handler::{HandlerError, HttpError};
 use crate::handler::HandlerError::Conflict;
 use crate::utils::perm::UserAuthCotext;
@@ -164,8 +165,10 @@ impl Login {
             }
             None => "Unknow Device",
         };
+        let mut redis = get_redis_connection();
         let (user, token) = rmjac_core::model::user::user_login(
             &self.db,
+            &mut redis,
             &self.user.as_str(),
             &self.password.as_str(),
             token_iden,
@@ -313,11 +316,11 @@ pub async fn post_register(
     Register::entry(req, db, data).perm().await?.exec().await
 }
 
-#[post("/before_create")]
+#[get("/before_create")]
 pub async fn before_create(
     req: HttpRequest,
     db: web::Data<DatabaseConnection>,
-    data: web::Json<UserBeforeCreate>,
+    data: web::Query<UserBeforeCreate>,
 ) -> ResultHandler<String> {
     Register::before_register(req, data.into_inner()).await
 }
@@ -350,6 +353,89 @@ pub async fn post_manage(
     Manage::entry_update(req, db, data.into_inner()).before().await?.perm().await?.update().await
 }
 
+#[derive(Deserialize)]
+pub struct SidebarQuery {
+    pub path: String,
+}
+
+#[derive(Serialize)]
+pub struct SidebarItem {
+    pub title: String,
+    pub url: String,
+    pub show: Option<String>,
+    pub reg: Option<String>,
+    pub icon: String,
+    pub number: Option<i64>,
+}
+
+#[get("/sidebar")]
+pub async fn get_sidebar(req: HttpRequest, db: web::Data<DatabaseConnection>, page: web::Query<SidebarQuery>) -> ResultHandler<String> {
+    let user_context = req.extensions().get::<UserAuthCotext>().cloned();
+    let basic_sidebar = vec![
+        SidebarItem {
+            title: "主页".to_string(),
+            url: "/".to_string(),
+            show: None,
+            reg: None,
+            icon: "Home".to_string(),
+            number: None,
+        },
+        SidebarItem {
+            title: "题单".to_string(),
+            url: "/training".to_string(),
+            show: None,
+            reg: None,
+            icon: "ClipboardCheckIcon".to_string(),
+            number: None,
+        },
+        SidebarItem {
+            title: "用户详情".to_string(),
+            url: "[current]".to_string(),
+            show: Some("/user/.*".to_string()),
+            reg: Some("/user/.*".to_string()),
+            icon: "User2".to_string(),
+            number: None,
+        },
+        SidebarItem {
+            title: "题目详情".to_string(),
+            url: "[current]".to_string(),
+            show: Some("/problem/.*".to_string()),
+            reg: Some("/problem/.*".to_string()),
+            icon: "BookMinusIcon".to_string(),
+            number: None,
+        },
+        SidebarItem {
+            title: "训练详情".to_string(),
+            url: "[current]".to_string(),
+            show: Some("/training/.*".to_string()),
+            reg: Some("/training/.*".to_string()),
+            icon: "BookMinusIcon".to_string(),
+            number: None,
+        },
+    ];
+    if let Some(uc) = user_context && uc.is_real {
+        Ok(Json! {
+            "is_login": true,
+            "user": SimplyUser::from_db(&db, uc.user_id).await?,
+            "sidebar": basic_sidebar
+        })
+    } else {
+        let mut no_login_sidebar = basic_sidebar;
+        no_login_sidebar.push(SidebarItem {
+            title: "登录/注册".to_string(),
+            url: "/login".to_string(),
+            show: None,
+            reg: None,
+            icon: "LogInIcon".to_string(),
+            number: None,
+        });
+        Ok(Json! {
+            "is_login": false,
+            "sidebar": no_login_sidebar
+        })
+    }
+}
+
 pub fn service() -> Scope {
     let service = services![
         post_register,
@@ -357,7 +443,8 @@ pub fn service() -> Scope {
         get_check_iden,
         post_login,
         post_logout,
-        post_manage
+        post_manage,
+        get_sidebar
     ];
     web::scope("/api/user").service(service)
 }

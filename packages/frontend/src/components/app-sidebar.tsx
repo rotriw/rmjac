@@ -17,52 +17,23 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { getSidebar } from "@/lib/api"
+import { useEffect } from "react"
 
-const data = {
-  navMain: [
-    {
-      title: "主页",
-      url: "/",
-      icon: Home,
-    },
-    {
-      title: "题单",
-      url: "/training",
-      icon: ClipboardCheckIcon,
-    },
-    {
-      title: "用户详情",
-      url: "[current]",
-      shows: "/user/.*",
-      reg: "/user/.*",
-      icon: User2,
-      badge: "102",
-    },
-    {
-      title: "题目详情",
-      url: "[current]",
-      shows: "/problem/.*",
-      reg: "/problem/.*",
-      icon: BookMinusIcon,
-      badge: "102",
-    },
-    {
-      title: "训练详情",
-      url: "[current]",
-      shows: "/training/.*",
-      reg: "/training/.*",
-      icon: LibraryIcon,
-      badge: "102",
-    }
-  ]
-}
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+let side_bar = {};
+let sb = false;
+
+export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  if (!sb) {
+    side_bar = await(await getSidebar());
+    sb = true;
+  }
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>
         {/* <TeamSwitcher teams={data.teams} /> */}
-        <NavMain items={data.navMain} />
+        <NavMain items={side_bar.sidebar} />
       </SidebarHeader>
       <SidebarContent />
       <UserAvatar />

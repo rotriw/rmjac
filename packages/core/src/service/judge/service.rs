@@ -8,7 +8,7 @@ use macro_socket_auth::auth_socket_connect;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use crate::{env, Result};
 use crate::env::db::get_connect;
-use crate::model::problem::{create_problem, CreateProblemProps};
+use crate::model::problem::{create_problem_with_user, CreateProblemProps};
 use crate::utils::encrypt::change_string_format;
 
 fn trust_auth(socket: &SocketRef) {
@@ -77,7 +77,7 @@ async fn create_problem_back(socket: SocketRef, Data(problem): Data<String>) {
         return;
     }
     let db = db.unwrap();
-    let result = create_problem(&db, problem.clone()).await;
+    let result = create_problem_with_user(&db, problem.clone(), true).await;
     if let Err(err) = result {
         log::error!("Failed to create problem: {}", err);
         return;

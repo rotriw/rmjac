@@ -1,11 +1,11 @@
-use crate::utils::perm::AuthTool;
+use crate::utils::perm::{AuthTool, UserAuthCotext};
 use rmjac_core::error::CoreError;
 
 use actix_cors::Cors;
-use actix_web::{App, HttpResponse, HttpServer, error, http::{StatusCode, header::ContentType}, web};
+use actix_web::{App, HttpResponse, HttpServer, error, http::{StatusCode, header::ContentType}, web, HttpRequest};
 use derive_more::derive::Display;
 use log::LevelFilter;
-use sea_orm::{ConnectOptions, Database};
+use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 
 #[derive(Debug, Display)]
 pub enum HandlerError {
@@ -17,6 +17,12 @@ pub enum HandlerError {
     NotFound(String),
     #[display("Conflict: {}", _0)]
     Conflict(String),
+}
+
+pub struct BasicHandler {
+    pub db: DatabaseConnection,
+    pub user_context: Option<UserAuthCotext>,
+    pub req: HttpRequest
 }
 
 

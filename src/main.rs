@@ -1,4 +1,5 @@
 #![feature(super_let)]
+
 use command_tool::generate_commands;
 
 generate_commands! {

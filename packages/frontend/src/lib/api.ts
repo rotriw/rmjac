@@ -257,6 +257,19 @@ export async function getTrainingByIden(user_iden: string, training_iden: string
   }
 }
 
+export async function getSidebar(): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/user/sidebar?path=/`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    return data
+  } catch (error) {
+    throw error
+  }
+}
+
 export async function getTrainingByNodeId(node_id: number): Promise<any> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/training/training/node/${node_id}`)

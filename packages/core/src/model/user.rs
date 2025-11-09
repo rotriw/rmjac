@@ -29,6 +29,7 @@ use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use tap::Conv;
 use crate::env::db::{get_connect, refresh_redis};
+use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPermRaw};
 use crate::utils::get_redis_connection;
 
 pub async fn create_default_user(
@@ -61,13 +62,12 @@ pub async fn create_default_user(
     let result = user.save(db).await?;
     let default_node_id = env::DEFAULT_NODES.lock().unwrap().default_strategy_node;
     if default_node_id != -1 {
-        PermViewEdgeRaw {
-            u: result.node_id,
+        PermProblemEdgeRaw {
+            u:  result.node_id,
             v: default_node_id,
-            perms: ViewPermRaw::All,
-        }
-        .save(db)
-        .await?;
+            perms: ProblemPermRaw::All
+        }.save(db).await?;
+
     } else {
         log::error!("Default strategy node not set, user will not have default permissions.");
     }
@@ -81,6 +81,7 @@ pub async fn check_iden_exists(db: &DatabaseConnection, iden: &str) -> Result<bo
 
 pub async fn user_login(
     db: &DatabaseConnection,
+    redis: &mut redis::Connection,
     iden: &str,
     password: &str,
     token_iden: &str,
@@ -118,20 +119,11 @@ pub async fn user_login(
     }
     .save(db)
     .await?;
-    PermViewEdgeRaw {
-        u: token.node_id,
-        v: user.node_id,
-        perms: ViewPermRaw::All,
-    }
-    .save(db)
-    .await?;
-    PermManageEdgeRaw {
-        u: token.node_id,
-        v: user.node_id,
-        perms: ManagePermRaw::All,
-    }
-    .save(db)
-    .await?;
+
+    let redis_key = format!("user_token:{}:{}", user.node_id, token.private.token);
+    let redis_value = user.node_id.to_string();
+    let redis_expiration = 24 * 3600;
+    let _: () = redis.set_ex(redis_key, redis_value, redis_expiration).unwrap();
     Ok((user, token))
 }
 
@@ -306,5 +298,26 @@ pub async fn check_user_token(user_id: i64, user_token: &str) -> bool {
         data == user_id
     } else {
         false
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SimplyUser {
+    pub node_id: i64,
+    pub avatar: String,
+    pub name: String,
+    pub iden: String,
+}
+
+impl SimplyUser {
+    pub async fn from_db(db: &DatabaseConnection, node_id: i64) -> Result<Self> {
+        let user = UserNode::from_db(db, node_id).await?;
+        Ok(Self {
+            node_id: user.node_id,
+            avatar: user.public.avatar,
+            name: user.public.name,
+            iden: user.public.iden,
+        })
+
     }
 }

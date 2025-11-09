@@ -123,7 +123,7 @@ export async function RegisterForm({
         challenge_darkmode: "light",
       }
     }));
-    const result = await fetch("http://127.0.0.1:1824/api/user/create", {
+    const result = await fetch("http://127.0.0.1:1824/api/user/register", {
       method: "POST",
       headers: {
         'Content-Type': 'application/json',
