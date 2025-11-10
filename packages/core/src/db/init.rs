@@ -6,7 +6,8 @@ use macro_db_init::table_create;
 use sea_orm::{ConnectOptions, Database};
 use sea_orm_migration::prelude::*;
 
-use crate::graph::edge::perm_pages::PagesPermRaw;
+// use crate::graph::edge::perm_pages::PagesPermRaw;
+use crate::graph::edge::perm_system::{PermSystemEdge, PermSystemEdgeRaw, SystemPerm, SystemPermRaw};
 use crate::graph::node::problem_source::{
     ProblemSourceNodePrivateRaw, ProblemSourceNodePublicRaw, ProblemSourceNodeRaw,
 };
@@ -499,22 +500,23 @@ pub async fn init(
             }
         }
     }
-    let mut default_pages = vec![];
-    if up.contains(&"all") || up.contains(&"node_pages") {
-        log::info!("Creating default pages");
-        log::info!("Creating home page");
-        let home_page = PagesNodeRaw {
-            iden: "home".to_string(),
+    let mut default_system = vec![];
+    let mut system_id = 0;
+    if up.contains(&"all") || up.contains(&"node_system") {
+        log::info!("Creating default system");
+        let system = PagesNodeRaw {
+            iden: "system".to_string(),
             public: PagesNodePublicRaw {},
             private: PagesNodePrivateRaw {
-                name: "home".to_string(),
+                name: "system".to_string(),
             },
         }
         .save(&db)
         .await?;
-        default_pages.push(home_page.node_id);
+        default_system.push(system.node_id);
+        system_id = system.node_id;
     } else {
-        log::warn!("Skipping default pages creation, This may lead to unexpected behavior.");
+        log::warn!("Skipping default system creation, This may lead to unexpected behavior.");
     }
     let mut guest_user_id = 0;
     if up.contains(&"all") || up.contains(&"node_user") {
@@ -551,16 +553,14 @@ pub async fn init(
         }
             .save(&db)
             .await?;
-        log::info!("Perm group -> default pages");
-        for i in default_pages.clone() {
-            PermPagesEdgeRaw {
-                u: default_strategy.node_id,
-                v: i,
-                perms: PagesPermRaw::Perms(vec![PagesPerm::ReadPages]),
-            }
-                .save(&db)
-                .await?;
+        log::info!("Perm group -> default system");
+        PermSystemEdgeRaw {
+            u: default_strategy.node_id,
+            v: system_id,
+            perms: SystemPermRaw::Perms(vec![SystemPerm::ViewSite]),
         }
+            .save(&db)
+            .await?;
         log::info!("default user -> guest user");
         PermProblemEdgeRaw {
             u: default_strategy.node_id,
@@ -575,16 +575,14 @@ pub async fn init(
             && up.contains(&"edge_perm_pages")
             && up.contains(&"node_pages"))
     {
-        log::info!("guest user -> default pages");
-        for i in default_pages {
-            PermPagesEdgeRaw {
-                u: guest_user_id,
-                v: i,
-                perms: PagesPermRaw::Perms(vec![PagesPerm::ReadPages]),
-            }
-            .save(&db)
-            .await?;
+        log::info!("guest user -> default system");
+        PermSystemEdgeRaw {
+            u: guest_user_id,
+            v: system_id,
+            perms: SystemPermRaw::Perms(vec![SystemPerm::ViewSite, SystemPerm::Register]),
         }
+        .save(&db)
+        .await?;
     } else {
         log::warn!(
             "Skipping default perm pages edge creation, This may lead to unexpected behavior."

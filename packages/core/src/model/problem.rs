@@ -142,6 +142,8 @@ pub struct CreateProblemProps {
     pub problem_statement: Vec<ProblemStatementProp>,
     pub creation_time: Option<chrono::NaiveDateTime>,
     pub tags: Vec<String>,
+    pub sample_group: Vec<(String, String)>,
+    pub show_order: Vec<String>,
 }
 
 pub async fn create_problem_with_user(
@@ -167,6 +169,9 @@ pub async fn create_problem_with_user(
                     source: statement.statement_source,
                     creation_time: problem.creation_time.unwrap_or(Utc::now().naive_utc()),
                     iden: problem.problem_iden.clone(),
+                    sample_group_in: problem.sample_group.iter().map(|(a, _)| a.clone()).collect(),
+                    sample_group_out: problem.sample_group.iter().map(|(_, b)| b.clone()).collect(),
+                    show_order: problem.show_order.clone(),
                 },
                 private: ProblemStatementNodePrivateRaw {},
             }

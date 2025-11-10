@@ -20,6 +20,9 @@ pub struct Model {
     pub content: Vec<ContentType>,
     pub creation_time: DateTime,
     pub update_time: DateTime,
+    pub sample_group_in: Vec<String>,
+    pub sample_group_out: Vec<String>,
+    pub show_order: Vec<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

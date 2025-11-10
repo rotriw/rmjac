@@ -23,6 +23,9 @@ pub enum SystemPermRaw {
 pub enum SystemPerm {
     All = -1,
     CreateProblem = 1,
+    ViewAdminDashboard = 2,
+    ViewSite = 4,
+    Register = 8,
 }
 
 impl From<SystemPermRaw> for i32 {
