@@ -25,7 +25,7 @@ pub enum ProblemPerm {
     ReadProblem = 1,
     EditProblem = 2,
     DeleteProblem = 4,
-    ManageProblemPermissions = 8,
+    OwnProblem = 8,
 
 }
 

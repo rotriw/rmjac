@@ -3,6 +3,8 @@ use crate::graph::node::pages::{PagesNode, PagesNodePrivate, PagesNodePublic};
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter, FromJsonQueryResult};
 use serde::{Deserialize, Serialize};
+use crate::error::CoreError;
+use crate::Result;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromJsonQueryResult)]
 pub struct ContentType {
@@ -39,4 +41,16 @@ impl From<Model> for PagesNode {
             },
         }
     }
+}
+
+
+pub async fn default_system_node(db: &DatabaseConnection) -> Result<i64> {
+    let node = Entity::find()
+        .filter(Column::Iden.eq("system"))
+        .one(db)
+        .await?
+        .ok_or(CoreError::NotFound(
+            "Default system node not found".to_string(),
+        ))?;
+    Ok(node.node_id)
 }

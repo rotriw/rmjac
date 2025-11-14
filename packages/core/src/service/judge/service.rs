@@ -77,7 +77,7 @@ async fn create_problem_back(socket: SocketRef, Data(problem): Data<String>) {
         return;
     }
     let db = db.unwrap();
-    let result = create_problem_with_user(&db, problem.clone(), true).await;
+    let result = create_problem_with_user(&db, &problem, true).await;
     if let Err(err) = result {
         log::error!("Failed to create problem: {}", err);
         return;

@@ -25,6 +25,7 @@ lazy_static! {
         guest_user_node: -1,
         default_strategy_node: -1,
         default_iden_node: -1,
+        default_system_node: -1,
     });
 
     pub static ref DB_URL: Mutex<String> = Mutex::new("postgres://localhost/rmjac".to_string());

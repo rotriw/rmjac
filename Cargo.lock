@@ -3801,6 +3801,7 @@ dependencies = [
  "colored",
  "command_tool",
  "derive_more",
+ "enum_const",
  "fern",
  "futures-util",
  "lazy_static",

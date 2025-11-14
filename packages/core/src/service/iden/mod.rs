@@ -1,6 +1,8 @@
 use redis::TypedCommands;
 use sea_orm::{ColumnTrait, DatabaseConnection};
+use sea_orm::sea_query::SimpleExpr;
 use crate::env::{DEFAULT_NODES, SLICE_WORD_ACMAC, SLICE_WORD_LIST};
+use crate::error::QueryNotFound;
 use crate::error::QueryExists;
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
 use crate::graph::edge::iden::{IdenEdgeQuery, IdenEdgeRaw};
@@ -17,6 +19,77 @@ pub async fn create_iden(iden: &str, node_ids: Vec<i64>, db: &DatabaseConnection
 }
 
 
+pub async fn check_exist(iden: &str, db: &DatabaseConnection) -> Result<bool> {
+    let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
+    use crate::db::entity::edge::iden::Column;
+    let iden_slice = auto_slice_iden(iden);
+    for (i, iden_part) in iden_slice.iter().enumerate() {
+        let val =  IdenEdgeQuery::get_v_filter(now_id, Column::Iden.eq(*iden_part), db).await?;
+        if i == iden_slice.len() - 1 {
+            return Ok(!val.is_empty())
+        }
+        if val.is_empty() {
+            return Ok(false);
+        }
+        if val.len() > 1 {
+            log::error!("iden service have same error(iden_edge_many): {now_id} (fallback: choose first.)");
+        }
+        now_id = val[0];
+    }
+    // unreachable
+    Ok(false)
+}
+
+pub async fn remove_iden_to_specific_node(iden: &str, node_id: i64, db: &DatabaseConnection) -> Result<()> {
+    let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
+    use crate::db::entity::edge::iden::Column;
+    let iden_slice = auto_slice_iden(iden);
+    for (i, iden_part) in iden_slice.iter().enumerate() {
+        let val =  IdenEdgeQuery::get_v_filter(now_id, Column::Iden.eq(*iden_part), db).await?;
+        if val.is_empty() {
+            return Err(QueryNotFound::IdenNotFound.into());
+        }
+        if val.len() > 1 {
+            log::error!("iden service have same error(iden_edge_many): {now_id} (fallback: choose first.)");
+        }
+        if i == iden_slice.len() - 1 {
+            let more_data = IdenEdgeQuery::get_v_filter_extend_content::<SimpleExpr>(now_id, vec![], db, None, None).await?;
+            for cur_edge in more_data {
+                if cur_edge.v == node_id {
+                    IdenEdgeQuery::delete_from_id(db, cur_edge.id);
+                }
+            }
+            return Ok(());
+        }
+        now_id = val[0];
+    }
+    Ok(())
+}
+
+pub async fn remove_iden(iden: &str, db: &DatabaseConnection) -> Result<()> {
+    let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
+    use crate::db::entity::edge::iden::Column;
+    let iden_slice = auto_slice_iden(iden);
+    for (i, iden_part) in iden_slice.iter().enumerate() {
+        let val =  IdenEdgeQuery::get_v_filter(now_id, Column::Iden.eq(*iden_part), db).await?;
+        if val.is_empty() {
+            return Err(QueryNotFound::IdenNotFound.into());
+        }
+        if val.len() > 1 {
+            log::error!("iden service have same error(iden_edge_many): {now_id} (fallback: choose first.)");
+        }
+        if i == iden_slice.len() - 1 {
+            let more_data = IdenEdgeQuery::get_v_filter_extend_content::<SimpleExpr>(now_id, vec![], db, None, None).await?;
+            for cur_edge in more_data {
+                IdenEdgeQuery::delete_from_id(db, cur_edge.id);
+            }
+            return Ok(());
+        }
+        now_id = val[0];
+    }
+    Ok(())
+}
+
 pub async fn create_iden_with_slice(iden_slice: Vec<&str>, node_ids: Vec<i64>, db: &DatabaseConnection) -> Result<()> {
     let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
     let mut flag = false;
@@ -27,10 +100,11 @@ pub async fn create_iden_with_slice(iden_slice: Vec<&str>, node_ids: Vec<i64>, d
         } else {
             IdenEdgeQuery::get_v_filter(now_id, Column::Iden.eq(*iden_part), db).await?
         };
-        if !val.is_empty() {
+        if ((i != iden_slice.len() - 1) && !val.is_empty()) {
             now_id = val[0];
         } else {
             // check step
+
             if i == iden_slice.len() - 1 {
                 flag = true;
                 for node_id in &node_ids {
@@ -59,9 +133,6 @@ pub async fn create_iden_with_slice(iden_slice: Vec<&str>, node_ids: Vec<i64>, d
                 now_id = new_node.node_id;
             }
         }
-    }
-    if !flag {
-        Err(QueryExists::IdenExist)?;
     }
     Ok(())
 }

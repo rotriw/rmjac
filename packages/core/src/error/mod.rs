@@ -19,6 +19,8 @@ pub enum QueryExists {
 pub enum QueryNotFound {
     #[display("Problem IDEN not found")]
     ProblemIdenNotFound,
+    #[display("IDEN not found")]
+    IdenNotFound,
 }
 
 #[derive(Debug, Display, EnumConst)]
@@ -69,6 +71,7 @@ impl From<&CoreError> for i64 {
             },
             CoreError::QueryNotFound(data) => match data {
                 QueryNotFound::ProblemIdenNotFound => 61001,
+                QueryNotFound::IdenNotFound => 61002,
             },
             CoreError::SerdeError(_) => 70000,
             CoreError::PGPError(_) => 75000,

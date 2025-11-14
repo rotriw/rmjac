@@ -66,6 +66,13 @@ where
             .unwrap()
     }
 
+    fn get_edge_id_column() -> <DbEntity as EntityTrait>::Column {
+        <DbEntity as EntityTrait>::Column::from_str("id")
+            .ok()
+            .unwrap()
+    }
+
+
     fn get_u_edge_id_column_2() -> <<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Column {
         <<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Column::from_str("u_node_id")
             .ok()
@@ -74,6 +81,12 @@ where
 
     fn get_v_edge_id_column_2() -> <<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Column {
         <<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Column::from_str("v_node_id")
+            .ok()
+            .unwrap()
+    }
+
+    fn get_edge_id_column_2() -> <<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Column {
+        <<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Column::from_str("id")
             .ok()
             .unwrap()
     }
@@ -331,10 +344,24 @@ where
             edge.set(Self::get_u_edge_id_column_2(), u.into());
             edge.set(Self::get_v_edge_id_column_2(), v.into());
             edge.delete(db).await?;
-            log::warn!("(Edge Delete){}, u: {}, v: {}", Self::get_edge_type(), u, v);
+            log::warn!("(Edge Delete){}, u: {u}, v: {v}", Self::get_edge_type());
             Ok(())
         }
     }
+
+    fn delete_from_id(
+        db: &DatabaseConnection,
+        id: i64,
+    ) -> impl Future<Output = Result<()>> {
+        async move {
+            let mut edge = DbActive::new();
+            edge.set(Self::get_edge_id_column_2(), id.into());
+            edge.delete(db).await?;
+            log::warn!("(Edge Delete){}, id: {id}", Self::get_edge_type());
+            Ok(())
+        }
+    }
+    
 
     fn get_edge_type() -> &'static str;
     fn check_perm(perm_a: i64, perm_b: i64) -> bool {
