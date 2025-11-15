@@ -57,11 +57,11 @@ pub async fn create_training(
         }.save(db).await?;
     }
     // create node iden
-    create_iden(format!("training#{user_iden}#{pb_iden}").as_str(), vec![node.node_id], db).await?;
+    create_iden(db, format!("training#{user_iden}#{pb_iden}").as_str(), vec![node.node_id]).await?;
 
     // 为创建者授予训练权限
     log::info!("Granting training creator permissions for user {}", user_iden);
-    if let Ok(user_node_ids) = get_node_ids_from_iden(user_iden, db, redis).await
+    if let Ok(user_node_ids) = get_node_ids_from_iden(db, redis, user_iden).await
         && let Some(creator_node_id) = user_node_ids.first() {
         grant_training_creator_permissions(db, *creator_node_id, node.node_id).await?;
     }
@@ -145,7 +145,7 @@ pub async fn get_training_problem_list(db: &DatabaseConnection, redis: &mut redi
     for next_node_id in node_ids {
         let node_type = get_node_type(db, next_node_id).await?;
         if node_type == "problem" || node_type == "problem_statement" {
-            let problem_iden = get_node_id_iden(node_id, db, redis).await?[0].clone();
+            let problem_iden = get_node_id_iden(db, redis, node_id).await?[0].clone();
             result.own_problem.push(TrainingProblem::ProblemIden(problem_iden));
         } else {
             let sub_problem = get_training_problem_list(db, redis, next_node_id).await?;
@@ -156,7 +156,7 @@ pub async fn get_training_problem_list(db: &DatabaseConnection, redis: &mut redi
 }
 
 pub async fn get_training(db: &DatabaseConnection, redis: &mut redis::Connection, user_iden: &str, pb_iden: &str) -> Result<Training> {
-    let iden_id = get_node_ids_from_iden(format!("training#{user_iden}#{pb_iden}").as_str(), db, redis).await?[0];
+    let iden_id = get_node_ids_from_iden(db, redis, format!("training#{user_iden}#{pb_iden}").as_str()).await?[0];
     let training_node = TrainingNode::from_db(db, iden_id).await?;
     let problem_list = get_training_problem_list(db, redis, training_node.node_id).await?;
     let result = Training {
@@ -201,7 +201,7 @@ pub async fn delete_training_connections(
 
     // Get training node ID from iden
     let iden = format!("training#{user_iden}#{training_iden}");
-    let node_ids = get_node_ids_from_iden(&iden, db, redis).await?;
+    let node_ids = get_node_ids_from_iden(db, redis, &iden).await?;
     if node_ids.is_empty() {
         return Err(CoreError::NotFound("Cannot find training with this iden".to_string()));
     }
@@ -238,14 +238,14 @@ pub async fn remove_problem_from_training(
 
     // Get training node ID from iden
     let training_iden_full = format!("training#{user_iden}#{training_iden}");
-    let training_node_ids = get_node_ids_from_iden(&training_iden_full, db, redis).await?;
+    let training_node_ids = get_node_ids_from_iden(db, redis, &training_iden_full).await?;
     if training_node_ids.is_empty() {
         return Err(CoreError::NotFound("Cannot find training with this iden".to_string()));
     }
     let training_node_id = training_node_ids[0];
 
     // Get problem node ID from problem_iden
-    let problem_node_ids = get_node_ids_from_iden(problem_iden, db, redis).await?;
+    let problem_node_ids = get_node_ids_from_iden(db, redis, problem_iden).await?;
     if problem_node_ids.is_empty() {
         return Err(CoreError::NotFound("Cannot find problem with this iden".to_string()));
     }

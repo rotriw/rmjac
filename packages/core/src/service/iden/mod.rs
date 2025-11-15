@@ -14,12 +14,12 @@ pub mod ac_automaton;
 
 
 // 为多个 node_id 创建一个 iden。
-pub async fn create_iden(iden: &str, node_ids: Vec<i64>, db: &DatabaseConnection) -> Result<()> {
-    create_iden_with_slice(auto_slice_iden(iden), node_ids, db).await
+pub async fn create_iden(db: &DatabaseConnection, iden: &str, node_ids: Vec<i64>) -> Result<()> {
+    create_iden_with_slice(db, auto_slice_iden(iden), node_ids).await
 }
 
 
-pub async fn check_exist(iden: &str, db: &DatabaseConnection) -> Result<bool> {
+pub async fn check_exist(db: &DatabaseConnection, iden: &str) -> Result<bool> {
     let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
     use crate::db::entity::edge::iden::Column;
     let iden_slice = auto_slice_iden(iden);
@@ -40,7 +40,7 @@ pub async fn check_exist(iden: &str, db: &DatabaseConnection) -> Result<bool> {
     Ok(false)
 }
 
-pub async fn remove_iden_to_specific_node(iden: &str, node_id: i64, db: &DatabaseConnection) -> Result<()> {
+pub async fn remove_iden_to_specific_node(db: &DatabaseConnection, iden: &str, node_id: i64) -> Result<()> {
     let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
     use crate::db::entity::edge::iden::Column;
     let iden_slice = auto_slice_iden(iden);
@@ -66,7 +66,7 @@ pub async fn remove_iden_to_specific_node(iden: &str, node_id: i64, db: &Databas
     Ok(())
 }
 
-pub async fn remove_iden(iden: &str, db: &DatabaseConnection) -> Result<()> {
+pub async fn remove_iden(db: &DatabaseConnection, iden: &str) -> Result<()> {
     let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
     use crate::db::entity::edge::iden::Column;
     let iden_slice = auto_slice_iden(iden);
@@ -90,7 +90,7 @@ pub async fn remove_iden(iden: &str, db: &DatabaseConnection) -> Result<()> {
     Ok(())
 }
 
-pub async fn create_iden_with_slice(iden_slice: Vec<&str>, node_ids: Vec<i64>, db: &DatabaseConnection) -> Result<()> {
+pub async fn create_iden_with_slice(db: &DatabaseConnection, iden_slice: Vec<&str>, node_ids: Vec<i64>) -> Result<()> {
     let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
     let mut flag = false;
     use crate::db::entity::edge::iden::Column;
@@ -197,7 +197,7 @@ pub fn auto_slice_iden(iden: &str) -> Vec<&str> {
     result
 }
 
-pub async fn get_node_ids_from_iden(iden: &str, db: &DatabaseConnection, redis: &mut redis::Connection) -> Result<Vec<i64>> {
+pub async fn get_node_ids_from_iden(db: &DatabaseConnection, redis: &mut redis::Connection, iden: &str) -> Result<Vec<i64>> {
     if let Ok(value) = redis.get(format!("iden_to_id_{}", iden))
         && let Some(value) = value {
             let value: Vec<i64> = serde_json::from_str(&value)?;
@@ -205,13 +205,13 @@ pub async fn get_node_ids_from_iden(iden: &str, db: &DatabaseConnection, redis: 
 
     }
     let iden_slice = auto_slice_iden(iden);
-    let now_id = get_node_ids_from_iden_slice(iden_slice, db).await?;
+    let now_id = get_node_ids_from_iden_slice(db, iden_slice).await?;
     redis.set(format!("iden_to_id_{}", iden), serde_json::to_string(&now_id)?)?;
     log::debug!("auto iden: {} to {:?}", iden, now_id);
     Ok(now_id)
 }
 
-pub async fn get_node_ids_from_iden_slice(iden_slice: Vec<&str>, db: &DatabaseConnection) -> Result<Vec<i64>> {
+pub async fn get_node_ids_from_iden_slice(db: &DatabaseConnection, iden_slice: Vec<&str>) -> Result<Vec<i64>> {
     let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
     let mut id_list = vec![];
     for iden_part in iden_slice {
@@ -227,25 +227,25 @@ pub async fn get_node_ids_from_iden_slice(iden_slice: Vec<&str>, db: &DatabaseCo
     Ok(id_list)
 }
 
-pub async fn get_node_id_iden(node_id: i64, db: &DatabaseConnection, redis: &mut redis::Connection) -> Result<Vec<String>> {
+pub async fn get_node_id_iden(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64) -> Result<Vec<String>> {
     if let Ok(value) = redis.get(format!("iden_node_{}", node_id))
         && let Some(value) = value {
             let value: Vec<String> = serde_json::from_str(&value)?;
             return Ok(value);
 
     }
-    let result = get_node_id_iden_pref(node_id, db, redis, "").await?;
+    let result = get_node_id_iden_pref(db, redis, node_id, "").await?;
     redis.set(format!("iden_node_{}", node_id), serde_json::to_string(&result)?)?;
     Ok(result)
 }
 
-pub async fn get_node_id_iden_pref(node_id: i64, db: &DatabaseConnection, redis: &mut redis::Connection, pref: &str) -> Result<Vec<String>> {
+pub async fn get_node_id_iden_pref(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64, pref: &str) -> Result<Vec<String>> {
     if !pref.is_empty() && let Ok(value) = redis.get(format!("iden_node_{}_pref_{}", node_id, pref))
             && let Some(value) = value {
             let value: Vec<String> = serde_json::from_str(&value)?;
             return Ok(value);
     }
-    let result = get_node_id_iden_all(node_id, db, pref).await?;
+    let result = get_node_id_iden_all(db, node_id, pref).await?;
     let iden_list: Vec<String> = result.into_iter().map(|(_, iden)| iden).collect();
     if !pref.is_empty() {
         redis.set(format!("iden_node_{}_pref_{}", node_id, pref), serde_json::to_string(&iden_list)?)?;
@@ -257,7 +257,7 @@ pub async fn get_node_id_iden_pref(node_id: i64, db: &DatabaseConnection, redis:
 * 在给定的node_id下，匹配所有存在pref的iden。若 pref 为空字符串，则匹配所有。
 * 本函数不应当直接从外部调用，应当通过 get_node_id_iden_pref 调用。
 */
-async fn get_node_id_iden_all(node_id: i64, db: &DatabaseConnection, pref: &str) -> Result<Vec<(i64, String)>> {
+async fn get_node_id_iden_all(db: &DatabaseConnection, node_id: i64, pref: &str) -> Result<Vec<(i64, String)>> {
     use priority_queue::PriorityQueue;
     let mut q = PriorityQueue::new();
     q.push((node_id, "".to_string(), pref.is_empty()), 0);

@@ -100,7 +100,7 @@ pub async fn add_problem_statement_for_problem(
         .save(db)
         .await?;
     if let Some(iden) = iden {
-        create_iden(&format!("problem/{}", iden), vec![problem_statement_node.node_id, problem_node_id], db).await?;
+        create_iden(db, &format!("problem/{}", iden), vec![problem_statement_node.node_id, problem_node_id]).await?;
     }
     // 暂时允许访问题目 = 访问所有题面
     // statement -limit-> limit
@@ -218,9 +218,9 @@ pub async fn create_problem_with_user(
     .await?;
     log::info!("Start to create problem_source for problem");
     create_iden(
+        db,
         &format!("problem/{}", problem.problem_iden),
         vec![result.node_id],
-        db,
     ).await?;
     log::info!("The problem {} have been created.", &problem.problem_name);
     grant_problem_creator_permissions(db, problem.user_id, result.node_id).await?;
@@ -256,7 +256,7 @@ pub async fn get_problem_node_and_statement(
     redis: &mut redis::Connection,
     iden: &str,
 ) -> Result<(i64, i64)> {
-    let node_ids = get_node_ids_from_iden(format!("problem/{iden}").as_str(), db, redis).await?;
+    let node_ids = get_node_ids_from_iden(db, redis, format!("problem/{iden}").as_str()).await?;
     if node_ids.is_empty() {
         return Err(CoreError::NotFound("Cannot find problem with this iden".to_string()));
     }
@@ -450,11 +450,11 @@ pub async fn remove_statement_from_problem(
 
     // check iden for statement id
 
-    let iden = get_node_id_iden(statement_node_id, db, redis).await?;
+    let iden = get_node_id_iden(db, redis, statement_node_id).await?;
 
     // delete all iden.
     for i in iden {
-        remove_iden_to_specific_node(&i, statement_node_id, db).await?;
+        remove_iden_to_specific_node(db, &i, statement_node_id).await?;
     }
 
 
