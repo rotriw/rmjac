@@ -61,6 +61,7 @@ where
                     is_real = true;
                 }
             }
+            log::debug!("Auth Middleware: user_id={}, is_real={}", user_id, is_real);
             req.extensions_mut().insert(UserAuthCotext {
                 user_id,
                 is_real

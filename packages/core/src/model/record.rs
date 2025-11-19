@@ -48,7 +48,7 @@ pub async fn create_record_only_archived(
     .save(db)
     .await?;
 
-    let user_edge = RecordEdgeRaw {
+    let _user_edge = RecordEdgeRaw {
         u: user_node_id,
         v: record_node.node_id,
         record_status: RecordStatus::OnlyArchived,
@@ -58,7 +58,7 @@ pub async fn create_record_only_archived(
         platform: "archived".to_string(),
     }.save(db).await?;
 
-    let problem_edge = RecordEdgeRaw {
+    let _problem_edge = RecordEdgeRaw {
         u: problem_node_id,
         v: record_node.node_id,
         record_status: RecordStatus::OnlyArchived,
@@ -176,13 +176,12 @@ pub async fn get_specific_node_records<T: IntoCondition>(
     filter: Vec<T>,
 ) -> Result<Vec<RecordEdge>> {
     log::debug!("Getting public records for id: {}", node_id);
-    use sea_orm::{QueryFilter, QueryOrder, PaginatorTrait, ColumnTrait};
-    let page = if page < 1 {
+        let page = if page < 1 {
         1
     } else {
         page
     };
-    let mut offset = number_per_page * (page - 1);
+    let offset = number_per_page * (page - 1);
     let data = RecordEdgeQuery::get_v_filter_extend_content(
         node_id,
         filter,

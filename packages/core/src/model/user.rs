@@ -1,5 +1,4 @@
 use redis::TypedCommands;
-use crate::graph::edge::perm_view::ViewPermRaw;
 use crate::{
     db::{
         self,
@@ -13,9 +12,7 @@ use crate::{
     graph::{
         edge::{
             EdgeRaw, EdgeQuery,
-            perm_manage::{ManagePermRaw, PermManageEdgeRaw},
-            perm_view::PermViewEdgeRaw,
-        },
+            },
         node::{
             Node, NodeRaw,
             token::{TokenNode, TokenNodePrivateRaw, TokenNodePublicRaw, TokenNodeRaw},
@@ -28,7 +25,6 @@ use crate::{
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use tap::Conv;
-use crate::env::db::{get_connect, refresh_redis};
 use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPermRaw};
 use crate::utils::get_redis_connection;
 

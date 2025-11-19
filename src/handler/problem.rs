@@ -14,6 +14,7 @@ use rmjac_core::graph::edge::perm_problem::ProblemPerm::ReadProblem;
 use rmjac_core::db::entity::edge::record::Column as RecordEdgeColumn;
 use rmjac_core::db::entity::node::problem_statement::ContentType;
 use rmjac_core::graph::edge::perm_system::{PermSystemEdgeQuery, SystemPerm, SystemPermRaw};
+use rmjac_core::graph::node::record::RecordStatus;
 use rmjac_core::utils::get_redis_connection;
 use crate::handler::{BasicHandler, HttpError, ResultHandler};
 use crate::handler::HandlerError::PermissionDenied;
@@ -90,14 +91,14 @@ impl View {
         };
         let get_user_accepted_data = if let Some(uc) = &self.basic.user_context && uc.is_real {
             Some(get_specific_node_records(&self.basic.db, uc.user_id, 1, 1, vec![
-                RecordEdgeColumn::RecordStatus.eq("Accepted")
+                RecordEdgeColumn::RecordStatus.eq(RecordStatus::Accepted.get_const_isize().unwrap_or(100) as i32)
             ]).await?)
         } else {
             None
         };
         Ok(Json! {
             "model": model,
-            "statement": problem_node_id,
+            "statement": problem_statement_node_id,
             "user_recent_records": get_user_ten_data,
             "user_last_accepted_record": get_user_accepted_data
         })

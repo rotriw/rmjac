@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use log::LevelFilter;
-use macro_db_init::table_create;
-use sea_orm::{ConnectOptions, Database};
+use macro_db_init::{table_create, table_create_with};
+use sea_orm::{self, ConnectOptions, Database};
 use sea_orm_migration::prelude::*;
 
 // use crate::graph::edge::perm_pages::PagesPermRaw;
-use crate::graph::edge::perm_system::{PermSystemEdge, PermSystemEdgeRaw, SystemPerm, SystemPermRaw};
+use crate::graph::edge::perm_system::{PermSystemEdgeRaw, SystemPerm, SystemPermRaw};
 use crate::graph::node::problem_source::{
     ProblemSourceNodePrivateRaw, ProblemSourceNodePublicRaw, ProblemSourceNodeRaw,
 };
@@ -17,8 +17,7 @@ use crate::{
     graph::{
         edge::{
             EdgeRaw,
-            perm_pages::{PermPagesEdgeRaw, PagesPerm},
-        },
+          },
         node::{
             NodeRaw,
             pages::{PagesNodePrivateRaw, PagesNodePublicRaw, PagesNodeRaw},
@@ -72,14 +71,24 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
     );
     tables.insert(
         "node_problem_statement".to_string(),
-        table_create!(iden::node::problem_statement::ProblemStatement, {
+        table_create_with!(iden::node::problem_statement::ProblemStatement, {
             NodeId: big_integer not_null primary_key,
             Iden: text not_null,
             Source: text not_null,
             Content: json not_null,
             CreationTime: date_time not_null,
-            UpdateTime: date_time not_null,
-        }),
+            UpdateTime: date_time not_null
+        })
+        .col(
+            ColumnDef::new(iden::node::problem_statement::ProblemStatement::SampleGroupIn).array(ColumnType::Text)
+        )
+        .col(
+            ColumnDef::new(iden::node::problem_statement::ProblemStatement::SampleGroupOut).array(ColumnType::Text)
+        )
+        .col(
+            ColumnDef::new(iden::node::problem_statement::ProblemStatement::ShowOrder).array(ColumnType::Text)
+        )
+        .to_owned(),
     );
     tables.insert(
         "node_problem_source".to_string(),
@@ -94,6 +103,24 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         table_create!(iden::node::pages::Pages, {
             NodeId: big_integer not_null primary_key,
             Iden: text not_null,
+        }),
+    );
+    tables.insert(
+        "node_record".to_string(),
+        table_create!(iden::node::record::Record, {
+            NodeId: big_integer not_null primary_key,
+            RecordTime: date_time not_null,
+            RecordUpdateTime: date_time not_null,
+            RecordOrder: big_integer not_null,
+            RecordStatus: big_integer not_null,
+            RecordScore: big_integer not_null,
+            RecordPlatform: text not_null,
+            RecordUrl: text,
+            StatementId: big_integer not_null,
+            RecordMessage: text,
+            Code: text not_null,
+            CodeLanguage: text not_null,
+            PublicStatus: boolean not_null,
         }),
     );
     tables.insert(
@@ -250,6 +277,16 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             MiscType: text not_null,
         })
     );
+    tables.insert(
+        "edge_perm_system".to_string(),
+        table_create!(iden::edge::perm_system::PermSystem, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
+            Perm: big_integer not_null,
+        })
+    );
+
     tables
 }
 
@@ -413,6 +450,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         "edge_misc".to_string(),
         Table::drop()
             .table(iden::edge::misc::Misc::Table)
+            .if_exists()
+            .to_owned()
+    );
+    tables.insert(
+        "edge_perm_system".to_string(),
+        Table::drop()
+            .table(iden::edge::perm_system::PermSystem::Table)
             .if_exists()
             .to_owned()
     );

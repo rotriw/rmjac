@@ -45,7 +45,7 @@ impl From<TokenNodeRaw> for ActiveModel {
             token_type: Set(value.public.token_type),
             token_expiration: match value.public.token_expiration {
                 Some(exp) => Set(exp),
-                None => NotSet,
+                None => Set(chrono::Utc::now().naive_utc()),
             },
             service: Set(value.service),
             token_iden: Set(value.iden),

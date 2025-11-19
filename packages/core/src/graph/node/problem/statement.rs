@@ -48,7 +48,7 @@ impl From<Model> for ProblemStatementNode {
                 source: model.source,
                 creation_time: model.creation_time,
                 update_time: model.update_time,
-                sample_group: model.sample_group_in.into_iter().zip(model.sample_group_out.into_iter()).collect(),
+                sample_group: model.sample_group_in.into_iter().zip(model.sample_group_out).collect(),
                 show_order: model.show_order,
             },
             private: ProblemStatementNodePrivate {},
@@ -75,7 +75,6 @@ impl From<ProblemStatementNodeRaw> for ActiveModel {
 use crate::db::entity::node::problem_statement::{ActiveModel, Column, ContentType, Entity, Model};
 use crate::graph::node::{Node, NodeRaw};
 use chrono::NaiveDateTime;
-use deno_core::cppgc::SameObject;
 use macro_node_iden::{Node, NodeRaw};
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::EntityTrait;

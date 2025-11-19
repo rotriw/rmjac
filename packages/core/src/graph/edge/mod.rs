@@ -4,6 +4,7 @@ use crate::error::CoreError::NotFound;
 use sea_orm::sea_query::IntoCondition;
 use sea_orm::{ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel, QuerySelect};
 use std::str::FromStr;
+use tap::Conv;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EdgeType {
@@ -101,8 +102,7 @@ where
                 .filter(Self::get_u_edge_id_column().eq(u))
                 .all(db)
                 .await?;
-            use tap::Conv;
-            Ok(edges
+                        Ok(edges
                 .into_iter()
                 .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_v_node_id())
                 .collect())
@@ -121,8 +121,7 @@ where
                 .filter(Self::get_u_edge_id_column().eq(u))
                 .all(db)
                 .await?;
-            use tap::Conv;
-            Ok(edges
+                        Ok(edges
                 .into_iter()
                 .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_v_node_id())
                 .collect())
@@ -149,8 +148,7 @@ where
                 edges
             };
             let edges = edges.all(db).await?;
-            use tap::Conv;
-            Ok(edges
+                        Ok(edges
                 .into_iter()
                 .map(|edge| {
                     let edge_a = edge.conv::<DbModel>().conv::<EdgeA>();
@@ -180,8 +178,7 @@ where
                 edges
             };
             let edges = edges.all(db).await?;
-            use tap::Conv;
-            Ok(edges
+                        Ok(edges
                 .into_iter()
                 .map(|edge| {
                     edge.into().into()
@@ -200,8 +197,7 @@ where
                 .filter(Self::get_v_edge_id_column().eq(v))
                 .all(db)
                 .await?;
-            use tap::Conv;
-            Ok(edges
+                        Ok(edges
                 .into_iter()
                 .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_u_node_id())
                 .collect())
@@ -222,8 +218,7 @@ where
             if edge.is_none() {
                 return Err(NotFound("Not Found Edge id".to_string()));
             }
-            use tap::Conv;
-            Ok(edge
+                        Ok(edge
                 .unwrap()
                 .conv::<DbModel>()
                 .conv::<EdgeA>()
@@ -244,8 +239,7 @@ where
             if edge.is_none() {
                 return Err(NotFound("Not Found Edge id".to_string()));
             }
-            use tap::Conv;
-            Ok(edge
+                        Ok(edge
                 .unwrap()
                 .conv::<DbModel>()
                 .conv::<EdgeA>()
@@ -265,8 +259,7 @@ where
                 .filter(Self::get_v_edge_id_column().eq(v))
                 .all(db)
                 .await?;
-            use tap::Conv;
-            Ok(edges
+                        Ok(edges
                 .into_iter()
                 .map(|edge| edge.conv::<DbModel>().conv::<EdgeA>().get_u_node_id())
                 .collect())
@@ -293,8 +286,7 @@ where
                 edges
             };
             let edges = edges.all(db).await?;
-            use tap::Conv;
-            Ok(edges
+                        Ok(edges
                 .into_iter()
                 .map(|edge| {
                     let edge_a = edge.conv::<DbModel>().conv::<EdgeA>();
@@ -324,8 +316,7 @@ where
                 edges
             };
             let edges = edges.all(db).await?;
-            use tap::Conv;
-            Ok(edges
+                        Ok(edges
                 .into_iter()
                 .map(|edge| {
                     edge.into().into()
@@ -420,8 +411,7 @@ where
         edge_id: i64,
     ) -> impl Future<Output = Result<Self>> + Send {
         async move {
-            use tap::Conv;
-            let edge_id_column = Self::get_edge_id_column();
+                        let edge_id_column = Self::get_edge_id_column();
             use sea_orm::ColumnTrait;
             use sea_orm::QueryFilter;
             let model = DbEntity::find()
@@ -454,8 +444,7 @@ where
     fn get_edge_id_column(&self) -> <EdgeActive::Entity as EntityTrait>::Column;
     fn save(&self, db: &DatabaseConnection) -> impl Future<Output = Result<Edge>> {
         async {
-            use tap::Conv;
-            let edge_type = self.get_edge_type();
+                        let edge_type = self.get_edge_type();
             let edge_id = create_edge(db, edge_type).await?.edge_id;
             log::info!("Saving edge({edge_type}), data:{:?}", *self);
             let mut value = (*self).clone().conv::<EdgeActive>();

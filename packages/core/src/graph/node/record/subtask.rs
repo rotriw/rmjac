@@ -24,14 +24,15 @@ impl From<String> for SubtaskCalcMethod {
     }
 }
 
-//noinspection ALL
-impl ToString for SubtaskCalcMethod {
-    fn to_string(&self) -> String {
+use std::fmt;
+
+impl fmt::Display for SubtaskCalcMethod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SubtaskCalcMethod::Sum => "sum".to_string(),
-            SubtaskCalcMethod::Max => "max".to_string(),
-            SubtaskCalcMethod::Min => "min".to_string(),
-            SubtaskCalcMethod::Function => "function".to_string(),
+            SubtaskCalcMethod::Sum => write!(f, "sum"),
+            SubtaskCalcMethod::Max => write!(f, "max"),
+            SubtaskCalcMethod::Min => write!(f, "min"),
+            SubtaskCalcMethod::Function => write!(f, "function"),
         }
     }
 }

@@ -6,25 +6,62 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { redirect } from "next/navigation"
+import { API_BASE_URL } from "@/lib/api"
+import { cookies } from "next/headers"
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-
+  async function handleSubmit(data: FormData) {
+    "use server"
+    console.log(data.get("user"));
+    console.log(JSON.stringify({
+      user: data.get("user"),
+      password: data.get("password"),
+    }));
+    const body = await fetch(`${API_BASE_URL}/api/user/login`, {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user: data.get("user"),
+          password: data.get("password"),
+          // long_token: null
+        })
+      }
+    );
+    const res = await body.json();
+    console.log(res);
+    if (res?.code == 60003) {
+      redirect('/login?err=60003')
+    }
+    if (res?.user_id) {
+      console.log(123);
+      // login successful
+      // set cookie.
+      const cookieStore = await cookies();
+      cookieStore.set('_uid', res?.user_id);
+      cookieStore.set('token', res?.token_private?.token);
+      redirect('/')
+    }
+  }
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardContent>
-          <form>
+          <form action={handleSubmit}>
             <div className="grid gap-6">
               <div className="grid gap-6">
                 <div className="grid gap-3">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="name">Email/Handle</Label>
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="m@example.com"
+                    name="user"
+                    id="user"
+                    type="user"
+                    placeholder="you@rmj.ac"
                     required
                   />
                 </div>
@@ -38,7 +75,7 @@ export function LoginForm({
                       Forgot your password?
                     </a>
                   </div>
-                  <Input id="password" type="password" required />
+                  <Input name="password" id="password" type="password" required />
                 </div>
                 <Button type="submit" className="w-full">
                   Login
@@ -55,7 +92,7 @@ export function LoginForm({
         </CardContent>
       </Card>
       <div className="text-muted-foreground *:[a]:hover:text-primary text-center text-xs text-balance *:[a]:underline *:[a]:underline-offset-4">
-        &copy; Rotriw 2025. All rights reserved.
+        &copy; Rotriw. All rights reserved.
       </div>
     </div>
   )

@@ -21,8 +21,8 @@ impl From<JudgeIOMethod> for String {
 
 impl From<String> for JudgeIOMethod {
     fn from(s: String) -> Self {
-        if s.starts_with("file_io:") {
-            let parts: Vec<&str> = s[8..].split(',').collect();
+        if let Some(stripped) = s.strip_prefix("file_io:") {
+            let parts: Vec<&str> = stripped.split(',').collect();
             if parts.len() == 2 {
                 let in_file = parts[0].split('=').nth(1).unwrap_or("").to_string();
                 let out_file = parts[1].split('=').nth(1).unwrap_or("").to_string();
@@ -54,8 +54,8 @@ impl From<JudgeDiffMethod> for String {
 
 impl From<String> for JudgeDiffMethod {
     fn from(s: String) -> Self {
-        if s.starts_with("spj:") {
-            return JudgeDiffMethod::SPJ(s[4..].to_string());
+        if let Some(stripped) = s.strip_prefix("spj:") {
+            return JudgeDiffMethod::SPJ(stripped.to_string());
         }
         match s.as_str() {
             "ignore_space" => JudgeDiffMethod::IgnoreSpace,

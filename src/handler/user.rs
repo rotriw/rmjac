@@ -175,6 +175,7 @@ impl Login {
             self.long_token
         ).await?;
         Ok(serde_json::to_string(&serde_json::json!({
+            "user_id": user.node_id,
             "user_public": user.public,
             "token_public": token.public,
             "token_private": token.private,
@@ -414,10 +415,20 @@ pub async fn get_sidebar(req: HttpRequest, db: web::Data<DatabaseConnection>, pa
         },
     ];
     if let Some(uc) = user_context && uc.is_real {
+        // require logout
+        let mut log_out = basic_sidebar;
+        log_out.push(SidebarItem {
+            title: "登出".to_string(),
+            url: "/logout".to_string(),
+            show: None,
+            reg: None,
+            icon: "LogOut".to_string(),
+            number: None,
+        });
         Ok(Json! {
             "is_login": true,
             "user": SimplyUser::from_db(&db, uc.user_id).await?,
-            "sidebar": basic_sidebar
+            "sidebar": log_out
         })
     } else {
         let mut no_login_sidebar = basic_sidebar;

@@ -106,3 +106,25 @@ pub fn table_create(input: TokenStream) -> TokenStream {
 
     expanded.into()
 }
+
+
+#[proc_macro]
+pub fn table_create_with(input: TokenStream) -> TokenStream {
+    let input: TableDef = parse_macro_input!(input as TableDef);
+    let table_name = &input.table_name;
+    let columns: Vec<_> = input
+        .columns
+        .iter()
+        .map(|col| col.with_table(table_name))
+        .collect();
+
+    let expanded = quote! {
+        Table::create()
+            .table(#table_name::Table)
+            .if_not_exists()
+            #(#columns)*
+    };
+
+    expanded.into()
+}
+

@@ -324,6 +324,7 @@ pub async fn grant_training_creator_permissions(
 
 
 /// 从token创建训练
+#[allow(clippy::too_many_arguments)]
 pub async fn create_training_with_user(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,

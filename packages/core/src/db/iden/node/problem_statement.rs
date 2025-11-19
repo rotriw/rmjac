@@ -16,4 +16,10 @@ pub enum ProblemStatement {
     CreationTime,
     #[sea_orm(iden = "update_time")]
     UpdateTime,
+    #[sea_orm(iden = "sample_group_in")]
+    SampleGroupIn,
+    #[sea_orm(iden = "sample_group_out")]
+    SampleGroupOut,
+    #[sea_orm(iden = "show_order")]
+    ShowOrder,
 }

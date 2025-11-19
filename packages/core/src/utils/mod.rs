@@ -10,7 +10,7 @@ pub fn get_redis_connection() -> redis::Connection {
         client
     } else {
         log::error!("Redis connection failed, try reconnecting... the handler will panic.");
-        refresh_redis();
+        let _ = refresh_redis();
         env::REDIS_CLIENT
             .lock()
             .unwrap()

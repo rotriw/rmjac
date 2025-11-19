@@ -1,6 +1,8 @@
 // API utility functions for the frontend
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1824'
+import { cookies } from "next/headers"
+
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1824'
 
 // Content types for problem statements
 export interface ContentType {
@@ -112,54 +114,6 @@ export async function getProblemByIden(iden: string): Promise<ProblemModel> {
   }
 }
 
-export async function createProblem(problemData: {
-  problem_iden: string
-  problem_name: string
-  problem_statement: Array<{
-    statement_source: string
-    problem_iden?: string
-    problem_statements: any[]
-    time_limit: number
-    memory_limit: number
-  }>
-  creation_time?: string
-  tags: string[]
-}): Promise<any> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(problemData),
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error('Failed to create problem:', error)
-    throw error
-  }
-}
-
-export async function deleteProblem(iden: string): Promise<void> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/problem/${iden}`, {
-      method: 'DELETE',
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-  } catch (error) {
-    console.error(`Failed to delete problem ${iden}:`, error)
-    throw error
-  }
-}
 
 // Utility function to get acceptance rate
 export function getAcceptanceRate(accepted: number, total: number): string {
@@ -258,8 +212,15 @@ export async function getTrainingByIden(user_iden: string, training_iden: string
 }
 
 export async function getSidebar(): Promise<any> {
+  "use server"
   try {
-    const response = await fetch(`${API_BASE_URL}/api/user/sidebar?path=/`)
+    const manage = await cookies();
+    console.log(manage.toString());
+    const response = await fetch(`${API_BASE_URL}/api/user/sidebar?path=/`, {
+      headers: {
+        cookie: manage.toString()
+      }
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }

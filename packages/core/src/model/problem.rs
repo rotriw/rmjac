@@ -7,7 +7,6 @@ use crate::graph::edge::problem_tag::{ProblemTagEdgeQuery, ProblemTagEdgeRaw};
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
 use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPerm};
 use crate::graph::edge::perm_pages::{PermPagesEdgeRaw, PagesPerm};
-use enum_const::EnumConst;
 use db::entity::edge::misc::Column as MiscColumn;
 use crate::graph::node::problem::limit::{
     ProblemLimitNode, ProblemLimitNodePrivateRaw, ProblemLimitNodePublicRaw, ProblemLimitNodeRaw,
@@ -297,7 +296,7 @@ pub async fn get_problem_with_node_id(
     redis: &mut redis::Connection,
     node_id: i64,
 ) -> Result<ProblemModel> {
-    Ok(get_problem_model(db, redis, node_id).await?)
+    get_problem_model(db, redis, node_id).await
 }
 
 pub async fn get_problem_model(

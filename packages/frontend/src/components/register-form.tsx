@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { CaptchaForm } from "./register-captcha-form"
 import { RegisterIdenForm } from "./register-iden-form"
 import { redirect } from "next/navigation"
+import { API_BASE_URL } from "@/lib/api"
 
 // interface RegisterData {
 //   name: string;
@@ -35,7 +36,7 @@ export async function RegisterForm({
     challenge_code: string,
     challenge_verify: string,
     challenge_time: number,
-  } = (params?.email) ? await (await fetch(`http://127.0.0.1:1824/api/user/before_create?dark_mode=false&email=${params?.email}`)).json() : {};
+  } = (params?.email) ? await (await fetch(`${API_BASE_URL}/api/user/before_create?dark_mode=false&email=${params?.email}`)).json() : {};
   const now_data = (!params?.email) ? (<>
     <div className="grid gap-3">
       <Label htmlFor="email">邮箱</Label>
@@ -123,7 +124,7 @@ export async function RegisterForm({
         challenge_darkmode: "light",
       }
     }));
-    const result = await fetch("http://127.0.0.1:1824/api/user/register", {
+    const result = await fetch(`${API_BASE_URL}/api/user/register`, {
       method: "POST",
       headers: {
         'Content-Type': 'application/json',

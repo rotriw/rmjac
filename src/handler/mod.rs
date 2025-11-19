@@ -3,6 +3,7 @@ use rmjac_core::error::CoreError;
 
 use actix_cors::Cors;
 use actix_web::{App, HttpResponse, HttpServer, error, http::{StatusCode, header::ContentType}, web, HttpRequest};
+use actix_web::http::header;
 use derive_more::derive::Display;
 use log::LevelFilter;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
@@ -114,10 +115,11 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
     log::info!("Server is running on port {port}");
     HttpServer::new(move || {
         let cors = Cors::default()
-            .allow_any_origin()
-            .allow_any_method()
-            .allow_any_header()
-            .max_age(3600);
+            .allowed_origin("http://localhost:3000")
+            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+            .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
+            .allowed_header(header::CONTENT_TYPE)
+            .supports_credentials();
         let auth = AuthTool {};
         App::new()
             .service(user::service())

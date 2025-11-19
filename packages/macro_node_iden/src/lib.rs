@@ -51,16 +51,12 @@ fn extract_node_type(attrs: &[Attribute], default_name: &str) -> String {
                 Meta::List(meta_list) => {
                     let tokens = meta_list.tokens;
                     let parsed: Result<syn::ExprAssign, _> = syn::parse2(tokens);
-                    if let Ok(assign) = parsed {
-                        if let Expr::Path(path) = &*assign.left {
-                            if path.path.is_ident("node_type") {
-                                if let Expr::Lit(expr_lit) = &*assign.right {
-                                    if let Lit::Str(lit_str) = &expr_lit.lit {
-                                        return lit_str.value();
-                                    }
-                                }
-                            }
-                        }
+                    if let Ok(assign) = parsed
+                        && let Expr::Path(path) = &*assign.left
+                        && path.path.is_ident("node_type")
+                        && let Expr::Lit(expr_lit) = &*assign.right
+                        && let Lit::Str(lit_str) = &expr_lit.lit {
+                            return lit_str.value();
                     }
                 }
                 _ => {}

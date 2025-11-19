@@ -3,7 +3,6 @@ use sea_orm::{ColumnTrait, DatabaseConnection};
 use sea_orm::sea_query::SimpleExpr;
 use crate::env::{DEFAULT_NODES, SLICE_WORD_ACMAC, SLICE_WORD_LIST};
 use crate::error::QueryNotFound;
-use crate::error::QueryExists;
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
 use crate::graph::edge::iden::{IdenEdgeQuery, IdenEdgeRaw};
 use crate::graph::node::iden::{IdenNodePrivateRaw, IdenNodePublicRaw, IdenNodeRaw};
@@ -56,7 +55,7 @@ pub async fn remove_iden_to_specific_node(db: &DatabaseConnection, iden: &str, n
             let more_data = IdenEdgeQuery::get_v_filter_extend_content::<SimpleExpr>(now_id, vec![], db, None, None).await?;
             for cur_edge in more_data {
                 if cur_edge.v == node_id {
-                    IdenEdgeQuery::delete_from_id(db, cur_edge.id);
+                    IdenEdgeQuery::delete_from_id(db, cur_edge.id).await?;
                 }
             }
             return Ok(());
@@ -81,7 +80,7 @@ pub async fn remove_iden(db: &DatabaseConnection, iden: &str) -> Result<()> {
         if i == iden_slice.len() - 1 {
             let more_data = IdenEdgeQuery::get_v_filter_extend_content::<SimpleExpr>(now_id, vec![], db, None, None).await?;
             for cur_edge in more_data {
-                IdenEdgeQuery::delete_from_id(db, cur_edge.id);
+                IdenEdgeQuery::delete_from_id(db, cur_edge.id).await?;
             }
             return Ok(());
         }
@@ -100,7 +99,7 @@ pub async fn create_iden_with_slice(db: &DatabaseConnection, iden_slice: Vec<&st
         } else {
             IdenEdgeQuery::get_v_filter(now_id, Column::Iden.eq(*iden_part), db).await?
         };
-        if ((i != iden_slice.len() - 1) && !val.is_empty()) {
+        if (i != iden_slice.len() - 1) && !val.is_empty() {
             now_id = val[0];
         } else {
             // check step

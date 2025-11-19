@@ -134,6 +134,7 @@ use macro_node_iden::{Node, NodeRaw};
 use sea_orm::EntityTrait;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumIter;
+use std::fmt;
 
 pub mod subtask;
 pub mod testcase;
@@ -170,30 +171,27 @@ impl From<RecordStatus> for i64 {
     }
 }
 
-impl ToString for RecordStatus {
-    fn to_string(&self) -> String {
+impl fmt::Display for RecordStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RecordStatus::Accepted => "Accepted".to_string(),
-            RecordStatus::PartialAccepted => "Partial Accepted".to_string(),
-            RecordStatus::WrongAnswer => "Wrong Answer".to_string(),
-            RecordStatus::TimeLimitExceeded => "Time Limit Exceeded".to_string(),
-            RecordStatus::MemoryLimitExceeded => "Memory Limit Exceeded".to_string(),
-            RecordStatus::OutputLimitExceeded => "Output Limit Exceeded".to_string(),
-            RecordStatus::RuntimeError => "Runtime Error".to_string(),
-            RecordStatus::CompileError => "Compile Error".to_string(),
-            RecordStatus::DangerousCode => "Dangerous Code".to_string(),
-            RecordStatus::RemoteServiceUnknownError => "Remote Service Unknown Error".to_string(),
-            RecordStatus::SandboxError => "Sandbox Error".to_string(),
-            RecordStatus::RemotePlatformRefused => "Remote Platform Refused".to_string(),
-            RecordStatus::RemotePlatformConnectionFailed => {
-                "Remote Platform Connection Failed".to_string()
-            }
-            RecordStatus::RemotePlatformUnknownError => "Remote Platform Unknown Error".to_string(),
-            RecordStatus::Waiting => "Waiting".to_string(),
-            RecordStatus::UnknownError => "Unknown Error".to_string(),
-            RecordStatus::Deleted => "Deleted".to_string(),
-            RecordStatus::OnlyArchived => "OnlyArchived".to_string(),
-
+            RecordStatus::Accepted => write!(f, "Accepted"),
+            RecordStatus::PartialAccepted => write!(f, "Partial Accepted"),
+            RecordStatus::WrongAnswer => write!(f, "Wrong Answer"),
+            RecordStatus::TimeLimitExceeded => write!(f, "Time Limit Exceeded"),
+            RecordStatus::MemoryLimitExceeded => write!(f, "Memory Limit Exceeded"),
+            RecordStatus::OutputLimitExceeded => write!(f, "Output Limit Exceeded"),
+            RecordStatus::RuntimeError => write!(f, "Runtime Error"),
+            RecordStatus::CompileError => write!(f, "Compile Error"),
+            RecordStatus::DangerousCode => write!(f, "Dangerous Code"),
+            RecordStatus::RemoteServiceUnknownError => write!(f, "Remote Service Unknown Error"),
+            RecordStatus::SandboxError => write!(f, "Sandbox Error"),
+            RecordStatus::RemotePlatformRefused => write!(f, "Remote Platform Refused"),
+            RecordStatus::RemotePlatformConnectionFailed => write!(f, "Remote Platform Connection Failed"),
+            RecordStatus::RemotePlatformUnknownError => write!(f, "Remote Platform Unknown Error"),
+            RecordStatus::Waiting => write!(f, "Waiting"),
+            RecordStatus::UnknownError => write!(f, "Unknown Error"),
+            RecordStatus::Deleted => write!(f, "Deleted"),
+            RecordStatus::OnlyArchived => write!(f, "OnlyArchived"),
         }
     }
 }

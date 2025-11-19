@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, Attribute, DeriveInput, Expr, ItemFn, Lit, Meta};
+use syn::{parse_macro_input, ItemFn};
 
 
 #[proc_macro_attribute]
@@ -12,7 +12,6 @@ pub fn perm(attr: TokenStream, item: TokenStream) -> TokenStream {
     let func_args = &input.sig.inputs;
     let func_body = &input.block;
     let func_return = &input.sig.output;
-
     // check return type is HttpResponse or String
     let return_data = if func_return
         .into_token_stream()
