@@ -1,6 +1,7 @@
 use crate::db::entity::node::problem_statement::ContentType;
 use crate::error::CoreError;
 use crate::graph::action::get_node_type;
+use crate::graph::edge::perm_problem::{PermProblemEdgeQuery};
 use crate::graph::edge::problem_limit::{ProblemLimitEdgeQuery, ProblemLimitEdgeRaw};
 use crate::graph::edge::problem_statement::{ProblemStatementEdgeQuery, ProblemStatementEdgeRaw};
 use crate::graph::edge::problem_tag::{ProblemTagEdgeQuery, ProblemTagEdgeRaw};
@@ -547,5 +548,113 @@ pub async fn grant_problem_access(
     .await?;
 
     log::info!("Successfully granted problem access: user {} -> problem {}", user_node_id, problem_node_id);
+    Ok(())
+}
+
+pub async fn add_owner(
+    db: &DatabaseConnection,
+    user_node_id: i64,
+    problem_node_id: i64,
+) -> Result<()> {
+    log::info!("Adding owner: user {} -> problem {}", user_node_id, problem_node_id);
+
+    // 授予用户题目所有权限
+    PermProblemEdgeRaw {
+        u: user_node_id,
+        v: problem_node_id,
+        perms: crate::graph::edge::perm_problem::ProblemPermRaw::Perms(vec![
+            ProblemPerm::OwnProblem,
+        ]),
+    }
+    .save(db)
+    .await?;
+
+    log::info!("Successfully added owner: user {} -> problem {}", user_node_id, problem_node_id);
+    Ok(())
+}
+
+pub async fn delete_owner(
+    db: &DatabaseConnection,
+    user_node_id: i64,
+    problem_node_id: i64,
+) -> Result<()> {
+    log::info!("Deleting owner: user {} -> problem {}", user_node_id, problem_node_id);
+
+    // 删除用户题目所有权限
+    PermProblemEdgeQuery::delete(db, user_node_id, problem_node_id).await?;
+
+    log::info!("Successfully deleted owner: user {} -> problem {}", user_node_id, problem_node_id);
+    Ok(())
+}
+
+pub async fn add_editor(
+    db: &DatabaseConnection,
+    user_node_id: i64,
+    problem_node_id: i64,
+) -> Result<()> {
+    log::info!("Adding editor: user {} -> problem {}", user_node_id, problem_node_id);
+
+    // 授予用户题目编辑权限
+    PermProblemEdgeRaw {
+        u: user_node_id,
+        v: problem_node_id,
+        perms: crate::graph::edge::perm_problem::ProblemPermRaw::Perms(vec![
+            ProblemPerm::EditProblem,
+        ]),
+    }
+    .save(db)
+    .await?;
+
+    log::info!("Successfully added editor: user {} -> problem {}", user_node_id, problem_node_id);
+    Ok(())
+}
+
+pub async fn delete_editor(
+    db: &DatabaseConnection,
+    user_node_id: i64,
+    problem_node_id: i64,
+) -> Result<()> {
+    log::info!("Deleting editor: user {} -> problem {}", user_node_id, problem_node_id);
+
+    // 删除用户题目编辑权限
+    PermProblemEdgeQuery::delete(db, user_node_id, problem_node_id).await?;
+
+    log::info!("Successfully deleted editor: user {} -> problem {}", user_node_id, problem_node_id);
+    Ok(())
+}
+
+pub async fn add_viewer(
+    db: &DatabaseConnection,
+    user_node_id: i64,
+    problem_node_id: i64,
+) -> Result<()> {
+    log::info!("Adding viewer: user {} -> problem {}", user_node_id, problem_node_id);
+
+    // 授予用户题目查看权限
+    PermProblemEdgeRaw {
+        u: user_node_id,
+        v: problem_node_id,
+        perms: crate::graph::edge::perm_problem::ProblemPermRaw::Perms(vec![
+            ProblemPerm::ReadProblem,
+        ]),
+    }
+    .save(db)
+    .await?;
+
+    log::info!("Successfully added viewer: user {} -> problem {}", user_node_id, problem_node_id);
+    Ok(())
+}
+
+pub async fn delete_viewer(
+    db: &DatabaseConnection,
+    user_node_id: i64,
+    problem_node_id: i64,
+) -> Result<()> {
+    log::info!("Deleting viewer: user {} -> problem {}", user_node_id, problem_node_id);
+
+    // 删除用户题目查看权限
+    PermProblemEdgeQuery::delete(db, user_node_id, problem_node_id).await?;
+
+    log::info!("Successfully deleted viewer: user {} -> problem {}", user_node_id, problem_node_id);
     Ok(())
 }

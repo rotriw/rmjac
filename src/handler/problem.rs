@@ -4,11 +4,12 @@ use actix_web::{get, post, web, Scope, services, HttpRequest, HttpMessage};
 use sea_orm::DatabaseConnection;
 use sea_orm::sea_query::SimpleExpr;
 use tap::Conv;
-use rmjac_core::model::problem::{add_problem_statement_for_problem, delete_problem_connections, delete_problem_statement_for_problem, generate_problem_statement_schema, get_problem_with_node_id, modify_problem_statement, modify_problem_statement_source, CreateProblemProps, ProblemStatementProp};
+use rmjac_core::model::problem::{CreateProblemProps, ProblemStatementProp, add_editor, add_owner, add_problem_statement_for_problem, add_viewer, delete_editor, delete_owner, delete_problem_connections, delete_problem_statement_for_problem, delete_viewer, generate_problem_statement_schema, get_problem_with_node_id, modify_problem_statement, modify_problem_statement_source};
 use rmjac_core::model::perm::check_perm;
 use rmjac_core::model::problem::get_problem_node_and_statement;
 use rmjac_core::model::record::get_specific_node_records;
 use rmjac_core::error::CoreError;
+use rmjac_core::graph::edge::{EdgeQuery};
 use rmjac_core::graph::edge::perm_problem::{PermProblemEdgeQuery, ProblemPerm, ProblemPermRaw};
 use rmjac_core::graph::edge::perm_problem::ProblemPerm::ReadProblem;
 use rmjac_core::db::entity::edge::record::Column as RecordEdgeColumn;
@@ -229,9 +230,9 @@ impl Manage {
     }
 
     pub async fn add_new_editor(self, user_id: i64) -> ResultHandler<String> {
-        // TODO.
+        add_editor(&self.basic.db, user_id, self.problem_node_id).await?;
         Ok(Json! {
-            "message": "work in progress.",
+            "message": "successful",
         })
     }
 
@@ -243,16 +244,16 @@ impl Manage {
         })
     }
     pub async fn remove_editor(self, manager: i64) -> ResultHandler<String> {
-        // TODO.
+        delete_editor(&self.basic.db, manager, self.problem_node_id).await?;
         Ok(Json! {
-            "message": "work in progress.",
+            "message": "successful",
         })
     }
 
     pub async fn add_visitor(self, user_id: i64) -> ResultHandler<String> {
-        // TODO.
+        add_viewer(&self.basic.db, user_id, self.problem_node_id).await?;
         Ok(Json! {
-            "message": "work in progress.",
+            "message": "successful",
         })
     }
 
@@ -264,15 +265,18 @@ impl Manage {
     }
 
     pub async fn remove_visitor(self, user_id: i64) -> ResultHandler<String> {
-        // TODO.
+        delete_viewer(&self.basic.db, user_id, self.problem_node_id).await?;
         Ok(Json! {
-            "message": "work in progress.",
+            "message": "successful",
         })
     }
     pub async fn transfer_owner(self, new_owner: i64) -> ResultHandler<String> {
         // TODO.
+        let mut old_owners = EdgeQuery::get_u_filter(self.problem_node_id, &self.basic.db).await?;
+        delete_owner(&self.basic.db, new_owner, self.problem_node_id).await?;
+        add_owner(&self.basic.db, new_owner, self.problem_node_id).await?;
         Ok(Json! {
-            "message": "work in progress.",
+            "message": "successful",
         })
     }
 
