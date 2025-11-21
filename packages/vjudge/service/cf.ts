@@ -57,11 +57,11 @@ class CodeforcesContestProblemRouter extends ProblemRouter {
     async get_problem_page_html(url: string): Promise<string> {
         let tools = this.fetch_tool;
         let new_tab = tools.page;
-        let _ = await new_tab.goto(url);
+        let new_value = await new_tab.goto(url);
         if (!(await new_tab?.content()).includes("problem-statement")) {
             await new_tab.clickAndWaitForNavigation("body");
+            new_value = await new_tab.goto(url);
         }
-        let new_value = await new_tab.goto(url);
         let data = (await new_value?.text());
         return data || "";
     }
