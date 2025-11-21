@@ -111,6 +111,7 @@ class CodeforcesContestProblemRouter extends ProblemRouter {
         let cnt = data.length;
         for (const id of data) {
             console.log(`${cnt} / ${data.length}`);
+            cnt --;
             result = result.concat(await this.local_get_problemID_of_contest(id.toString(), file_path));
         }
         return result;
