@@ -66,7 +66,7 @@ class CodeforcesContestProblemRouter extends ProblemRouter {
         return data || "";
     }
 
-    async local_get_problemID_of_contest(contest_id: string, file_path: string): Promise<string[]> {
+    async local_get_problemID_of_contest(contest_id: string, file_path: string): Promise<string[]> {try {
         let axios_fetch = await axios.get(`https://codeforces.com/api/contest.standings?contestId=${contest_id}&from=1&count=1`);
         let data: ProblemStandingData = axios_fetch.data;
         fs.appendFileSync(file_path, JSON.stringify(data));
@@ -76,11 +76,14 @@ class CodeforcesContestProblemRouter extends ProblemRouter {
             try {
                 fs.appendFileSync(file_path, await this.get_problem_page_html(`https://codeforces.com/contest/${contest_id}/problem/${problem.index}`));
             } catch (e) {
-                console.log('error in saving problem:', `${contest_id}${problem.index}`, e);
-                result.push(`${contest_id}${problem.index}`);
+                console.log(`errlr saving problem.${contest_id}`);
             }
         }
         return result;
+        } catch(err) {
+            console.log('error saving problem');
+            return [contest_id];
+        }
     }
 
     async local_discover_contest_problem(start_time: Date, file_path: string, thread = 1): Promise<string[]> {
@@ -124,7 +127,7 @@ async function start() {
     let path = "./s.out";
     let datas = fs.readFileSync(path).toString();
     let datax: number[] = JSON.parse(datas);
-    let exs = datax.slice(0, 1000);
+    let exs = datax;
     // let value = await a.local_discover_contest_problem(new Date("0"), "./s.out");
     // console.log(value);
     a.local_run(exs, "./problem.txt");
