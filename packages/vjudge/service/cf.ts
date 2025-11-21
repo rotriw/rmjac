@@ -108,7 +108,9 @@ class CodeforcesContestProblemRouter extends ProblemRouter {
     async local_run(data: number[], file_path: string): Promise<string[]> {
         let result: string[] = [];
         console.log(`handle ${data.length} number.`);
+        let cnt = data.length;
         for (const id of data) {
+            console.log(`${cnt} / ${data.length}`);
             result = result.concat(await this.local_get_problemID_of_contest(id.toString(), file_path));
         }
         return result;
