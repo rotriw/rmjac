@@ -69,6 +69,7 @@ class CodeforcesContestProblemRouter extends ProblemRouter {
     async local_get_problemID_of_contest(contest_id: string, file_path: string): Promise<string[]> {
         let axios_fetch = await axios.get(`https://codeforces.com/api/contest.standings?contestId=${contest_id}&from=1&count=1`);
         let data: ProblemStandingData = axios_fetch.data;
+        fs.appendFileSync(file_path, JSON.stringify(data));
         let result: string[] = [];
         for (let problem of data.result.problems) {
             console.log('save problem:', `${contest_id}${problem.index}`);
@@ -93,12 +94,22 @@ class CodeforcesContestProblemRouter extends ProblemRouter {
             let contest_time = new Date(contest.startTimeSeconds * 1000);
             if (contest_time >= start_time) {
                 if (contest.phase != "BEFORE") {
-                    result = result.concat(await this.local_get_problemID_of_contest(contest.id.toString(), file_path));
-                    console.log(`Discovered problems from contest ${contest.id} - ${contest.name}`);
+                    result.push(contest.id.toString());
                 }
             }
         }
+        fs.appendFileSync(file_path, result.toString());
         return result;
+    }
+
+    async local_run(data: number[], file_path: string): Promise<string[]> {
+        let result: string[] = [];
+        console.log(`handle ${data.length} number.`);
+        for (const id of data) {
+            result = result.concat(await this.local_get_problemID_of_contest(id.toString(), file_path));
+        }
+        return result;
+    
     }
 }
 async function start() {
@@ -110,8 +121,13 @@ async function start() {
         ignoreAllFlags: false,
         plugins: [require("puppeteer-extra-plugin-click-and-wait")()],
     }));
-    let value = await a.local_discover_contest_problem(new Date("2024-01-01"), "./problem.txt");
-    console.log(value);
+    let path = "./s.out";
+    let datas = fs.readFileSync(path).toString();
+    let datax: number[] = JSON.parse(datas);
+    let exs = datax.slice(0, 1000);
+    // let value = await a.local_discover_contest_problem(new Date("0"), "./s.out");
+    // console.log(value);
+    a.local_run(exs, "./problem.txt");
     // await a.get_problem("https://codeforces.com/contest/1702/problem/A", ["","https://","codeforces.com","1702","A"]);
     // await 100ms
     //  await a.get_problem("https://codeforces.com/contest/1702/problem/B", ["","https://","codeforces.com","1702","B"]);
