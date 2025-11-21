@@ -19,6 +19,8 @@ export interface Problem {
     problem_statement: ProblemStatement[]; // 题目描述
     creation_time: string; // 题目创建时间
     tags: string[]; // 输入描述
+    sample_group: [string, string][]; // 样例组，包含输入输出
+    source_code: string; // html code.
 }
 
 export class ProblemRouter {

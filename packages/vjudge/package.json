@@ -14,8 +14,14 @@
     "dotenv": "^17.2.1",
     "jsdom": "^26.1.0",
     "log4js": "^6.9.1",
+    "node-pandoc": "^0.3.0",
     "openpgp": "^6.2.1",
+    "pandoc-types": "^0.0.2",
+    "puppeteer": "^24.30.0",
+    "puppeteer-extra-plugin-click-and-wait": "^2.3.3",
+    "puppeteer-real-browser": "^1.4.4",
     "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "tex-to-typst": "^0.0.19"
   }
 }
