@@ -58,7 +58,7 @@ class CodeforcesContestProblemRouter extends ProblemRouter {
         let tools = this.fetch_tool;
         let new_tab = tools.page;
         let new_value = await new_tab.goto(url);
-        if (!(await new_tab?.content()).includes("problem-statement")) {
+        if (!(await new_tab?.content()).includes("#sidebar")) {
             await new_tab.clickAndWaitForNavigation("body");
             new_value = await new_tab.goto(url);
         }
@@ -74,7 +74,7 @@ class CodeforcesContestProblemRouter extends ProblemRouter {
         for (let problem of data.result.problems) {
             console.log('save problem:', `${contest_id}${problem.index}`);
             try {
-                fs.appendFileSync(file_path, await this.get_problem_page_html(`https://codeforces.com/contest/${contest_id}/problem/${problem.index}`));
+                fs.appendFileSync(file_path, await this.get_problem_page_html(`https://codeforces.com/gym/${contest_id}/problem/${problem.index}`));
             } catch (e) {
                 console.log(`errlr saving problem.${contest_id}`);
             }
@@ -87,7 +87,7 @@ class CodeforcesContestProblemRouter extends ProblemRouter {
     }
 
     async local_discover_contest_problem(start_time: Date, file_path: string, thread = 1): Promise<string[]> {
-        let axios_fetch = await axios.get("https://codeforces.com/api/contest.list");
+        let axios_fetch = await axios.get("https://codeforces.com/api/contest.list?gym=true");
         let cf_contests: APIContestList = axios_fetch.data;
         let result: string[] = [];
         // times = 10;
@@ -108,10 +108,10 @@ class CodeforcesContestProblemRouter extends ProblemRouter {
     async local_run(data: number[], file_path: string): Promise<string[]> {
         let result: string[] = [];
         console.log(`handle ${data.length} number.`);
-        let cnt = data.length;
+        let cnt = 0;
         for (const id of data) {
             console.log(`${cnt} / ${data.length}`);
-            cnt --;
+            cnt ++;
             result = result.concat(await this.local_get_problemID_of_contest(id.toString(), file_path));
         }
         return result;
@@ -119,21 +119,25 @@ class CodeforcesContestProblemRouter extends ProblemRouter {
     }
 }
 async function start() {
-    let a = new CodeforcesContestProblemRouter(await connect({
-        headless: false,
-        turnstile: false,
-        args: [],
-        disableXvfb: true,
-        ignoreAllFlags: false,
-        plugins: [require("puppeteer-extra-plugin-click-and-wait")()],
-    }));
     let path = "./s.out";
     let datas = fs.readFileSync(path).toString();
     let datax: number[] = JSON.parse(datas);
     let exs = datax;
-    // let value = await a.local_discover_contest_problem(new Date("0"), "./s.out");
     // console.log(value);
-    a.local_run(exs, "./problem.txt");
+    let start = 1, end = exs.length, tms = 10;
+    let now_start = 1, step = (end - start) / tms;
+    for (let i = 1; i <= tms; i ++ ) {
+        let x = new CodeforcesContestProblemRouter(await connect({
+            headless: false,
+            turnstile: false,
+            args: [],
+            disableXvfb: true,
+            ignoreAllFlags: false,
+            plugins: [require("puppeteer-extra-plugin-click-and-wait")()],
+        }));
+        x.local_run(exs.slice(now_start, now_start + step), `problem_ggym.txt`);
+        now_start += step;
+    }
     // await a.get_problem("https://codeforces.com/contest/1702/problem/A", ["","https://","codeforces.com","1702","A"]);
     // await 100ms
     //  await a.get_problem("https://codeforces.com/contest/1702/problem/B", ["","https://","codeforces.com","1702","B"]);
