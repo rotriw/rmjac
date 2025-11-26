@@ -378,6 +378,8 @@ pub trait EdgeQueryOrder<DbActive, DbModel, DbEntity, Edge> {
     fn get_order_id(u: i64, order: i64, db: &DatabaseConnection) -> impl Future<Output = Result<i64>>;
     fn get_order_desc(u: i64, db: &DatabaseConnection) -> impl Future<Output = Result<Vec<i64>>>;
     fn get_order_asc(u: i64, db: &DatabaseConnection) -> impl Future<Output = Result<Vec<i64>>>;
+    fn get_order_asc_extend(u: i64, db: &DatabaseConnection) -> impl Future<Output = Result<Vec<Edge>>>;
+    fn get_order_desc_extend(u: i64, db: &DatabaseConnection) -> impl Future<Output = Result<Vec<Edge>>>;
 }
 
 

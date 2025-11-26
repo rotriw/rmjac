@@ -1,4 +1,5 @@
-use crate::Result;
+use enum_const::EnumConst;
+use crate::{db, Result};
 use crate::graph::node::{Node, NodeRaw};
 use crate::graph::node::record::{
     RecordNode, RecordNodePrivateRaw, RecordNodePublicRaw, RecordNodeRaw, RecordStatus,
@@ -6,7 +7,9 @@ use crate::graph::node::record::{
 use sea_orm::{DatabaseConnection, ColumnTrait};
 use sea_orm::sea_query::IntoCondition;
 use serde::{Deserialize, Serialize};
+use crate::graph::action::get_node_type;
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
+use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
 use crate::graph::edge::record::{RecordEdge, RecordEdgeQuery, RecordEdgeRaw};
 
 #[allow(unused)]
@@ -190,4 +193,42 @@ pub async fn get_specific_node_records<T: IntoCondition>(
         Some(offset)
     ).await?;
     Ok(data)
+}
+
+pub async fn get_problem_user_status(db: &DatabaseConnection, user_id: i64, problem_id: i64) -> Result<RecordStatus> {
+    let node_type = get_node_type(db, problem_id).await?;
+    let problem_id = if node_type == "problem_statement" {
+        ProblemStatementEdgeQuery::get_u(problem_id, db).await?[0]
+    } else {
+        problem_id
+    };
+    use db::entity::edge::record::Column;
+    // RecordEdgeColumn
+    let get_record = RecordEdgeQuery::get_v_filter_extend_content(
+        user_id,
+        vec! [
+            Column::RecordStatus.eq(RecordStatus::Accepted.get_const_isize().unwrap() as i64),
+            Column::VNodeId.eq(problem_id),
+        ],
+        db,
+        None,
+        None
+    ).await?;
+    if get_record.len() > 0 {
+        Ok(RecordStatus::Accepted)
+    } else {
+        let get_record = RecordEdgeQuery::get_v_filter_extend_content(
+            user_id,
+            vec! [
+                Column::VNodeId.eq(problem_id),
+            ],
+            db,
+            None,
+            None
+        ).await?;
+        if get_record.len() > 0 {
+            return Ok(RecordStatus::Waiting);
+        }
+        Ok(RecordStatus::NotFound)
+    }
 }

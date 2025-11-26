@@ -18,6 +18,7 @@ pub enum RecordStatus {
     UnknownError = 900,
     Deleted = 902,
     OnlyArchived = 1000,
+    NotFound = 1001,
 }
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct RecordNodePublic {
@@ -192,6 +193,7 @@ impl fmt::Display for RecordStatus {
             RecordStatus::UnknownError => write!(f, "Unknown Error"),
             RecordStatus::Deleted => write!(f, "Deleted"),
             RecordStatus::OnlyArchived => write!(f, "OnlyArchived"),
+            RecordStatus::NotFound => write!(f, "NotFound"),
         }
     }
 }

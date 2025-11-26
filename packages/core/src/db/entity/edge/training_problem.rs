@@ -11,6 +11,7 @@ pub struct Model {
     pub u_node_id: i64,
     pub v_node_id: i64,
     pub order: i64,
+    pub problem_type: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

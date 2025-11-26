@@ -21,6 +21,8 @@ pub enum QueryNotFound {
     ProblemIdenNotFound,
     #[display("IDEN not found")]
     IdenNotFound,
+    #[display("Node not found")]
+    NodeNotFound,
 }
 
 #[derive(Debug, Display, EnumConst)]
@@ -51,6 +53,8 @@ pub enum CoreError {
     StringError(String),
     #[display("Invalid Function: {}", _0)]
     InvalidFunction(String),
+    #[display("Guard: {}", _0)]
+    Guard(String),
 }
 
 impl From<&CoreError> for i64 {
@@ -72,11 +76,13 @@ impl From<&CoreError> for i64 {
             CoreError::QueryNotFound(data) => match data {
                 QueryNotFound::ProblemIdenNotFound => 61001,
                 QueryNotFound::IdenNotFound => 61002,
+                QueryNotFound::NodeNotFound => 61003,
             },
             CoreError::SerdeError(_) => 70000,
             CoreError::PGPError(_) => 75000,
             CoreError::StringError(_) => 80000,
             CoreError::InvalidFunction(_) => 80001,
+            CoreError::Guard(_) => 50300,
         }
     }
 }
