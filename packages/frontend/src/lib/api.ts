@@ -1,6 +1,10 @@
 // API utility functions for the frontend
+"use server"
+
 
 import { cookies } from "next/headers"
+
+// Remove cookies import to avoid server-side dependency issues
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1824'
 
@@ -100,7 +104,7 @@ export async function getAllProblems(): Promise<ProblemsResponse> {
 
 export async function getProblemByIden(iden: string): Promise<ProblemModel> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/${iden}`)
+    const response = await fetch(`${API_BASE_URL}/api/problem/view/${iden}`)
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -116,7 +120,7 @@ export async function getProblemByIden(iden: string): Promise<ProblemModel> {
 
 
 // Utility function to get acceptance rate
-export function getAcceptanceRate(accepted: number, total: number): string {
+export async function getAcceptanceRate(accepted: number, total: number): string {
   if (total === 0) return "0%"
   return ((accepted / total) * 100).toFixed(1) + "%"
 }
@@ -212,7 +216,7 @@ export async function getTrainingByIden(user_iden: string, training_iden: string
 }
 
 export async function getSidebar(): Promise<any> {
-  "use server"
+
   try {
     const manage = await cookies();
     console.log(manage.toString());
@@ -225,6 +229,25 @@ export async function getSidebar(): Promise<any> {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
     const data = await response.json()
+    console.log(data);
+    return data
+  } catch (error) {
+    throw error
+  }
+}
+
+export async function getUserInfo(): Promise<any> {
+  try {
+    const manage = await cookies();
+    console.log(manage.toString());
+    const response = await fetch(`${API_BASE_URL}/api/user/info`, {
+      headers: {
+        cookie: manage.toString()
+      }
+    });
+    console.log(123);
+    const data = await response.json()
+    console.log(data);
     return data
   } catch (error) {
     throw error

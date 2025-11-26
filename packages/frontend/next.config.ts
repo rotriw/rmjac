@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
     ];
     return config;
   },
+  devIndicators: false
 };
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports

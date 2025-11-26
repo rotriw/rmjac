@@ -369,6 +369,22 @@ pub struct SidebarItem {
     pub number: Option<i64>,
 }
 
+#[get("/info")]
+pub async fn get_user_info(req: HttpRequest, db: web::Data<DatabaseConnection>) -> ResultHandler<String> {
+    let user_context = req.extensions().get::<UserAuthCotext>().cloned();
+    if let Some(uc) = user_context && uc.is_real {
+        let user = SimplyUser::from_db(&db, uc.user_id).await?;
+        Ok(Json! {
+            "is_login": true,
+            "user": user
+        })
+    } else {
+        Ok(Json! {
+            "is_login": false
+        })
+    }
+}
+
 #[get("/sidebar")]
 pub async fn get_sidebar(req: HttpRequest, db: web::Data<DatabaseConnection>, page: web::Query<SidebarQuery>) -> ResultHandler<String> {
     let user_context = req.extensions().get::<UserAuthCotext>().cloned();
@@ -455,7 +471,8 @@ pub fn service() -> Scope {
         post_login,
         post_logout,
         post_manage,
-        get_sidebar
+        get_sidebar,
+        get_user_info
     ];
     web::scope("/api/user").service(service)
 }
