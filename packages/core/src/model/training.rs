@@ -134,6 +134,18 @@ pub struct Training {
     pub problem_list: TrainingList,
 }
 
+pub struct CreateTrainingProps {
+    pub title: String,
+    pub description_public: String,
+    pub description_private: String,
+    pub start_time: NaiveDateTime,
+    pub end_time: NaiveDateTime,
+    pub training_type: String,
+    pub problem_list: TrainingList,
+    pub write_perm_user: Vec<i64>,
+    pub read_perm_user: Vec<i64>,
+}
+
 #[async_recursion]
 pub async fn get_training_problem_list(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64) -> Result<TrainingList> {
     let training_problem_node = TrainingProblemNode::from_db(db, node_id).await?;

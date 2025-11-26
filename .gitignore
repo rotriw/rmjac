@@ -23,3 +23,5 @@ dump.rdb
 !package.json
 
 flamegraph.svg
+
+packages/vjudge/data/*
