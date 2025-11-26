@@ -272,7 +272,7 @@ impl Manage {
     }
     pub async fn transfer_owner(self, new_owner: i64) -> ResultHandler<String> {
         // TODO.
-        let mut old_owners = EdgeQuery::get_u_filter(self.problem_node_id, &self.basic.db).await?;
+        let mut old_owners = PermProblemEdgeQuery::get_u_filter(self.problem_node_id, &self.basic.db).await?;
         delete_owner(&self.basic.db, new_owner, self.problem_node_id).await?;
         add_owner(&self.basic.db, new_owner, self.problem_node_id).await?;
         Ok(Json! {

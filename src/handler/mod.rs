@@ -142,3 +142,5 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
 
 pub mod user;
 pub mod problem;
+// pub mod record;
+pub mod training;
