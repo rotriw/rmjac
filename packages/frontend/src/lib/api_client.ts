@@ -39,7 +39,7 @@ export async function createProblem(problemData: {
 
 export async function deleteProblem(iden: string): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/problem/${iden}`, {
+    const response = await fetch(`${API_BASE_URL}/api/problem/problem/view/${iden}`, {
       method: 'DELETE',
     })
 
