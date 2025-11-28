@@ -860,6 +860,9 @@ importers:
       '@myriaddreamin/typst-ts-web-compiler':
         specifier: 0.6.1-rc3
         version: 0.6.1-rc3
+      '@myriaddreamin/typst.react':
+        specifier: 0.6.1-rc5
+        version: 0.6.1-rc5(@myriaddreamin/typst-ts-renderer@0.6.1-rc3)(@myriaddreamin/typst.ts@0.6.1-rc3(@myriaddreamin/typst-ts-renderer@0.6.1-rc3)(@myriaddreamin/typst-ts-web-compiler@0.6.1-rc3))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@myriaddreamin/typst.ts':
         specifier: 0.6.1-rc3
         version: 0.6.1-rc3(@myriaddreamin/typst-ts-renderer@0.6.1-rc3)(@myriaddreamin/typst-ts-web-compiler@0.6.1-rc3)
@@ -1392,6 +1395,14 @@ packages:
 
   '@myriaddreamin/typst-ts-web-compiler@0.6.1-rc3':
     resolution: {integrity: sha512-6KD2QKUI1KVcBpKxh/LQX02224NnjMWlRQy/IqtROekDKUdoCoSlf5PV7aETYyI4bA1mtNrzMkBGdCeum/4frA==}
+
+  '@myriaddreamin/typst.react@0.6.1-rc5':
+    resolution: {integrity: sha512-RcTOTjxSPcuv87nl2MmcXdiypLmYLwlcYZvZScSnLFl5YKdGatbofqk3mxfqri+UhEUd3Paunf3Pm33pw7NILw==}
+    peerDependencies:
+      '@myriaddreamin/typst-ts-renderer': ^0.6.1-rc5
+      '@myriaddreamin/typst.ts': ^0.6.1-rc5
+      react: ^17.0.1 || ^18.x || ^19.x
+      react-dom: ^17.0.1 || ^18.x || ^19.x
 
   '@myriaddreamin/typst.ts@0.6.1-rc3':
     resolution: {integrity: sha512-pGzaJ5SV0JjrNWn14Bicy0nPTtfD5+4kHwGUDYSebSMbfAtNHfi+Et7k4PiXqunwRm7Obkk5iZufiRM2jOlfbg==}
@@ -5051,6 +5062,13 @@ snapshots:
   '@myriaddreamin/typst-ts-renderer@0.6.1-rc3': {}
 
   '@myriaddreamin/typst-ts-web-compiler@0.6.1-rc3': {}
+
+  '@myriaddreamin/typst.react@0.6.1-rc5(@myriaddreamin/typst-ts-renderer@0.6.1-rc3)(@myriaddreamin/typst.ts@0.6.1-rc3(@myriaddreamin/typst-ts-renderer@0.6.1-rc3)(@myriaddreamin/typst-ts-web-compiler@0.6.1-rc3))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@myriaddreamin/typst-ts-renderer': 0.6.1-rc3
+      '@myriaddreamin/typst.ts': 0.6.1-rc3(@myriaddreamin/typst-ts-renderer@0.6.1-rc3)(@myriaddreamin/typst-ts-web-compiler@0.6.1-rc3)
+      react: 19.1.0
+      react-dom: 19.1.0(react@19.1.0)
 
   '@myriaddreamin/typst.ts@0.6.1-rc3(@myriaddreamin/typst-ts-renderer@0.6.1-rc3)(@myriaddreamin/typst-ts-web-compiler@0.6.1-rc3)':
     dependencies:

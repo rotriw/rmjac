@@ -7,6 +7,26 @@ const nextConfig: NextConfig = {
       ...config.externals,
       /^(rmjac_core)$/i,
     ];
+
+    config.experiments = Object.assign(config.experiments || {}, {
+      asyncWebAssembly: true,
+    });
+    config.module.defaultRules = [
+      {
+        type: 'javascript/auto',
+        resolve: {},
+      },
+      {
+        test: /\.json$/i,
+        type: 'json',
+      },
+    ];
+    config.optimization.moduleIds = 'named';
+    
+    config.module.rules.push({
+      test: /\.wasm$/,
+      type: 'asset/resource',
+    });
     return config;
   },
   devIndicators: false

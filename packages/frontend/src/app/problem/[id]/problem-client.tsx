@@ -41,9 +41,7 @@ export default function ProblemClient({
       alert("请先登录后再保存代码")
       return
     }
-    // TODO: 实现代码保存功能
     console.log("保存代码:", { problemId, code, language })
-    alert("代码已保存")
   }
 
   const getStatusText = (status: number) => {
@@ -74,7 +72,7 @@ export default function ProblemClient({
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md bg-white"
+                className="px-1 py-1 border border-gray-300 rounded-md bg-white w-auto"
               >
                 <option value="cpp">C++</option>
                 <option value="python">Python</option>
@@ -92,12 +90,8 @@ export default function ProblemClient({
             />
             
             <div className="flex justify-between items-center">
-              <div className="text-sm text-gray-600">
-                <div>时间限制: {timeLimit || "N/A"}ms</div>
-                <div>内存限制: {memoryLimit || "N/A"}MB</div>
-              </div>
-              <Button 
-                onClick={handleSaveCode} 
+              <Button
+                onClick={handleSaveCode}
                 disabled={!code.trim()}
                 variant={isLoggedIn ? "default" : "outline"}
               >

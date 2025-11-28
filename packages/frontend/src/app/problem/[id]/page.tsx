@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { StandardCard, TitleCard } from "@/components/card/card"
 import { TypstRenderer } from "@/components/typst-renderer"
-import { API_BASE_URL } from "@/lib/api"
+import { API_BASE_URL } from "@/lib/api_client"
 import ProblemClient from "./problem-client"
+import { CardTitle } from "@/components/ui/card"
 
 interface Record {
   node_id: number
@@ -112,54 +113,30 @@ async function checkUserLogin(): Promise<boolean> {
 }
 
 function renderContent(content: ContentItem[]) {
+  const refname = {
+    "background": "题目背景",
+    "description": "题目描述",
+    "input_format": "输入格式",
+    "output_format": "输出格式",
+    "sample_input": "样例输入",
+    "sample_output": "样例输出",
+    "hint": "提示",
+    "source": "来源",
+  };
   return content.map((item, index) => {
+    console.log(item);
     switch (item.iden) {
-      case "text":
-      case "background":
-      case "description":
       case "input":
+        return <StandardCard title={item.iden} key={index}>
+          {item.content}
+        </StandardCard>
       case "output":
-      case "note":
-        return <div key={index} className="mb-4">
-          <h3 className="text-lg font-semibold mb-2 capitalize">{item.iden}</h3>
-          <div className="whitespace-pre-wrap">{item.content}</div>
-        </div>
-      case "code":
-        return (
-          <div key={index} className="mb-4">
-            <pre className="bg-gray-100 p-4 rounded-lg overflow-x-auto">
-              <code>{item.content}</code>
-            </pre>
-          </div>
-        )
-      case "math":
-        return (
-          <div key={index} className="mb-4 text-center">
-            <span className="font-mono">{item.content}</span>
-          </div>
-        )
-      case "typst":
-        return (
-          <div key={index} className="mb-4">
-            <TypstRenderer content={item.content} />
-          </div>
-        )
-      case "image":
-        return (
-          <div key={index} className="mb-4">
-            <Image 
-              src={item.content} 
-              alt="Problem image" 
-              width={800} 
-              height={600} 
-              className="max-w-full h-auto rounded-lg" 
-            />
-          </div>
-        )
+        return <StandardCard title={item.iden} key={index}>
+          {item.content}
+        </StandardCard>
       default:
-        return <div key={index} className="mb-4">
-          <h3 className="text-lg font-semibold mb-2">{item.iden}</h3>
-          <div className="whitespace-pre-wrap">{item.content}</div>
+        return <div className="mb-4">
+          <TypstRenderer content={`== ${refname[item.iden] || item.iden} \n ${item.content} \n\n`} />
         </div>
     }
   })
@@ -187,12 +164,15 @@ export default async function ProblemPage({ params }: { params: Promise<{ id: st
   }
 
   const { model, statement, user_recent_records, user_last_accepted_record } = problemData
-  
+  console.log(problemData);
   // Find the statement node by statement ID
-  const statementIndex = model.problem_statement_node.findIndex(([stmt]) => stmt.node_id === statement)
+  let statementIndex = model.problem_statement_node.findIndex(([stmt]) => stmt.node_id === statement)
+  if (statement === model.problem_node.node_id) {
+    statementIndex = 0;
+  }
   const mainStatement = statementIndex >= 0 ? model.problem_statement_node[statementIndex][0] : null
   const mainLimit = statementIndex >= 0 ? model.problem_statement_node[statementIndex][1] : null
-
+  console.log(mainStatement);
   return (
     <div className="container mx-auto py-6 px-4 md:px-6">
       <TitleCard 
@@ -202,7 +182,7 @@ export default async function ProblemPage({ params }: { params: Promise<{ id: st
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
-          <StandardCard title="题目描述">
+          <StandardCard>
             {mainStatement?.public?.statements ? (
               renderContent(mainStatement.public.statements)
             ) : (
@@ -210,7 +190,7 @@ export default async function ProblemPage({ params }: { params: Promise<{ id: st
             )}
           </StandardCard>
 
-          <ProblemClient 
+          <ProblemClient
             problemId={id}
             timeLimit={mainLimit?.public?.time_limit}
             memoryLimit={mainLimit?.public?.memory_limit}
@@ -234,50 +214,27 @@ export default async function ProblemPage({ params }: { params: Promise<{ id: st
               </StandardCard>
             )}
 
-            {model.tag && model.tag.length > 0 && (
-              <StandardCard title="标签">
-                <div className="flex flex-wrap gap-2">
-                  {model.tag.map((tag) => (
-                    <Badge key={tag.node_id} variant="secondary">
-                      {tag.public.tag_name}
-                    </Badge>
-                  ))}
-                </div>
-              </StandardCard>
-            )}
+            <StandardCard title="题目信息">
 
-            {model.author && (
-              <StandardCard title="作者">
-                <div className="text-sm text-gray-600">
-                  {model.author.name}
-                </div>
-              </StandardCard>
-            )}
+              {/*<StandardCard title="相关">
+                <span className="text-gray-600">{model?.author?.name}</span>
+              </StandardCard>*/}
 
-            <StandardCard title="统计信息">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">总提交:</span>
-                  <span className="font-mono">0</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">通过人数:</span>
-                  <span className="font-mono">0</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">通过率:</span>
-                  <span className="font-mono">0%</span>
-                </div>
-              </div>
+              {model.tag && model.tag.length > 0 && (
+                <StandardCard title="标签">
+                  <div className="flex flex-wrap gap-2">
+                    {model.tag.map((tag) => (
+                      <Badge key={tag.node_id} variant="secondary">
+                        {tag.public.tag_name}
+                      </Badge>
+                    ))}
+                  </div>
+                </StandardCard>
+              )}
             </StandardCard>
 
+
             <Link href="/problem">
-              <Button 
-                variant="outline" 
-                className="w-full"
-              >
-                返回
-              </Button>
             </Link>
           </div>
         </div>

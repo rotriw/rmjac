@@ -1,12 +1,11 @@
 // API utility functions for the frontend
 "use server"
 
-
 import { cookies } from "next/headers"
 
 // Remove cookies import to avoid server-side dependency issues
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1824'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1824'
 
 // Content types for problem statements
 export interface ContentType {
@@ -126,7 +125,7 @@ export async function getAcceptanceRate(accepted: number, total: number): string
 }
 
 // Utility function to format difficulty color
-export const difficultyColors = {
+const difficultyColors = {
   "入门": "bg-green-100 text-green-800",
   "简单": "bg-blue-100 text-blue-800",
   "中等": "bg-yellow-100 text-yellow-800",
@@ -135,14 +134,14 @@ export const difficultyColors = {
 }
 
 // Utility function to format status color
-export const statusColors = {
+const statusColors = {
   "published": "bg-green-100 text-green-800",
   "draft": "bg-gray-100 text-gray-800",
   "archived": "bg-red-100 text-red-800"
 }
 
 // Utility function to format status label
-export const statusLabels = {
+const statusLabels = {
   "published": "已发布",
   "draft": "草稿",
   "archived": "已归档"
