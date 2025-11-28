@@ -125,6 +125,7 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
         App::new()
             .service(user::service())
             .service(problem::service())
+            .service(record::service())
             .service(training::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {
                 error::InternalError::from_response(
@@ -146,5 +147,5 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
 
 pub mod user;
 pub mod problem;
-// pub mod record;
+pub mod record;
 pub mod training;
