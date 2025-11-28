@@ -125,6 +125,7 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
         App::new()
             .service(user::service())
             .service(problem::service())
+            .service(training::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {
                 error::InternalError::from_response(
                     "",

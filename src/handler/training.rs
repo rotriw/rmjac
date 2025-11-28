@@ -1,4 +1,4 @@
-use actix_web::{HttpMessage, HttpRequest};
+use actix_web::{HttpMessage, HttpRequest, Scope, get, post, services, web};
 use chrono::NaiveDateTime;
 use enum_const::EnumConst;
 use sea_orm::DatabaseConnection;
@@ -237,4 +237,151 @@ impl View {
             "data": accept_status,
         })
     }
+}
+
+#[post("/create")]
+pub async fn create_training(
+    req: HttpRequest,
+    db: web::Data<DatabaseConnection>,
+    data: web::Json<CreateTrainingProps>
+) -> ResultHandler<String> {
+    Create::entry(req, db.as_ref().clone())
+        .perm()
+        .await?
+        .exec(data.into_inner())
+        .await
+}
+
+#[get("/view/{user_iden}/{training_iden}")]
+pub async fn view_training(
+    req: HttpRequest,
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<(String, String)>
+) -> ResultHandler<String> {
+    let (user_iden, training_iden) = path.into_inner();
+    View::entry(req, db.as_ref().clone())
+        .before(&user_iden, &training_iden)
+        .await?
+        .perm()
+        .await?
+        .view_problem()
+        .await
+}
+
+#[post("/view/{user_iden}/{training_iden}")]
+pub async fn post_view_training(
+    req: HttpRequest,
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<(String, String)>
+) -> ResultHandler<String> {
+    let (user_iden, training_iden) = path.into_inner();
+    View::entry(req, db.as_ref().clone())
+        .before(&user_iden, &training_iden)
+        .await?
+        .perm()
+        .await?
+        .view_problem()
+        .await
+}
+
+#[get("/status/{user_iden}/{training_iden}")]
+pub async fn get_training_status(
+    req: HttpRequest,
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<(String, String)>
+) -> ResultHandler<String> {
+    let (user_iden, training_iden) = path.into_inner();
+    View::entry(req, db.as_ref().clone())
+        .before(&user_iden, &training_iden)
+        .await?
+        .perm()
+        .await?
+        .get_problem_accept_status()
+        .await
+}
+
+#[derive(Deserialize)]
+pub struct AddProblemToListRequest {
+    pub list_node_id: i64,
+    pub problems: Vec<String>,
+}
+
+#[post("/manage/{user_iden}/{training_iden}/add_problem")]
+pub async fn add_problem_to_training_list(
+    req: HttpRequest,
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<(String, String)>,
+    data: web::Json<AddProblemToListRequest>
+) -> ResultHandler<String> {
+    let (user_iden, training_iden) = path.into_inner();
+    let request = data.into_inner();
+    Manage::entry(req, db.as_ref().clone())
+        .before(&user_iden, &training_iden)
+        .await?
+        .perm(false)
+        .await?
+        .add_problem_into_list(request.list_node_id, request.problems)
+        .await
+}
+
+#[derive(Deserialize)]
+pub struct AddProblemListRequest {
+    pub list_node_id: i64,
+    pub problem_list: TrainingList,
+}
+
+#[post("/manage/{user_iden}/{training_iden}/add_problem_list")]
+pub async fn add_problem_list_to_training(
+    req: HttpRequest,
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<(String, String)>,
+    data: web::Json<AddProblemListRequest>
+) -> ResultHandler<String> {
+    let (user_iden, training_iden) = path.into_inner();
+    let request = data.into_inner();
+    Manage::entry(req, db.as_ref().clone())
+        .before(&user_iden, &training_iden)
+        .await?
+        .perm(false)
+        .await?
+        .add_new_problem_list_into_list(request.list_node_id, request.problem_list)
+        .await
+}
+
+#[derive(Deserialize)]
+pub struct ModifyListDescriptionRequest {
+    pub list_node_id: i64,
+    pub description_public: String,
+    pub description_private: String,
+}
+
+#[post("/manage/{user_iden}/{training_iden}/modify_description")]
+pub async fn modify_training_list_description(
+    req: HttpRequest,
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<(String, String)>,
+    data: web::Json<ModifyListDescriptionRequest>
+) -> ResultHandler<String> {
+    let (user_iden, training_iden) = path.into_inner();
+    let request = data.into_inner();
+    Manage::entry(req, db.as_ref().clone())
+        .before(&user_iden, &training_iden)
+        .await?
+        .perm(false)
+        .await?
+        .modify_list_description(request.list_node_id, &request.description_public, &request.description_private)
+        .await
+}
+
+pub fn service() -> Scope {
+    let service1 = services![
+        create_training,
+        view_training,
+        post_view_training,
+        get_training_status,
+        add_problem_to_training_list,
+        add_problem_list_to_training,
+        modify_training_list_description,
+    ];
+    web::scope("/api/training").service(service1)
 }
