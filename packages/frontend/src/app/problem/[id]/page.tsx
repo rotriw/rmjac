@@ -116,8 +116,8 @@ function renderContent(content: ContentItem[]) {
   const refname = {
     "background": "题目背景",
     "description": "题目描述",
-    "input_format": "输入格式",
-    "output_format": "输出格式",
+    "input": "输入格式",
+    "output": "输出格式",
     "sample_input": "样例输入",
     "sample_output": "样例输出",
     "hint": "提示",
@@ -126,17 +126,9 @@ function renderContent(content: ContentItem[]) {
   return content.map((item, index) => {
     console.log(item);
     switch (item.iden) {
-      case "input":
-        return <StandardCard title={item.iden} key={index}>
-          {item.content}
-        </StandardCard>
-      case "output":
-        return <StandardCard title={item.iden} key={index}>
-          {item.content}
-        </StandardCard>
       default:
-        return <div className="mb-4">
-          <TypstRenderer content={`== ${refname[item.iden] || item.iden} \n ${item.content} \n\n`} />
+        return <div className="">
+          <TypstRenderer content={`== ${refname[item.iden] || item.iden} \n ${item.content.replaceAll('\\n', '\n')}\n\n`} />
         </div>
     }
   })

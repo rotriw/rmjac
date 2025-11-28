@@ -7,6 +7,7 @@ import type * as typst from '@myriaddreamin/typst.ts';
 import { $typst } from '@myriaddreamin/typst.ts';
 import { loadFonts, preloadFontAssets, preloadRemoteFonts, preloadSystemFonts } from "@myriaddreamin/typst.ts/dist/esm/options.init.mjs";
 import { preloadFont } from "next/dist/server/app-render/entry-base";
+import "./typst.css";
 
 interface TypstRendererProps {
   content: string
@@ -67,12 +68,6 @@ export function TypstRenderer({ content, className = "" }: TypstRendererProps) {
               "https://fonts.gstatic.com/s/roboto/v15/owYYXKukxFDFjr0ZO8NXh6CWcynf_cDxXwCLxiixG1c.ttf",
               "https://fonts.gstatic.com/s/roboto/v15/H1vB34nOKWXqzKotq25pcg.ttf",
               "https://fonts.gstatic.com/s/roboto/v15/b9PWBSMHrT2zM5FgUdtu0aCWcynf_cDxXwCLxiixG1c.ttf",
-              'InriaSerif-Bold.ttf', 
-              'InriaSerif-BoldItalic.ttf', 
-              'InriaSerif-Italic.ttf', 
-              'InriaSerif-Regular.ttf', 
-              'Roboto-Regular.ttf', 
-              'NotoSerifCJKsc-Regular.otf', 
             ]),
             preloadFontAssets({
               assets: ['cjk', 'text']
@@ -103,9 +98,10 @@ export function TypstRenderer({ content, className = "" }: TypstRendererProps) {
         console.log(compiler);
         const result = await $typst.svg({
           mainContent: `
-          #set page(height:auto,margin:(top: 0cm,bottom: 0cm,x: 0cm,y: 0cm))
-          #set text(size: 14pt)
-          ${content}`,
+          #set rect(width: 100%)
+          #set page(width: 40cm,height:auto,margin:(top: 0cm,bottom: 0cm,x: 0cm,y: 0cm))
+          #set text(size: 16pt)
+          ${content}\\`,
         });
         console.log(result);
         if (containerRef.current && result) {
