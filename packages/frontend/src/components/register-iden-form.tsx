@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { CheckIcon } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api_client";
 
 
 export function RegisterIdenForm({ iden }: { iden?: string }) {
@@ -27,7 +28,7 @@ export function RegisterIdenForm({ iden }: { iden?: string }) {
             setIden(value)
             return;
         }
-        const res = await fetch(`http://127.0.0.1:1824/api/user/check_iden/${value}`);
+        const res = await fetch(`${API_BASE_URL}/api/user/check_iden/${value}`);
         const data = await res.json();
         if (data?.exists === false) {
           setIsValid(2);

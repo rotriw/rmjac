@@ -2,6 +2,7 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react";
+import { API_BASE_URL } from "@/lib/api_client";
 
 export function CaptchaForm({ defaultChallengeCode, challengeVerify, challengeTime, email }: {
   defaultChallengeCode: string,
@@ -27,7 +28,7 @@ export function CaptchaForm({ defaultChallengeCode, challengeVerify, challengeTi
         <img src={challenge_code} className="col-span-2" alt="验证码" />
       </div>
       <span className="text-xs text-muted-foreground text-end">看不清？ <a onClick={async () => {
-        const res = await fetch(`http://127.0.0.1:1824/api/user/before_create?dark_mode=false&email=${email}`);
+        const res = await fetch(`${API_BASE_URL}/api/user/before_create?dark_mode=false&email=${email}`);
         const data = await res.json();
         setChallengeCode(data.challenge_code);
         setChallengeVerify(data.challenge_verify);
