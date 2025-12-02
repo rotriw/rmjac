@@ -150,20 +150,34 @@ const statusLabels = {
 // Training interfaces
 export interface TrainingNode {
   node_id: number
-  name: string
-  iden: string
-  description_public: string
-  description_private: string
-  training_type: string
-  start_time: string
-  end_time: string
+  public: {
+    name: string
+    iden: string
+    description: string
+    training_type: string
+    start_time: string
+    end_time: string
+  }
+  private: {
+    description: string
+  }
+}
+
+export interface TrainingProblem {
+  ProblemIden?: string
+  ProblemTraining?: TrainingList
+  ProblemPresetTraining?: [number, string]
+  ExistTraining?: [number, string]
+}
+
+export interface TrainingList {
+  description: string
+  own_problem: TrainingProblem[]
 }
 
 export interface TrainingModel {
   training_node: TrainingNode
-  problems: any[]
-  chapters: any[]
-  statistics: any
+  problem_list: TrainingList
 }
 
 export interface Training {

@@ -1,6 +1,8 @@
 use sha2::{Digest, Sha512};
 use crate::Result;
 use pgp::composed::{Deserializable, CleartextSignedMessage, SignedPublicKey};
+use rand::distr::Alphanumeric;
+use rand::Rng;
 
 pub fn encode_password(data: &String) -> String {
     base16ct::lower::encode_string(&Sha512::digest(data.as_bytes()))
@@ -16,6 +18,16 @@ pub fn verify(pub_key: String, msg_un: String, socket_id: String) -> Result<bool
         log::info!("verify error: {:?}", value);
         Ok(false)
     }
+}
+
+
+pub fn gen_random_string(len: usize) -> String {
+    let rand_string: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(len)
+        .map(char::from)
+        .collect();
+    rand_string
 }
 
 pub fn change_string_format(data: String) -> String {

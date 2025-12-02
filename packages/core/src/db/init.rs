@@ -186,6 +186,20 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
+        "node_user_remote_account".to_string(),
+        table_create!(iden::node::user_remote::UserRemoteAccount, {
+            NodeId: big_integer not_null primary_key,
+            UserIden: text not_null,
+            Platform: text not_null,
+            VerifiedCode: text not_null,
+            Verified: boolean not_null,
+            Auth: text,
+            UseMode: integer not_null,
+            CreationTime: date_time not_null,
+            UpdatedAt: date_time not_null,
+        })
+    );
+    tables.insert(
         "edge".to_string(),
         table_create!(iden::edge::edge::Edge, {
             EdgeId: big_integer not_null primary_key auto_increment,
@@ -261,6 +275,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             EdgeId: big_integer not_null primary_key,
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
+            RecordNodeId: big_integer not_null,
             RecordStatus: big_integer not_null,
             CodeLength: big_integer not_null,
             Score: big_integer not_null,
@@ -380,6 +395,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         "node_training_problem".to_string(),
         Table::drop()
             .table(iden::node::training_problem::TrainingProblem::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        "node_user_remote_account".to_string(),
+        Table::drop()
+            .table(iden::node::user_remote::UserRemoteAccount::Table)
             .if_exists()
             .to_owned(),
     );

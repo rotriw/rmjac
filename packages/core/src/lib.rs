@@ -1,3 +1,4 @@
+#![feature(super_let)]
 pub type Result<T, E = error::CoreError> = std::result::Result<T, E>;
 
 pub mod env;

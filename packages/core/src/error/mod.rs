@@ -55,34 +55,44 @@ pub enum CoreError {
     InvalidFunction(String),
     #[display("Guard: {}", _0)]
     Guard(String),
+    #[display("Vjudge Error: {}", _0)]
+    VjudgeError(String),
 }
-
 impl From<&CoreError> for i64 {
     fn from(value: &CoreError) -> Self {
         match value {
-            CoreError::StdError => 10000,
-            CoreError::IOError(_) => 10001,
-            CoreError::DbError(_) => 20000,
-            CoreError::RedisError(_) => 21000,
-            CoreError::UserNotFound => 60003,
-            CoreError::UserIdenExists => 60004,
-            CoreError::NotFound(_) => 50000,
+            CoreError::StdError => 10500,
+            CoreError::IOError(_) => 10501,
+            CoreError::DbError(_) => 20500,
+            CoreError::RedisError(_) => 21500,
+            CoreError::UserNotFound => 60404,
+            CoreError::UserIdenExists => 60403,
+            CoreError::NotFound(_) => 40404,
             CoreError::QueryExists(data) => match data {
-                QueryExists::RegisterIDENExist => 60001,
-                QueryExists::RegisterEmailExist => 60002,
-                QueryExists::ProblemExist => 60005,
-                QueryExists::IdenExist => 60006,
+                QueryExists::RegisterIDENExist => 91404,
+                QueryExists::RegisterEmailExist => 92404,
+                QueryExists::ProblemExist => 91403,
+                QueryExists::IdenExist => 92403,
             },
             CoreError::QueryNotFound(data) => match data {
-                QueryNotFound::ProblemIdenNotFound => 61001,
-                QueryNotFound::IdenNotFound => 61002,
-                QueryNotFound::NodeNotFound => 61003,
+                QueryNotFound::ProblemIdenNotFound => 70404,
+                QueryNotFound::IdenNotFound => 71404,
+                QueryNotFound::NodeNotFound => 72404,
             },
-            CoreError::SerdeError(_) => 70000,
-            CoreError::PGPError(_) => 75000,
-            CoreError::StringError(_) => 80000,
-            CoreError::InvalidFunction(_) => 80001,
-            CoreError::Guard(_) => 50300,
+            CoreError::SerdeError(_) => 12500,
+            CoreError::PGPError(_) => 13500,
+            CoreError::StringError(_) => 99999,
+            CoreError::InvalidFunction(_) => 99404,
+            CoreError::Guard(_) => 100403,
+            CoreError::VjudgeError(s) => {
+                if s.contains("Guard") {
+                    101403
+                } else if s.contains("NotFound") && s.contains("User") {
+                    61404
+                } else {
+                    99999
+                }
+            },
         }
     }
 }

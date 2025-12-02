@@ -51,24 +51,16 @@ pub async fn create_record_only_archived(
     .save(db)
     .await?;
 
-    let _user_edge = RecordEdgeRaw {
+    // Create edge: user -> problem, with record_node_id pointing to the detailed record node
+    let _user_problem_edge = RecordEdgeRaw {
         u: user_node_id,
-        v: record_node.node_id,
+        v: problem_node_id,
+        record_node_id: record_node.node_id,
         record_status: RecordStatus::OnlyArchived,
         code_length: record_node.private.code.len() as i64,
         score: 0,
-        submit_time: Default::default(),
-        platform: "archived".to_string(),
-    }.save(db).await?;
-
-    let _problem_edge = RecordEdgeRaw {
-        u: problem_node_id,
-        v: record_node.node_id,
-        record_status: RecordStatus::OnlyArchived,
-        code_length: record_node.private.code.len() as i64,
-        score: 0,
-        submit_time: Default::default(),
-        platform: "archived".to_string(),
+        submit_time: chrono::Utc::now().naive_utc(),
+        platform: record.platform.to_string(),
     }.save(db).await?;
 
     Ok(record_node)
@@ -171,6 +163,56 @@ pub async fn update_record_message(
     Ok(updated_record)
 }
 
+/// Get records for a specific user by user_id (u_node_id)
+pub async fn get_user_records<T: IntoCondition>(
+    db: &DatabaseConnection,
+    user_id: i64,
+    number_per_page: u64,
+    page: u64,
+    filter: Vec<T>,
+) -> Result<Vec<RecordEdge>> {
+    log::debug!("Getting records for user id: {}", user_id);
+    let page = if page < 1 { 1 } else { page };
+    let offset = number_per_page * (page - 1);
+    
+    RecordEdgeQuery::get_u_filter_extend_content(
+        user_id,
+        filter,
+        db,
+        Some(number_per_page),
+        Some(offset)
+    ).await
+}
+
+/// Get records for a specific problem by problem_id (v_node_id)
+pub async fn get_problem_records<T: IntoCondition>(
+    db: &DatabaseConnection,
+    problem_id: i64,
+    number_per_page: u64,
+    page: u64,
+    filter: Vec<T>,
+) -> Result<Vec<RecordEdge>> {
+    log::debug!("Getting records for problem id: {}", problem_id);
+    let page = if page < 1 { 1 } else { page };
+    let offset = number_per_page * (page - 1);
+    
+    use db::entity::edge::record::{Column, Entity};
+    use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QuerySelect};
+    
+    // Build query with filters
+    let mut query = Entity::find();
+    for f in filter {
+        query = query.filter(f);
+    }
+    query = query.filter(Column::VNodeId.eq(problem_id));
+    query = query.offset(offset).limit(number_per_page);
+    
+    let edges = query.all(db).await?;
+    Ok(edges.into_iter().map(|e| e.into()).collect())
+}
+
+/// Get records for a specific node (auto-detect if it's user or problem)
+/// This function tries to determine the node type by checking database
 pub async fn get_specific_node_records<T: IntoCondition>(
     db: &DatabaseConnection,
     node_id: i64,
@@ -178,21 +220,18 @@ pub async fn get_specific_node_records<T: IntoCondition>(
     page: u64,
     filter: Vec<T>,
 ) -> Result<Vec<RecordEdge>> {
-    log::debug!("Getting public records for id: {}", node_id);
-        let page = if page < 1 {
-        1
-    } else {
-        page
-    };
-    let offset = number_per_page * (page - 1);
-    let data = RecordEdgeQuery::get_v_filter_extend_content(
-        node_id,
-        filter,
-        db,
-        Some(number_per_page),
-        Some(offset)
-    ).await?;
-    Ok(data)
+    log::debug!("Getting records for node id: {}", node_id);
+    
+    // Try to determine node type and call appropriate function
+    let node_type = get_node_type(db, node_id).await?;
+    match node_type.as_str() {
+        "user" => get_user_records(db, node_id, number_per_page, page, filter).await,
+        "problem" | "problem_statement" => get_problem_records(db, node_id, number_per_page, page, filter).await,
+        _ => {
+            // For unknown types, default to user records
+            get_user_records(db, node_id, number_per_page, page, filter).await
+        }
+    }
 }
 
 pub async fn get_problem_user_status(db: &DatabaseConnection, user_id: i64, problem_id: i64) -> Result<RecordStatus> {
@@ -203,8 +242,9 @@ pub async fn get_problem_user_status(db: &DatabaseConnection, user_id: i64, prob
         problem_id
     };
     use db::entity::edge::record::Column;
-    // RecordEdgeColumn
-    let get_record = RecordEdgeQuery::get_v_filter_extend_content(
+    
+    // Now edge is user->problem, so we filter by u_node_id=user_id and v_node_id=problem_id
+    let get_record = RecordEdgeQuery::get_u_filter_extend_content(
         user_id,
         vec! [
             Column::RecordStatus.eq(RecordStatus::Accepted.get_const_isize().unwrap() as i64),
@@ -217,7 +257,7 @@ pub async fn get_problem_user_status(db: &DatabaseConnection, user_id: i64, prob
     if get_record.len() > 0 {
         Ok(RecordStatus::Accepted)
     } else {
-        let get_record = RecordEdgeQuery::get_v_filter_extend_content(
+        let get_record = RecordEdgeQuery::get_u_filter_extend_content(
             user_id,
             vec! [
                 Column::VNodeId.eq(problem_id),

@@ -1,14 +1,16 @@
 use std::fmt::Debug;
 use axum::routing::get;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use socketioxide::extract::{SocketRef, Data};
 use socketioxide::SocketIo;
 use serde_json::Value;
 use macro_socket_auth::auth_socket_connect;
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use crate::model::vjudge::verified_account;
 use crate::{env, Result};
 use crate::env::db::get_connect;
 use crate::model::problem::{create_problem_with_user, CreateProblemProps};
+use crate::model::user::check_user_token;
 use crate::utils::encrypt::change_string_format;
 
 fn trust_auth(socket: &SocketRef) {
@@ -89,6 +91,47 @@ async fn create_problem_back(socket: SocketRef, Data(problem): Data<String>) {
 
 }
 
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct VerifiedResultProp {
+    pub user_id: i64,
+    pub result: bool,
+    pub ws_id: String,
+
+}
+
+#[auth_socket_connect]
+async fn handle_verified_result(socket: SocketRef, Data(result): Data<VerifiedResultProp>) {
+    let user_socket =  {
+        let data = env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap();
+        data.get(&result.ws_id).cloned()
+    };
+    if result.result {
+        let db = get_connect().await;
+        if let Err(err) = db {
+            log::error!("Failed to connect to database: {}", err);
+            if let Some(user_socket) = user_socket {
+                let _ = user_socket.emit("vjudge_account_verified", "0Failed to connect to database, please retry.");
+            }
+            return;
+        }
+        let db = db.unwrap();
+        let x = verified_account(&db, result.user_id).await;
+        if let Err(err) = x {
+            if let Some(user_socket) = &user_socket {
+                let _ = user_socket.emit("vjudge_account_verified", &format!("0Failed to verify account, please retry. {:?}", err));
+            }
+        }
+        if let Some(user_socket) = &user_socket {
+            let _ = user_socket.emit("vjudge_account_verified", "1Account verified successfully.");
+        }
+    } else {
+        if let Some(user_socket) = &user_socket {
+            let _ = user_socket.emit("vjudge_account_verified", "0Account verified Failed.");
+        }
+    }
+}
+
 fn erase_socket(socket: &SocketRef) {
     log::info!("Erasing socket: {}", socket.id);
     env::EDGE_SOCKETS.lock().unwrap().remove(&socket.id.to_string());
@@ -125,16 +168,53 @@ async fn on_connect(socket: SocketRef, Data(_data): Data<Value>) {
     socket.on("auth", auth);
     socket.on("update_status", update_status);
     socket.on("create_problem", create_problem_back);
+    socket.on("verified_done", handle_verified_result);
+}
+
+
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserVerifiedProp {
+    pub token: String,
+    pub user_id: i64,
+}
+
+pub async fn auth_user(socket: SocketRef, Data(user): Data<UserVerifiedProp>) {
+    log::info!("user notify {} auth", socket.id);
+    let db = get_connect().await;
+    if let Err(err) = db {
+        log::error!("Failed to connect to database: {}", err);
+        socket.disconnect();
+        return ;
+    }
+    let result = check_user_token(user.user_id, &user.token).await;
+    if !result {
+        socket.disconnect();
+    }
+    else {
+        log::info!("user {} authenticated successfully", user.user_id);
+        env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().insert(socket.ns().to_string(), socket.clone());
+    }
+}
+
+async fn on_user_connect(socket: SocketRef, Data(_data): Data<Value>) {
+    log::info!("user notify connected: {:?} {:?}", &socket.ns(), socket.id);
+    socket.on("auth", auth_user);
+    socket.on_disconnect(async |socket: SocketRef| {
+       log::info!("user notify disconnected: {:?} {:?}", socket.ns(), socket.id);
+        env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().remove(&socket.ns().to_string());
+    });
 }
 
 
 pub async fn service_start(port: u16) -> Result<()> {
-    log::info!("VJudge Task server will be started at ::{port}");
+    log::info!("VJudge Task server(with user.) will be started at ::{port}");
     let (layer, io) = SocketIo::new_layer();
-    io.ns("/", on_connect);
+    io.ns("/vjudge", on_connect);
+    io.ns("/user_notify", on_user_connect);
     let cors = CorsLayer::new().allow_origin(AllowOrigin::any());
     let app = axum::Router::new()
-        .route("/", get(|| async { "" }))
+        .route("/vjudge", get(|| async { "" }))
         .layer(layer)
         .layer(cors);
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await.unwrap();

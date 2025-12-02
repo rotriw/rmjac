@@ -43,10 +43,10 @@ fn error_code(error: &HttpError) -> i64 {
     use tap::Conv;
     match error {
         HttpError::HandlerError(handler_error) => match handler_error {
-            HandlerError::PermissionDenied => 100,
-            HandlerError::InvalidInput(_) => 200,
-            HandlerError::NotFound(_) => 300,
-            HandlerError::Conflict(_) => 400,
+            HandlerError::PermissionDenied => 200403,
+            HandlerError::InvalidInput(_) => 201403,
+            HandlerError::NotFound(_) => 201404,
+            HandlerError::Conflict(_) => 202403,
         },
         HttpError::CoreError(core_error) => core_error.conv::<i64>(),
         HttpError::IOError => 500,

@@ -1,20 +1,17 @@
 use std::cmp::max;
 use std::collections::HashMap;
-use sea_orm::ColumnTrait;
 use async_recursion::async_recursion;
 use chrono::NaiveDateTime;
 use redis::TypedCommands;
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use crate::graph::edge::{EdgeQuery, EdgeQueryOrder, EdgeRaw};
-use crate::graph::edge::iden::IdenEdgeQuery;
 use crate::graph::edge::training_problem::{TrainingProblemEdgeQuery, TrainingProblemEdgeRaw, TrainingProblemType};
 use crate::graph::edge::perm_pages::{PermPagesEdgeRaw, PagesPerm};
-use enum_const::EnumConst;
 use crate::graph::node::{Node, NodeRaw};
-use crate::{db, Result};
+use crate::Result;
 use crate::db::entity::node::user::get_user_by_iden;
-use crate::error::{CoreError, QueryExists, QueryNotFound};
+use crate::error::{CoreError, QueryNotFound};
 use crate::graph::action::get_node_type;
 use crate::graph::node::record::RecordStatus;
 use crate::graph::node::training::{TrainingNode, TrainingNodePrivateRaw, TrainingNodePublicRaw, TrainingNodeRaw};
@@ -121,9 +118,7 @@ pub async fn create_training_problem_node(db: &DatabaseConnection, problem: &Tra
                     }.save(db).await?;
                 }
             }
-            _ => {
-
-            }
+            _ => {}
         }
     }
     Ok(now_training)
@@ -137,7 +132,7 @@ pub async fn create_training_problem_node_for_list(db: &DatabaseConnection, redi
     for (_, order) in &problem_list {
         max_order = max(max_order, *order);
     }
-    let training_problem_edge = TrainingProblemEdgeRaw {
+    let _training_problem_edge = TrainingProblemEdgeRaw {
         u: list_id,
         v: training_problem_node.node_id,
         order: max_order as i64 + 1,
@@ -191,12 +186,12 @@ pub async fn get_training_problem_list(db: &DatabaseConnection, redis: &mut redi
                 result.own_problem.push(TrainingProblem::ExistTraining((next_node_id, problem_iden)));
             }
             TrainingProblemType::PresetForce => {
-                let problem_iden = if let Ok(iden_value) = get_node_id_iden(db, redis, next_node_id).await {
+                let _problem_iden = if let Ok(iden_value) = get_node_id_iden(db, redis, next_node_id).await {
                     iden_value[0].clone()
                 } else {
                     "unknown".to_string()
                 };
-                let problem_iden = get_node_id_iden(db, redis, next_node_id).await?[0].clone();
+                let _problem_iden = get_node_id_iden(db, redis, next_node_id).await?[0].clone();
             }
         }
     }
@@ -206,7 +201,7 @@ pub async fn get_training_problem_list(db: &DatabaseConnection, redis: &mut redi
 // 获得当前点的列表。
 // (node_id, order)
 pub async fn get_training_problem_list_one_with_order(db: &DatabaseConnection, _redis: &mut redis::Connection, node_id: i64) -> Result<Vec<(i64, i64)>> {
-    let training_problem_node = TrainingProblemNode::from_db(db, node_id).await?;
+    let _training_problem_node = TrainingProblemNode::from_db(db, node_id).await?;
     let mut result = vec![];
     let edges = TrainingProblemEdgeQuery::get_order_asc_extend(node_id, db).await?;
     for edge in edges {
@@ -235,7 +230,7 @@ pub async fn get_training(db: &DatabaseConnection, redis: &mut redis::Connection
 
 pub async fn add_problem_into_training_list(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64, problem_node_id: i64) -> Result<Vec<(i64, i64)>> {
     let mut problem_list = get_training_problem_list_one_with_order(db, redis, node_id).await?;
-    let problem_iden = get_node_id_iden(db, redis, problem_node_id).await?[0].clone();
+    let _problem_iden = get_node_id_iden(db, redis, problem_node_id).await?[0].clone();
     let mut new_order_id = 0;
     for (_, order) in &problem_list {
         new_order_id = max(new_order_id, *order);
@@ -288,7 +283,7 @@ pub async fn get_training_list_root(db: &DatabaseConnection, redis: &mut redis::
 
 pub async fn add_exist_list_for_training_list(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64, exist_list: i64) -> Result<Vec<(i64, i64)>> {
     let mut problem_list = get_training_problem_list_one_with_order(db, redis, node_id).await?;
-    let root_problem_list = get_training_list_root(db, redis, node_id).await?;
+    let _root_problem_list = get_training_list_root(db, redis, node_id).await?;
     let mut new_order_id = 0;
     for (_, order) in &problem_list {
         new_order_id = max(new_order_id, *order);
@@ -318,8 +313,8 @@ pub async fn add_problem_into_training_list_from_problem_iden(db: &DatabaseConne
 }
 
 pub async fn remove_problem_from_training_list(db: &DatabaseConnection, redis: &mut redis::Connection, training_list_id: i64, delete_node_id: i64) -> Result<()> {
-    let mut problem_list = get_training_problem_list_one_with_order(db, redis, training_list_id).await?;
-    for (i, order) in &problem_list {
+    let problem_list = get_training_problem_list_one_with_order(db, redis, training_list_id).await?;
+    for (i, _order) in &problem_list {
         if *i == delete_node_id {
             TrainingProblemEdgeQuery::delete(db, training_list_id, *i).await?;
             return Ok(());
@@ -584,7 +579,7 @@ pub async fn get_user_training_status(
     user_node_id: i64,
     training_node_id: i64,
 ) -> Result<TrainingListStatus> {
-    let mut cur_task = 0;
+    let _cur_task = 0;
     // get from redis_list.
     let value = redis.exists(format!("user_training_vis_{user_node_id}_{training_node_id}"))?;
     if value {
@@ -598,7 +593,7 @@ pub async fn get_user_training_status(
         total_score: 0.0,
         data: HashMap::new(),
     };
-    redis.set(format!("user_training_vis_{user_node_id}_{training_node_id}"), value);
+    let _ = redis.set(format!("user_training_vis_{user_node_id}_{training_node_id}"), value);
     let problem_list = TrainingProblemEdgeQuery::get_order_asc_extend(training_node_id, db).await?;
     for edge in problem_list {
         let node_type = get_node_type(db, edge.v).await?;

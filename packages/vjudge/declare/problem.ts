@@ -10,6 +10,7 @@ export interface ProblemStatement {
     problem_statements: ContentType[];
     time_limit: number; // 时间限制，单位 ms
     memory_limit: number; // 内存限制，单位 KB
+    sample_group: [string, string][];
 }
 
 export interface Problem {
@@ -21,9 +22,16 @@ export interface Problem {
     tags: string[]; // 输入描述
 }
 
+import { RouterOps } from "./router";
+
 export class ProblemRouter {
+    protected ops: RouterOps;
+
+    constructor(ops: RouterOps) {
+        this.ops = ops;
+    }
+
     async save_problem(url: string): Promise<Problem | ""> {
         return "";
     }
-    
 }

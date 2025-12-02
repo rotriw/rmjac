@@ -34,6 +34,7 @@ axum = "0.8.4"
 tower-http = { version = "0.6.6", features = ["cors"] }
 pgp = "0.16.0"
 priority-queue = "2.7.0"
+rand = "0.9.2"
 
 
 [dependencies.sea-orm-migration]

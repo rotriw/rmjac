@@ -29,6 +29,7 @@ pub enum SystemPerm {
     ProblemManage = 16,
     CreateTraining = 32,
     ManageAllTraining = 64,
+    CreateRecord = 128,
 }
 
 impl From<SystemPermRaw> for i32 {

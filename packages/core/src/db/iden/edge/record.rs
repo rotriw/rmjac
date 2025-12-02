@@ -10,6 +10,8 @@ pub enum Record {
     UNodeId,
     #[sea_orm(iden = "v_node_id")]
     VNodeId,
+    #[sea_orm(iden = "record_node_id")]
+    RecordNodeId,
     #[sea_orm(iden = "record_status")]
     RecordStatus,
     #[sea_orm(iden = "code_length")]

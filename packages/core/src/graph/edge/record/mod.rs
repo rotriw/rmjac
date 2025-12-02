@@ -7,6 +7,7 @@ pub struct RecordEdge {
     pub id: i64,
     pub u: i64,
     pub v: i64,
+    pub record_node_id: i64,
     pub record_status: RecordStatus,
     pub code_length: i64,
     pub score: i64,
@@ -18,6 +19,7 @@ pub struct RecordEdge {
 pub struct RecordEdgeRaw {
     pub u: i64,
     pub v: i64,
+    pub record_node_id: i64,
     pub record_status: RecordStatus,
     pub code_length: i64,
     pub score: i64,
@@ -44,6 +46,7 @@ impl From<RecordEdgeRaw> for ActiveModel {
             edge_id: NotSet,
             u_node_id: Set(raw.u),
             v_node_id: Set(raw.v),
+            record_node_id: Set(raw.record_node_id),
             record_status: Set(raw.record_status.into()),
             code_length: Set(raw.code_length),
             score: Set(raw.score),

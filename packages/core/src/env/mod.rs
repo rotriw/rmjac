@@ -40,6 +40,9 @@ lazy_static! {
 
     pub static ref SLICE_WORD_LIST: Mutex<Vec<String>> = Mutex::new(vec![]);
     pub static ref SLICE_WORD_ACMAC: Mutex<AcMachine> = Mutex::new(AcMachine::build(SLICE_WORD_LIST.lock().unwrap().clone().iter().map(AsRef::as_ref).collect()));
+
+
+    pub static ref USER_WEBSOCKET_CONNECTIONS: Mutex<HashMap<String, SocketRef>> = Mutex::new(HashMap::new());
 }
 
 pub mod db;

@@ -14,3 +14,5 @@ pub mod training;
 pub mod training_problem;
 
 pub mod record;
+
+pub mod user_remote;

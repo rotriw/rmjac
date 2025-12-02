@@ -4,13 +4,16 @@ use serde::Deserialize;
 use rmjac_core::model::record::{RecordNewProp, create_record_only_archived, update_record_status, get_specific_node_records, get_problem_user_status};
 use rmjac_core::model::problem::get_problem_node_and_statement;
 use rmjac_core::graph::node::record::{RecordStatus, RecordNode};
+use rmjac_core::model::perm::check_perm;
+use rmjac_core::graph::edge::perm_system::{PermSystemEdgeQuery, SystemPerm};
+use rmjac_core::graph::node::Node;
 
 use rmjac_core::error::QueryNotFound;
-use rmjac_core::graph::node::Node;
 use rmjac_core::utils::get_redis_connection;
 use sea_orm::sea_query::SimpleExpr;
 use crate::handler::{BasicHandler, HttpError, ResultHandler, HandlerError};
 use crate::utils::perm::UserAuthCotext;
+use enum_const::EnumConst;
 
 
 pub struct View {
@@ -108,14 +111,19 @@ impl Create {
 
     pub async fn perm(self) -> ResultHandler<Self> {
         // Check if user is logged in
-        let _user_node_id = if let Some(uc) = &self.basic.user_context && uc.is_real {
+        let user_node_id = if let Some(uc) = &self.basic.user_context && uc.is_real {
             uc.user_id
         } else {
             return Err(HttpError::HandlerError(HandlerError::PermissionDenied));
         };
 
-        // TODO: Add permission check for submitting to this problem
-        Ok(self)
+        // Check if user has CreateRecord permission
+        let system_id = 0; // System node ID
+        if check_perm(&self.basic.db, user_node_id, system_id, PermSystemEdgeQuery, SystemPerm::CreateRecord.get_const_isize().unwrap() as i64).await? == 1 {
+            Ok(self)
+        } else {
+            Err(HttpError::HandlerError(HandlerError::PermissionDenied))
+        }
     }
 
     pub async fn exec(self, problem_iden: &str) -> ResultHandler<String> {
@@ -237,12 +245,29 @@ impl List {
 
         let records = if let Some(user_id) = query.user_id {
             // Get records for specific user
-            get_specific_node_records::<SimpleExpr>(&self.basic.db, user_id, per_page, page, vec![]).await?
+            if current_user_id == Some(user_id) {
+                // User viewing their own records - show all
+                get_specific_node_records::<SimpleExpr>(&self.basic.db, user_id, per_page, page, vec![]).await?
+            } else {
+                // User viewing another user's records - only show public ones
+                // This would need a custom query to join with record nodes and filter by public_status
+                // For now, we'll use the existing function which shows all edges, but the actual records
+                // will be filtered when converting from nodes (public_status controls code visibility)
+                get_specific_node_records::<SimpleExpr>(&self.basic.db, user_id, per_page, page, vec![]).await?
+            }
         } else if let Some(problem_id) = query.problem_id {
-            // Get records for specific problem
-            get_specific_node_records::<SimpleExpr>(&self.basic.db, problem_id, per_page, page, vec![]).await?
+            // Get records for specific problem - only show public records or user's own records
+            if let Some(current_user) = current_user_id {
+                // Logged in user - show public records and their own records
+                // TODO: Implement proper filtering. For now showing all records
+                get_specific_node_records::<SimpleExpr>(&self.basic.db, problem_id, per_page, page, vec![]).await?
+            } else {
+                // Anonymous user - only show public records
+                // TODO: Implement proper filtering. For now showing all records
+                get_specific_node_records::<SimpleExpr>(&self.basic.db, problem_id, per_page, page, vec![]).await?
+            }
         } else if let Some(user_id) = current_user_id {
-            // Get current user's records
+            // Get current user's own records - show all
             get_specific_node_records::<SimpleExpr>(&self.basic.db, user_id, per_page, page, vec![]).await?
         } else {
             // No permission to see all records without login

@@ -20,6 +20,7 @@ pub mod user;
 pub mod testcase;
 pub mod training;
 pub mod training_problem;
+pub mod user_remote;
 
 use crate::Result;
 
