@@ -128,7 +128,7 @@ function renderContent(content: ContentItem[]) {
     switch (item.iden) {
       default:
         return <div className="">
-          <TypstRenderer content={`== ${refname[item.iden] || item.iden} \n ${item.content.replaceAll('\\n', '\n')}\n\n`} />
+          <TypstRenderer content={`== ${refname[item.iden as keyof typeof refname] || item.iden} \n ${item.content.replaceAll('\\n', '\n')}\n\n`} />
         </div>
     }
   })
@@ -193,6 +193,13 @@ export default async function ProblemPage({ params }: { params: Promise<{ id: st
 
         <div className="lg:col-span-1">
           <div className="space-y-2">
+            <StandardCard title="操作">
+              <Link href={`/problem/${id}/edit`}>
+                <Button className="w-full">
+                  编辑题目
+                </Button>
+              </Link>
+            </StandardCard>
             {mainLimit && (
               <StandardCard title="限制">
                 <div className="flex flex-wrap gap-2">

@@ -119,7 +119,7 @@ export async function getProblemByIden(iden: string): Promise<ProblemModel> {
 
 
 // Utility function to get acceptance rate
-export async function getAcceptanceRate(accepted: number, total: number): string {
+export async function getAcceptanceRate(accepted: number, total: number): Promise<string> {
   if (total === 0) return "0%"
   return ((accepted / total) * 100).toFixed(1) + "%"
 }

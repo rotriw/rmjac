@@ -123,6 +123,8 @@ where
                 column.enum_type_name().unwrap_or("unknown"),
                 data
             );
+            let node_id_column = Self::get_node_id_column();
+            new_model.set(node_id_column, self.get_node_id().into());
             new_model.set(column, data.into());
             let data = new_model.update(db).await?.conv::<DbModel>();
             Ok(data.into())

@@ -51,3 +51,70 @@ export async function deleteProblem(iden: string): Promise<void> {
     throw error
   }
 }
+
+export async function getProblemForEdit(iden: string): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/problem/view/${iden}`, {
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error(`Failed to fetch problem ${iden} for editing:`, error)
+    throw error
+  }
+}
+
+export async function updateProblemStatement(iden: string, content: Array<{
+  iden: string
+  content: string
+}>): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/problem/manage/${iden}/update_statement_content`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(content),
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error(`Failed to update problem statement ${iden}:`, error)
+    throw error
+  }
+}
+
+export async function updateProblemSource(iden: string, source: string): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/problem/manage/${iden}/update_statement_source`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(source),
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error(`Failed to update problem source ${iden}:`, error)
+    throw error
+  }
+}
