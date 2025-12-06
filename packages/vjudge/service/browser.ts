@@ -20,11 +20,9 @@ class BrowserPool {
             plugins: [plugin()],
             args: [
                 '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu'
             ]
         });
+        await browser.newPage();
         return browser;
     }
 
@@ -43,17 +41,14 @@ async function getContentWithBrowser(url: string): Promise<string> {
     let browser: any | null = null;
     try {
         browser = await browserPool.acquire();
-        const page = await browser.newPage();
-        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
-        let page_content = await page.content();
-        if (!page_content.includes("problem-statement")) {
-            await page.clickAndWaitForNavigation("body");
-            await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 })
-            await page.waitForSelector(".problem-statement", { timeout: 10000 });
-            page_content = await page.content();
+        const new_tab = await browser.newPage();
+        let _ = await new_tab.goto(url);
+        if (!(await new_tab?.content()).includes("problem-statement")) {
+            await new_tab.clickAndWaitForNavigation("body");
         }
-        await page.close();
-        return page_content;
+        let new_value = await new_tab.goto(url);
+        let data = (await new_value.text());
+        return data;
     } catch (e) {
         console.error(`Error fetching ${url} with browser:`, e);
         return "";

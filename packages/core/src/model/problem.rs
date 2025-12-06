@@ -332,7 +332,7 @@ pub async fn get_problem_model(
     }
     let author_node_id = MiscEdgeQuery::get_u_filter(problem_node.node_id, MiscColumn::MiscType.eq("author"), db).await?;
     let author = if !author_node_id.is_empty() {
-        let author_node = crate::model::user::SimplyUser::from_db(db, author_node_id[0]).await?;
+        let author_node = crate::model::user::SimplyUser::from_db(db, author_node_id[0]).await.unwrap_or(SimplyUser { node_id:  author_node_id[0], name: "unknown".to_string(), iden: "unknown".to_string(), avatar: "default".to_string() });
         Some(author_node)
     } else {
         None

@@ -9,6 +9,7 @@
   "scripts": {
     "ui:dev": "pnpm --filter=rmjac_fe run dev",
     "ui:build": "pnpm --filter=rmjac_fe run build",
+    "vjudge:start": "deno --allow-env --allow-read --allow-net --allow-write --sloppy-imports --unstable-detect-cjs packages/vjudge/index.ts",
     "start": "cargo run -- start",
     "build": "cargo build --release",
     "init": "cargo run -- dbinit"

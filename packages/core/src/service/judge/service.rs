@@ -43,6 +43,7 @@ async fn auth(socket: SocketRef, Data(key): Data<String>) {
 }
 
 fn check_auth(socket: SocketRef) -> bool {
+    log::info!("Checking auth for socket: {}", socket.id);
     if let Some(auth_count) = env::EDGE_AUTH_MAP.lock().unwrap().get(&socket.id.to_string()) {
         log::trace!("{} auth success: {:?}", socket.id, auth_count);
         if *auth_count > 0 {
@@ -63,15 +64,8 @@ async fn update_status(socket: SocketRef, Data(_key): Data<String>) {
 }
 
 #[auth_socket_connect]
-async fn create_problem_back(socket: SocketRef, Data(problem): Data<String>) {
-    let problem: CreateProblemProps = match serde_json::from_str(&problem) {
-        Ok(p) => p,
-        Err(err) => {
-            socket.emit("create_problem_response", format!("Failed to parse problem data: {}", err).as_str()).unwrap_or(());
-            log::error!("Failed to parse problem data: {}", err);
-            return;
-        }
-    };
+async fn create_problem_back(socket: SocketRef, Data(problem): Data<serde_json::Value>) {
+    let problem = serde_json::from_value::<CreateProblemProps>(problem).unwrap();
     log::info!("Creating problem from socket {}.", socket.id);
     let db = get_connect().await;
     if let Err(err) = db {
@@ -132,10 +126,12 @@ async fn handle_verified_result(socket: SocketRef, Data(result): Data<VerifiedRe
     }
 }
 
-fn erase_socket(socket: &SocketRef) {
-    log::info!("Erasing socket: {}", socket.id);
-    env::EDGE_SOCKETS.lock().unwrap().remove(&socket.id.to_string());
-    env::EDGE_VEC.lock().unwrap().retain(|id| id != &socket.id.to_string());
+fn erase_socket(id: &str) {
+    log::info!("Erasing socket: {}", id);
+    env::EDGE_SOCKETS.lock().unwrap().remove(&id.to_string());
+    log::info!("Erase socket {id} from map.");
+    env::EDGE_VEC.lock().unwrap().retain(|n_id| id != n_id);
+    log::info!("Socket {} erased.", id);
 }
 
 pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
@@ -144,19 +140,26 @@ pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
         log::error!("No edge sockets available to add task.");
         return false;
     }
-    let use_id = (now_id + 1) % (env::EDGE_SOCKETS.lock().unwrap().len() as i32);
+    let use_id = (now_id + 1) % (env::EDGE_SOCKETS.lock().unwrap().clone().len() as i32);
     *env::EDGE_NUM.lock().unwrap() = use_id;
     let use_id = env::EDGE_VEC.lock().unwrap().get(use_id as usize).unwrap().clone();
     log::info!("add task to socket: {}", use_id);
-    if let Some(socket) = env::EDGE_SOCKETS.lock().unwrap().get(&use_id) {
-        if let Err(err) = socket.emit("task", task) {
+    let mut require_erase = false;
+    if let Some(socket) = env::EDGE_SOCKETS.lock().unwrap().get(&use_id).cloned() {
+        if !socket.connected() {
+            log::error!("Socket {} is not connected, erasing", use_id);
+            require_erase = true;
+        } else if let Err(err) = socket.emit("task", task) {
             log::error!("Failed to emit task: {}", err);
             // erase this socket.
-            erase_socket(socket);
-            return false;
+            require_erase = true;
         }
     } else {
         log::error!("Socket not found for id: {}", use_id);
+        require_erase = true;
+    }
+    if require_erase {
+        erase_socket(&use_id);
         return false;
     }
     log::info!("successfully added task {task:?} to socket: {use_id}");
@@ -169,6 +172,10 @@ async fn on_connect(socket: SocketRef, Data(_data): Data<Value>) {
     socket.on("update_status", update_status);
     socket.on("create_problem", create_problem_back);
     socket.on("verified_done", handle_verified_result);
+    socket.on_disconnect(async |socket: SocketRef| {
+        log::info!("socket io disconnected: {:?} {:?}", socket.ns(), socket.id);
+        erase_socket(socket.id.as_str());
+    });
 }
 
 

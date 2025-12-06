@@ -9,6 +9,7 @@ export async function handle_problem(url: string): Promise<Problem | ""> {
     for (let i in problem_routers) {
         let reg = new RegExp(i, "i");
         if (reg.test(url)) {
+            console.log(`Using router for ${i} to handle ${url}`);
             const { router_class, ops } = problem_routers[i];
             let router = new router_class(ops);
             return await router.get_problem(url, reg.exec(url) || []);

@@ -14,6 +14,7 @@ export class CodeforcesRouter extends ProblemRouter {
             if (!content) {
                 return "";
             }
+            console.log(content);
             return parse(content, url);
         } catch (e) {
             LOG.error(`Error fetching ${url}:`, e);

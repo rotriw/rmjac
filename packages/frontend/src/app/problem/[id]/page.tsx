@@ -116,8 +116,9 @@ function renderContent(content: ContentItem[]) {
   const refname = {
     "background": "题目背景",
     "description": "题目描述",
-    "input": "输入格式",
-    "output": "输出格式",
+    "input": "Input",
+    "output": "Output",
+    "statement": "Statement",
     "sample_input": "样例输入",
     "sample_output": "样例输出",
     "hint": "提示",
@@ -127,7 +128,7 @@ function renderContent(content: ContentItem[]) {
     console.log(item);
     switch (item.iden) {
       default:
-        return <div className="">
+        return <div className="mb-5">
           <TypstRenderer content={`== ${refname[item.iden as keyof typeof refname] || item.iden} \n ${item.content.replaceAll('\\n', '\n')}\n\n`} />
         </div>
     }

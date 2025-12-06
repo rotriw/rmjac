@@ -35,12 +35,34 @@ export async function fetchUserSubmissions(
       throw new Error(`HTTP error! status: ${res.status} ${await res.text()}`);
     }
     const data = await res.json();
-    
+
     // The API returns a simple array of submissions, so we parse it directly.
     const validatedData = z.array(submissionSchema).parse(data);
     return validatedData;
   } catch (error) {
-    console.error(`Error fetching submissions for AtCoder user ${userHandle}:`, error);
+    console.error(
+      `Error fetching submissions for AtCoder user ${userHandle}:`,
+      error,
+    );
     throw error;
   }
 }
+
+export async function syncSpecificContestStatus(contestId: string) {
+  const url = `https://atcoder.jp/contests/${contestId}/submissions/status/json`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status} ${await res.text()}`);
+    }
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error(
+      `Error fetching submission status for contest ${contestId}:`,
+      error,
+    );
+    throw error;
+  }
+}
+

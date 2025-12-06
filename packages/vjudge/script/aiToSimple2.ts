@@ -12,39 +12,58 @@ const client = new OpenAI({
 });
 
 
-const prompt = `You are an expert Mathematical Formalizer. Your task is to translate the provided word problem or verbose problem statement into a concise, formal mathematical representation.
-**Guidelines:**
-1.  **Strict Formalism:** Use only standard mathematical terminology and notation (LaTeX format is preferred for symbols).
-2.  **De-contextualize:** Remove all narrative, real-world scenarios, filler words, and conversational elements. Retain only the mathematical logic and constraints.
-3.  **Structure:** Organize the output logically (e.g., Definitions, Given/Constraints, Objective).
-4.  **Direct Output:** Do not provide explanations, thinking processes, or introductory phrases (like "Here is the formal statement"). Output **only** the mathematical formulation.
-
-!!!YOU SHOULDN'T SOLVE THE PROBLEM LONG TIME!!!!
-!!!Only print statement, and print quickly!!!
+const prompt = `You only need to simplied the problem.
+MAKE STATEMENT EASILY AS YOU CAN.
+DONT THINK HOW TO SOLVE PROBLEM, PRINT FAST AND ONLY PRINT ENGLISH VERSION NEW STATEMENT.MAKE NEW STATEMENT EASILY AS YOU CAN.
 **Example**
-"You are given a sequence of integers. Output the _alternating_ sum of this sequence. In other words, output $a_1 -a_2 + a_3 -a_4 + a_5 -dots.h$. That is, the signs of plus and minus alternate, starting with a plus.
 
-The first line of the test contains one integer $t$ ($1 lt.eq t lt.eq 1000$) — the number of test cases. Then follow $t$ test cases.
+**Input 1**
 
-The first line of each test case contains one integer $n$ ($1 lt.eq n lt.eq 50$) — the length of the sequence. The second line of the test case contains $n$ integers $a_1, a_2, dots.h, a_n$ ($1 lt.eq a_i lt.eq 100$).
+你知道火星人使用 $k$ 进制的数字系统。数字 $b$（$0 \leq b < k$）被认为是幸运数字，因为火星人与地球人的首次接触发生在火星纪年 $b$ 年。
 
-Output $t$ lines. For each test case, output the required alternating sum of the numbers.
+一个数 $x$ 的数字根 $d(x)$ 是一个一位数，得到方法是将 $x$ 的所有数字递归相加。这里的“递归”指的是：如果第一次相加的结果不是一位数，则将结果的所有数字继续相加，如此反复，直到得到一个一位数为止。
 
-the result is
+例如，$d(3504_{7})=d((3+5+0+4)_{7})=d(15_{7})=d((1+5)_{7})=d(6_{7})=6_{7}$。在这个例子中，所有计算均在 $7$ 进制下进行。
 
-**Definitions**\nLet $t \\in \\mathbb{Z}$ be the number of test cases.\nLet $T = \\{(n_k, A_k) \\mid k \\in \\{1, \\dots, t\\}\\}$ be the set of test cases, where for each $k$:\n*   $n_k \\in \\mathbb{Z}$ denotes the length of the sequence.\n*   $A_k = (a_{k,1}, a_{k,2}, \\dots, a_{k,n_k})$ is a sequence of integers.\n\n**Constraints**\n1.  $1 \\le t \\le 1000$\n2.  For each $k \\in \\{1, \\dots, t\\}$:\n    *   $1 \\le n_k \\le 50$\n    *   $1 \\le a_{k,i} \\le 100$ for all $i \\in \\{1, \\dots, n_k\\}$\n\n**Objective**\nFor each test case $k \\in \\{1, \\dots, t\\}$, calculate the alternating sum $S_k$:\n$$ S_k = \\sum_{i=1}^{n_k} (-1)^{i-1} a_{k,i} $$
+如果一个数的数字根等于 $b$，火星人也称这个数为“幸运数字”。
 
-**Input Problem:**`;
+你有一个长度为 $n$ 的字符串 $s$，其中每个字符是 $k$ 进制的一位数字。你的任务是计算，有多少个不同的子串是幸运数字。数字前导零是允许的。
+
+注意：字符串 $s[i...j]$ 表示字符串 $s=a_1a_2...a_n$ 的从第 $i$ 个到第 $j$ 个子串（$1 \leq i \leq j \leq n$），也就是 $a_ia_{i+1}...a_j$。如果 $i_1 \neq i_2$ 或 $j_1 \neq j_2$，则 $s[i_1...j_1]$ 和 $s[i_2...j_2]$ 被认为是不同的子串。
+
+**Output 1**
+
+The numeric root of a number is defined as the one-digit number obtained by adding up all the digits in base k and repeating this process several times. If the root of a number is b, then this number is very lucky. Given a string of numbers, ask how many consecutive strings make up a number that is lucky
+
+**Input 2**
 
 
-const pathf = "./data/codeforces/problem_b_3_formal.txt";
+输入两个整数 $a, b$，输出它们的和（$|a|,|b| \le {10}^9$）。
+
+注意
+1. Pascal 使用 integer 会爆掉哦！
+2. 有负数哦！
+好吧，同志们，我们就从这一题开始，向着大牛的路进发。
+> 任何一个伟大的思想，都有一个微不足道的开始。
+
+**Output 2**
+
+give you two numbers, add two numbers and print answer.
+
+
+输入是typst格式。
+MAKE STATEMENT EASILY AS YOU CAN.
+DONT THINK TOO MANY, PRINT FAST AND ONLY PRINT ENGLISH VERSION ANSWER.`;
+
+
+const pathf = "./data/codeforces/problem_b_2_2_formal.txt";
 
 const faileds: number[] = [];
 
 const isExist = {};
 const isUse = {};
 
-const filePath = process.argv[2] || "./data/codeforces/problem_b_3.txt";
+const filePath = process.argv[2] || "./data/codeforces/problem_b_2.txt";
 const dataList = fs.readFileSync(filePath, "utf-8").split("\n");
 const bar = new Progress(':bar :current :etas :token1 :percent', {total: dataList.length, width: 40});
 
@@ -107,7 +126,7 @@ async function handle(l: number, r: number) {
         }
     }
     console.log("Failed indices:", faileds);
-    fs.appendFileSync("./data/codeforces/problem_b_3_failed_formal.txt", JSON.stringify(faileds));
+    fs.appendFileSync("./data/codeforces/problem_b_2_failed_formal_2.txt", JSON.stringify(faileds));
 
 }
 
@@ -120,7 +139,7 @@ const now_process = 0;
 
 
 console.log(dataList.length);
-for (let i = 1; i <= 10; i ++) {
+for (let i = 1; i <= 5; i ++) {
     handle(0, dataList.length - 1);
 }
 

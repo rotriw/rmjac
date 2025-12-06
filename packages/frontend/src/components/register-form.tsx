@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { CaptchaForm } from "./register-captcha-form"
 import { RegisterIdenForm } from "./register-iden-form"
 import { redirect } from "next/navigation"
-import { API_BASE_URL } from "@/lib/api"
+import { API_BASE_URL } from "@/lib/api_client"
 
 // interface RegisterData {
 //   name: string;

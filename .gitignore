@@ -25,3 +25,5 @@ dump.rdb
 flamegraph.svg
 
 packages/vjudge/data/*
+
+.env

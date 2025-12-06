@@ -3,11 +3,14 @@ import * as openpgp from "openpgp";
 import { handle_problem } from "./router";
 import { verifyApiKey } from "./vjudge/codeforces/service/verify";
 import { verifyAtcoderUser } from "./vjudge/atcoder/service/verify";
+import { Problem } from "./declare/problem";
 
 async function auth(socket: Socket<any>) {
+    console.log(123);
     const message = await openpgp.createCleartextMessage({
         text: `Rotriw_Edge_Server_${socket.id || ""}`
     });
+    console.log(123);
     const signingKeys = await openpgp.decryptKey({
         privateKey: await openpgp.readPrivateKey({ armoredKey: global.PRIVATE_KEY }),
         passphrase: global.PRIVATE_PWD
@@ -21,8 +24,8 @@ async function auth(socket: Socket<any>) {
 
 export async function connect() {
     const socket = io(global.SERVER_URL);
-
     socket.on("connect", async () => {
+        LOG.info("start to auth.");
         await auth(socket);
     });
 
@@ -43,8 +46,17 @@ export async function connect() {
     });
 
     socket.on("create_problem_statement", (url: string) => {
-        LOG.info(`Received update_problem_statement for ${url}`);
-        socket.emit("create_problem", handle_problem(url));
+    });
+
+    socket.on("task", async (data: any) => {
+        console.log(data);
+        if (data.operation === "add_problem") {
+            LOG.info(`Received update_problem_statement for ${data.url}`);
+            let res = await handle_problem(data.url) as Problem;
+            res.creation_time = new Date().toISOString().slice(0, -1);
+            console.log(JSON.stringify(res));
+            socket.emit("create_problem", res)
+        }
     });
 
     socket.on(

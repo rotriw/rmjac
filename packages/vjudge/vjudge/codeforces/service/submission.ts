@@ -90,3 +90,20 @@ export async function fetchUserSubmissions(
     throw error;
   }
 }
+
+export async function fetchUserSubmissionsWithEnv(
+  handle: string,
+  from = 1,
+  count = 10000,
+) {
+  const apiKey = Deno.env.get("CODEFORCES_API_KEY");
+  const apiSecret = Deno.env.get("CODEFORCES_API_SECRET");
+
+  if (!apiKey || !apiSecret) {
+    throw new Error(
+      "CODEFORCES_API_KEY and CODEFORCES_API_SECRET must be set in the environment.",
+    );
+  }
+
+  return await fetchUserSubmissions(handle, apiKey, apiSecret, from, count);
+}

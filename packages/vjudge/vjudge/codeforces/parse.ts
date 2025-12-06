@@ -1,8 +1,8 @@
 import { JSDOM } from "jsdom";
 import { Problem, ProblemStatement } from "../../declare/problem";
-import { convertCodeforcesDomToSampleGroup, convertCodeforcesDomToTypst } from "./parse/tools";
+import { convertCodeforcesDomToSampleGroup, convertCodeforcesDomToTypst } from "./parse/tools.ts";
 
-export function parse(html: string, url: string): Problem | "" {
+export async function parse(html: string, url: string): Promise<Problem | ""> {
     const dom = new JSDOM(html);
     const document = dom.window.document;
 
@@ -34,21 +34,24 @@ export function parse(html: string, url: string): Problem | "" {
     const problemStatement: ProblemStatement = {
         statement_source: "codeforces",
         problem_source: "codeforces",
-        problem_iden: problemIden,
-        problem_statements: convertCodeforcesDomToTypst(dom),
+        iden: `CF${problemIden}`,
+        problem_statements: await convertCodeforcesDomToTypst(dom),
         time_limit: timeLimit,
         memory_limit: memoryLimit,
         sample_group: convertCodeforcesDomToSampleGroup(dom),
+        show_order: ["default"],
     };
 
     const result: Problem = {
         problem_source: "codeforces",
-        problem_iden: problemIden,
+        problem_iden: `RmjCF${problemIden}`,
         problem_name: problemName,
         problem_statement: [problemStatement],
         creation_time: new Date().toISOString(),
         tags: [],
+        user_id: 1,
     };
 
+    console.log(result);
     return result;
 }

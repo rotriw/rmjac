@@ -61,13 +61,14 @@ function convertHtmlToTypst(element: Element): string {
     
     // Basic cleanup
     text = text.replace(/\r\n/g, "\n");
+    text = text.replace("\\\\", "\\");
     
     // Handle inline math \( ... \) -> $ ... $
     // Note: texToTypst might be needed if complex latex is used
     // Simple replacement for now, assuming AtCoder's simple math
     // AtCoder often uses <var> which we handled.
     // Sometimes they use \( ... \)
-    text = text.replace(/\\\((.*?)\\\)/g, (match, p1) => `$${p1}$`);
+    text = text.replace(/\\\((.*?)\\\)/g, (match, p1) => `$${convertLatexToTypst(p1)}$`);
     
     return text.trim();
 }
@@ -133,10 +134,12 @@ export const parse = (html: string, url: string): Problem => {
     const statement: ProblemStatement = {
         statement_source: "AtCoder",
         problem_source: "AtCoder",
-        problem_iden: problem_iden,
+        iden: problem_iden,
         problem_statements: contents,
         time_limit,
-        memory_limit
+        memory_limit,
+        sample_group: [],
+        show_order: ["default"],
     };
 
     return {
@@ -145,7 +148,8 @@ export const parse = (html: string, url: string): Problem => {
         problem_name: title,
         problem_statement: [statement],
         creation_time: new Date().toISOString(),
-        tags: []
+        tags: [],
+        user_id: 1,
     };
 };
 

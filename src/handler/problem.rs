@@ -369,6 +369,16 @@ pub async fn view_problem_visitor(req: HttpRequest, db: web::Data<DatabaseConnec
     Manage::entry_from_iden(req, db.as_ref().clone(), &iden, false).await?.perm().await?.view_visitor(body.into_inner()).await
 }
 
+#[post("/test/add_task")]
+pub async fn test_add_task(req: HttpRequest, task: web::Json<serde_json::Value>) -> ResultHandler<String> {
+    use rmjac_core::service::judge::service::add_task;
+    let success = add_task(&task.into_inner()).await;
+    Ok(Json! {
+        "success": success,
+    })
+}
+
+
 pub fn service() -> Scope {
     let service1 = services![
         get_view,
@@ -387,6 +397,7 @@ pub fn service() -> Scope {
         add_problem_visitor,
         remove_problem_visitor,
         view_problem_visitor,
+        test_add_task,
     ];
     web::scope("/api/problem")
         .service(service1)

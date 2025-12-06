@@ -34,6 +34,28 @@ export function TypstRenderer({ content, className = "" }: TypstRendererProps) {
           getModule: () =>
             'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
         }); */
+        // convert content image src start with espress.codeforces.com to download and convert.
+        let counter = 0;
+        const promise = [];
+        let print_content = content.replaceAll(/image\("(.*?)(.png|.jpg)",/g, (_match, p1, p2) => {
+            const download_url = `${p1}${p2}`;
+            const now_counter = counter ++;
+            const fetchImage = async(count: number, ext: string, url: string) => {
+                console.log(url);
+                const nowImage = await (await fetch(url)).arrayBuffer();
+                console.log("done");
+                console.log(nowImage);
+                console.log($typst);
+                console.log(`/local/${count}${ext}`);
+                $typst.mapShadow(`/local/${count}${ext}`, new Uint8Array(nowImage));
+            };
+            promise.push(fetchImage(now_counter, p2, download_url));
+            console.log(download_url);
+            return `image("/local/${now_counter}${p2}",`;
+        });
+        await Promise.all(promise);
+        console.log("qwqqq");
+        console.log(print_content);
         $typst.setCompilerInitOptions({
           getModule: async () => {
             const wasmUrl = new URL(
@@ -73,6 +95,7 @@ export function TypstRenderer({ content, className = "" }: TypstRendererProps) {
               assets: ['cjk', 'text']
             })
           ],
+        
         });
 
       $typst.setRendererInitOptions({
@@ -101,11 +124,48 @@ export function TypstRenderer({ content, className = "" }: TypstRendererProps) {
           #set rect(width: 100%)
           #set page(width: 40cm,height:auto,margin:(top: 0cm,bottom: 0cm,x: 0cm,y: 0cm))
           #set text(size: 16pt)
-          ${content}\\`,
+          #set footnote(numbering: "*")
+          #let bmod = math.op("mod")
+          #let pmod(x) = $space (mod #x)$
+          #let colored(col, content) = text(col, content)
+          #let plus = symbol(
+            "+",
+            ("o", symbol(math.xor))
+          )
+          #let overset(top, base) = math.attach(base, t: top)
+          #let underset(bot, base) = math.attach(base, b: bot)
+          #let over(numerator, denominator) = math.frac(numerator, denominator)
+          #let epigraph = (
+                  wrapper: (body) => {
+                    set align(right)
+                    block(width: 100%, inset: (y: 1em), body)
+                  },
+
+                  text: (body) => {
+                    stack(
+                      dir: ttb,
+                      spacing: 0.8em,
+                      body,
+                      line(length: 100%, stroke: 0.5pt + black)
+                    )
+                  },
+
+                  source: (body) => {
+                    v(0.0em)
+                    align(right, body)
+                  }
+                )
+          ${print_content}\\`,
         });
         console.log(result);
         if (containerRef.current && result) {
+          
           containerRef.current.innerHTML = result
+          containerRef.current.querySelectorAll("svg").forEach(svg => {
+            svg.setAttribute("width", "auto")
+            svg.setAttribute("height", "auto")
+          }
+        );
         }
       } catch (err) {
         console.error("Typst渲染错误:", err)
