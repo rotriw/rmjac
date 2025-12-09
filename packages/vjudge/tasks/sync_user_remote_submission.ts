@@ -1,0 +1,69 @@
+import { Socket } from "npm:socket.io-client@^4.8.1";
+import { fetchUserSubmissions as fetchCodeforcesSubmissions } from "../vjudge/codeforces/service/submission.ts";
+import { fetchUserSubmissions as fetchAtcoderSubmissions } from "../vjudge/atcoder/service/submission.ts";
+import { CFSubmissionStatus } from "../declare/codeforces.ts";
+
+interface SyncUserRemoteSubmissionData {
+    vjudge_node: any;
+    user_id: string;
+    platform: string;
+    ws_id: string | null;
+    problem_iden: string;    
+    fetch_count: "all" | number;
+}
+
+const convertCFSubmissionStatus = (status: string) =>  {
+    return CFSubmissionStatus[status as keyof typeof CFSubmissionStatus];
+}
+
+export const run = async (data: SyncUserRemoteSubmissionData, socket: Socket) => {
+    const { vjudge_node, user_id, platform, ws_id, problem_iden, fetch_count } = data;
+    if (platform === "codeforces") {
+        const result = [];
+        const submissions = await fetchCodeforcesSubmissions(
+            vjudge_node.public.iden,
+            vjudge_node.private.auth.split(":")[0],
+            vjudge_node.private.auth.split(":")[1],
+            1,
+            100,
+        );
+        if (fetch_count === "all") {
+            let now_count = 1;
+            while (true) {
+                globalThis.LOG.info(`Fetching codeforces submissions from ${now_count} to ${now_count + 999}`);
+                const submissions = await fetchCodeforcesSubmissions(
+                    vjudge_node.public.iden,
+                    vjudge_node.private.auth.split(":")[0],
+                    vjudge_node.private.auth.split(":")[1],
+                    now_count,
+                    1000,
+                );
+                console.log(submissions);
+                if (submissions.length === 0) {
+                    break;
+                }
+                now_count += 1000;
+                submissions.forEach(submission => {
+                    let code = "[archive]";
+                    if (submission.sourceBase64) {
+                        code = atob(submission.sourceBase64);
+                    }
+                    const status = convertCFSubmissionStatus(submission.verdict || "FAILED");
+                    result.push({
+                        remote_id: submission.id,
+                        remote_platform: "codeforces",
+                        remote_problem_id: `CF${submission.problem.contestId}${submission.problem.index}`,
+                        language: submission.programmingLanguage,
+                        code: code,
+                        status,
+                        message: "",
+                        score: submission.passedTestCount,
+                        submit_time: new Date(submission.creationTimeSeconds * 1000),
+                        url: `https://codeforces.com/contest/${submission.problem.contestId}/submission/${submission.id}`,
+                        passed: Array.from({ length: submission.passedTestCount }, (_, i) => i + 1),
+                    });
+                });
+            }
+        }
+    }
+}

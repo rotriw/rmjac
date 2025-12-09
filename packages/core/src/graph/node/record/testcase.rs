@@ -8,6 +8,7 @@ pub struct FileIOMethod {
 pub enum JudgeIOMethod {
     Std,
     FileIO(FileIOMethod),
+    RemoteJudge,
 }
 
 impl From<JudgeIOMethod> for String {
@@ -15,6 +16,7 @@ impl From<JudgeIOMethod> for String {
         match method {
             JudgeIOMethod::Std => "std".to_string(),
             JudgeIOMethod::FileIO(file_io) => format!("file_io:in={},out={}", file_io.in_file, file_io.out_file),
+            JudgeIOMethod::RemoteJudge => "remote_judge".to_string(),
         }
     }
 }
@@ -29,6 +31,9 @@ impl From<String> for JudgeIOMethod {
                 return JudgeIOMethod::FileIO(FileIOMethod { in_file, out_file });
             }
         }
+        if s == "remote_judge" {
+            return JudgeIOMethod::RemoteJudge;
+        }
         JudgeIOMethod::Std
     }
 }
@@ -38,7 +43,8 @@ pub enum JudgeDiffMethod {
     IgnoreSpace,
     Strict,
     YesNo,
-    SPJ(String)
+    SPJ(String),
+    RemoteJudge,
 }
 
 impl From<JudgeDiffMethod> for String {
@@ -48,6 +54,7 @@ impl From<JudgeDiffMethod> for String {
             JudgeDiffMethod::Strict => "strict".to_string(),
             JudgeDiffMethod::YesNo => "yes_no".to_string(),
             JudgeDiffMethod::SPJ(spj) => format!("spj:{}", spj),
+            JudgeDiffMethod::RemoteJudge => "remote_judge".to_string(),
         }
     }
 }
@@ -61,6 +68,7 @@ impl From<String> for JudgeDiffMethod {
             "ignore_space" => JudgeDiffMethod::IgnoreSpace,
             "strict" => JudgeDiffMethod::Strict,
             "yes_no" => JudgeDiffMethod::YesNo,
+            "remote_judge" => JudgeDiffMethod::RemoteJudge,
             _ => JudgeDiffMethod::IgnoreSpace,
         }
     }
@@ -72,6 +80,7 @@ pub struct TestcaseNodePublic {
     pub memory_limit: i64,
     pub in_file: i64,
     pub out_file: i64,
+    pub testcase_name: String,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -86,6 +95,7 @@ pub struct TestcaseNodePublicRaw {
     pub memory_limit: i64,
     pub in_file: i64,
     pub out_file: i64,
+    pub testcase_name: String,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -119,6 +129,7 @@ impl From<TestcaseNodeRaw> for ActiveModel {
             out_file: Set(value.public.out_file),
             io_method: Set(value.private.io_method.into()),
             diff_method: Set(value.private.diff_method.into()),
+            testcase_name: Set(value.public.testcase_name),
         }
     }
 }
@@ -132,6 +143,7 @@ impl From<Model> for TestcaseNode {
                 memory_limit: model.memory_limit,
                 in_file: model.in_file,
                 out_file: model.out_file,
+                testcase_name: model.testcase_name,
             },
             private: TestcaseNodePrivate {
                 io_method: model.io_method.into(),

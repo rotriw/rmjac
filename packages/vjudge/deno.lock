@@ -20,9 +20,11 @@
     "npm:puppeteer-real-browser@^1.4.4": "1.4.4",
     "npm:socket.io-client@^4.8.1": "4.8.1",
     "npm:socket.io@^4.8.1": "4.8.1",
+    "npm:tex-to-typst@*": "0.0.19",
     "npm:tex-to-typst@^0.0.19": "0.0.19",
     "npm:tex2typst@~0.5.1": "0.5.1",
     "npm:turndown@^7.2.2": "7.2.2",
+    "npm:zod@*": "3.22.4",
     "npm:zod@3.22.4": "3.22.4",
     "npm:zod@^3.22.4": "3.25.76"
   },

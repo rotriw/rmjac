@@ -4,6 +4,7 @@ import * as path from "https://deno.land/std@0.207.0/path/mod.ts";
 import { Problem, ProblemStatement, ContentType } from "../declare/problem.ts";
 // @deno-types="npm:@types/tex-to-typst"
 import { texToTypst } from "npm:tex-to-typst";
+import { parse } from "../vjudge/atcoder/parse.ts";
 
 
 // Helper to convert LaTeX to Typst
@@ -189,7 +190,7 @@ const fetchProblemsForContest = async (contest: Contest) => {
                 continue;
             }
             const problemHtml = await problemResponse.text();
-            const problem = parseProblem(problemHtml, problemUrl);
+            const problem = await parse(problemHtml, problemUrl);
 
             await fs.ensureDir(contestDir);
             

@@ -56,14 +56,14 @@ MAKE STATEMENT EASILY AS YOU CAN.
 DONT THINK TOO MANY, PRINT FAST AND ONLY PRINT ENGLISH VERSION ANSWER.`;
 
 
-const pathf = "./data/codeforces/problem_b_2_2_formal.txt";
+const pathf = "./data/codeforces/problem_b_3_2_formal.txt";
 
 const faileds: number[] = [];
 
 const isExist = {};
 const isUse = {};
 
-const filePath = process.argv[2] || "./data/codeforces/problem_b_2.txt";
+const filePath = process.argv[2] || "./data/codeforces/problem_b_3.txt";
 const dataList = fs.readFileSync(filePath, "utf-8").split("\n");
 const bar = new Progress(':bar :current :etas :token1 :percent', {total: dataList.length, width: 40});
 
@@ -126,7 +126,7 @@ async function handle(l: number, r: number) {
         }
     }
     console.log("Failed indices:", faileds);
-    fs.appendFileSync("./data/codeforces/problem_b_2_failed_formal_2.txt", JSON.stringify(faileds));
+    fs.appendFileSync("./data/codeforces/problem_b3_failed_formal_3.txt", JSON.stringify(faileds));
 
 }
 

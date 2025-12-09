@@ -10,3 +10,4 @@ pub mod graph;
 pub mod model;
 pub mod service;
 pub mod utils;
+pub mod declare;

@@ -29,6 +29,7 @@ const submissionSchema = z.object({
   passedTestCount: z.number(),
   timeConsumedMillis: z.number(),
   memoryConsumedBytes: z.number(),
+  sourceBase64: z.string().optional(),
 });
 
 const responseSchema = z.object({
@@ -61,10 +62,10 @@ export async function fetchUserSubmissions(
   apiKey: string,
   apiSecret: string,
   from = 1,
-  count = 10000,
+  count = 100,
 ) {
   const methodName = "user.status";
-  const params = { handle, from, count, apiKey, time: Math.floor(Date.now() / 1000) };
+  const params = { handle, from, count, apiKey, time: Math.floor(Date.now() / 1000), includeSources: true };
   const apiSig = await createApiSig(methodName, params, apiSecret);
 
   const url = new URL("https://codeforces.com/api/user.status");
@@ -83,7 +84,6 @@ export async function fetchUserSubmissions(
     if (validatedData.status !== "OK") {
       throw new Error(`Codeforces API Error: ${validatedData.comment}`);
     }
-    
     return validatedData.result ?? [];
   } catch (error) {
     console.error(`Error fetching submissions for handle ${handle}:`, error);

@@ -55,6 +55,7 @@ pub struct SubtaskNodePublic {
     pub time_limit: i64,
     pub memory_limit: i64,
     pub subtask_calc_method: SubtaskCalcMethod,
+    pub is_root: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -68,6 +69,7 @@ pub struct SubtaskNodePublicRaw {
     pub time_limit: i64,
     pub memory_limit: i64,
     pub subtask_calc_method: SubtaskCalcMethod,
+    pub is_root: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -99,6 +101,7 @@ impl From<SubtaskNodeRaw> for ActiveModel {
             memory_limit: Set(value.public.memory_limit),
             subtask_calc_method: Set(value.public.subtask_calc_method.into()),
             subtask_calc_function: Set(value.private.subtask_calc_function),
+            is_root: Set(value.public.is_root),
         }
     }
 }
@@ -112,6 +115,7 @@ impl From<Model> for SubtaskNode {
                 time_limit: model.time_limit,
                 memory_limit: model.memory_limit,
                 subtask_calc_method: model.subtask_calc_method.into(),
+                is_root: model.is_root,
             },
             private: SubtaskNodePrivate {
                 subtask_calc_function: model.subtask_calc_function,

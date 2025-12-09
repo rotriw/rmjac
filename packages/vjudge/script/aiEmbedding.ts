@@ -20,8 +20,8 @@ const problemSchema = z.object({
 });
 
 // 3. 定义输入和输出文件路径
-const inputFilePath = "./data/codeforces/problem_b_2_formal.txt";
-const outputFilePath = "./data/codeforces/embeddings_formal.jsonl";
+const inputFilePath = "./data/codeforces/problem_b_2_2_formal.txt";
+const outputFilePath = "./data/codeforces/embeddings_2_formal.jsonl";
 
 // 4. 读取并解析数据文件
 let lines: string[];

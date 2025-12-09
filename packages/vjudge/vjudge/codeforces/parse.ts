@@ -1,5 +1,10 @@
+/*
+Codeforces problem parser:
+Codeforces HTML -> Easy HTML -> Markdown(convert math to typst) -> Typst.
+*/
+
 import { JSDOM } from "jsdom";
-import { Problem, ProblemStatement } from "../../declare/problem";
+import { Problem, ProblemStatement } from "../../declare/problem.ts";
 import { convertCodeforcesDomToSampleGroup, convertCodeforcesDomToTypst } from "./parse/tools.ts";
 
 export async function parse(html: string, url: string): Promise<Problem | ""> {

@@ -1,0 +1,580 @@
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+	<title>E - Closest Moment</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="Content-Language" content="en">
+	<meta name="viewport" content="width=device-width,initial-scale=1.0">
+	<meta name="format-detection" content="telephone=no">
+	<meta name="google-site-verification" content="nXGC_JxO0yoP1qBzMnYD_xgufO6leSLw1kyNo2HZltM" />
+
+	
+	<script async src="https://www.googletagmanager.com/gtag/js?id=G-RC512FD18N"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag(){dataLayer.push(arguments);}
+		gtag('js', new Date());
+		gtag('set', 'user_properties', {
+			
+				'login_status': 'logged_out',
+			
+		});
+		gtag('config', 'G-RC512FD18N');
+	</script>
+
+	
+	<meta name="description" content="AtCoder is a programming contest site for anyone from beginners to experts. We hold weekly programming contests online.">
+	<meta name="author" content="AtCoder Inc.">
+
+	<meta property="og:site_name" content="AtCoder">
+	
+	<meta property="og:title" content="E - Closest Moment" />
+	<meta property="og:description" content="AtCoder is a programming contest site for anyone from beginners to experts. We hold weekly programming contests online." />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="https://atcoder.jp/contests/abc426/tasks/abc426_e" />
+	<meta property="og:image" content="https://img.atcoder.jp/assets/atcoder.png" />
+	<meta name="twitter:card" content="summary" />
+	<meta name="twitter:site" content="@atcoder" />
+	
+	<meta property="twitter:title" content="E - Closest Moment" />
+
+	<link href="//fonts.googleapis.com/css?family=Lato:400,700" rel="stylesheet" type="text/css">
+	<link rel="stylesheet" type="text/css" href="//img.atcoder.jp/public/a8db298/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="//img.atcoder.jp/public/a8db298/css/base.css">
+	<link rel="shortcut icon" type="image/png" href="//img.atcoder.jp/assets/favicon.png">
+	<link rel="apple-touch-icon" href="//img.atcoder.jp/assets/atcoder.png">
+	<script src="//img.atcoder.jp/public/a8db298/js/lib/jquery-1.9.1.min.js"></script>
+	<script src="//img.atcoder.jp/public/a8db298/js/lib/bootstrap.min.js"></script>
+	<script src="//img.atcoder.jp/public/a8db298/js/cdn/js.cookie.min.js"></script>
+	<script src="//img.atcoder.jp/public/a8db298/js/cdn/moment.min.js"></script>
+	<script src="//img.atcoder.jp/public/a8db298/js/cdn/moment_js-ja.js"></script>
+	<script>
+		var LANG = "en";
+		var userScreenName = "";
+		var csrfToken = "bRHozYgC5iXAKELbvZ/oBZsUo1xxkgLPck5RyJ9T2kg="
+	</script>
+	<script src="//img.atcoder.jp/public/a8db298/js/utils.js"></script>
+	
+	
+		<script src="//img.atcoder.jp/public/a8db298/js/contest.js"></script>
+		<link href="//img.atcoder.jp/public/a8db298/css/contest.css" rel="stylesheet" />
+		<script>
+			var contestScreenName = "abc426";
+			var remainingText = "Remaining Time";
+			var countDownText = "Contest begins in";
+			var startTime = moment("2025-10-04T21:00:00+09:00");
+			var endTime = moment("2025-10-04T22:40:00+09:00");
+		</script>
+		<style></style>
+	
+	
+		<link href="//img.atcoder.jp/public/a8db298/css/cdn/select2.min.css" rel="stylesheet" />
+		<link href="//img.atcoder.jp/public/a8db298/css/cdn/select2-bootstrap.min.css" rel="stylesheet" />
+		<script src="//img.atcoder.jp/public/a8db298/js/lib/select2.min.js"></script>
+	
+	
+		<script src="//img.atcoder.jp/public/a8db298/js/ace/ace.js"></script>
+		<script src="//img.atcoder.jp/public/a8db298/js/ace/ext-language_tools.js"></script>
+	
+	
+		<script src="//img.atcoder.jp/public/a8db298/js/cdn/run_prettify.js"></script>
+	
+	
+		<link rel="stylesheet" href="//img.atcoder.jp/public/a8db298/css/cdn/katex.min.css">
+		<script defer src="//img.atcoder.jp/public/a8db298/js/cdn/katex.min.js"></script>
+		<script defer src="//img.atcoder.jp/public/a8db298/js/cdn/auto-render.min.js"></script>
+		<script>$(function(){$('var').each(function(){var html=$(this).html().replace(/<sub>/g,'_{').replace(/<\/sub>/g,'}');$(this).html('\\('+html+'\\)');});});</script>
+		<script>
+			var katexOptions = {
+				delimiters: [
+					{left: "$$", right: "$$", display: true},
+					
+					{left: "\\(", right: "\\)", display: false},
+					{left: "\\[", right: "\\]", display: true}
+				],
+      	ignoredTags: ["script", "noscript", "style", "textarea", "code", "option"],
+				ignoredClasses: ["prettyprint", "source-code-for-copy"],
+				throwOnError: false
+			};
+			document.addEventListener("DOMContentLoaded", function() { renderMathInElement(document.body, katexOptions);});
+		</script>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<script src="//img.atcoder.jp/public/a8db298/js/base.js"></script>
+</head>
+
+<body>
+
+<script type="text/javascript">
+	var __pParams = __pParams || [];
+	__pParams.push({client_id: '468', c_1: 'atcodercontest', c_2: 'ClientSite'});
+</script>
+<script type="text/javascript" src="https://cdn.d2-apps.net/js/tr.js" async></script>
+
+
+<div id="modal-contest-start" class="modal fade" tabindex="-1" role="dialog">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				<h4 class="modal-title">Contest started</h4>
+			</div>
+			<div class="modal-body">
+				<p>AtCoder Beginner Contest 426 has begun.</p>
+			</div>
+			<div class="modal-footer">
+				
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				
+			</div>
+		</div>
+	</div>
+</div>
+<div id="modal-contest-end" class="modal fade" tabindex="-1" role="dialog">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				<h4 class="modal-title">Contest is over</h4>
+			</div>
+			<div class="modal-body">
+				<p>AtCoder Beginner Contest 426 has ended.</p>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+<div id="main-div" class="float-container">
+
+
+	<nav class="navbar navbar-inverse navbar-fixed-top">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse" aria-expanded="false">
+					<span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
+				</button>
+				<a class="navbar-brand" href="/home"></a>
+			</div>
+			<div class="collapse navbar-collapse" id="navbar-collapse">
+				<ul class="nav navbar-nav">
+				
+					<li><a class="contest-title" href="/contests/abc426">AtCoder Beginner Contest 426</a></li>
+				
+				</ul>
+				<ul class="nav navbar-nav navbar-right">
+					
+					<li class="dropdown">
+						<a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+							<img src='//img.atcoder.jp/assets/top/img/flag-lang/en.png'> English <span class="caret"></span>
+						</a>
+						<ul class="dropdown-menu">
+							<li><a href="/contests/abc426/tasks/abc426_e?lang=ja"><img src='//img.atcoder.jp/assets/top/img/flag-lang/ja.png'> 日本語</a></li>
+							<li><a href="/contests/abc426/tasks/abc426_e?lang=en"><img src='//img.atcoder.jp/assets/top/img/flag-lang/en.png'> English</a></li>
+						</ul>
+					</li>
+					
+					
+						<li><a href="/register?continue=https%3A%2F%2Fatcoder.jp%2Fcontests%2Fabc426%2Ftasks%2Fabc426_e">Sign Up</a></li>
+						<li><a href="/login?continue=https%3A%2F%2Fatcoder.jp%2Fcontests%2Fabc426%2Ftasks%2Fabc426_e">Sign In</a></li>
+					
+				</ul>
+			</div>
+		</div>
+	</nav>
+
+	<form method="POST" name="form_logout" action="/logout?continue=https%3A%2F%2Fatcoder.jp%2Fcontests%2Fabc426%2Ftasks%2Fabc426_e">
+		<input type="hidden" name="csrf_token" value="bRHozYgC5iXAKELbvZ/oBZsUo1xxkgLPck5RyJ9T2kg=" />
+	</form>
+	<div id="main-container" class="container"
+		 	style="padding-top:50px;">
+		
+
+
+<div class="row">
+	<div id="contest-nav-tabs" class="col-sm-12 mb-2 cnvtb-fixed">
+	<div>
+		<small class="contest-duration">
+			
+				Contest Duration:
+				<a href='http://www.timeanddate.com/worldclock/fixedtime.html?iso=20251004T2100&p1=248' target='blank'><time class='fixtime fixtime-full'>2025-10-04 21:00:00+0900</time></a> - <a href='http://www.timeanddate.com/worldclock/fixedtime.html?iso=20251004T2240&p1=248' target='blank'><time class='fixtime fixtime-full'>2025-10-04 22:40:00+0900</time></a> (local time)
+				(100 minutes)
+			
+		</small>
+		<small class="back-to-home pull-right"><a href="/home">Back to Home</a></small>
+	</div>
+	<ul class="nav nav-tabs">
+		<li><a href="/contests/abc426"><span class="glyphicon glyphicon-home" aria-hidden="true"></span> Top</a></li>
+		
+			<li class="active"><a href="/contests/abc426/tasks"><span class="glyphicon glyphicon-tasks" aria-hidden="true"></span> Tasks</a></li>
+		
+
+		
+			<li><a href="/contests/abc426/clarifications"><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span> Clarifications <span id="clar-badge" class="badge" ></span></a></li>
+		
+
+		
+
+		
+			<li>
+				<a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-list" aria-hidden="true"></span> Results<span class="caret"></span></a>
+				<ul class="dropdown-menu">
+					<li><a href="/contests/abc426/submissions"><span class="glyphicon glyphicon-globe" aria-hidden="true"></span> All Submissions</a></li>
+					
+				</ul>
+			</li>
+		
+
+		
+			
+				
+					<li><a href="/contests/abc426/standings"><span class="glyphicon glyphicon-sort-by-attributes-alt" aria-hidden="true"></span> Standings</a></li>
+				
+			
+				
+					<li><a href="/contests/abc426/standings/virtual"><span class="glyphicon glyphicon-sort-by-attributes-alt" aria-hidden="true"></span> Virtual Standings</a></li>
+				
+			
+		
+
+		
+
+		
+			<li><a href="/contests/abc426/editorial"><span class="glyphicon glyphicon-book" aria-hidden="true"></span> Editorial</a></li>
+		
+		
+			
+			
+				<li><a href="https://codeforces.com/blog/entry/146984" target="_blank" rel="noopener"><span class="glyphicon glyphicon-comment" aria-hidden="true"></span> Discuss</a></li>
+			
+		
+
+		<li class="pull-right"><a id="fix-cnvtb" href="javascript:void(0)"><span class="glyphicon glyphicon-pushpin" aria-hidden="true"></span></a></li>
+	</ul>
+</div>
+	<div class="col-sm-12">
+		<span class="h2">
+			E - Closest Moment
+			<a class="btn btn-default btn-sm" href="/contests/abc426/tasks/abc426_e/editorial">Editorial</a>
+		</span>
+		<span id="task-lang-btn" class="pull-right"><span data-lang="ja"><img src='//img.atcoder.jp/assets/top/img/flag-lang/ja.png'></span> / <span data-lang="en"><img src='//img.atcoder.jp/assets/top/img/flag-lang/en.png'></span></span>
+		<script>
+			$(function() {
+				var ts = $('#task-statement span.lang');
+				if (ts.children('span').size() <= 1) {
+					$('#task-lang-btn').hide();
+					ts.children('span').show();
+					return;
+				}
+
+				var REMEMBER_LB = 5;
+				var LS_KEY = 'task_lang';
+				var taskLang = getLS(LS_KEY) || '';
+				function isTaskLangSet(taskLang) { return taskLang === 'ja' || taskLang === 'en';}
+				if (isTaskLangSet(taskLang)) {
+					const params = new URLSearchParams(window.location.search);
+					if (params.get('lang')) {
+						setLS(LS_KEY, REMEMBER_LB);
+						taskLang = LANG;
+					}
+				} else {
+					taskLang = LANG;
+				}
+				ts.children('span.lang-' + taskLang).show();
+
+				$('#task-lang-btn span').click(function() {
+					var l = $(this).data('lang');
+					ts.children('span').hide();
+					ts.children('span.lang-' + l).show();
+
+					taskLang = getLS(LS_KEY) || '';
+					let changeTimes = 0;
+					if (isTaskLangSet(taskLang)) {
+						changeTimes = REMEMBER_LB;
+					} else {
+						changeTimes = parseInt(taskLang, 10);
+						if (isNaN(changeTimes)) changeTimes = 0;
+						changeTimes++;
+					}
+					if (changeTimes < REMEMBER_LB) setLS(LS_KEY, changeTimes);
+					else setLS(LS_KEY, l);
+				});
+			});
+		</script>
+		<hr/>
+		<p>
+			Time Limit: 3 sec / Memory Limit: 1024 MiB
+			
+			
+		</p>
+
+		<div id="task-statement">
+			
+
+
+	
+	
+
+			<span class="lang">
+<span class="lang-ja">
+<p>配点 : <var>450</var> 点</p>
+
+<div class="part">
+<section>
+<h3>問題文</h3><p>高橋君と青木君が二次元平面上を歩きます。</p>
+<p>高橋君のスタート地点は <var>(TS_X, TS_Y)</var>、ゴール地点は <var>(TG_X, TG_Y)</var> です。
+青木君のスタート地点は <var>(AS_X, AS_Y)</var>、ゴール地点は <var>(AG_X, AG_Y)</var> です。</p>
+<p>二人は同時に各々のスタート地点を出発し、各々のゴール地点に向かって真っ直ぐ速さ <var>1</var> で歩き続け、各々のゴール地点に到達すると停止します。
+（出発は同時ですが、停止するタイミングは同時とは限らないことに注意してください。）</p>
+<p>二人の間の距離が最も短いタイミング（二人が出発する瞬間および停止した後を含む）における、二人の間の距離を求めてください。</p>
+<p>ここで、距離はユークリッド距離を指すものとします。すなわち、<var>2</var> 点 <var>(x_1,y_1),(x_2,y_2)</var> の間の距離は <var>\sqrt{(x_1-x_2)^2+(y_1-y_2)^2}</var> として定められます。</p>
+<p><var>T</var> 個のテストケースが与えられるので、それぞれについて答えを求めてください。</p>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>制約</h3><ul>
+<li><var>1\leq T\leq 2\times 10^5</var></li>
+<li><var>-100\leq TS_X,TS_Y,TG_X,TG_Y,AS_X,AS_Y,AG_X,AG_Y \leq 100</var></li>
+<li><var>(TS_X,TS_Y)\neq (TG_X,TG_Y)</var></li>
+<li><var>(AS_X,AS_Y)\neq (AG_X,AG_Y)</var></li>
+<li>入力は全て整数</li>
+</ul>
+</section>
+</div>
+
+<hr />
+<div class="io-style">
+<div class="part">
+<section>
+<h3>入力</h3><p>入力は以下の形式で標準入力から与えられる。</p>
+<pre><var>T</var>
+<var>\text{case}_1</var>
+<var>\text{case}_2</var>
+<var>\vdots</var>
+<var>\text{case}_T</var>
+</pre>
+
+<p><var>\text{case}_i</var> は <var>i</var> 番目のテストケースを表す。各テストケースは以下の形式で与えられる。</p>
+<pre><var>TS_X</var> <var>TS_Y</var> <var>TG_X</var> <var>TG_Y</var>
+<var>AS_X</var> <var>AS_Y</var> <var>AG_X</var> <var>AG_Y</var>
+</pre>
+
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>出力</h3><p><var>T</var> 行出力せよ。<var>i</var> 行目 <var>(1\leq i\leq T)</var> には <var>i</var> 番目のテストケースに対する答えを出力せよ。</p>
+<p>出力は、真の値との絶対誤差または相対誤差が <var>10^{-6}</var> 以下のとき、正解と判定される。</p>
+</section>
+</div>
+</div>
+
+<hr />
+<div class="part">
+<section>
+<h3>入力例 1</h3><pre>4
+0 0 -2 2
+-1 -1 4 4
+4 0 2 0
+6 0 8 0
+1 0 1 1
+-1 0 1 1
+-8 9 2 6
+-10 -10 17 20
+</pre>
+
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>出力例 1</h3><pre>1.000000000000000
+2.000000000000000
+0.000000000000000
+1.783905950993199
+</pre>
+
+<p><var>1</var> 番目のテストケースについて、二人が出発する時刻を <var>0</var> とおくと、二人の行動は以下のようになります。</p>
+<ul>
+<li>時刻 <var>0</var>：高橋君が <var>(0,0)</var> を出発し、<var>(-2,2)</var> に向かって速さ <var>1</var> で歩き始める。同時に、青木君が <var>(-1,-1)</var> を出発し、<var>(4,4)</var> に向かって速さ <var>1</var> で歩き始める。</li>
+<li>時刻 <var>2\sqrt{2}</var>：高橋君がゴール地点の <var>(-2,2)</var> に到達し、停止する。このとき、青木君は <var>(1,1)</var> におり、まだ歩き続けている。</li>
+<li>時刻 <var>5\sqrt{2}</var>：青木君がゴール地点の <var>(4,4)</var> に到達し、停止する。</li>
+</ul>
+<p>二人の間の距離が最も短いのは時刻 <var>\frac{1}{\sqrt{2}}</var> であり、このとき高橋君と青木君はそれぞれ <var>(-\frac{1}{2},\frac{1}{2}), (-\frac{1}{2},-\frac{1}{2})</var> にいて、その距離は <var>1</var> です。</p>
+<p><var>2</var> 番目のテストケースについて、二人の間の距離が最も短いのは二人が出発する瞬間であり、そのときの距離は <var>2</var> です。</p>
+<p><var>3</var> 番目のテストケースについて、二人の間の距離が最も短いのは二人が共に停止した後であり、そのときの距離は <var>0</var> です。</p></section>
+</div>
+</span>
+<span class="lang-en">
+<p>Score : <var>450</var> points</p>
+
+<div class="part">
+<section>
+<h3>Problem Statement</h3><p>Takahashi and Aoki walk on a two-dimensional plane.</p>
+<p>Takahashi's start point is <var>(TS_X, TS_Y)</var> and goal point is <var>(TG_X, TG_Y)</var>.
+Aoki's start point is <var>(AS_X, AS_Y)</var> and goal point is <var>(AG_X, AG_Y)</var>.</p>
+<p>They simultaneously depart from their respective start points and walk straight toward their respective goal points at speed <var>1</var>, and stop when they reach their respective goal points.
+(Note that they depart simultaneously, but they do not necessarily stop at the same time.)</p>
+<p>Find the distance between them at the moment when the distance between them is shortest (including the moment they depart and after they stop).</p>
+<p>Here, distance refers to Euclidean distance. That is, the distance between two points <var>(x_1,y_1),(x_2,y_2)</var> is defined as <var>\sqrt{(x_1-x_2)^2+(y_1-y_2)^2}</var>.</p>
+<p>You are given <var>T</var> test cases, so solve each of them.</p>
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>Constraints</h3><ul>
+<li><var>1\leq T\leq 2\times 10^5</var></li>
+<li><var>-100\leq TS_X,TS_Y,TG_X,TG_Y,AS_X,AS_Y,AG_X,AG_Y \leq 100</var></li>
+<li><var>(TS_X,TS_Y)\neq (TG_X,TG_Y)</var></li>
+<li><var>(AS_X,AS_Y)\neq (AG_X,AG_Y)</var></li>
+<li>All input values are integers.</li>
+</ul>
+</section>
+</div>
+
+<hr />
+<div class="io-style">
+<div class="part">
+<section>
+<h3>Input</h3><p>The input is given from Standard Input in the following format:</p>
+<pre><var>T</var>
+<var>\text{case}_1</var>
+<var>\text{case}_2</var>
+<var>\vdots</var>
+<var>\text{case}_T</var>
+</pre>
+
+<p><var>\text{case}_i</var> represents the <var>i</var>-th test case. Each test case is given in the following format:</p>
+<pre><var>TS_X</var> <var>TS_Y</var> <var>TG_X</var> <var>TG_Y</var>
+<var>AS_X</var> <var>AS_Y</var> <var>AG_X</var> <var>AG_Y</var>
+</pre>
+
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>Output</h3><p>Output <var>T</var> lines. The <var>i</var>-th line <var>(1\leq i\leq T)</var> should contain the answer for the <var>i</var>-th test case.</p>
+<p>Your answer will be considered correct if the absolute or relative error from the true value is at most <var>10^{-6}</var>.</p>
+</section>
+</div>
+</div>
+
+<hr />
+<div class="part">
+<section>
+<h3>Sample Input 1</h3><pre>4
+0 0 -2 2
+-1 -1 4 4
+4 0 2 0
+6 0 8 0
+1 0 1 1
+-1 0 1 1
+-8 9 2 6
+-10 -10 17 20
+</pre>
+
+</section>
+</div>
+
+<div class="part">
+<section>
+<h3>Sample Output 1</h3><pre>1.000000000000000
+2.000000000000000
+0.000000000000000
+1.783905950993199
+</pre>
+
+<p>For the first test case, let time <var>0</var> be the moment they depart. Their behavior is as follows:</p>
+<ul>
+<li>Time <var>0</var>: Takahashi departs from <var>(0,0)</var> and starts walking toward <var>(-2,2)</var> at speed <var>1</var>. At the same time, Aoki departs from <var>(-1,-1)</var> and starts walking toward <var>(4,4)</var> at speed <var>1</var>.</li>
+<li>Time <var>2\sqrt{2}</var>: Takahashi reaches his goal point <var>(-2,2)</var> and stops. At this time, Aoki is at <var>(1,1)</var> and is still walking.</li>
+<li>Time <var>5\sqrt{2}</var>: Aoki reaches his goal point <var>(4,4)</var> and stops.</li>
+</ul>
+<p>The distance between them is shortest at time <var>\frac{1}{\sqrt{2}}</var>, when Takahashi and Aoki are at <var>(-\frac{1}{2},\frac{1}{2})</var> and <var>(-\frac{1}{2},-\frac{1}{2})</var> respectively, and the distance is <var>1</var>.</p>
+<p>For the second test case, the distance between them is shortest at the moment they depart, and the distance at that time is <var>2</var>.</p>
+<p>For the third test case, the distance between them is shortest after they both stop, and the distance at that time is <var>0</var>.</p></section>
+</div>
+</span>
+</span>
+
+		</div>
+
+		
+
+		
+	</div>
+</div>
+
+
+
+
+		
+			<hr>
+			
+			
+			
+<div class="a2a_kit a2a_kit_size_20 a2a_default_style pull-right" data-a2a-url="https://atcoder.jp/contests/abc426/tasks/abc426_e?lang=en" data-a2a-title="E - Closest Moment">
+	<a class="a2a_button_facebook"></a>
+	<a class="a2a_button_twitter"></a>
+	
+		<a class="a2a_button_telegram"></a>
+	
+	<a class="a2a_dd" href="https://www.addtoany.com/share"></a>
+</div>
+
+		
+		<script async src="//static.addtoany.com/menu/page.js"></script>
+		
+	</div> 
+	<hr>
+</div> 
+
+	<div class="container" style="margin-bottom: 80px;">
+			<footer class="footer">
+			
+				<ul>
+					<li><a href="/contests/abc426/rules">Rule</a></li>
+					<li><a href="/contests/abc426/glossary">Glossary</a></li>
+					
+				</ul>
+			
+			<ul>
+				<li><a href="/tos">Terms of service</a></li>
+				<li><a href="/privacy">Privacy Policy</a></li>
+				<li><a href="/personal">Information Protection Policy</a></li>
+				<li><a href="/company">Company</a></li>
+				<li><a href="/faq">FAQ</a></li>
+				<li><a href="/contact">Contact</a></li>
+				
+			</ul>
+			<div class="text-center">
+					<small id="copyright">Copyright Since 2012 &copy;<a href="http://atcoder.co.jp">AtCoder Inc.</a> All rights reserved.</small>
+			</div>
+			</footer>
+	</div>
+	<p id="fixed-server-timer" class="contest-timer"></p>
+	<div id="scroll-page-top" style="display:none;"><span class="glyphicon glyphicon-arrow-up" aria-hidden="true"></span> Page Top</div>
+
+</body>
+</html>

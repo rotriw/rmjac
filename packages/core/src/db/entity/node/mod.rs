@@ -17,10 +17,11 @@ pub mod record;
 pub mod testcase_subtask;
 pub mod token;
 pub mod user;
-pub mod testcase;
 pub mod training;
 pub mod training_problem;
 pub mod user_remote;
+pub mod testcase;
+
 
 use crate::Result;
 

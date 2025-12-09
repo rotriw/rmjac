@@ -54,8 +54,6 @@ export function TypstRenderer({ content, className = "" }: TypstRendererProps) {
             return `image("/local/${now_counter}${p2}",`;
         });
         await Promise.all(promise);
-        console.log("qwqqq");
-        console.log(print_content);
         $typst.setCompilerInitOptions({
           getModule: async () => {
             const wasmUrl = new URL(
@@ -127,14 +125,27 @@ export function TypstRenderer({ content, className = "" }: TypstRendererProps) {
           #set footnote(numbering: "*")
           #let bmod = math.op("mod")
           #let pmod(x) = $space (mod #x)$
+          #let lvert = symbol("|");
+          #let rvert = symbol("|");
           #let colored(col, content) = text(col, content)
           #let plus = symbol(
             "+",
             ("o", symbol(math.xor))
           )
+          #set quote(block: true)
           #let overset(top, base) = math.attach(base, t: top)
           #let underset(bot, base) = math.attach(base, b: bot)
           #let over(numerator, denominator) = math.frac(numerator, denominator)
+          #show quote: it => block(
+  stroke: (left: 2pt + black),
+  spacing: 10pt,
+  inset: (y: 10pt),
+  block(
+    text(font: "Georgia", size: 16pt)[
+      #it
+    ]
+  ),
+)
           #let epigraph = (
                   wrapper: (body) => {
                     set align(right)

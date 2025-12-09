@@ -4,16 +4,26 @@ import { handle_problem } from "./router";
 import { verifyApiKey } from "./vjudge/codeforces/service/verify";
 import { verifyAtcoderUser } from "./vjudge/atcoder/service/verify";
 import { Problem } from "./declare/problem";
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import { log } from "node:console";
+const require = createRequire(import.meta.url);
+
+// const { io, Socket } = require("socket.io-client");
+// const openpgp = require("openpgp");
+// const fs = require("fs");
+// const { handle_problem } = require("./router");
+// const { verifyApiKey } = require("./vjudge/codeforces/service/verify");
+// const { verifyAtcoderUser } = require("./vjudge/atcoder/service/verify");
+// const { Problem } = require("./declare/problem");
 
 async function auth(socket: Socket<any>) {
-    console.log(123);
     const message = await openpgp.createCleartextMessage({
         text: `Rotriw_Edge_Server_${socket.id || ""}`
     });
-    console.log(123);
     const signingKeys = await openpgp.decryptKey({
         privateKey: await openpgp.readPrivateKey({ armoredKey: global.PRIVATE_KEY }),
-        passphrase: global.PRIVATE_PWD
+        passphrase: globalThis.PRIVATE_PWD
     });
     let msg = await openpgp.sign({
         message,
@@ -23,7 +33,7 @@ async function auth(socket: Socket<any>) {
 }
 
 export async function connect() {
-    const socket = io(global.SERVER_URL);
+    const socket = io(globalThis.SERVER_URL);
     socket.on("connect", async () => {
         LOG.info("start to auth.");
         await auth(socket);
@@ -45,57 +55,19 @@ export async function connect() {
         }, 1000);
     });
 
-    socket.on("create_problem_statement", (url: string) => {
-    });
-
+    // socket.on("create_problem_statement", (url: string) => {});
+    const tasks = fs.readdirSync("./tasks");
+    // deno-lint-ignore no-explicit-any
+    const taskMap: Record<string, (task: any, socket: Socket) => Promise<void>> = {};
+    for (const task of tasks) {
+        const func = (await import(`./tasks/${task}`))["run"];
+        taskMap[task.split(".")[0]] = func;
+        globalThis.LOG.info(`Loaded task: ${task} operation = ${task.split(".")[0]}`);
+    }
+    
+    // deno-lint-ignore no-explicit-any
     socket.on("task", async (data: any) => {
         console.log(data);
-        if (data.operation === "add_problem") {
-            LOG.info(`Received update_problem_statement for ${data.url}`);
-            let res = await handle_problem(data.url) as Problem;
-            res.creation_time = new Date().toISOString().slice(0, -1);
-            console.log(JSON.stringify(res));
-            socket.emit("create_problem", res)
-        }
+        await taskMap[data.operation](data, socket);
     });
-
-    socket.on(
-        "verify_codeforces",
-        async (data: { handle: string; apiKey: string; apiSecret: string }) => {
-            try {
-                const user = await verifyApiKey(
-                    data.handle,
-                    data.apiKey,
-                    data.apiSecret,
-                );
-                socket.emit("verify_codeforces_response", {
-                    success: true,
-                    user,
-                });
-            } catch (e: any) {
-                socket.emit("verify_codeforces_response", {
-                    success: false,
-                    error: e.message,
-                });
-            }
-        },
-    );
-
-    socket.on(
-        "verify_atcoder",
-        async (data: { handle: string; expectedTopcoderId: string }) => {
-            try {
-                const success = await verifyAtcoderUser(
-                    data.handle,
-                    data.expectedTopcoderId,
-                );
-                socket.emit("verify_atcoder_response", { success });
-            } catch (e: any) {
-                socket.emit("verify_atcoder_response", {
-                    success: false,
-                    error: e.message,
-                });
-            }
-        },
-    );
 }

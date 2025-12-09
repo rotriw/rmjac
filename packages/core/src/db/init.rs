@@ -200,6 +200,32 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         })
     );
     tables.insert(
+        "node_testcase_subtask".to_string(),
+        table_create!(iden::node::testcase_subtask::TestcaseSubtask, {
+            NodeId: big_integer not_null primary_key,
+            SubtaskId: big_integer not_null,
+            TimeLimit: big_integer not_null,
+            MemoryLimit: big_integer not_null,
+            SubtaskCalcMethod: text not_null,
+            SubtaskCalcFunction: text,
+            IsRoot: boolean not_null,
+        })
+    );
+    tables.insert(
+        "node_testcase".to_string(),
+        table_create!(iden::node::testcase::Testcase, {
+            NodeId: big_integer not_null primary_key,
+            TimeLimit: big_integer not_null,
+            MemoryLimit: big_integer not_null,
+            InFile: text not_null,
+            OutFile: text not_null,
+            IoMethod: text not_null,
+            DiffMethod: text not_null,
+            TestcaseName: text not_null,
+        })
+    );
+
+    tables.insert(
         "edge".to_string(),
         table_create!(iden::edge::edge::Edge, {
             EdgeId: big_integer not_null primary_key auto_increment,
@@ -301,7 +327,27 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             Perm: big_integer not_null,
         })
     );
-
+    tables.insert(
+        "edge_testcase".to_string(),
+        table_create!(iden::edge::testcase::Testcase, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
+            Order: big_integer not_null,
+        })
+    );
+    tables.insert(
+        "edge_judge".to_string(),
+        table_create!(iden::edge::judge::Judge, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
+            Status: text not_null,
+            Score: big_integer not_null,
+            Time: big_integer not_null,
+            Memory: big_integer not_null,
+        })
+    );
     tables
 }
 
@@ -406,6 +452,22 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
             .to_owned(),
     );
     tables.insert(
+        "node_testcase_subtask".to_string(),
+        Table::drop()
+            .table(iden::node::testcase_subtask::TestcaseSubtask::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        "node_testcase".to_string(),
+        Table::drop()
+            .table(iden::node::testcase::Testcase::Table)
+            .if_exists()
+            .to_owned(),
+    );
+
+
+    tables.insert(
         "edge".to_string(),
         Table::drop()
             .table(iden::edge::edge::Edge::Table)
@@ -479,6 +541,20 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         "edge_perm_system".to_string(),
         Table::drop()
             .table(iden::edge::perm_system::PermSystem::Table)
+            .if_exists()
+            .to_owned()
+    );
+    tables.insert(
+        "edge_testcase".to_string(),
+        Table::drop()
+            .table(iden::edge::testcase::Testcase::Table)
+            .if_exists()
+            .to_owned()
+    );
+    tables.insert(
+        "edge_judge".to_string(),
+        Table::drop()
+            .table(iden::edge::judge::Judge::Table)
             .if_exists()
             .to_owned()
     );
@@ -656,24 +732,25 @@ pub async fn init(
     }
     if up.contains(&"all") {
         log::info!("Create default problem_source");
-        ProblemSourceNodeRaw {
-            public: ProblemSourceNodePublicRaw {
-                iden: "rmj".to_string(),
-                name: "Rmj.ac".to_string(),
-            },
-            private: ProblemSourceNodePrivateRaw {},
-        }
-        .save(&db)
-        .await?;
-        ProblemSourceNodeRaw {
-            public: ProblemSourceNodePublicRaw {
-                iden: "LG".to_string(),
-                name: "洛谷".to_string(),
-            },
-            private: ProblemSourceNodePrivateRaw {},
-        }
-        .save(&db)
-        .await?;
+        // desperate
+        // ProblemSourceNodeRaw {
+        //     public: ProblemSourceNodePublicRaw {
+        //         iden: "rmj".to_string(),
+        //         name: "Rmj.ac".to_string(),
+        //     },
+        //     private: ProblemSourceNodePrivateRaw {},
+        // }
+        // .save(&db)
+        // .await?;
+        // ProblemSourceNodeRaw {
+        //     public: ProblemSourceNodePublicRaw {
+        //         iden: "LG".to_string(),
+        //         name: "洛谷".to_string(),
+        //     },
+        //     private: ProblemSourceNodePrivateRaw {},
+        // }
+        // .save(&db)
+        // .await?;
         log::info!("Create default iden super node");
         IdenNodeRaw {
             public: IdenNodePublicRaw {

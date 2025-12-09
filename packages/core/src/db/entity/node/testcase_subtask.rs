@@ -13,6 +13,7 @@ pub struct Model {
     pub memory_limit: i64,
     pub subtask_calc_method: i32,
     pub subtask_calc_function: Option<String>,
+    pub is_root: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

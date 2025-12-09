@@ -19,6 +19,10 @@ pub mod problem_statement;
 pub mod problem_tag;
 pub mod record;
 pub mod training_problem;
+pub mod user_remote;
+pub mod testcase;
+
+pub mod judge;
 
 pub trait DbEdgeInfo {
     fn get_edge_type(&self) -> &str;

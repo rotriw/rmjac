@@ -128,7 +128,7 @@ function renderContent(content: ContentItem[]) {
     console.log(item);
     switch (item.iden) {
       default:
-        return <div className="mb-5">
+        return <div className="mb-2">
           <TypstRenderer content={`== ${refname[item.iden as keyof typeof refname] || item.iden} \n ${item.content.replaceAll('\\n', '\n')}\n\n`} />
         </div>
     }

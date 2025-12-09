@@ -1,86 +1,103 @@
+// @ts-nocheck
+
 import { JSDOM } from "jsdom";
 import { Problem, ProblemStatement, ContentType } from "../../declare/problem.ts";
 import { texToTypst } from 'tex-to-typst';
+import { convertTex2Typst } from "../../utils/texToTypst.ts";
+import TurndownService from 'turndown';
+import { markdownToTypstCode } from "@mdpdf/mdpdf";
 
-// Helper to convert LaTeX to Typst
-// AtCoder uses MathJax, usually \( ... \) or \[ ... \] or <var>...</var>
-// But raw HTML often has <var>x</var> or similar.
-// Sometimes they use \( ... \) for inline math.
-function convertLatexToTypst(latex: string): string {
-    try {
-        return texToTypst(latex).value;
-    } catch (e) {
-        return latex;
+
+export const convertHTML = async (value: Element): string => {
+    let res = value.innerHTML;
+    res = await convertEasyHTMLToTypst(res);
+    res = await markdownToTypstCode(res);
+    res = res.split('\n').filter(line => !line.startsWith('#set ') && !line.startsWith('#let ') && !line.startsWith('#show') && line.replaceAll(" ", "").length > 0).join('\n');
+    res = res.replace(/<br>/g, '\n');
+    res = res.replace(/&nbsp;/g, ' ');
+    res = res.replace(/&lt;/g, '<');
+    res = res.replace(/&gt;/g, '>');
+    res = res.replaceAll(/%imgstart%(.*?)%imgdone%/g, (_match, p1) => {
+            return `#figure(image("${p1.replaceAll('\\/', '/')}", width: 60%))`
+    })
+
+    res = res.replaceAll(/%typststart%(.*?)%typstend%/g, (_match, p1) => {
+        return `$${p1.replaceAll('\\\\', '%xgg%').replaceAll('\\', '').replaceAll('%xgg%', '\\')}$`
+    })
+
+    res = res.replaceAll("\\_", "_");
+    res = res.replaceAll("\\*", "*");
+    res = res.replaceAll("\\#", "#");
+    res = res.replaceAll("\\{", "{");
+    res = res.replaceAll("\\}", "}");
+    res = res.replaceAll("\\(", "(");
+    res = res.replaceAll("\\)", ")");
+    res = res.replaceAll("\\|", "|");
+    return res;
+}
+
+const convertEasyHTMLToTypst = async (value: string): Promise<string> => {
+    const turndownService = new TurndownService({ option: 'value' });
+    turndownService.addRule('typstMathInAtcoder', {
+        filter: ['var'],
+        replacement: function (_content: string, node: Element, _options: any) {
+            return `%typststart%${convertTex2Typst(node.textContent)}%typstend%`
+        }
+    });
+    turndownService.addRule('image', {
+        filter: ['img'],
+        replacement: function (_content, node, _options) {
+            return '%imgstart%' + node.src + '%imgdone%'
+        }
+    });
+    turndownService.addRule('center', {
+        filter: ['center'],
+        replacement: function (content, node, _options) {
+            return '<center>' + content + '</center>'
+        }
+    });
+
+    turndownService.addRule('p to new line', {
+        filter: ['p'],
+        replacement: function (content, node, _options) {
+            return content + '\\n'
+        }
+    });
+    const res = turndownService.turndown(value);
+    return res;
+}
+
+export const convertAtcoderEnglishDomToTypst = async ($: Element): Promise<ContentType[]> => {
+    const content = $;
+    if (content == null) {
+        return [];
     }
+    const now_content = content;
+    const used_statement = false, unknown_id = 1;
+    const result = [];
+    for (const child of now_content.children) {
+        if (child.nodeName === 'DIV') {
+            // have a section
+            const nchild = child.querySelector("section");
+            const h3 = nchild.querySelectorAll("h3");
+            let section_title = h3[0].textContent?.trim() || "";
+            nchild.removeChild(h3[0]);
+            const content = await convertHTML(nchild);
+            result.push({
+                iden: section_title.toLowerCase(),
+                content
+            });
+        }
+    }
+    return result;
 }
 
-function convertHtmlToTypst(element: Element): string {
-    // Clone to avoid modifying original
-    const clone = element.cloneNode(true) as Element;
-
-    // Handle <var> tags -> $...$
-    const vars = clone.querySelectorAll("var");
-    vars.forEach(v => {
-        v.textContent = `$${v.textContent}$`;
-    });
-
-    // Handle <pre> tags (code blocks)
-    const pres = clone.querySelectorAll("pre");
-    pres.forEach(p => {
-        // Typst code block
-        p.textContent = "\n```\n" + p.textContent + "\n```\n";
-    });
-
-    // Handle <h3>, <h4> etc -> Typst headings
-    // But usually we process sections separately. 
-    // If inside content:
-    const headings = clone.querySelectorAll("h3, h4, h5");
-    headings.forEach(h => {
-        const level = parseInt(h.tagName.substring(1));
-        const prefix = "=".repeat(level);
-        h.textContent = `\n${prefix} ${h.textContent}\n`;
-    });
-
-    // Handle lists
-    const uls = clone.querySelectorAll("ul");
-    uls.forEach(ul => {
-        const lis = ul.querySelectorAll("li");
-        lis.forEach(li => {
-            li.textContent = `- ${li.textContent}\n`;
-        });
-    });
-
-    // Handle <br>
-    const brs = clone.querySelectorAll("br");
-    brs.forEach(br => {
-        br.replaceWith("\n");
-    });
-
-    // Get text content and clean up
-    let text = clone.textContent || "";
-    
-    // Basic cleanup
-    text = text.replace(/\r\n/g, "\n");
-    text = text.replace("\\\\", "\\");
-    
-    // Handle inline math \( ... \) -> $ ... $
-    // Note: texToTypst might be needed if complex latex is used
-    // Simple replacement for now, assuming AtCoder's simple math
-    // AtCoder often uses <var> which we handled.
-    // Sometimes they use \( ... \)
-    text = text.replace(/\\\((.*?)\\\)/g, (match, p1) => `$${convertLatexToTypst(p1)}$`);
-    
-    return text.trim();
-}
-
-export const parse = (html: string, url: string): Problem => {
+export const parse = async (html: string, url: string): Problem => {
     const dom = new JSDOM(html);
     const doc = dom.window.document;
 
-    // Title usually: "A - Title" in span.h2
     const titleElement = doc.querySelector("span.h2");
     let title = titleElement?.textContent?.trim() || "";
-    // Remove "A - " prefix if present
     title = title.replace(/^[A-Z]\s-\s/, "");
 
     // Time/Memory Limit
@@ -97,37 +114,6 @@ export const parse = (html: string, url: string): Problem => {
     
     const parts = langEn?.querySelectorAll("section") || [];
     const contents: ContentType[] = [];
-    
-    parts.forEach((part) => {
-        const h3 = part.querySelector("h3");
-        if (!h3) return;
-        
-        const sectionTitle = h3.textContent?.trim() || "";
-        
-        // Clone part to manipulate
-        const clone = part.cloneNode(true) as HTMLElement;
-        const cloneH3 = clone.querySelector("h3");
-        if (cloneH3) cloneH3.remove();
-        
-        let typstContent = convertHtmlToTypst(clone);
-        
-        // Map section titles to standard identifiers if possible
-        let iden = sectionTitle;
-        if (sectionTitle.toLowerCase().includes("problem statement")) iden = "statement";
-        else if (sectionTitle.toLowerCase().includes("constraints")) iden = "constraints";
-        else if (sectionTitle.toLowerCase().includes("input")) iden = "input";
-        else if (sectionTitle.toLowerCase().includes("output")) iden = "output";
-        else if (sectionTitle.toLowerCase().includes("sample input")) iden = "sample_input"; // Will need special handling for samples?
-        else if (sectionTitle.toLowerCase().includes("sample output")) iden = "sample_output";
-
-        // For samples, we might want to keep them together or just store as is.
-        // The current interface allows list of ContentType.
-        
-        contents.push({
-            iden: iden,
-            content: typstContent
-        });
-    });
 
     const problem_iden = url.split("/").pop() || "";
 
@@ -135,7 +121,7 @@ export const parse = (html: string, url: string): Problem => {
         statement_source: "AtCoder",
         problem_source: "AtCoder",
         iden: problem_iden,
-        problem_statements: contents,
+        problem_statements: await convertAtcoderEnglishDomToTypst(langEn),
         time_limit,
         memory_limit,
         sample_group: [],

@@ -1,16 +1,26 @@
+use std::collections::HashMap;
 use enum_const::EnumConst;
+use redis::TypedCommands;
+use crate::graph::node::record::testcase::{JudgeDiffMethod, JudgeIOMethod, TestcaseNode, TestcaseNodePrivateRaw, TestcaseNodePublicRaw, TestcaseNodeRaw};
 use crate::{db, Result};
 use crate::graph::node::{Node, NodeRaw};
 use crate::graph::node::record::{
     RecordNode, RecordNodePrivateRaw, RecordNodePublicRaw, RecordNodeRaw, RecordStatus,
 };
-use sea_orm::{DatabaseConnection, ColumnTrait};
+use sea_orm::{DatabaseConnection, ColumnTrait, EntityTrait, QueryFilter, NotSet, Set};
+use sea_orm::sea_query::ColumnRef::Column;
 use sea_orm::sea_query::IntoCondition;
 use serde::{Deserialize, Serialize};
+use tap::Conv;
+use crate::error::CoreError;
 use crate::graph::action::get_node_type;
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
+use crate::graph::edge::judge::{JudgeEdgeQuery, JudgeEdgeRaw};
 use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
 use crate::graph::edge::record::{RecordEdge, RecordEdgeQuery, RecordEdgeRaw};
+use crate::graph::edge::testcase::{TestcaseEdge, TestcaseEdgeQuery, TestcaseEdgeRaw};
+use crate::graph::node::record::subtask::{SubtaskCalcMethod, SubtaskNode, SubtaskNodePrivate, SubtaskNodePrivateRaw, SubtaskNodePublic, SubtaskNodePublicRaw, SubtaskNodeRaw};
+use crate::service::judge::calc::handle_score;
 
 #[allow(unused)]
 
@@ -63,6 +73,48 @@ pub async fn create_record_only_archived(
         platform: record.platform.to_string(),
     }.save(db).await?;
 
+    Ok(record_node)
+}
+
+pub async fn create_record_with_status(
+    db: &DatabaseConnection,
+    record: RecordNewProp,
+    user_node_id: i64,
+    status: RecordStatus,
+    score: i64,
+    time: chrono::NaiveDateTime,
+) -> Result<RecordNode> {
+    log::debug!("creating record schema with properties: {:?}", record);
+    let record_node = RecordNodeRaw {
+        public: RecordNodePublicRaw {
+            record_message: None,
+            record_platform: record.platform.to_string(),
+            record_url: Some(record.url.to_string()),
+            record_time: time,
+            public_status: record.public_status,
+            record_score: score,
+            record_status: status,
+            statement_id: record.statement_node_id,
+        },
+        private: RecordNodePrivateRaw {
+            code: record.code.to_string(),
+            code_language: record.code_language.to_string(),
+        },
+    }
+    .save(db)
+    .await?;
+
+    // Create edge: user -> problem, with record_node_id pointing to the detailed record node
+    let _user_problem_edge = RecordEdgeRaw {
+        u: user_node_id,
+        v: record.statement_node_id,
+        record_node_id: record_node.node_id,
+        record_status: status,
+        code_length: record_node.private.code.len() as i64,
+        score: 0,
+        submit_time: time,
+        platform: record.platform.to_string(),
+    }.save(db).await?;
     Ok(record_node)
 }
 
@@ -271,4 +323,277 @@ pub async fn get_problem_user_status(db: &DatabaseConnection, user_id: i64, prob
         }
         Ok(RecordStatus::NotFound)
     }
+}
+
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SubtaskUserRecord {
+    pub time: i64,
+    pub memory: i64,
+    pub status: RecordStatus,
+    pub subtask_status: Vec<SubtaskUserRecord>,
+    pub score: i64,
+}
+
+pub fn get_record_status_with_now_id(
+    redis: &mut redis::Connection,
+    record_id: i64,
+    subtask_root_id: i64,
+    super_root_id: i64,
+) -> Result<SubtaskUserRecord> {
+    let now_value = redis.get(format!("graph_edge_testcase_{record_id}_v"))?.unwrap_or("".to_string());
+    let now_value = now_value.split(".").collect::<Vec<&str>>();
+    let mut now_result = vec![];
+    for value in &now_value {
+        let value = value.parse::<i64>().unwrap_or(0);
+        let result_back = get_record_status_with_now_id(redis, record_id, value, super_root_id);
+        if let Ok(res) = result_back {
+            now_result.push(res);
+        }
+    }
+
+    if now_value.len() == 0 {
+        let result = redis.get(format!("graph_node_{subtask_root_id}_{record_id}"))?.unwrap_or("".to_string());
+        let result = serde_json::from_str::<SubtaskUserRecord>(&result);
+        if let Ok(res) = result {
+            return Ok(res);
+        }
+        return Ok(
+            SubtaskUserRecord {
+                time: 0,
+                memory: 0,
+                status: RecordStatus::Skipped,
+                score: 0,
+                subtask_status: vec![],
+            }
+        );
+    }
+
+    use crate::service::judge::calc::handle_score;
+    let judge_node = redis.get(format!("graph_node_{}", record_id))?.unwrap_or("".to_string());
+    let judge_node = serde_json::from_str::<SubtaskNode>(&judge_node);
+    if let Err(err) = judge_node {
+        return Ok(
+            SubtaskUserRecord {
+                time: 0,
+                memory: 0,
+                status: RecordStatus::UnknownError,
+                score: (&err.conv::<CoreError>()).into(),
+                subtask_status: now_result,
+            }
+        );
+    }
+
+    let raw_data = now_result.clone();
+    let now_result = now_result.iter().map(|v| {
+        (v.score as f64, v.time, v.memory, v.status.clone())
+    }).collect();
+    let judge_node = judge_node.unwrap();
+    if let Ok((score, time, memory, status)) = handle_score(
+        judge_node.public.subtask_calc_method,
+        judge_node.private.subtask_calc_function,
+        now_result
+    ) {
+        Ok(
+            SubtaskUserRecord {
+                time,
+                memory,
+                status,
+                score: score as i64,
+                subtask_status: raw_data,
+            }
+        )
+    } else {
+        Ok(
+            SubtaskUserRecord {
+                time: 0,
+                memory: 0,
+                status: RecordStatus::UnknownError,
+                score: 0,
+                subtask_status: raw_data,
+            }
+        )
+    }
+}
+
+pub async fn get_record_status(
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    record_id: i64,
+    statement_id: i64,
+) -> Result<SubtaskUserRecord> {
+    let record_edges = JudgeEdgeQuery::get_u_for_all(record_id, db).await?;
+    for edge in record_edges {
+        let record = SubtaskUserRecord {
+            time: edge.time,
+            memory: edge.memory,
+            status: edge.status.into(),
+            score: edge.score,
+            subtask_status: vec![],
+        };
+        redis.set_ex(format!("graph_node_{}_{}", edge.u, edge.v), serde_json::to_string(&record).unwrap(), 60).unwrap();
+    }
+    let get_rt = TestcaseEdgeQuery::get_v_one(statement_id, db).await?;
+    let mut q = queue::Queue::new();
+    let _ = q.queue(get_rt);
+    while q.len() > 0 {
+        let t = q.dequeue().unwrap();
+        let data = redis.get(format!("graph_edge_testcase_{t}_v"))?;
+        let edges = if let Some(data) = data {
+            data.split(".").map(|v| v.parse::<i64>().unwrap_or(0)).collect::<Vec<i64>>()
+        } else {
+            let data = TestcaseEdgeQuery::get_v(t, db).await?;
+            redis.set(format!("graph_edge_testcase_{t}_v"), data.iter().map(|v| v.to_string()).collect::<Vec<String>>().join(".")).unwrap();            
+            data
+        };
+        for ver in edges {
+            let _ = q.queue(ver);
+        }
+    }
+    Ok(get_record_status_with_now_id(
+        redis,
+        record_id,
+        get_rt,
+        get_rt,
+    )?)
+}
+
+
+pub async fn get_testcase_number(
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    root_id: i64,
+) -> Result<i64> {
+    let testcase_number = redis.get(format!("graph_node_{}_testcase_number", root_id))?;
+    if let Some(testcase_number) = testcase_number {
+        return Ok(testcase_number.parse::<i64>().unwrap_or(0));
+    }
+    let mut count = 0;
+    let mut q = queue::Queue::new();
+    let _ = q.queue(root_id);
+    while q.len() > 0 {
+        let t = q.dequeue().unwrap();
+        // check graph_node_{t}_v is not empty
+        let graph_data = redis.get(format!("graph_node_{t}_v"))?;
+        if graph_data.is_none() {
+            let vdata = TestcaseNode::from_db(db, t).await?;
+            redis.set(format!("graph_node_{t}_v"), serde_json::to_string(&vdata).unwrap()).unwrap();
+        }
+        let data = redis.get(format!("graph_edge_testcase_{t}_v"))?;
+        let edges = if let Some(data) = data {
+            data.split(".").map(|v| v.parse::<i64>().unwrap_or(0)).collect::<Vec<i64>>()
+        } else {
+            let data = TestcaseEdgeQuery::get_v(t, db).await?;
+            redis.set(format!("graph_edge_testcase_{t}_v"), data.iter().map(|v| v.to_string()).collect::<Vec<String>>().join(".")).unwrap();            
+            data
+        };
+        if edges.len() == 0 {
+            count += 1;
+        }
+        for ver in edges {
+            let _ = q.queue(ver);
+        }
+    }
+    redis.set(format!("graph_node_{}_testcase_number", root_id), count.to_string()).unwrap();
+    Ok(count)
+}
+
+pub async fn create_subtask_node(
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    statement_id: i64,
+) -> Result<SubtaskNode> {
+    let subtask_node = SubtaskNodeRaw {
+        public: SubtaskNodePublicRaw {
+            subtask_id: 0,
+            time_limit: 0,
+            memory_limit: 0,
+            subtask_calc_method: SubtaskCalcMethod::Sum,
+            is_root: true,
+        },
+        private: SubtaskNodePrivateRaw {
+            subtask_calc_function: None,
+        },
+    }.save(db).await?;
+    let _ = TestcaseEdgeRaw {
+        u: statement_id,
+        v: subtask_node.node_id,
+        order: 0,
+    }.save(db).await?;
+    Ok(subtask_node)
+}
+
+pub async fn get_testcase_id(
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    statement_id: i64,
+) -> Result<i64> {
+    let testcase_id = TestcaseEdgeQuery::get_v_one(statement_id, db).await?;
+    Ok(testcase_id)
+}
+
+pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask的remote题目，如果缺失直接在后面创建。
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    record_id: i64,
+    statement_id: i64,
+    detail_data: HashMap<String, SubtaskUserRecord>
+) -> Result<SubtaskUserRecord> {
+    let testcase_id = get_testcase_id(db, redis, statement_id).await?;
+    let testcase_list = TestcaseEdgeQuery::get_v(testcase_id, db).await?;
+    let mut unused_data = detail_data.clone();
+    for testcase in testcase_list {
+        // get_node
+        let node = TestcaseNode::from_db(db, testcase).await?;
+        let id = node.public.testcase_name;
+
+        use crate::db::entity::edge::judge::{Column, Entity, ActiveModel};
+        let edge_exist = JudgeEdgeQuery::get_v_filter(node.node_id, Column::VNodeId.eq(record_id), db).await?;
+        let nv = detail_data.get(&id);
+        if nv.is_none() {
+            continue;
+        }
+        let nv = nv.unwrap().clone();
+        unused_data.remove(&id);
+        if edge_exist.len() > 0 {
+            // update note detail.
+            Entity::update(
+                ActiveModel {
+                    score: Set(nv.score),
+                    status: Set(nv.status.to_string()),
+                    time: Set(nv.time),
+
+                    ..Default::default()
+                }
+            ).filter(Column::VNodeId.eq(record_id)).filter(Column::UNodeId.eq(node.node_id)).exec(db).await?;
+            continue;
+        }
+        JudgeEdgeRaw {
+            u: node.node_id,
+            v: record_id,
+            status: nv.status.to_string(),
+            time: nv.time,
+            memory: nv.memory,
+            score: nv.score,
+        }.save(db).await?;
+    }
+
+    for unused in unused_data {
+        log::info!("Unused testcase data for record/statement {}: {:?}, ", record_id, unused);
+        // create new testcase node.
+        TestcaseNodeRaw {
+            public: TestcaseNodePublicRaw {
+                time_limit: -2,
+                memory_limit: -2,
+                testcase_name: unused.0,
+                in_file: 0,
+                out_file: 0,
+            },
+            private: TestcaseNodePrivateRaw {
+                diff_method: JudgeDiffMethod::RemoteJudge,
+                io_method: JudgeIOMethod::RemoteJudge,
+            },
+        }.save(db).await?;
+    }
+    get_record_status(db, redis, record_id, statement_id).await
 }

@@ -16,3 +16,7 @@ pub mod training_problem;
 pub mod record;
 
 pub mod user_remote;
+
+pub mod testcase_subtask;
+
+pub mod testcase;

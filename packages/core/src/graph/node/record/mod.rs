@@ -6,6 +6,7 @@ pub enum RecordStatus {
     TimeLimitExceeded = 301,
     MemoryLimitExceeded = 302,
     OutputLimitExceeded = 303,
+    IdlenessLimitExceeded = 304,
     RuntimeError = 400,
     CompileError = 500,
     DangerousCode = 501,
@@ -19,6 +20,7 @@ pub enum RecordStatus {
     Deleted = 902,
     OnlyArchived = 1000,
     NotFound = 1001,
+    Skipped = 1002,
 }
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct RecordNodePublic {
@@ -149,6 +151,7 @@ impl From<i64> for RecordStatus {
             301 => RecordStatus::TimeLimitExceeded,
             302 => RecordStatus::MemoryLimitExceeded,
             303 => RecordStatus::OutputLimitExceeded,
+            304 => RecordStatus::IdlenessLimitExceeded,
             400 => RecordStatus::RuntimeError,
             500 => RecordStatus::CompileError,
             501 => RecordStatus::DangerousCode,
@@ -181,6 +184,7 @@ impl fmt::Display for RecordStatus {
             RecordStatus::TimeLimitExceeded => write!(f, "Time Limit Exceeded"),
             RecordStatus::MemoryLimitExceeded => write!(f, "Memory Limit Exceeded"),
             RecordStatus::OutputLimitExceeded => write!(f, "Output Limit Exceeded"),
+            RecordStatus::IdlenessLimitExceeded => write!(f, "Idleness Limit Exceeded"),
             RecordStatus::RuntimeError => write!(f, "Runtime Error"),
             RecordStatus::CompileError => write!(f, "Compile Error"),
             RecordStatus::DangerousCode => write!(f, "Dangerous Code"),
@@ -194,6 +198,7 @@ impl fmt::Display for RecordStatus {
             RecordStatus::Deleted => write!(f, "Deleted"),
             RecordStatus::OnlyArchived => write!(f, "OnlyArchived"),
             RecordStatus::NotFound => write!(f, "NotFound"),
+            RecordStatus::Skipped => write!(f, "Skipped"),
         }
     }
 }
@@ -219,6 +224,7 @@ impl From<String> for RecordStatus {
             "Unknown Error" => RecordStatus::UnknownError,
             "Deleted" => RecordStatus::Deleted,
             "OnlyArchived" => RecordStatus::OnlyArchived,
+            "Skipped" => RecordStatus::Skipped,
             _ => RecordStatus::UnknownError,
         }
     }

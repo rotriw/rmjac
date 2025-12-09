@@ -14,6 +14,7 @@ pub struct Model {
     pub out_file: i64,
     pub io_method: String,
     pub diff_method: String,
+    pub testcase_name: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
