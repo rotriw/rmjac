@@ -1,19 +1,13 @@
 use sea_orm::{ColumnTrait, DatabaseConnection};
-use crate::db::entity::node::problem_statement::Column::Content;
-use crate::db::iden::node::user_remote::UserRemoteAccount::Verified;
 use crate::declare::UniversalSubmission;
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
 use crate::graph::edge::user_remote::{UserRemoteEdgeQuery, UserRemoteEdgeRaw};
-use crate::graph::node::record::{RecordNodePrivateRaw, RecordNodePublicRaw, RecordNodeRaw};
 use crate::graph::node::user::remote_account::{RemoteMode, UserRemoteAccountAuth, UserRemoteAccountNode, UserRemoteAccountNodePrivateRaw, UserRemoteAccountNodePublicRaw, UserRemoteAccountNodeRaw};
 use crate::error::CoreError;
-use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
 use crate::graph::node::{Node, NodeRaw};
-use crate::graph::node::problem::statement::ProblemStatementNode;
-use crate::model::problem::{get_problem_node_and_statement, refresh_problem_node_cache};
-use crate::model::vjudge;
+use crate::model::problem::get_problem_node_and_statement;
 use crate::model::vjudge::AddErrorResult::Warning;
-use crate::{env, Result};
+use crate::Result;
 use crate::model::record::{create_record_with_status, RecordNewProp};
 use crate::service::judge::service::add_task;
 use crate::utils::encrypt::gen_random_string;
@@ -38,7 +32,7 @@ impl From<CoreError> for AddErrorResult {
 pub async fn add_unverified_account_for_user(
     db: &DatabaseConnection,
     user_id: i64,
-    platform_type: Platform,
+    _platform_type: Platform,
     platform: String,
     remote_mode: RemoteMode,
     auth: Option<UserRemoteAccountAuth>,

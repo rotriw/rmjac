@@ -2,7 +2,7 @@ use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeEntityModel, DbEdgeInfo};
 use crate::graph::edge::judge::JudgeEdge;
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter};
-use crate::graph::node::record::RecordStatus;
+
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "edge_judge")]

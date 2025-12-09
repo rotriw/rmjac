@@ -7,8 +7,7 @@ use crate::graph::node::{Node, NodeRaw};
 use crate::graph::node::record::{
     RecordNode, RecordNodePrivateRaw, RecordNodePublicRaw, RecordNodeRaw, RecordStatus,
 };
-use sea_orm::{DatabaseConnection, ColumnTrait, EntityTrait, QueryFilter, NotSet, Set};
-use sea_orm::sea_query::ColumnRef::Column;
+use sea_orm::{DatabaseConnection, ColumnTrait, EntityTrait, QueryFilter, Set};
 use sea_orm::sea_query::IntoCondition;
 use serde::{Deserialize, Serialize};
 use tap::Conv;
@@ -18,9 +17,8 @@ use crate::graph::edge::{EdgeQuery, EdgeRaw};
 use crate::graph::edge::judge::{JudgeEdgeQuery, JudgeEdgeRaw};
 use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
 use crate::graph::edge::record::{RecordEdge, RecordEdgeQuery, RecordEdgeRaw};
-use crate::graph::edge::testcase::{TestcaseEdge, TestcaseEdgeQuery, TestcaseEdgeRaw};
-use crate::graph::node::record::subtask::{SubtaskCalcMethod, SubtaskNode, SubtaskNodePrivate, SubtaskNodePrivateRaw, SubtaskNodePublic, SubtaskNodePublicRaw, SubtaskNodeRaw};
-use crate::service::judge::calc::handle_score;
+use crate::graph::edge::testcase::{TestcaseEdgeQuery, TestcaseEdgeRaw};
+use crate::graph::node::record::subtask::{SubtaskCalcMethod, SubtaskNode, SubtaskNodePrivateRaw, SubtaskNodePublicRaw, SubtaskNodeRaw};
 
 #[allow(unused)]
 
@@ -500,7 +498,7 @@ pub async fn get_testcase_number(
 
 pub async fn create_subtask_node(
     db: &DatabaseConnection,
-    redis: &mut redis::Connection,
+    _redis: &mut redis::Connection,
     statement_id: i64,
 ) -> Result<SubtaskNode> {
     let subtask_node = SubtaskNodeRaw {
@@ -525,7 +523,7 @@ pub async fn create_subtask_node(
 
 pub async fn get_testcase_id(
     db: &DatabaseConnection,
-    redis: &mut redis::Connection,
+    _redis: &mut redis::Connection,
     statement_id: i64,
 ) -> Result<i64> {
     let testcase_id = TestcaseEdgeQuery::get_v_one(statement_id, db).await?;

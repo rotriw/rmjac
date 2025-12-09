@@ -4,7 +4,6 @@ use actix_web::{get, post, web, Scope, services, HttpRequest, HttpMessage};
 use sea_orm::DatabaseConnection;
 use sea_orm::sea_query::SimpleExpr;
 use tap::Conv;
-use rmjac_core::db::entity::edge::iden::Column;
 use rmjac_core::model::problem::{CreateProblemProps, ProblemStatementProp, add_editor, add_owner, add_problem_statement_for_problem, add_viewer, delete_editor, delete_owner, delete_problem_connections, delete_problem_statement_for_problem, delete_viewer, generate_problem_statement_schema, get_problem_with_node_id, modify_problem_statement, modify_problem_statement_source};
 use rmjac_core::model::perm::check_perm;
 use rmjac_core::model::problem::get_problem_node_and_statement;
@@ -15,7 +14,7 @@ use rmjac_core::graph::edge::perm_problem::{PermProblemEdgeQuery, ProblemPerm, P
 use rmjac_core::graph::edge::perm_problem::ProblemPerm::ReadProblem;
 use rmjac_core::db::entity::edge::record::Column as RecordEdgeColumn;
 use rmjac_core::db::entity::node::problem_statement::ContentType;
-use rmjac_core::graph::edge::perm_system::{PermSystemEdgeQuery, SystemPerm, SystemPermRaw};
+use rmjac_core::graph::edge::perm_system::{PermSystemEdgeQuery, SystemPerm};
 use rmjac_core::graph::node::record::RecordStatus;
 use rmjac_core::utils::get_redis_connection;
 use crate::handler::{BasicHandler, HttpError, ResultHandler};
@@ -26,7 +25,6 @@ pub struct View {
     basic: BasicHandler,
     problem_node_id: Option<i64>,
     problem_statement_node_id: Option<i64>,
-    iden: Option<String>
 }
 
 impl View {
@@ -41,7 +39,6 @@ impl View {
             },
             problem_node_id: None,
             problem_statement_node_id: None,
-            iden: None,
         }
     }
 
@@ -81,7 +78,7 @@ impl View {
         if node_id.is_none() {
             return Err(QueryNotFound::ProblemIdenNotFound.conv::<CoreError>().into());
         }
-        let node_id = node_id.unwrap();
+        let _node_id = node_id.unwrap();
         let mut redis = get_redis_connection();
         let problem_node_id = &self.problem_node_id.unwrap();
         let problem_statement_node_id = &self.problem_statement_node_id.unwrap();
@@ -224,7 +221,7 @@ impl Manage {
         })
     }
 
-    pub async fn add_new_iden(self, new_iden: &str) -> ResultHandler<String> {
+    pub async fn add_new_iden(self, _new_iden: &str) -> ResultHandler<String> {
         // TODO.
         Ok(Json! {
             "message": "work in progress.",
@@ -239,7 +236,7 @@ impl Manage {
     }
 
 
-    pub async fn view_editor(self, user_id: i64) -> ResultHandler<String> {
+    pub async fn view_editor(self, _user_id: i64) -> ResultHandler<String> {
         Ok(Json! {
             "message": "work in progress.",
         })
@@ -258,7 +255,7 @@ impl Manage {
         })
     }
 
-    pub async fn view_visitor(self, user_id: i64) -> ResultHandler<String> {
+    pub async fn view_visitor(self, _user_id: i64) -> ResultHandler<String> {
         Ok(Json! {
             "message": "work in progress.",
         })
@@ -273,7 +270,7 @@ impl Manage {
     pub async fn transfer_owner(self, new_owner: i64) -> ResultHandler<String> {
         use rmjac_core::db::entity::edge::perm_problem::Column;
         let old_owner_id = self.basic.user_context.unwrap().user_id;
-        let mut old_owners = PermProblemEdgeQuery::get_u_filter(self.problem_node_id, Column::UNodeId.eq(old_owner_id),  &self.basic.db).await?;
+        let old_owners = PermProblemEdgeQuery::get_u_filter(self.problem_node_id, Column::UNodeId.eq(old_owner_id),  &self.basic.db).await?;
         if old_owners.contains(&old_owner_id) {
             delete_owner(&self.basic.db, old_owner_id, self.problem_node_id).await?;
         }
@@ -370,7 +367,7 @@ pub async fn view_problem_visitor(req: HttpRequest, db: web::Data<DatabaseConnec
 }
 
 #[post("/test/add_task")]
-pub async fn test_add_task(req: HttpRequest, task: web::Json<serde_json::Value>) -> ResultHandler<String> {
+pub async fn test_add_task(_req: HttpRequest, task: web::Json<serde_json::Value>) -> ResultHandler<String> {
     use rmjac_core::service::judge::service::add_task;
     let success = add_task(&task.into_inner()).await;
     Ok(Json! {

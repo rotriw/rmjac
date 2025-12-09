@@ -127,7 +127,7 @@ pub async fn create_training_problem_node(db: &DatabaseConnection, problem: &Tra
 
 pub async fn create_training_problem_node_for_list(db: &DatabaseConnection, redis: &mut redis::Connection, problem_list: &TrainingList, list_id: i64) -> Result<TrainingProblemNode> {
     let training_problem_node = create_training_problem_node(db, problem_list, redis).await?;
-    let mut problem_list = get_training_problem_list_one_with_order(db, redis, list_id).await?;
+    let problem_list = get_training_problem_list_one_with_order(db, redis, list_id).await?;
     let mut max_order = 0;
     for (_, order) in &problem_list {
         max_order = max(max_order, *order);

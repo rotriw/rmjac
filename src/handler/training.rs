@@ -6,9 +6,8 @@ use serde::{Deserialize, Serialize};
 use rmjac_core::graph::edge::perm_pages::{PagesPerm, PermPagesEdgeQuery};
 use rmjac_core::graph::edge::perm_system::{PermSystemEdgeQuery, SystemPerm};
 use rmjac_core::model::perm::check_perm;
-use rmjac_core::model::problem::CreateProblemProps;
 use crate::handler::{BasicHandler, HttpError, ResultHandler};
-use rmjac_core::model::training::{add_problem_into_training_list, add_problem_into_training_list_from_problem_iden, check_problem_list_in_training, create_training_problem_node, create_training_problem_node_for_list, get_training_list_root, get_training_node_id_by_iden, modify_training_description, TrainingList};
+use rmjac_core::model::training::{add_problem_into_training_list_from_problem_iden, check_problem_list_in_training, create_training_problem_node_for_list, get_training_node_id_by_iden, modify_training_description, TrainingList};
 use rmjac_core::utils::get_redis_connection;
 use crate::handler::HandlerError::PermissionDenied;
 use crate::utils::perm::UserAuthCotext;
@@ -116,7 +115,7 @@ impl Manage {
     pub async fn add_problem_into_list(self, list_node_id: i64, problem: Vec<String>) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
         // check problem_list is in node
-        if (check_problem_list_in_training(&self.basic.db, node_id, list_node_id).await? == false) {
+        if check_problem_list_in_training(&self.basic.db, node_id, list_node_id).await? == false {
             return Ok(Json! {
                 "status": "error",
                 "message": "problem list not in training",
@@ -143,7 +142,7 @@ impl Manage {
     pub async fn add_new_problem_list_into_list(self, list_node_id: i64, new_problem_list: TrainingList) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
         // check problem_list is in node
-        if (check_problem_list_in_training(&self.basic.db, node_id, list_node_id).await? == false) {
+        if check_problem_list_in_training(&self.basic.db, node_id, list_node_id).await? == false {
             return Ok(Json! {
                 "status": "error",
                 "message": "problem list not in training",
@@ -160,7 +159,7 @@ impl Manage {
     pub async fn modify_list_description(self, list_node_id: i64, new_description_public: &str, new_description_private: &str) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
         // check problem_list is in node
-        if (check_problem_list_in_training(&self.basic.db, node_id, list_node_id).await? == false) {
+        if check_problem_list_in_training(&self.basic.db, node_id, list_node_id).await? == false {
             return Ok(Json! {
                 "status": "error",
                 "message": "problem list not in training",

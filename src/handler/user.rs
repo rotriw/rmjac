@@ -41,8 +41,6 @@ pub struct UserCreateUser {
 
 pub struct Register {
     db: DatabaseConnection,
-    user_context: Option<UserAuthCotext>,
-    req: HttpRequest,
     data: UserCreateUser
 }
 
@@ -54,11 +52,9 @@ pub struct UserBeforeCreate {
 }
 
 impl Register {
-    pub fn entry(req: HttpRequest, db: web::Data<DatabaseConnection>, data: web::Json<UserCreateUser>) -> Self {
+    pub fn entry(_req: HttpRequest, db: web::Data<DatabaseConnection>, data: web::Json<UserCreateUser>) -> Self {
         Self {
             db: db.get_ref().clone(),
-            user_context: req.extensions().get::<UserAuthCotext>().cloned(),
-            req: req.clone(),
             data: data.into_inner()
         }
     }
@@ -132,7 +128,6 @@ impl Register {
 
 pub struct Login {
     db: DatabaseConnection,
-    user_context: Option<UserAuthCotext>,
     req: HttpRequest,
 
     user: String,
@@ -141,7 +136,7 @@ pub struct Login {
 }
 
 #[derive(Deserialize)]
-struct LoginProp {
+pub struct LoginProp {
     user: String,
     password: String,
     pub long_token: Option<bool>,
@@ -150,7 +145,6 @@ impl Login {
     pub fn entry(req: HttpRequest, db: web::Data<DatabaseConnection>, data: web::Json<LoginProp>) -> Self {
         Self {
             db: db.get_ref().clone(),
-            user_context: req.extensions().get::<UserAuthCotext>().cloned(),
             req: req.clone(),
             user: data.user.clone(),
             password: data.password.clone(),
@@ -201,7 +195,6 @@ pub struct UserUpdateRequest {
 pub struct Manage {
     db: DatabaseConnection,
     user_context: Option<UserAuthCotext>,
-    req: HttpRequest,
     user_id: Option<i64>,
     update: UserUpdateRequest,
 }
@@ -212,7 +205,6 @@ impl Manage {
         Self {
             db: db.get_ref().clone(),
             user_context: req.extensions().get::<UserAuthCotext>().cloned(),
-            req: req.clone(),
             user_id: None,
             update: data,
         }
@@ -221,7 +213,6 @@ impl Manage {
         Self {
             db: db.get_ref().clone(),
             user_context: req.extensions().get::<UserAuthCotext>().cloned(),
-            req: req.clone(),
             user_id: None,
             update: UserUpdateRequest {
                 user: uid.to_string(),
@@ -320,7 +311,7 @@ pub async fn post_register(
 #[get("/before_create")]
 pub async fn before_create(
     req: HttpRequest,
-    db: web::Data<DatabaseConnection>,
+    _db: web::Data<DatabaseConnection>,
     data: web::Query<UserBeforeCreate>,
 ) -> ResultHandler<String> {
     Register::before_register(req, data.into_inner()).await
@@ -386,7 +377,7 @@ pub async fn get_user_info(req: HttpRequest, db: web::Data<DatabaseConnection>) 
 }
 
 #[get("/sidebar")]
-pub async fn get_sidebar(req: HttpRequest, db: web::Data<DatabaseConnection>, page: web::Query<SidebarQuery>) -> ResultHandler<String> {
+pub async fn get_sidebar(req: HttpRequest, db: web::Data<DatabaseConnection>, _page: web::Query<SidebarQuery>) -> ResultHandler<String> {
     let user_context = req.extensions().get::<UserAuthCotext>().cloned();
     let basic_sidebar = vec![
         SidebarItem {

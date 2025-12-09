@@ -8,9 +8,6 @@ use sea_orm_migration::prelude::*;
 
 // use crate::graph::edge::perm_pages::PagesPermRaw;
 use crate::graph::edge::perm_system::{PermSystemEdgeRaw, SystemPerm, SystemPermRaw};
-use crate::graph::node::problem_source::{
-    ProblemSourceNodePrivateRaw, ProblemSourceNodePublicRaw, ProblemSourceNodeRaw,
-};
 use crate::{
     db::iden,
     error::CoreError,

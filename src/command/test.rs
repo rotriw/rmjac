@@ -107,7 +107,7 @@
 //     let _ = dbg!(handle_score(SubtaskCalcMethod::Function, None, test_detail));
 // }
 
-pub fn run(log_level: Option<String>) -> Option<()> {
+pub fn run(_log_level: Option<String>) -> Option<()> {
         // let log_level: LevelFilter = log_level
         //     .unwrap_or_else(|| "info".to_string())
         //     .parse()

@@ -191,12 +191,12 @@ pub async fn auth_user(socket: SocketRef, Data(user): Data<UserVerifiedProp>) {
     let db = get_connect().await;
     if let Err(err) = db {
         log::error!("Failed to connect to database: {}", err);
-        socket.disconnect();
+        let _ = socket.disconnect();
         return ;
     }
     let result = check_user_token(user.user_id, &user.token).await;
     if !result {
-        socket.disconnect();
+        let _ = socket.disconnect();
     }
     else {
         log::info!("user {} authenticated successfully", user.user_id);

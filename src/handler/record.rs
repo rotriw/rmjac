@@ -257,7 +257,7 @@ impl List {
             }
         } else if let Some(problem_id) = query.problem_id {
             // Get records for specific problem - only show public records or user's own records
-            if let Some(current_user) = current_user_id {
+            if let Some(_current_user) = current_user_id {
                 // Logged in user - show public records and their own records
                 // TODO: Implement proper filtering. For now showing all records
                 get_specific_node_records::<SimpleExpr>(&self.basic.db, problem_id, per_page, page, vec![]).await?

@@ -22,7 +22,7 @@ pub fn verify(pub_key: String, msg_un: String, socket_id: String) -> Result<bool
 
 
 pub fn gen_random_string(len: usize) -> String {
-    let rand_string: String = rand::thread_rng()
+    let rand_string: String = rand::rng()
         .sample_iter(&Alphanumeric)
         .take(len)
         .map(char::from)
