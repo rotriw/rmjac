@@ -63,6 +63,10 @@ export const run = async (data: SyncUserRemoteSubmissionData, socket: Socket) =>
                         passed: Array.from({ length: submission.passedTestCount }, (_, i) => i + 1),
                     });
                 });
+                socket.emit("update_user_submission", {
+                    user_id: parseInt(user_id),
+                    submissions: result
+                });
             }
         }
     }

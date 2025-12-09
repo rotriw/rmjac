@@ -9,9 +9,10 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use crate::model::vjudge::verified_account;
 use crate::{env, Result};
 use crate::env::db::get_connect;
-use crate::model::problem::{create_problem_with_user, CreateProblemProps};
+use crate::model::problem::CreateProblemProps;
 use crate::model::user::check_user_token;
 use crate::utils::encrypt::change_string_format;
+use crate::model::vjudge::{create_or_update_problem_from_vjudge, update_user_submission_from_vjudge, UserSubmissionProp};
 
 fn trust_auth(socket: &SocketRef) {
     log::info!("Socket {} authenticated successfully", socket.id);
@@ -66,23 +67,17 @@ async fn update_status(socket: SocketRef, Data(_key): Data<String>) {
 #[auth_socket_connect]
 async fn create_problem_back(socket: SocketRef, Data(problem): Data<serde_json::Value>) {
     let problem = serde_json::from_value::<CreateProblemProps>(problem).unwrap();
-    log::info!("Creating problem from socket {}.", socket.id);
+    log::info!("Creating/Updating problem from socket {}.", socket.id);
     let db = get_connect().await;
     if let Err(err) = db {
         log::error!("Failed to connect to database: {}", err);
         return;
     }
     let db = db.unwrap();
-    let result = create_problem_with_user(&db, &problem, true).await;
-    if let Err(err) = result {
-        log::error!("Failed to create problem: {}", err);
-        return;
+    
+    if let Err(err) = create_or_update_problem_from_vjudge(&db, &problem).await {
+        log::error!("Failed to create/update problem: {}", err);
     }
-    let problem = result.unwrap();
-    // let data_id = socket_id;
-    // log::info!("Problem created from({}) successfully: {:?}", data_id, problem);
-    drop(problem);
-
 }
 
 
@@ -123,6 +118,21 @@ async fn handle_verified_result(socket: SocketRef, Data(result): Data<VerifiedRe
         if let Some(user_socket) = &user_socket {
             let _ = user_socket.emit("vjudge_account_verified", "0Account verified Failed.");
         }
+    }
+}
+
+#[auth_socket_connect]
+async fn update_user_submission_back(socket: SocketRef, Data(data): Data<UserSubmissionProp>) {
+    log::info!("Updating user submission from socket {}.", socket.id);
+    let db = get_connect().await;
+    if let Err(err) = db {
+        log::error!("Failed to connect to database: {}", err);
+        return;
+    }
+    let db = db.unwrap();
+    
+    if let Err(err) = update_user_submission_from_vjudge(&db, data).await {
+        log::error!("Failed to update user submissions: {}", err);
     }
 }
 
@@ -171,6 +181,7 @@ async fn on_connect(socket: SocketRef, Data(_data): Data<Value>) {
     socket.on("auth", auth);
     socket.on("update_status", update_status);
     socket.on("create_problem", create_problem_back);
+    socket.on("update_user_submission", update_user_submission_back);
     socket.on("verified_done", handle_verified_result);
     socket.on_disconnect(async |socket: SocketRef| {
         log::info!("socket io disconnected: {:?} {:?}", socket.ns(), socket.id);
