@@ -36,7 +36,7 @@ function ShowOneStatus({status, show_id, score, time, memory, index, total, firs
         </div>
       ) : (
         <span>
-          <Badge 
+          <Badge
             className={`mr-1 ${isSubtask ? "cursor-pointer select-none" : ""}`}
             variant={(isSubtask && !isOutline) ? "outline" : "default"}
             style={{background: (isSubtask && !isOutline) ? "" : originalBackground}}

@@ -120,3 +120,21 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom Animation for SVG Path Drawing */
+@keyframes draw-path {
+  from {
+    stroke-dashoffset: 2000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-path-draw path,
+.animate-path-draw circle,
+.animate-path-draw rect,
+.animate-path-draw line,
+.animate-path-draw polyline,
+.animate-path-draw polygon {
+}

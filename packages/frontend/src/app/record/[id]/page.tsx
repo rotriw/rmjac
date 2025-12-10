@@ -1,7 +1,6 @@
 import { StandardCard, TitleCard } from "@/components/card/card";
-import { Card } from "@/components/ui/card";
-import { ShowSubtaskStatus } from "./record-tree";
-import { Icond, RecordNode, RecordStatus, SubtaskUserRecord, RECORD_STATUS_COLOR_MAP } from "./shared";
+import { TreeTable, TreeTableNode } from "@/components/table/treetable";
+import { Icond, RecordNode, RecordStatus, SubtaskUserRecord, RECORD_STATUS_COLOR_MAP, RECORD_STATUS_COLOR_MAP_INTER } from "./shared";
 
 export function ShowColorfulCard( {status, score} : {status: RecordStatus, score?: number} ) {
   console.log(status);
@@ -12,6 +11,74 @@ export function ShowColorfulCard( {status, score} : {status: RecordStatus, score
   </>)
 }
 
+function transformSubtasksToTreeNodes(subtasks: SubtaskUserRecord[], parentId: string = ""): TreeTableNode[] {
+  return subtasks.map((subtask, index) => {
+    const displayIndex = index + 1;
+    const currentId = parentId ? `${parentId}.${displayIndex}` : `${displayIndex}`;
+    const isGroup = subtask.subtask_status.length > 0;
+    
+    // Define the specific layout for the collapsed root card
+    const rootCollapsedContent = parentId === "" ? (
+        <div className="flex w-full items-end justify-baseline text-shadow-white min-h-30">
+          <div>
+            <div className="text-lg font-bold flex items-center gap-1 min-w-1000">
+                <Icond size={5} status={subtask.status} animate={true} />
+                <span className=" opacity-90">{subtask.score} </span>
+                <span className=" opacity-90">{subtask.status}</span>
+            </div>
+            <span className="ml-1 mr-1 text-sm border-current opacity-50 hover:opacity-100">{subtask.time} ms</span>
+            ·
+            <span className="ml-1 mr-1 text-sm border-current opacity-50 hover:opacity-100">{subtask.memory} KB</span>
+          </div>
+        </div>
+    ) : undefined;
+
+    let defaultExpanded = subtask.status !== "Accepted" && subtask.subtask_status.length > 0;
+
+    return {
+      id: currentId,
+      background: RECORD_STATUS_COLOR_MAP_INTER[subtask.status],
+      // Use the new property for the specialized collapsed card view
+      collapsedContent: rootCollapsedContent,
+      content_title: (
+        parentId === "" ? <div className="flex items-center gap-2 text-sm font-medium">
+          <div className="flex items-center gap-1">
+             <Icond size={2.5} status={subtask.status} />
+             <span className="mr-1 border-current font-bold">{subtask.score}</span>
+             {subtask.status} <span className="ml-1 mr-1 border-current font-bold">{subtask.time} ms</span>·
+          <span className="ml-1 border-current font-bold">{subtask.memory} KB</span>
+          </div>
+        </div>  : <div className="flex items-center gap-2 text-sm font-medium">
+          <span className="font-semibold">{isGroup ? "Subtask" : "Testcase"} {currentId.slice(2, )}</span>
+          <div className="flex items-center gap-1">
+             <Icond size={2.5} status={subtask.status} />
+             {subtask.status}
+          </div>
+        </div>
+      ),
+      content: (
+        parentId === "" ? <>
+        </> :
+        <>
+          <span className="mr-1 border-current font-bold opacity-50 hover:opacity-100">{subtask.score} pts</span>
+          ·
+          <span className="ml-1 mr-1 border-current opacity-50 hover:opacity-100">{subtask.time} ms</span>
+          ·
+          <span className="ml-1 border-current opacity-50 hover:opacity-100">{subtask.memory} KB</span>
+        </>
+      ),
+      children: isGroup ? transformSubtasksToTreeNodes(subtask.subtask_status, currentId) : [{
+          id: `数据信息${currentId}`,
+          content_title: <span className="font-semibold">数据信息</span>,
+          background: RECORD_STATUS_COLOR_MAP_INTER[subtask.status],
+          defaultExpanded: false,
+          content: <>1</>,
+          children: [],
+      }],
+      defaultExpanded: defaultExpanded,
+    };
+  });
+}
 
 export default function RecordPage({ params }: { params: Promise<{ id: string }> }) {
   const record: RecordNode = {
@@ -37,71 +104,174 @@ export default function RecordPage({ params }: { params: Promise<{ id: string }>
     time: 100,
     memory: 100,
     status: "Wrong Answer",
-    score: 100,
+    score: 0,
     subtask_status: [
-        {
-            time: 100,
-            memory: 100,
+      {
+        time: 50,
+        memory: 50,
+        status: "Accepted",
+        score: 50,
+        subtask_status: [{
+            time: 50,
+            memory: 50,
             status: "Wrong Answer",
-            score: 100,
-            subtask_status: [{
-            time: 100,
-            memory: 100,
-            status: "Accepted",
-            score: 100,
+            score: 50,
             subtask_status: []
-        },
-
-        {
-            time: 100,
-            memory: 100,
-            status: "Accepted",
-            score: 100,
-            subtask_status: []
-        },
-
-        {
-            time: 100,
-            memory: 100,
-            status: "Accepted",
-            score: 100,
-            subtask_status: []
-        }]
-        },
-        {
-            time: 100,
-            memory: 100,
-            status: "Accepted",
-            score: 100,
-            subtask_status: []
-        },
-
-        {
-            time: 100,
-            memory: 100,
-            status: "Accepted",
-            score: 100,
-            subtask_status: []
-        },
-
-        {
-            time: 100,
-            memory: 100,
-            status: "Accepted",
-            score: 100,
-            subtask_status: []
-        }
+          },]
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Wrong Answer",
+        score: 50,
+        subtask_status: []
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Compile Error",
+        score: 0,
+        subtask_status: []
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Dangerous Code",
+        subtask_status: [],
+        score: 0,
+      },
+      // test all colors.
+      {
+        time: 50,
+        memory: 50,
+        status: "Time Limit Exceeded",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Memory Limit Exceeded",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Idleness Limit Exceeded",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "NotFound",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Remote Platform Connection Failed",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Remote Platform Refused",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Remote Platform Unknown Error",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Remote Service Unknown Error",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Runtime Error",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Output Limit Exceeded",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Waiting",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Unknown Error",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Deleted",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "OnlyArchived",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Skipped",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Partial Accepted",
+        subtask_status: [],
+        score: 0,
+      },
+      {
+        time: 50,
+        memory: 50,
+        status: "Sandbox Error",
+        subtask_status: [],
+        score: 0,
+      },
     ]
-  };
+  }; // all color test
+
+  const treeData = transformSubtasksToTreeNodes([subtask_status]);
+
   return <>
     <div className="container mx-auto py-6 px-4 md:px-6">
         <TitleCard title="记录详情" description={`RECORD ${record.public.record_order}`} />
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-3">
-              <ShowColorfulCard status={record.public.record_status} score={record.public.record_score} />
-              <StandardCard title="子任务状态">
-              <ShowSubtaskStatus  subtask_status={subtask_status} id={""} start={true} rounded={undefined} />
-              </StandardCard>
+              <TreeTable data={treeData} enableRootCollapseCard={true} />
+              <div className="my-4" />
               <StandardCard title="代码">
                 <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto text-sm">
                   <code>

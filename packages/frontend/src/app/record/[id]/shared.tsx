@@ -56,7 +56,7 @@ export const RECORD_STATUS_COLOR_MAP: Record<RecordStatus, string> = {
   "Wrong Answer": oklch2hex([0.7, 0.1, 20]),
   "Time Limit Exceeded": oklch2hex([0.4, 0.1, 245]),
   "Memory Limit Exceeded": oklch2hex([0.4, 0.1, 260]),
-  "Dangerous Code": oklch2hex([0.4, 0.1, 20]),
+  "Dangerous Code": oklch2hex([0.4, 0.3, 20]),
   "Compile Error": oklch2hex([0.7, 0.1, 80]),
   "Idleness Limit Exceeded": oklch2hex([0.4, 0.1, 30]),
   "NotFound": oklch2hex([0.7, 0.1, 320]),
@@ -76,27 +76,27 @@ export const RECORD_STATUS_COLOR_MAP: Record<RecordStatus, string> = {
 }
 
 export const RECORD_STATUS_COLOR_MAP_INTER: Record<RecordStatus, string> = {
-  "Accepted": oklch2hex([0.95, 0.1, 140]),
-  "Wrong Answer": oklch2hex([0.95, 0.1, 20]),
-  "Time Limit Exceeded": oklch2hex([0.7, 0.1, 245]),
-  "Memory Limit Exceeded": oklch2hex([0.7, 0.1, 260]),
-  "Dangerous Code": oklch2hex([0.7, 0.1, 20]),
-  "Compile Error": oklch2hex([0.95, 0.1, 80]),
-  "Idleness Limit Exceeded": oklch2hex([0.7, 0.1, 30]),
-  "NotFound": oklch2hex([0.95, 0.1, 320]),
-  "Remote Platform Connection Failed": oklch2hex([0.7, 0.1, 260]),
-  "Remote Platform Refused": oklch2hex([0.7, 0.1, 20]),
-  "Remote Platform Unknown Error": oklch2hex([0.7, 0.1, 30]),
-  "Remote Service Unknown Error": oklch2hex([0.7, 0.1, 30]),
-  "Runtime Error": oklch2hex([0.7, 0.1, 80]),
-  "Output Limit Exceeded": oklch2hex([0.7, 0.1, 245]),
-  "Waiting": oklch2hex([0.95, 0.1, 270]),
-  "Unknown Error": oklch2hex([0.7, 0.1, 20]),
-  "Deleted": oklch2hex([0.5, 0.1, 20]),
-  "OnlyArchived": oklch2hex([0.5, 0.1, 30]),
-  "Skipped": oklch2hex([0.95, 0.01, 140]),
+  "Accepted": oklch2hex([0.9, 0.1, 140]),
+  "Wrong Answer": oklch2hex([0.9, 0.1, 20]),
+  "Time Limit Exceeded": oklch2hex([0.9, 0.1, 245]),
+  "Memory Limit Exceeded": oklch2hex([0.9, 0.1, 260]),
+  "Dangerous Code": oklch2hex([0.9, 0.1, 20]),
+  "Compile Error": oklch2hex([0.9, 0.1, 80]),
+  "Idleness Limit Exceeded": oklch2hex([0.9, 0.1, 30]),
+  "NotFound": oklch2hex([0.9, 0.1, 320]),
+  "Remote Platform Connection Failed": oklch2hex([0.9, 0.1, 260]),
+  "Remote Platform Refused": oklch2hex([0.9, 0.1, 20]),
+  "Remote Platform Unknown Error": oklch2hex([0.9, 0.1, 30]),
+  "Remote Service Unknown Error": oklch2hex([0.9, 0.1, 30]),
+  "Runtime Error": oklch2hex([0.9, 0.1, 320]),
+  "Output Limit Exceeded": oklch2hex([0.9, 0.1, 245]),
+  "Waiting": oklch2hex([0.99, 0.1, 270]),
+  "Unknown Error": oklch2hex([0.9, 0.1, 20]),
+  "Deleted": oklch2hex([0.9, 0.1, 20]),
+  "OnlyArchived": oklch2hex([0.9, 0.1, 30]),
+  "Skipped": oklch2hex([0.9, 0.01, 140]),
   "Partial Accepted": oklch2hex([0.9, 0.1, 140]),
-  "Sandbox Error": oklch2hex([0.7, 0.1, 20]),
+  "Sandbox Error": oklch2hex([0.9, 0.1, 20]),
 }
 
 export const RECORD_STATUS_ICON: Record<RecordStatus, any> = {
@@ -123,8 +123,23 @@ export const RECORD_STATUS_ICON: Record<RecordStatus, any> = {
   "Sandbox Error": Octagon,
 }
 
-export function Icond({status}: {status: RecordStatus}) {
+export function Icond({status, size, animate, className}: {status: RecordStatus, size?: number, animate?: boolean, className?: string}) {
   const Icons = RECORD_STATUS_ICON[status];
-  return <Icons className="inline-block mr-1 size-5"/>
+  // Convert custom size number (e.g. 5) to pixels if Lucide expects that, 
+  // or use Tailwind size classes if passing className.
+  // The user previously used `size-{size}` which works if using Tailwind JIT with dynamic safe-listing 
+  // OR if they have safelisted size-1, size-2... size-5 etc.
+  // Assuming they rely on Tailwind classes.
+  
+  // Note: Lucide icons accept `size` prop as number (px) or string.
+  // If `size` is passed, we can pass it directly to Lucide if intended as pixels,
+  // OR map it to className "w-X h-X".
+  // Looking at user code `<Icond size={5} ... />`.
+  // size-5 in Tailwind is 1.25rem (20px).
+  // If we pass size={5} to Lucide, it renders 5px wide icon (very small).
+  // So likely the user relied on `size-${size}` class name in previous version.
+  
+  return <Icons
+    className={`inline-block mr-1 ${size ? `size-${size}` : 'size-5'} ${animate ? 'animate-path-draw' : ''} ${className || ''}`} 
+  />
 }
-
