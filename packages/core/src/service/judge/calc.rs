@@ -18,6 +18,7 @@ pub fn handle_score(
     calc_function: Option<String>,
     task_detail: Vec<TaskDetail>,
 ) -> Result<TaskDetail> {
+    log::trace!("Calculating score using method: {:?} {:?} {:?}", method, calc_function, task_detail);
     use crate::graph::node::record::RecordStatus::*;
     use SubtaskCalcMethod::*;
     match method {
@@ -149,6 +150,7 @@ pub fn handle_score(
                 ))
             }
         }
+
     }
 }
 

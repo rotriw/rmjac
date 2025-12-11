@@ -8,7 +8,7 @@ use crate::graph::node::{Node, NodeRaw};
 use crate::model::problem::get_problem_node_and_statement;
 use crate::model::vjudge::AddErrorResult::Warning;
 use crate::Result;
-use crate::model::record::{create_record_with_status, RecordNewProp, get_records_by_statement, update_record_status, update_record_score};
+use crate::model::record::{create_record_with_status, RecordNewProp, get_records_by_statement, update_record_status, update_record_score, update_record_status_no_subtask_remote_judge, SubtaskUserRecord, get_record_by_submission_url};
 use crate::graph::node::record::RecordStatus;
 use crate::service::judge::service::add_task;
 use crate::utils::encrypt::gen_random_string;
@@ -296,7 +296,7 @@ pub struct SubmissionItem {
     pub score: i64,
     pub submit_time: String,
     pub url: String,
-    pub passed: Vec<i64>,
+    pub passed: Vec<(String, String, i64, i64, i64)>, // (testcase_id, status, score, time, memory)
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -331,6 +331,9 @@ pub async fn update_user_submission_from_vjudge(
                      }
                 }
              }
+        } else {
+            log::trace!("Failed to get node ids from iden for problem {}", submission.remote_problem_id);
+            log::trace!("Error: {:?}", node_ids.err());
         }
 
         if !problem_exists {
@@ -391,21 +394,12 @@ pub async fn update_user_submission_from_vjudge(
         }
 
         // Check if record exists
-        let records = get_records_by_statement(db, statement_node_id).await.unwrap_or(vec![]);
-        let mut record_exists = false;
-        let mut existing_record_id = -1;
-        
-        // This is inefficient O(N) check. `RecordNode` has `record_url` which should be unique for vjudge.
-        for record in records {
-             if let Some(url) = &record.public.record_url {
-                 if url == &submission.url {
-                     record_exists = true;
-                     existing_record_id = record.node_id;
-                     break;
-                 }
-             }
-        }
-        
+        let records = get_record_by_submission_url(db, &submission.url).await;
+        let (record_exists, existing_record_id) = if let Ok(records) = records && let Some(records) = records {
+            (true, records.node_id)
+        } else {
+            (false, -1)
+        };
         let status = match submission.status.as_str() {
             "Accepted" => RecordStatus::Accepted,
             "WrongAnswer" => RecordStatus::WrongAnswer,
@@ -423,11 +417,7 @@ pub async fn update_user_submission_from_vjudge(
             .unwrap_or(chrono::Utc::now().naive_utc());
 
 
-        if record_exists {
-            // Update record
-            let _ = update_record_status(db, existing_record_id, status.clone()).await;
-            let _ = update_record_score(db, existing_record_id, submission.score).await;
-        } else {
+        let record_id = if !record_exists {
             // Create record
             let record_prop = RecordNewProp {
                 platform: submission.remote_platform.clone(),
@@ -438,15 +428,30 @@ pub async fn update_user_submission_from_vjudge(
                 public_status: true,
             };
             
-            let _ = create_record_with_status(
+            let result = create_record_with_status(
                 db,
                 record_prop,
                 data.user_id,
                 status,
                 submission.score,
                 submit_time
-            ).await;
+            ).await?;
+            result.node_id
+        } else {
+            existing_record_id
+        };
+        let mut record_map = std::collections::HashMap::new();
+        for (testcase_id, status, score, time, memory) in &submission.passed {
+            record_map.insert((*testcase_id).clone(), SubtaskUserRecord {
+                time: *time,
+                memory: *memory,
+                status: (*status).clone().into(),
+                subtask_status: vec![],
+                score: *score,
+            });
         }
+        log::info!("Updating record {} for submission {}", record_id, submission.remote_id);
+        update_record_status_no_subtask_remote_judge(db, &mut redis, record_id, statement_node_id, record_map).await?;
     }
     Ok(())
 }

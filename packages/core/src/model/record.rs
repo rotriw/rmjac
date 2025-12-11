@@ -7,13 +7,14 @@ use crate::graph::node::{Node, NodeRaw};
 use crate::graph::node::record::{
     RecordNode, RecordNodePrivateRaw, RecordNodePublicRaw, RecordNodeRaw, RecordStatus,
 };
-use sea_orm::{DatabaseConnection, ColumnTrait, EntityTrait, QueryFilter, Set};
-use sea_orm::sea_query::IntoCondition;
+use sea_orm::{DatabaseConnection, ColumnTrait, EntityTrait, QueryFilter, Set, ActiveModelTrait};
+use sea_orm::sea_query::{IntoCondition, SimpleExpr};
 use serde::{Deserialize, Serialize};
 use tap::Conv;
+use crate::db::iden::node::record::Record::RecordUrl;
 use crate::error::CoreError;
 use crate::graph::action::get_node_type;
-use crate::graph::edge::{EdgeQuery, EdgeRaw};
+use crate::graph::edge::{EdgeQuery, EdgeQueryOrder, EdgeRaw};
 use crate::graph::edge::judge::{JudgeEdgeQuery, JudgeEdgeRaw};
 use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
 use crate::graph::edge::record::{RecordEdge, RecordEdgeQuery, RecordEdgeRaw};
@@ -39,7 +40,7 @@ pub async fn create_record_only_archived(
     user_node_id: i64,
     problem_node_id: i64,
 ) -> Result<RecordNode> {
-    log::debug!("creating record schema with properties: {:?}", record);
+    log::debug!("Creating record schema with properties: {:?}", record);
     let record_node = RecordNodeRaw {
         public: RecordNodePublicRaw {
             record_message: None,
@@ -82,7 +83,7 @@ pub async fn create_record_with_status(
     score: i64,
     time: chrono::NaiveDateTime,
 ) -> Result<RecordNode> {
-    log::debug!("creating record schema with properties: {:?}", record);
+    log::debug!("Creating record schema with properties: {:?}", record);
     let record_node = RecordNodeRaw {
         public: RecordNodePublicRaw {
             record_message: None,
@@ -123,14 +124,14 @@ pub async fn update_record_status(
     record_node_id: i64,
     new_status: RecordStatus,
 ) -> Result<RecordNode> {
-    log::info!("Updating record {} status to {:?}", record_node_id, new_status);
+    log::trace!("Updating record {} status to {:?}", record_node_id, new_status);
 
     let record_node = RecordNode::from_db(db, record_node_id).await?;
 
     use crate::db::entity::node::record::Column::RecordStatus;
     let updated_record = record_node.modify(db, RecordStatus, i64::from(new_status)).await?;
 
-    log::info!("Successfully updated record {} status to {:?}", record_node_id, new_status);
+    log::trace!("Successfully updated record {} status to {:?}", record_node_id, new_status);
     Ok(updated_record)
 }
 
@@ -159,6 +160,25 @@ pub async fn get_records_by_statement(
     Ok(records)
 }
 
+pub async fn get_record_by_submission_url(
+    db: &DatabaseConnection,
+    submission_url: &str,
+) -> Result<Option<RecordNode>> {
+    log::debug!("Finding record for submission URL {}", submission_url);
+
+    use crate::db::entity::node::record::Column::RecordUrl;
+    let records = RecordNode::from_db_filter(db, RecordUrl.eq(submission_url.to_string())).await?;
+
+    if records.is_empty() {
+        log::debug!("No record found for submission URL {}", submission_url);
+        Ok(None)
+    } else {
+        log::debug!("Found record for submission URL {}", submission_url);
+        Ok(Some(records[0].clone()))
+    }
+}
+
+
 /// Delete all records for a statement (soft delete by status)
 /// Since records reference statements via statement_id field, not edges
 pub async fn delete_records_for_statement(
@@ -185,14 +205,14 @@ pub async fn update_record_score(
     record_node_id: i64,
     score: i64,
 ) -> Result<RecordNode> {
-    log::debug!("Updating record {} score to {}", record_node_id, score);
+    log::trace!("Updating record {} score to {}", record_node_id, score);
 
     let record_node = RecordNode::from_db(db, record_node_id).await?;
 
     use crate::db::entity::node::record::Column::RecordScore;
     let updated_record = record_node.modify(db, RecordScore, score).await?;
 
-    log::debug!("Successfully updated record {} score to {}", record_node_id, score);
+    log::trace!("Successfully updated record {} score to {}", record_node_id, score);
     Ok(updated_record)
 }
 
@@ -202,14 +222,14 @@ pub async fn update_record_message(
     record_node_id: i64,
     message: Option<String>,
 ) -> Result<RecordNode> {
-    log::debug!("Updating record {} message", record_node_id);
+    log::trace!("Updating record {} message", record_node_id);
 
     let record_node = RecordNode::from_db(db, record_node_id).await?;
 
     use crate::db::entity::node::record::Column::RecordMessage;
     let updated_record = record_node.modify(db, RecordMessage, message).await?;
 
-    log::debug!("Successfully updated record {} message", record_node_id);
+    log::trace!("Successfully updated record {} message", record_node_id);
     Ok(updated_record)
 }
 
@@ -339,20 +359,29 @@ pub fn get_record_status_with_now_id(
     subtask_root_id: i64,
     super_root_id: i64,
 ) -> Result<SubtaskUserRecord> {
-    let now_value = redis.get(format!("graph_edge_testcase_{record_id}_v"))?.unwrap_or("".to_string());
+    log::debug!("Getting record status for record_id: {}, subtask_root_id: {}, super_root_id: {}", record_id, subtask_root_id, super_root_id);
+    let now_value = redis.get(format!("graph_edge_testcase_{subtask_root_id}_v"))?.unwrap_or("".to_string());
+    log::trace!("Current value: {}", now_value);
     let now_value = now_value.split(".").collect::<Vec<&str>>();
     let mut now_result = vec![];
+    log::trace!("Current value length: {}", now_value.len());
+    log::trace!("Record list: {:?}", now_value);
     for value in &now_value {
         let value = value.parse::<i64>().unwrap_or(0);
+        if value == 0 {
+            continue;
+        }
         let result_back = get_record_status_with_now_id(redis, record_id, value, super_root_id);
         if let Ok(res) = result_back {
             now_result.push(res);
         }
     }
 
-    if now_value.len() == 0 {
+    if now_result.len() == 0 {
+        log::debug!("No cached value found, fetching from redis directly for testcase {}.", format!("graph_node_{subtask_root_id}_{record_id}"));
         let result = redis.get(format!("graph_node_{subtask_root_id}_{record_id}"))?.unwrap_or("".to_string());
         let result = serde_json::from_str::<SubtaskUserRecord>(&result);
+        log::trace!("Result for testcase {}: {:?}", subtask_root_id, result);
         if let Ok(res) = result {
             return Ok(res);
         }
@@ -367,8 +396,11 @@ pub fn get_record_status_with_now_id(
         );
     }
 
+    log::trace!("Now result before calc: {:?}", now_result);
+    log::trace!("Current value: {:?}", now_value);
+
     use crate::service::judge::calc::handle_score;
-    let judge_node = redis.get(format!("graph_node_{}", record_id))?.unwrap_or("".to_string());
+    let judge_node = redis.get(format!("graph_node_{}", subtask_root_id))?.unwrap_or("".to_string());
     let judge_node = serde_json::from_str::<SubtaskNode>(&judge_node);
     if let Err(err) = judge_node {
         return Ok(
@@ -402,6 +434,7 @@ pub fn get_record_status_with_now_id(
             }
         )
     } else {
+        log::error!("Error calculating score for record_id: {}, subtask_root_id: {}", record_id, subtask_root_id);
         Ok(
             SubtaskUserRecord {
                 time: 0,
@@ -419,8 +452,11 @@ pub async fn get_record_status(
     redis: &mut redis::Connection,
     record_id: i64,
     statement_id: i64,
+    force_refresh: bool
 ) -> Result<SubtaskUserRecord> {
     let record_edges = JudgeEdgeQuery::get_u_for_all(record_id, db).await?;
+    log::trace!("Fetched {:?} judge edges for record_id {}", record_edges, record_id);
+
     for edge in record_edges {
         let record = SubtaskUserRecord {
             time: edge.time,
@@ -429,25 +465,38 @@ pub async fn get_record_status(
             score: edge.score,
             subtask_status: vec![],
         };
+        log::trace!("Caching testcase edge data: graph_node_{}_{} with data {:?}", edge.u, edge.v, record);
         redis.set_ex(format!("graph_node_{}_{}", edge.u, edge.v), serde_json::to_string(&record).unwrap(), 60).unwrap();
     }
     let get_rt = TestcaseEdgeQuery::get_v_one(statement_id, db).await?;
     let mut q = queue::Queue::new();
     let _ = q.queue(get_rt);
+    log::debug!("Processing queue length: {get_rt}");
     while q.len() > 0 {
         let t = q.dequeue().unwrap();
+        // check redis have node_{t} data.
+        if !redis.exists(format!("graph_node_{t}"))? || force_refresh {
+            log::trace!("Caching testcase node {t}");
+            if get_node_type(db, t).await? == "testcase_subtask" {
+                log::trace!("Caching subtask node {t}");
+                redis.set(format!("graph_node_{t}"), serde_json::to_string(&SubtaskNode::from_db(db, t).await?).unwrap())?;
+            }
+        }
         let data = redis.get(format!("graph_edge_testcase_{t}_v"))?;
-        let edges = if let Some(data) = data {
+        let edges = if let Some(data) = data && data.len() > 0 && !force_refresh {
+
             data.split(".").map(|v| v.parse::<i64>().unwrap_or(0)).collect::<Vec<i64>>()
         } else {
-            let data = TestcaseEdgeQuery::get_v(t, db).await?;
-            redis.set(format!("graph_edge_testcase_{t}_v"), data.iter().map(|v| v.to_string()).collect::<Vec<String>>().join(".")).unwrap();            
+            let data = TestcaseEdgeQuery::get_order_asc(t, db).await?;
+            redis.set(format!("graph_edge_testcase_{t}_v"), data.iter().map(|v| v.to_string()).collect::<Vec<String>>().join("."))?;
             data
         };
+        log::trace!("Processing node {t} with edges: {:?}", edges);
         for ver in edges {
             let _ = q.queue(ver);
         }
     }
+    log::trace!("Record status processing done");
     Ok(get_record_status_with_now_id(
         redis,
         record_id,
@@ -455,6 +504,20 @@ pub async fn get_record_status(
         get_rt,
     )?)
 }
+
+pub async fn get_record_status_with_record_id(
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    record_id: i64,
+) -> Result<SubtaskUserRecord> {
+    let record_node = RecordNode::from_db(db, record_id).await?;
+    let statement_id = RecordEdgeQuery::get_from_record_node_id(record_id, db).await?;
+    if statement_id.is_none() {
+        return Err(CoreError::NotFound("Statement ID for record not found".to_string()).into());
+    }
+    get_record_status(db, redis, record_id, statement_id.unwrap().v, false).await
+}
+
 
 
 pub async fn get_testcase_number(
@@ -521,13 +584,13 @@ pub async fn create_subtask_node(
     Ok(subtask_node)
 }
 
-pub async fn get_testcase_id(
+pub async fn get_root_subtask_id(
     db: &DatabaseConnection,
     _redis: &mut redis::Connection,
     statement_id: i64,
 ) -> Result<i64> {
-    let testcase_id = TestcaseEdgeQuery::get_v_one(statement_id, db).await?;
-    Ok(testcase_id)
+    let subtask_id = TestcaseEdgeQuery::get_v_one(statement_id, db).await?;
+    Ok(subtask_id)
 }
 
 pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask的remote题目，如果缺失直接在后面创建。
@@ -537,17 +600,22 @@ pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask�
     statement_id: i64,
     detail_data: HashMap<String, SubtaskUserRecord>
 ) -> Result<SubtaskUserRecord> {
-    let testcase_id = get_testcase_id(db, redis, statement_id).await?;
-    let testcase_list = TestcaseEdgeQuery::get_v(testcase_id, db).await?;
+    let root_testcase_id = get_root_subtask_id(db, redis, statement_id).await?;
+    log::debug!("Updating record {} status for statement {} with testcase root {}", record_id, statement_id, root_testcase_id);
+    let testcase_list = TestcaseEdgeQuery::get_v_filter_extend_content::<SimpleExpr>(root_testcase_id, vec![], db, None, None).await?;
     let mut unused_data = detail_data.clone();
+    let mut now_max_id = 0;
+    log::trace!("Testcase list: {:?}", testcase_list);
     for testcase in testcase_list {
         // get_node
-        let node = TestcaseNode::from_db(db, testcase).await?;
-        let id = node.public.testcase_name;
+        let testcase_node = TestcaseNode::from_db(db, testcase.v).await?;
+        let id = testcase_node.public.testcase_name;
 
         use crate::db::entity::edge::judge::{Column, Entity, ActiveModel};
-        let edge_exist = JudgeEdgeQuery::get_v_filter(node.node_id, Column::VNodeId.eq(record_id), db).await?;
+        let edge_exist = JudgeEdgeQuery::get_v_filter_extend_content(testcase_node.node_id, vec![Column::VNodeId.eq(record_id)], db, None, None).await?;
         let nv = detail_data.get(&id);
+        log::debug!("Processing testcase {}: existing edges: {:?}, new value: {:?} order: {:?}", id, edge_exist, nv, testcase.order);
+        now_max_id = now_max_id.max(testcase.order);
         if nv.is_none() {
             continue;
         }
@@ -555,19 +623,18 @@ pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask�
         unused_data.remove(&id);
         if edge_exist.len() > 0 {
             // update note detail.
-            Entity::update(
-                ActiveModel {
-                    score: Set(nv.score),
-                    status: Set(nv.status.to_string()),
-                    time: Set(nv.time),
+            ActiveModel {
+                edge_id: Set(edge_exist[0].id),
+                score: Set(nv.score),
+                status: Set(nv.status.to_string()),
+                time: Set(nv.time),
 
-                    ..Default::default()
-                }
-            ).filter(Column::VNodeId.eq(record_id)).filter(Column::UNodeId.eq(node.node_id)).exec(db).await?;
+                ..Default::default()
+            }.update(db).await?;
             continue;
         }
         JudgeEdgeRaw {
-            u: node.node_id,
+            u: testcase_node.node_id,
             v: record_id,
             status: nv.status.to_string(),
             time: nv.time,
@@ -575,11 +642,25 @@ pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask�
             score: nv.score,
         }.save(db).await?;
     }
+    log::debug!("Unused testcase data after processing: {:?}", unused_data);
+
+    if unused_data.len() > 0 {
+        let _ = redis.del(format!("graph_edge_testcase_{root_testcase_id}_v"));
+    }
+
+    // if unused data all number, sort it.
+    let mut unused_data: Vec<(String, SubtaskUserRecord)> = unused_data.into_iter().collect();
+    unused_data.sort_by(|a, b| {
+        a.0.len().cmp(&b.0.len()).then(a.0.cmp(&b.0))
+    });
+    log::info!("Creating new testcase nodes for unused data: {:?}", unused_data);
+
+
 
     for unused in unused_data {
-        log::info!("Unused testcase data for record/statement {}: {:?}, ", record_id, unused);
+        log::debug!("Unused testcase data for record/statement {}: {:?}, ", record_id, unused);
         // create new testcase node.
-        TestcaseNodeRaw {
+        let testcase_node = TestcaseNodeRaw {
             public: TestcaseNodePublicRaw {
                 time_limit: -2,
                 memory_limit: -2,
@@ -592,6 +673,22 @@ pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask�
                 io_method: JudgeIOMethod::RemoteJudge,
             },
         }.save(db).await?;
+        TestcaseEdgeRaw {
+            u: root_testcase_id,
+            v: testcase_node.node_id,
+            order: now_max_id + 1,
+        }
+        .save(db).await?;
+        now_max_id += 1;
+        // create judge edge
+        JudgeEdgeRaw {
+            u: testcase_node.node_id,
+            v: record_id,
+            status: unused.1.status.to_string(),
+            time: unused.1.time,
+            memory: unused.1.memory,
+            score: unused.1.score,
+        }.save(db).await?;
     }
-    get_record_status(db, redis, record_id, statement_id).await
+    get_record_status(db, redis, record_id, statement_id, true).await
 }

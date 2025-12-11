@@ -1,4 +1,4 @@
-import { ArchiveIcon, BugIcon, CheckCheckIcon, CheckIcon, ClockAlertIcon, ClockIcon, DatabaseIcon, FileQuestion, MailQuestionIcon, MessageCircleQuestionIcon, MonitorOffIcon, Octagon, OctagonAlert, PenOffIcon, Trash, XIcon, ChevronLastIcon } from "lucide-react";
+import * as LUCIDE from "lucide-react";
 import { oklch2hex } from 'colorizr';
 
 export type RecordStatus = "Accepted" 
@@ -100,45 +100,34 @@ export const RECORD_STATUS_COLOR_MAP_INTER: Record<RecordStatus, string> = {
 }
 
 export const RECORD_STATUS_ICON: Record<RecordStatus, any> = {
-  "Accepted": CheckIcon,
-  "Wrong Answer": XIcon,
-  "Time Limit Exceeded": ClockAlertIcon,
-  "Memory Limit Exceeded": DatabaseIcon,
-  "Dangerous Code": OctagonAlert,
-  "Compile Error": BugIcon,
-  "Idleness Limit Exceeded": PenOffIcon,
-  "NotFound": MailQuestionIcon,
-  "Remote Platform Connection Failed": MonitorOffIcon,
-  "Remote Platform Refused": MonitorOffIcon,
-  "Remote Platform Unknown Error": MonitorOffIcon,
-  "Remote Service Unknown Error": MessageCircleQuestionIcon,
-  "Runtime Error": BugIcon,
-  "Output Limit Exceeded": FileQuestion,
-  "Waiting": ClockIcon,
-  "Unknown Error": MessageCircleQuestionIcon,
-  "Deleted": Trash,
-  "OnlyArchived": ArchiveIcon,
-  "Skipped": ChevronLastIcon,
-  "Partial Accepted": CheckCheckIcon,
-  "Sandbox Error": Octagon,
+  "Accepted": "CheckIcon",
+  "Wrong Answer": "XIcon",
+  "Time Limit Exceeded": "ClockAlertIcon",
+  "Memory Limit Exceeded": "DatabaseIcon",
+  "Dangerous Code": "OctagonAlert",
+  "Compile Error": "BugIcon",
+  "Idleness Limit Exceeded": "PenOffIcon",
+  "NotFound": "MailQuestionIcon",
+  "Remote Platform Connection Failed": "MonitorOffIcon",
+  "Remote Platform Refused": "MonitorOffIcon",
+  "Remote Platform Unknown Error": "MonitorOffIcon",
+  "Remote Service Unknown Error": "MessageCircleQuestionIcon",
+  "Runtime Error": "BugIcon",
+  "Output Limit Exceeded": "FileQuestion",
+  "Waiting": "ClockIcon",
+  "Unknown Error": "MessageCircleQuestionIcon",
+  "Deleted": "Trash",
+  "OnlyArchived": "ArchiveIcon",
+  "Skipped": "ChevronLastIcon",
+  "Partial Accepted": "CheckCheckIcon",
+  "Sandbox Error": "Octagon",
 }
 
 export function Icond({status, size, animate, className}: {status: RecordStatus, size?: number, animate?: boolean, className?: string}) {
-  const Icons = RECORD_STATUS_ICON[status];
-  // Convert custom size number (e.g. 5) to pixels if Lucide expects that, 
-  // or use Tailwind size classes if passing className.
-  // The user previously used `size-{size}` which works if using Tailwind JIT with dynamic safe-listing 
-  // OR if they have safelisted size-1, size-2... size-5 etc.
-  // Assuming they rely on Tailwind classes.
-  
-  // Note: Lucide icons accept `size` prop as number (px) or string.
-  // If `size` is passed, we can pass it directly to Lucide if intended as pixels,
-  // OR map it to className "w-X h-X".
-  // Looking at user code `<Icond size={5} ... />`.
-  // size-5 in Tailwind is 1.25rem (20px).
-  // If we pass size={5} to Lucide, it renders 5px wide icon (very small).
-  // So likely the user relied on `size-${size}` class name in previous version.
-  
+  const Icons = LUCIDE[RECORD_STATUS_ICON[status]];
+  console.log(RECORD_STATUS_ICON[status]);
+  console.log(status);
+  console.log(Icons);
   return <Icons
     className={`inline-block mr-1 ${size ? `size-${size}` : 'size-5'} ${animate ? 'animate-path-draw' : ''} ${className || ''}`} 
   />

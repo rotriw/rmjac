@@ -100,7 +100,7 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
             std::io::Error::new(std::io::ErrorKind::NotFound, "Postgres URL not found")
         })?;
     let url = rmjac_core::env::REDIS_URL.lock().unwrap().clone();
-    log::info!("connect to redis: {url}");
+    log::info!("Connecting to Redis: {url}");
     *rmjac_core::env::REDIS_CLIENT.lock().unwrap() = redis::Client::open(url).unwrap();
     log::info!("Connecting to database {}...", &database_url);
     let connection_options = ConnectOptions::new(database_url.clone())

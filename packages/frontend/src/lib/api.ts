@@ -249,6 +249,25 @@ export async function getSidebar(): Promise<any> {
   }
 }
 
+export async function getRecord(id: string): Promise<any> {
+  try {
+    const manage = await cookies();
+    console.log(manage.toString());
+    const response = await fetch(`${API_BASE_URL}/api/record/view/${id}`, {
+      headers: {
+        cookie: manage.toString()
+      }
+    });
+    
+    const data = await response.json()
+    return data
+  } catch (error) {
+    throw error
+  } finally {
+    console.log("Finished fetching record");
+  }
+}
+
 export async function getUserInfo(): Promise<any> {
   try {
     const manage = await cookies();

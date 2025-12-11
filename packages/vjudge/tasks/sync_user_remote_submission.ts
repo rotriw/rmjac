@@ -20,13 +20,6 @@ export const run = async (data: SyncUserRemoteSubmissionData, socket: Socket) =>
     const { vjudge_node, user_id, platform, ws_id, problem_iden, fetch_count } = data;
     if (platform === "codeforces") {
         const result = [];
-        const submissions = await fetchCodeforcesSubmissions(
-            vjudge_node.public.iden,
-            vjudge_node.private.auth.split(":")[0],
-            vjudge_node.private.auth.split(":")[1],
-            1,
-            100,
-        );
         if (fetch_count === "all") {
             let now_count = 1;
             while (true) {
@@ -38,7 +31,6 @@ export const run = async (data: SyncUserRemoteSubmissionData, socket: Socket) =>
                     now_count,
                     1000,
                 );
-                console.log(submissions);
                 if (submissions.length === 0) {
                     break;
                 }
@@ -49,18 +41,22 @@ export const run = async (data: SyncUserRemoteSubmissionData, socket: Socket) =>
                         code = atob(submission.sourceBase64);
                     }
                     const status = convertCFSubmissionStatus(submission.verdict || "FAILED");
+                    let passed = Array.from({ length: submission.passedTestCount }, (_, i) => [(i + 1).toString(), "Accepted", 1, 0, 0]);
+                    if (submission.verdict !== "OK") {
+                        passed.push([(submission.passedTestCount + 1).toString(), status, 0, 0, 0]);
+                    }
                     result.push({
                         remote_id: submission.id,
                         remote_platform: "codeforces",
                         remote_problem_id: `CF${submission.problem.contestId}${submission.problem.index}`,
                         language: submission.programmingLanguage,
-                        code: code,
+                        code,
                         status,
                         message: "",
                         score: submission.passedTestCount,
                         submit_time: new Date(submission.creationTimeSeconds * 1000),
                         url: `https://codeforces.com/contest/${submission.problem.contestId}/submission/${submission.id}`,
-                        passed: Array.from({ length: submission.passedTestCount }, (_, i) => i + 1),
+                        passed,
                     });
                 });
                 socket.emit("update_user_submission", {

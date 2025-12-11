@@ -105,17 +105,17 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
     tables.insert(
         "node_record".to_string(),
         table_create!(iden::node::record::Record, {
+            RecordOrder: big_integer not_null auto_increment,
             NodeId: big_integer not_null primary_key,
             RecordTime: date_time not_null,
             RecordUpdateTime: date_time not_null,
-            RecordOrder: big_integer not_null,
             RecordStatus: big_integer not_null,
             RecordScore: big_integer not_null,
             RecordPlatform: text not_null,
             RecordUrl: text,
             StatementId: big_integer not_null,
             RecordMessage: text,
-            Code: text not_null,
+            Code: text,
             CodeLanguage: text not_null,
             PublicStatus: boolean not_null,
         }),
@@ -200,10 +200,10 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         "node_testcase_subtask".to_string(),
         table_create!(iden::node::testcase_subtask::TestcaseSubtask, {
             NodeId: big_integer not_null primary_key,
-            SubtaskId: big_integer not_null,
+            SubtaskId: integer not_null,
             TimeLimit: big_integer not_null,
             MemoryLimit: big_integer not_null,
-            SubtaskCalcMethod: text not_null,
+            SubtaskCalcMethod: integer not_null,
             SubtaskCalcFunction: text,
             IsRoot: boolean not_null,
         })
@@ -214,8 +214,8 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             NodeId: big_integer not_null primary_key,
             TimeLimit: big_integer not_null,
             MemoryLimit: big_integer not_null,
-            InFile: text not_null,
-            OutFile: text not_null,
+            InFile: big_integer not_null,
+            OutFile: big_integer not_null,
             IoMethod: text not_null,
             DiffMethod: text not_null,
             TestcaseName: text not_null,
@@ -303,7 +303,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             CodeLength: big_integer not_null,
             Score: big_integer not_null,
             SubmitTime: date_time not_null,
-            Platform: text not_null,
+            Platform: text,
         })
     );
     tables.insert(
@@ -343,6 +343,32 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             Score: big_integer not_null,
             Time: big_integer not_null,
             Memory: big_integer not_null,
+        })
+    );
+    tables.insert(
+        "edge_perm_manage".to_string(),
+        table_create!(iden::edge::perm_manage::PermManage, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
+            Perm: big_integer not_null,
+        })
+    );
+    tables.insert(
+        "edge_perm_view".to_string(),
+        table_create!(iden::edge::perm_view::PermView, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
+            Perm: big_integer not_null,
+        })
+    );
+    tables.insert(
+        "edge_user_remote".to_string(),
+        table_create!(iden::edge::user_remote::UserRemote, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
         })
     );
     tables
@@ -431,6 +457,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         "node_training".to_string(),
         Table::drop()
             .table(iden::node::training::Training::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        "node_record".to_string(),
+        Table::drop()
+            .table(iden::node::record::Record::Table)
             .if_exists()
             .to_owned(),
     );
@@ -552,6 +585,27 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         "edge_judge".to_string(),
         Table::drop()
             .table(iden::edge::judge::Judge::Table)
+            .if_exists()
+            .to_owned()
+    );
+    tables.insert(
+        "edge_perm_manage".to_string(),
+        Table::drop()
+            .table(iden::edge::perm_manage::PermManage::Table)
+            .if_exists()
+            .to_owned()
+    );
+    tables.insert(
+        "edge_perm_view".to_string(),
+        Table::drop()
+            .table(iden::edge::perm_view::PermView::Table)
+            .if_exists()
+            .to_owned()
+    );
+    tables.insert(
+        "edge_user_remote".to_string(),
+        Table::drop()
+            .table(iden::edge::user_remote::UserRemote::Table)
             .if_exists()
             .to_owned()
     );

@@ -29,6 +29,8 @@ use redis::Commands;
 use sea_orm::{ColumnTrait, DatabaseConnection};
 use serde::{Deserialize, Serialize};
 use crate::graph::edge::misc::{MiscEdgeQuery, MiscEdgeRaw};
+use crate::graph::edge::testcase::{TestcaseEdge, TestcaseEdgeRaw};
+use crate::graph::node::record::subtask::{SubtaskCalcMethod, SubtaskNodePrivateRaw, SubtaskNodePublicRaw, SubtaskNodeRaw};
 use crate::model::user::SimplyUser;
 use crate::service::iden::{create_iden, get_node_id_iden, get_node_ids_from_iden, remove_iden_to_specific_node};
 
@@ -44,7 +46,7 @@ pub async fn create_problem_schema(
     tag_node_id: Vec<i64>,
     problem_name: &str,
 ) -> Result<ProblemNode> {
-    log::info!("Start to create problem schema");
+    log::debug!("Starting to create problem schema");
     let problem_node = ProblemNodeRaw {
         public: ProblemNodePublicRaw {
             name: problem_name.to_string(),
@@ -66,8 +68,8 @@ pub async fn create_problem_schema(
         .save(db)
         .await?;
     }
-    log::info!(
-        "Problem schema have been created. problem_node_id: {}",
+    log::debug!(
+        "Problem schema created. Problem node ID: {}",
         problem_node.node_id
     );
     Ok(problem_node)
@@ -111,6 +113,21 @@ pub async fn add_problem_statement_for_problem(
     }
     .save(db)
     .await?;
+    let subtask_node = SubtaskNodeRaw {
+        public: SubtaskNodePublicRaw {
+            subtask_id: 0,
+            time_limit: problem_limit_node.public.time_limit,
+            memory_limit: problem_limit_node.public.memory_limit,
+            subtask_calc_method: SubtaskCalcMethod::Sum,
+            is_root: true,
+        },
+        private: SubtaskNodePrivateRaw { subtask_calc_function: None },
+    }.save(db).await?;
+    TestcaseEdgeRaw {
+        u: problem_statement_node.node_id,
+        v: subtask_node.node_id,
+        order: 0,
+    }.save(db).await?;
     Ok(problem_statement_node)
 }
 
@@ -172,7 +189,7 @@ pub async fn create_problem_with_user(
     problem: &CreateProblemProps,
     public_view: bool,
 ) -> Result<ProblemNode> {
-    log::info!("Creating new problem, name:{}.", &problem.problem_name);
+    log::debug!("Creating new problem: {}", &problem.problem_name);
     let problem_node_raw = ProblemNodeRaw {
         public: ProblemNodePublicRaw {
             name: problem.problem_name.clone(),
@@ -180,19 +197,19 @@ pub async fn create_problem_with_user(
         },
         private: ProblemNodePrivateRaw {},
     };
-    log::info!("Problem Node Raw: {problem_node_raw:?}");
+    log::trace!("Problem Node Raw: {problem_node_raw:?}");
     let mut problem_statement_node_raw = vec![];
     for statement in &problem.problem_statement {
         problem_statement_node_raw.push(generate_problem_statement_schema(statement.clone()));
     }
-    log::info!("Problem Statements Raw: {problem_statement_node_raw:?}");
+    log::trace!("Problem Statements Raw: {problem_statement_node_raw:?}");
     let mut tag_ids = vec![];
     for i in &problem.tags {
         use db::entity::node::problem_tag::Column as ProblemTagColumn;
         log::trace!("Finding tag {i} in database");
         let id = ProblemTagNode::from_db_filter(db, ProblemTagColumn::TagName.eq(i)).await?;
         tag_ids.push(if id.is_empty() {
-            log::debug!("Cannot find tag {i}, creating new.");
+            log::trace!("Tag {i} not found, creating new.");
             ProblemTagNodeRaw {
                 public: ProblemTagNodePublicRaw {
                     tag_name: i.clone(),
@@ -207,8 +224,8 @@ pub async fn create_problem_with_user(
             id[0].node_id
         });
     }
-    log::info!("Final Problem Tags id list: {problem_statement_node_raw:?}");
-    log::info!("Data collected");
+    log::trace!("Final problem tags ID list: {:?}", tag_ids);
+    log::trace!("Data collected");
     let result = create_problem_schema(
         db,
         problem_statement_node_raw,
@@ -216,13 +233,13 @@ pub async fn create_problem_with_user(
         &problem.problem_name,
     )
     .await?;
-    log::info!("Start to create problem_source for problem");
+    log::debug!("Creating problem_source for problem");
     create_iden(
         db,
         &format!("problem/{}", problem.problem_iden),
         vec![result.node_id],
     ).await?;
-    log::info!("The problem {} have been created.", &problem.problem_name);
+    log::info!("Problem created: {}", &problem.problem_name);
     grant_problem_creator_permissions(db, problem.user_id, result.node_id).await?;
     MiscEdgeRaw {
         u: problem.user_id,
@@ -277,7 +294,7 @@ pub async fn get_problem_node_and_statement(
             return Err(CoreError::NotFound("Cannot find problem with this iden".to_string()));
         }
         if statement_node == -1 {
-            log::warn!("{iden} There are many node for this iden, We can find a problem node, and there are many other iden, but we cannot find a statement node!");
+            log::warn!("{iden}: Multiple nodes found for this iden, but cannot find a statement node!");
         }
         Ok((problem_node, statement_node))
     }
@@ -438,7 +455,7 @@ pub async fn remove_statement_from_problem(
     problem_node_id: i64,
     statement_node_id: i64,
 ) -> Result<()> {
-    log::info!("Removing statement {} from problem {}", statement_node_id, problem_node_id);
+    log::debug!("Removing statement {} from problem {}", statement_node_id, problem_node_id);
 
     // Delete problem-limit edges using EdgeQuery
     let limit_node_ids = ProblemLimitEdgeQuery::get_v(statement_node_id, db).await?;
@@ -464,7 +481,7 @@ pub async fn remove_statement_from_problem(
     // Refresh problem cache
     refresh_problem_node_cache(redis, problem_node_id).await?;
 
-    log::info!("Successfully removed statement {} from problem {}", statement_node_id, problem_node_id);
+    log::debug!("Successfully removed statement {} from problem {}", statement_node_id, problem_node_id);
     Ok(())
 }
 
@@ -475,7 +492,7 @@ pub async fn remove_tag_from_problem(
     problem_node_id: i64,
     tag_node_id: i64,
 ) -> Result<()> {
-    log::info!("Removing tag {} from problem {}", tag_node_id, problem_node_id);
+    log::debug!("Removing tag {} from problem {}", tag_node_id, problem_node_id);
 
     // Delete the problem-tag edge using EdgeQuery
     ProblemTagEdgeQuery::delete(db, problem_node_id, tag_node_id).await?;
@@ -483,7 +500,7 @@ pub async fn remove_tag_from_problem(
     // Refresh problem cache
     refresh_problem_node_cache(redis, problem_node_id).await?;
 
-    log::info!("Successfully removed tag {} from problem {}", tag_node_id, problem_node_id);
+    log::debug!("Successfully removed tag {} from problem {}", tag_node_id, problem_node_id);
     Ok(())
 }
 
@@ -492,7 +509,7 @@ pub async fn grant_problem_creator_permissions(
     user_node_id: i64,
     problem_node_id: i64,
 ) -> Result<()> {
-    log::info!("Granting problem creator permissions: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Granting problem creator permissions: user {} -> problem {}", user_node_id, problem_node_id);
 
     // 授予题目权限
     PermProblemEdgeRaw {
@@ -521,7 +538,7 @@ pub async fn grant_problem_creator_permissions(
     .save(db)
     .await?;
 
-    log::info!("Successfully granted problem creator permissions: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Successfully granted problem creator permissions: user {} -> problem {}", user_node_id, problem_node_id);
     Ok(())
 }
 pub async fn grant_problem_access(
@@ -530,7 +547,7 @@ pub async fn grant_problem_access(
     problem_node_id: i64,
     can_view_private: bool,
 ) -> Result<()> {
-    log::info!("Granting problem access: user {} -> problem {}, private: {}", user_node_id, problem_node_id, can_view_private);
+    log::debug!("Granting problem access: user {} -> problem {}, private: {}", user_node_id, problem_node_id, can_view_private);
 
     let mut problem_perms = vec![ProblemPerm::ReadProblem];
     if can_view_private {
@@ -546,7 +563,7 @@ pub async fn grant_problem_access(
     .save(db)
     .await?;
 
-    log::info!("Successfully granted problem access: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Successfully granted problem access: user {} -> problem {}", user_node_id, problem_node_id);
     Ok(())
 }
 
@@ -555,7 +572,7 @@ pub async fn add_owner(
     user_node_id: i64,
     problem_node_id: i64,
 ) -> Result<()> {
-    log::info!("Adding owner: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Adding owner: user {} -> problem {}", user_node_id, problem_node_id);
 
     // 授予用户题目所有权限
     PermProblemEdgeRaw {
@@ -568,7 +585,7 @@ pub async fn add_owner(
     .save(db)
     .await?;
 
-    log::info!("Successfully added owner: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Successfully added owner: user {} -> problem {}", user_node_id, problem_node_id);
     Ok(())
 }
 
@@ -577,12 +594,12 @@ pub async fn delete_owner(
     user_node_id: i64,
     problem_node_id: i64,
 ) -> Result<()> {
-    log::info!("Deleting owner: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Deleting owner: user {} -> problem {}", user_node_id, problem_node_id);
 
     // 删除用户题目所有权限
     PermProblemEdgeQuery::delete(db, user_node_id, problem_node_id).await?;
 
-    log::info!("Successfully deleted owner: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Successfully deleted owner: user {} -> problem {}", user_node_id, problem_node_id);
     Ok(())
 }
 
@@ -591,7 +608,7 @@ pub async fn add_editor(
     user_node_id: i64,
     problem_node_id: i64,
 ) -> Result<()> {
-    log::info!("Adding editor: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Adding editor: user {} -> problem {}", user_node_id, problem_node_id);
 
     // 授予用户题目编辑权限
     PermProblemEdgeRaw {
@@ -604,7 +621,7 @@ pub async fn add_editor(
     .save(db)
     .await?;
 
-    log::info!("Successfully added editor: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Successfully added editor: user {} -> problem {}", user_node_id, problem_node_id);
     Ok(())
 }
 
@@ -613,12 +630,12 @@ pub async fn delete_editor(
     user_node_id: i64,
     problem_node_id: i64,
 ) -> Result<()> {
-    log::info!("Deleting editor: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Deleting editor: user {} -> problem {}", user_node_id, problem_node_id);
 
     // 删除用户题目编辑权限
     PermProblemEdgeQuery::delete(db, user_node_id, problem_node_id).await?;
 
-    log::info!("Successfully deleted editor: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Successfully deleted editor: user {} -> problem {}", user_node_id, problem_node_id);
     Ok(())
 }
 
@@ -627,7 +644,7 @@ pub async fn add_viewer(
     user_node_id: i64,
     problem_node_id: i64,
 ) -> Result<()> {
-    log::info!("Adding viewer: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Adding viewer: user {} -> problem {}", user_node_id, problem_node_id);
 
     // 授予用户题目查看权限
     PermProblemEdgeRaw {
@@ -640,7 +657,7 @@ pub async fn add_viewer(
     .save(db)
     .await?;
 
-    log::info!("Successfully added viewer: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Successfully added viewer: user {} -> problem {}", user_node_id, problem_node_id);
     Ok(())
 }
 
@@ -649,11 +666,11 @@ pub async fn delete_viewer(
     user_node_id: i64,
     problem_node_id: i64,
 ) -> Result<()> {
-    log::info!("Deleting viewer: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Deleting viewer: user {} -> problem {}", user_node_id, problem_node_id);
 
     // 删除用户题目查看权限
     PermProblemEdgeQuery::delete(db, user_node_id, problem_node_id).await?;
 
-    log::info!("Successfully deleted viewer: user {} -> problem {}", user_node_id, problem_node_id);
+    log::debug!("Successfully deleted viewer: user {} -> problem {}", user_node_id, problem_node_id);
     Ok(())
 }

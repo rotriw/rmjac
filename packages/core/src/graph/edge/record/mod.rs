@@ -207,6 +207,17 @@ impl RecordEdgeQuery {
             .await?;
         Ok(count as i64)
     }
+
+    pub async fn get_from_record_node_id(
+        record_node_id: i64,
+        db: &DatabaseConnection,
+    ) -> Result<Option<RecordEdge>> {
+        let record = Entity::find()
+            .filter(Column::RecordNodeId.eq(record_node_id))
+            .one(db)
+            .await?;
+        Ok(record.map(|model| model.into()))
+    }
 }
 
 use crate::Result;

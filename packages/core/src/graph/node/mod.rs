@@ -117,7 +117,7 @@ where
         async move {
             use tap::Conv;
             let mut new_model = DbNodeActive::new();
-            log::info!(
+            log::debug!(
                 "Modifying node {}: setting {} to {:?}",
                 self.get_node_id(),
                 column.enum_type_name().unwrap_or("unknown"),
@@ -138,7 +138,7 @@ where
     ) -> impl Future<Output = Result<Self>> {
         async move {
             use tap::Conv;
-            log::info!(
+            log::debug!(
                 "Modifying node {} with active model: {:?}",
                 self.get_node_id(),
                 active_model
@@ -153,7 +153,7 @@ where
     // you should delete all the edges connected to this node.
     fn delete(&self, db: &DatabaseConnection, node_id: i64) -> impl Future<Output = Result<()>> {
         async move {
-            log::error!("Deleting node {}.", self.get_node_id());
+            log::warn!("Deleting node {}.", self.get_node_id());
             let node_id_column = Self::get_node_id_column();
             let mut active = DbNodeActive::new();
             active.set(node_id_column, node_id.into());
@@ -184,7 +184,7 @@ where
             use tap::Conv;
             let node_type = self.get_node_type();
             let node_id = create_node(db, node_type).await?.node_id;
-            log::info!(
+            log::debug!(
                 "Saving NodeType({node_type}) with id {node_id} with data: {:?}",
                 *self
             );

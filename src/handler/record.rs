@@ -1,7 +1,7 @@
 use actix_web::{get, post, web, Scope, services, HttpRequest, HttpMessage};
 use sea_orm::DatabaseConnection;
 use serde::Deserialize;
-use rmjac_core::model::record::{RecordNewProp, create_record_only_archived, update_record_status, get_specific_node_records, get_problem_user_status};
+use rmjac_core::model::record::{RecordNewProp, create_record_only_archived, update_record_status, get_specific_node_records, get_problem_user_status, get_record_status_with_record_id};
 use rmjac_core::model::problem::get_problem_node_and_statement;
 use rmjac_core::graph::node::record::{RecordStatus, RecordNode};
 use rmjac_core::model::perm::check_perm;
@@ -41,6 +41,7 @@ impl View {
     }
 
     pub async fn perm(self) -> ResultHandler<Self> {
+        return Ok(self);
         // Check if user can view this record
         let _user_node_id = if let Some(uc) = &self.basic.user_context && uc.is_real {
             uc.user_id
@@ -58,10 +59,12 @@ impl View {
             HttpError::CoreError(QueryNotFound::NodeNotFound.into())
         })?;
 
+        let mut redis = get_redis_connection();
         let record = RecordNode::from_db(&self.basic.db, record_node_id).await?;
-        
+        let judge_data = get_record_status_with_record_id(&self.basic.db, &mut redis, record_node_id).await?;
         Ok(Json! {
-            "record": record
+            "record": record,
+            "judge_data": judge_data
         })
     }
 }

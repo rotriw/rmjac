@@ -1,6 +1,7 @@
 import { StandardCard, TitleCard } from "@/components/card/card";
 import { TreeTable, TreeTableNode } from "@/components/table/treetable";
 import { Icond, RecordNode, RecordStatus, SubtaskUserRecord, RECORD_STATUS_COLOR_MAP, RECORD_STATUS_COLOR_MAP_INTER } from "./shared";
+import { getRecord } from "@/lib/api";
 
 export function ShowColorfulCard( {status, score} : {status: RecordStatus, score?: number} ) {
   console.log(status);
@@ -11,7 +12,7 @@ export function ShowColorfulCard( {status, score} : {status: RecordStatus, score
   </>)
 }
 
-function transformSubtasksToTreeNodes(subtasks: SubtaskUserRecord[], parentId: string = ""): TreeTableNode[] {
+function transformSubtasksToTreeNodes(subtasks: SubtaskUserRecord[], parentId: string = "", pid: string = ""): TreeTableNode[] {
   return subtasks.map((subtask, index) => {
     const displayIndex = index + 1;
     const currentId = parentId ? `${parentId}.${displayIndex}` : `${displayIndex}`;
@@ -29,6 +30,8 @@ function transformSubtasksToTreeNodes(subtasks: SubtaskUserRecord[], parentId: s
             <span className="ml-1 mr-1 text-sm border-current opacity-50 hover:opacity-100">{subtask.time} ms</span>
             ·
             <span className="ml-1 mr-1 text-sm border-current opacity-50 hover:opacity-100">{subtask.memory} KB</span>
+            ·
+            <span className="ml-1 mr-1 text-sm border-current opacity-50 hover:opacity-100">{pid}</span>
           </div>
         </div>
     ) : undefined;
@@ -67,21 +70,16 @@ function transformSubtasksToTreeNodes(subtasks: SubtaskUserRecord[], parentId: s
           <span className="ml-1 border-current opacity-50 hover:opacity-100">{subtask.memory} KB</span>
         </>
       ),
-      children: isGroup ? transformSubtasksToTreeNodes(subtask.subtask_status, currentId) : [{
-          id: `数据信息${currentId}`,
-          content_title: <span className="font-semibold">数据信息</span>,
-          background: RECORD_STATUS_COLOR_MAP_INTER[subtask.status],
-          defaultExpanded: false,
-          content: <>1</>,
-          children: [],
-      }],
+      children: isGroup ? transformSubtasksToTreeNodes(subtask.subtask_status, currentId) : [],
       defaultExpanded: defaultExpanded,
     };
   });
 }
 
-export default function RecordPage({ params }: { params: Promise<{ id: string }> }) {
-  const record: RecordNode = {
+export default async function RecordPage({ params }: { params: Promise<{ id: string }> }) {
+  const fetchdata = await getRecord((await params).id);
+  console.log(fetchdata);
+  const record: RecordNode = fetchdata?.record || {
     node_id: 1,
     public: {
         record_order: 1,
@@ -100,7 +98,7 @@ export default function RecordPage({ params }: { params: Promise<{ id: string }>
         code_language: "C++",
     }
   }
-  const subtask_status: SubtaskUserRecord = {
+  const subtask_status: SubtaskUserRecord = fetchdata?.judge_data || {
     time: 100,
     memory: 100,
     status: "Wrong Answer",

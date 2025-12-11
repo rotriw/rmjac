@@ -145,7 +145,7 @@ where
             for f in filter {
                 edges = edges.filter(f);
             }
-            edges = edges.filter(Self::get_v_edge_id_column().eq(u));
+            edges = edges.filter(Self::get_u_edge_id_column().eq(u));
             edges = if let (Some(number_per_page), Some(offset)) = (number_per_page, offset) {
                 edges.offset(offset).limit(number_per_page)
             } else {
@@ -175,7 +175,7 @@ where
             for f in filter {
                 edges = edges.filter(f);
             }
-            edges = edges.filter(Self::get_v_edge_id_column().eq(u));
+            edges = edges.filter(Self::get_u_edge_id_column().eq(u));
             edges = if let (Some(number_per_page), Some(offset)) = (number_per_page, offset) {
                 edges.offset(offset).limit(number_per_page)
             } else {

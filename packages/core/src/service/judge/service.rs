@@ -22,8 +22,8 @@ fn trust_auth(socket: &SocketRef) {
 }
 
 async fn auth(socket: SocketRef, Data(key): Data<String>) {
-    log::info!("{} auth", socket.id);
-    log::debug!("auth key: {}", key);
+    log::trace!("{} auth", socket.id);
+    log::trace!("auth key: {}", key);
     use crate::utils::encrypt::verify;
     let key = change_string_format(key);
     let pub_key = env::EDGE_AUTH_PUBLICKEY.lock().unwrap().clone();
@@ -35,7 +35,7 @@ async fn auth(socket: SocketRef, Data(key): Data<String>) {
             return ;
         }
     } else {
-        log::info!("{} auth error: {:?}", socket.id, auth);
+        log::warn!("{} auth error: {:?}", socket.id, auth);
         let _ = socket.emit("auth_response", "Authentication Error/Failed");
         return ;
     }
@@ -44,14 +44,14 @@ async fn auth(socket: SocketRef, Data(key): Data<String>) {
 }
 
 fn check_auth(socket: SocketRef) -> bool {
-    log::info!("Checking auth for socket: {}", socket.id);
+    log::trace!("Checking auth for socket: {}", socket.id);
     if let Some(auth_count) = env::EDGE_AUTH_MAP.lock().unwrap().get(&socket.id.to_string()) {
         log::trace!("{} auth success: {:?}", socket.id, auth_count);
         if *auth_count > 0 {
             return true;
         }
     }
-    log::warn!("Socket {} is not authenticated", socket.id);
+    log::debug!("Socket {} is not authenticated", socket.id);
     false
 }
 
@@ -67,7 +67,7 @@ async fn update_status(socket: SocketRef, Data(_key): Data<String>) {
 #[auth_socket_connect]
 async fn create_problem_back(socket: SocketRef, Data(problem): Data<serde_json::Value>) {
     let problem = serde_json::from_value::<CreateProblemProps>(problem).unwrap();
-    log::info!("Creating/Updating problem from socket {}.", socket.id);
+    log::debug!("Creating/Updating problem from socket {}.", socket.id);
     let db = get_connect().await;
     if let Err(err) = db {
         log::error!("Failed to connect to database: {}", err);
@@ -123,7 +123,7 @@ async fn handle_verified_result(socket: SocketRef, Data(result): Data<VerifiedRe
 
 #[auth_socket_connect]
 async fn update_user_submission_back(socket: SocketRef, Data(data): Data<UserSubmissionProp>) {
-    log::info!("Updating user submission from socket {}.", socket.id);
+    log::debug!("Updating user submission from socket {}.", socket.id);
     let db = get_connect().await;
     if let Err(err) = db {
         log::error!("Failed to connect to database: {}", err);
@@ -137,11 +137,11 @@ async fn update_user_submission_back(socket: SocketRef, Data(data): Data<UserSub
 }
 
 fn erase_socket(id: &str) {
-    log::info!("Erasing socket: {}", id);
+    log::debug!("Erasing socket: {}", id);
     env::EDGE_SOCKETS.lock().unwrap().remove(&id.to_string());
-    log::info!("Erase socket {id} from map.");
+    log::trace!("Erase socket {id} from map.");
     env::EDGE_VEC.lock().unwrap().retain(|n_id| id != n_id);
-    log::info!("Socket {} erased.", id);
+    log::debug!("Socket {} erased.", id);
 }
 
 pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
@@ -153,7 +153,7 @@ pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
     let use_id = (now_id + 1) % (env::EDGE_SOCKETS.lock().unwrap().clone().len() as i32);
     *env::EDGE_NUM.lock().unwrap() = use_id;
     let use_id = env::EDGE_VEC.lock().unwrap().get(use_id as usize).unwrap().clone();
-    log::info!("add task to socket: {}", use_id);
+    log::trace!("Adding task to socket: {}", use_id);
     let mut require_erase = false;
     if let Some(socket) = env::EDGE_SOCKETS.lock().unwrap().get(&use_id).cloned() {
         if !socket.connected() {
@@ -172,19 +172,20 @@ pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
         erase_socket(&use_id);
         return false;
     }
-    log::info!("successfully added task {task:?} to socket: {use_id}");
+    log::debug!("Successfully added task to socket: {use_id}");
+    log::trace!("Task detail: {task:?}");
     true
 }
 
 async fn on_connect(socket: SocketRef, Data(_data): Data<Value>) {
-    log::info!("socket io connected: {:?} {:?}", socket.ns(), socket.id);
+    log::debug!("Socket io connected: {:?} {:?}", socket.ns(), socket.id);
     socket.on("auth", auth);
     socket.on("update_status", update_status);
     socket.on("create_problem", create_problem_back);
     socket.on("update_user_submission", update_user_submission_back);
     socket.on("verified_done", handle_verified_result);
     socket.on_disconnect(async |socket: SocketRef| {
-        log::info!("socket io disconnected: {:?} {:?}", socket.ns(), socket.id);
+        log::debug!("Socket io disconnected: {:?} {:?}", socket.ns(), socket.id);
         erase_socket(socket.id.as_str());
     });
 }
@@ -198,7 +199,7 @@ pub struct UserVerifiedProp {
 }
 
 pub async fn auth_user(socket: SocketRef, Data(user): Data<UserVerifiedProp>) {
-    log::info!("user notify {} auth", socket.id);
+    log::trace!("User notify {} auth", socket.id);
     let db = get_connect().await;
     if let Err(err) = db {
         log::error!("Failed to connect to database: {}", err);
@@ -210,16 +211,16 @@ pub async fn auth_user(socket: SocketRef, Data(user): Data<UserVerifiedProp>) {
         let _ = socket.disconnect();
     }
     else {
-        log::info!("user {} authenticated successfully", user.user_id);
+        log::debug!("User {} authenticated successfully", user.user_id);
         env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().insert(socket.ns().to_string(), socket.clone());
     }
 }
 
 async fn on_user_connect(socket: SocketRef, Data(_data): Data<Value>) {
-    log::info!("user notify connected: {:?} {:?}", &socket.ns(), socket.id);
+    log::debug!("User notify connected: {:?} {:?}", &socket.ns(), socket.id);
     socket.on("auth", auth_user);
     socket.on_disconnect(async |socket: SocketRef| {
-       log::info!("user notify disconnected: {:?} {:?}", socket.ns(), socket.id);
+       log::debug!("User notify disconnected: {:?} {:?}", socket.ns(), socket.id);
         env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().remove(&socket.ns().to_string());
     });
 }

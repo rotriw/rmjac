@@ -1,25 +1,45 @@
 #[derive(EnumConst, Copy, Clone, Debug, PartialEq, EnumIter, Deserialize, Serialize)]
 pub enum RecordStatus {
+    #[serde(rename = "Accepted")]
     Accepted = 100,
+    #[serde(rename = "Partial Accepted")]
     PartialAccepted = 101,
+    #[serde(rename = "Wrong Answer")]
     WrongAnswer = 200,
+    #[serde(rename = "Time Limit Exceeded")]
     TimeLimitExceeded = 301,
+    #[serde(rename = "Memory Limit Exceeded")]
     MemoryLimitExceeded = 302,
+    #[serde(rename = "Output Limit Exceeded")]
     OutputLimitExceeded = 303,
+    #[serde(rename = "Idleness Limit Exceeded")]
     IdlenessLimitExceeded = 304,
+    #[serde(rename = "Runtime Error")]
     RuntimeError = 400,
+    #[serde(rename = "Compile Error")]
     CompileError = 500,
     DangerousCode = 501,
+    #[serde(rename = "Remote Service Unknown Error")]
     RemoteServiceUnknownError = 600, // 我方错误
+    #[serde(rename = "Sandbox Error")]
     SandboxError = 601,
+    #[serde(rename = "Remote Platform Refused")]
     RemotePlatformRefused = 700,
+    #[serde(rename = "Remote Platform Connection Failed")]
     RemotePlatformConnectionFailed = 701,
+    #[serde(rename = "Remote Platform Unknown Error")]
     RemotePlatformUnknownError = 702,
+    #[serde(rename = "Waiting")]
     Waiting = 800,
+    #[serde(rename = "Unknown Error")]
     UnknownError = 900,
+    #[serde(rename = "Deleted")]
     Deleted = 902,
+    #[serde(rename = "OnlyArchived")]
     OnlyArchived = 1000,
+    #[serde(rename = "NotFound")]
     NotFound = 1001,
+    #[serde(rename = "Skipped")]
     Skipped = 1002,
 }
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -225,6 +245,8 @@ impl From<String> for RecordStatus {
             "Deleted" => RecordStatus::Deleted,
             "OnlyArchived" => RecordStatus::OnlyArchived,
             "Skipped" => RecordStatus::Skipped,
+            "Idleness Limit Exceeded" => RecordStatus::IdlenessLimitExceeded,
+            "Dangerous Code" => RecordStatus::DangerousCode,
             _ => RecordStatus::UnknownError,
         }
     }
