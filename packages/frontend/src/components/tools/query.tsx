@@ -4,9 +4,11 @@ import { Label } from "../ui/label"
 import { Button } from "../ui/button"
 import { StandardCard } from "../card/card"
 import { TagsInput } from "../ui/tags-input"
+import { Select, SelectItem } from "../ui/select"
+import { cn } from "@/lib/utils"
 
 interface BaseFormField {
-  type: "input" | "group" | "custom" | "button" | "tags"
+  type: "input" | "group" | "custom" | "button" | "tags" | "select" | "choice-card" | "info"
   title?: string
 }
 
@@ -14,6 +16,22 @@ interface InputField extends BaseFormField {
   type: "input"
   name: string
   title?: string
+  inputType?: string
+}
+
+interface SelectField extends BaseFormField {
+  type: "select"
+  name: string
+  title?: string
+  options: { label: string; value: string }[]
+}
+
+interface ChoiceCardField extends BaseFormField {
+  type: "choice-card"
+  name: string
+  title?: string
+  options: { label: string; value: string; description?: string }[]
+  cols?: number
 }
 
 interface GroupField extends BaseFormField {
@@ -40,7 +58,14 @@ interface TagsField extends BaseFormField {
   suggestions?: string[]
 }
 
-type FormField = InputField | GroupField | CustomField | ButtonField | TagsField
+interface InfoFiled extends BaseFormField {
+  type: "info"
+  content: string
+  color: "default" | "success" | "warning" | "error"
+}
+
+type FormField = InputField | GroupField | CustomField | ButtonField | TagsField | SelectField | ChoiceCardField | InfoFiled
+
 
 interface FormQueryProps extends React.ComponentProps<"form"> {
   fields?: FormField[]
@@ -68,10 +93,55 @@ function FormQuery({
             <Input
               id={field.name}
               name={field.name}
+              type={field.inputType || "text"}
               value={values[field.name] || ""}
               onChange={(e) => handleChange(field.name, e.target.value)}
               placeholder={field.title}
             />
+          </div>
+        )
+
+      case "select":
+        return (
+          <div key={index} className="space-y-2">
+            <Label htmlFor={field.name}>{field.title}</Label>
+            <Select
+              id={field.name}
+              name={field.name}
+              value={values[field.name] as string || ""}
+              onChange={(e) => handleChange(field.name, e.target.value)}
+            >
+              <SelectItem value="" disabled>选择...</SelectItem>
+              {field.options.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </Select>
+          </div>
+        )
+
+      case "choice-card":
+        return (
+          <div key={index} className="space-y-2">
+            <Label>{field.title}</Label>
+            <div className={cn("grid gap-4", field.cols === 1 ? "grid-cols-1" : "grid-cols-2")}>
+              {field.options.map((opt) => (
+                <div
+                  key={opt.value}
+                  className={cn(
+                    "cursor-pointer rounded-lg border p-4 hover:bg-accent hover:text-accent-foreground peer-checked:border-primary [&:has([data-state=checked])]:border-primary",
+                    values[field.name] === opt.value ? "border-primary bg-accent" : "border-muted"
+                  )}
+                  onClick={() => handleChange(field.name, opt.value)}
+                >
+                  <div className="font-semibold">{opt.label}</div>
+                  {opt.description && (
+                    <div className="text-sm text-muted-foreground">{opt.description}</div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )
 
@@ -111,6 +181,30 @@ function FormQuery({
           return <CustomComponent key={componentKey} values={values} onChange={onChange} {...(field.props || {})} />
         }
         return null
+
+      case "info":
+        let colorClass = "text-gray-800"
+        switch (field.color) {
+          case "success":
+            colorClass = "text-green-800"
+            break
+          case "warning":
+            colorClass = "text-yellow-800"
+            break
+          case "error":
+            colorClass = "text-red-800"
+            break
+          default:
+            colorClass = "text-gray-800"
+        }
+        return (
+          <div
+            key={index}
+            className={cn("text-sm", colorClass)}
+          >
+            {field.content}
+          </div>
+        )
 
       default:
         return null

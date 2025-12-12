@@ -19,9 +19,35 @@ const convertCFSubmissionStatus = (status: string) =>  {
 export const run = async (data: SyncUserRemoteSubmissionData, socket: Socket) => {
     const { vjudge_node, user_id, platform, ws_id, problem_iden, fetch_count } = data;
     if (platform === "codeforces") {
-        const result = [];
         if (fetch_count === "all") {
             let now_count = 1;
+            const result = [];
+            // for (let i = 0; i < 20; i ++ ) {
+            //     result.push({
+            //         remote_id: i,
+            //         remote_platform: "codeforces",
+            //         remote_problem_id: `CF${(i % 10 + 1)}A`,
+            //         language: "test",
+            //         code: "#include",
+            //         status: "Accepted",
+            //         message: "none",
+            //         score: 0,
+            //         submit_time: new Date(1),
+            //         url: `${i % 100 + 1}`,
+            //         passed: Array.from({ length: i + 1 }, (_, i) => [(i + 1).toString(), "Accepted", 1, 0, 0]),
+            //     });
+            // }
+            //
+            // socket.emit("update_user_submission", {
+            //     user_id: parseInt(user_id),
+            //     submissions: result
+            // });
+            // //
+            // socket.emit("update_user_submission", {
+            //     user_id: parseInt(user_id),
+            //     submissions: result
+            // });
+            // return ;
             while (true) {
                 globalThis.LOG.info(`Fetching codeforces submissions from ${now_count} to ${now_count + 999}`);
                 const submissions = await fetchCodeforcesSubmissions(
@@ -61,6 +87,7 @@ export const run = async (data: SyncUserRemoteSubmissionData, socket: Socket) =>
                 });
                 socket.emit("update_user_submission", {
                     user_id: parseInt(user_id),
+                    ws_id: ws_id,
                     submissions: result
                 });
             }

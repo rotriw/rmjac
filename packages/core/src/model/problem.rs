@@ -1,5 +1,5 @@
 use crate::db::entity::node::problem_statement::ContentType;
-use crate::error::CoreError;
+use crate::error::{CoreError, QueryExists};
 use crate::graph::action::get_node_type;
 use crate::graph::edge::perm_problem::{PermProblemEdgeQuery};
 use crate::graph::edge::problem_limit::{ProblemLimitEdgeQuery, ProblemLimitEdgeRaw};
@@ -38,6 +38,7 @@ type ProblemIdenString = String;
 
 pub async fn create_problem_schema(
     db: &DatabaseConnection,
+    redis: &mut redis::Connection,
     problem_statement: Vec<(
         ProblemStatementNodeRaw,
         ProblemLimitNodeRaw,
@@ -58,7 +59,7 @@ pub async fn create_problem_schema(
     .await?;
     let problem_node_id = problem_node.node_id;
     for data in problem_statement {
-        add_problem_statement_for_problem(db, problem_node_id, data).await?;
+        add_problem_statement_for_problem(db, redis, problem_node_id, data).await?;
     }
     for tag_node in tag_node_id {
         ProblemTagEdgeRaw {
@@ -77,6 +78,7 @@ pub async fn create_problem_schema(
 
 pub async fn add_problem_statement_for_problem(
     db: &DatabaseConnection,
+    redis: &mut redis::Connection,
     problem_node_id: i64,
     problem_statement: (
         ProblemStatementNodeRaw,
@@ -102,7 +104,7 @@ pub async fn add_problem_statement_for_problem(
         .save(db)
         .await?;
     if let Some(iden) = iden {
-        create_iden(db, &format!("problem/{}", iden), vec![problem_statement_node.node_id, problem_node_id]).await?;
+        create_iden(db, redis, &format!("problem/{}", iden), vec![problem_statement_node.node_id, problem_node_id]).await?;
     }
     // 暂时允许访问题目 = 访问所有题面
     // statement -limit-> limit
@@ -186,10 +188,17 @@ pub struct CreateProblemProps {
 
 pub async fn create_problem_with_user(
     db: &DatabaseConnection,
+    redis: &mut redis::Connection,
     problem: &CreateProblemProps,
     public_view: bool,
 ) -> Result<ProblemNode> {
     log::debug!("Creating new problem: {}", &problem.problem_name);
+    // check iden existence
+    let existing_ids = get_node_ids_from_iden(db, redis, format!("problem/{}", problem.problem_iden).as_str()).await;
+    log::info!("Checking existence for problem iden: {}", &problem.problem_iden);
+    if existing_ids.is_ok() {
+        return Err(CoreError::QueryExists(QueryExists::ProblemExist));
+    }
     let problem_node_raw = ProblemNodeRaw {
         public: ProblemNodePublicRaw {
             name: problem.problem_name.clone(),
@@ -228,6 +237,7 @@ pub async fn create_problem_with_user(
     log::trace!("Data collected");
     let result = create_problem_schema(
         db,
+        redis,
         problem_statement_node_raw,
         tag_ids,
         &problem.problem_name,
@@ -236,6 +246,7 @@ pub async fn create_problem_with_user(
     log::debug!("Creating problem_source for problem");
     create_iden(
         db,
+        redis,
         &format!("problem/{}", problem.problem_iden),
         vec![result.node_id],
     ).await?;

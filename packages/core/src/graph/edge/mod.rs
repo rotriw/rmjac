@@ -191,6 +191,28 @@ where
         }
     }
 
+    fn get_v_one_filter_extend<T: IntoCondition>(
+        u: i64,
+        filter: T,
+        db: &DatabaseConnection,
+    ) -> impl Future<Output = Result<EdgeA>> {
+        async move {
+            use sea_orm::{ColumnTrait, QueryFilter};
+            let edge = DbEntity::find()
+                .filter(filter)
+                .filter(Self::get_u_edge_id_column().eq(u))
+                .one(db)
+                .await?;
+            if edge.is_none() {
+                return Err(NotFound("Not Found Edge id".to_string()));
+            }
+            Ok(edge
+                .unwrap()
+                .conv::<DbModel>()
+                .conv::<EdgeA>())
+        }
+    }
+
     fn get_u(
         v: i64,
         db: &DatabaseConnection,
@@ -452,7 +474,7 @@ where
         async {
                         let edge_type = self.get_edge_type();
             let edge_id = create_edge(db, edge_type).await?.edge_id;
-            log::info!("Saving edge({edge_type}), data:{:?}", *self);
+            log::debug!("Saving edge({edge_type}), data:{:?}", *self);
             let mut value = (*self).clone().conv::<EdgeActive>();
             value.set(self.get_edge_id_column(), edge_id.into());
             Ok(value.save_into_db(db).await?.into())

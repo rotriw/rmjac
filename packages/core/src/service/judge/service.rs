@@ -208,11 +208,12 @@ pub async fn auth_user(socket: SocketRef, Data(user): Data<UserVerifiedProp>) {
     }
     let result = check_user_token(user.user_id, &user.token).await;
     if !result {
+        log::trace!("User {} authentication failed", user.user_id);
         let _ = socket.disconnect();
     }
     else {
-        log::debug!("User {} authenticated successfully", user.user_id);
-        env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().insert(socket.ns().to_string(), socket.clone());
+        log::debug!("User {} with socket {} authenticated successfully", user.user_id, socket.id);
+        env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().insert(socket.id.to_string(), socket.clone());
     }
 }
 

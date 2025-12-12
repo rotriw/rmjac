@@ -19,6 +19,14 @@ use crate::service::iden::get_node_ids_from_iden;
 use crate::env;
 use crate::db::entity::node::problem_statement::ContentType;
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use tokio::sync::Mutex as AsyncMutex;
+use crate::utils::get_redis_connection;
+
+lazy_static::lazy_static! {
+    static ref PROBLEM_UPDATE_LOCKS: Mutex<HashMap<String, Arc<AsyncMutex<()>>>> = Mutex::new(HashMap::new());
+}
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -235,7 +243,7 @@ pub async fn create_or_update_problem_from_vjudge(
                 // 3. Re-add statements
                 for statement in &problem.problem_statement {
                     let schema = generate_problem_statement_schema(statement.clone());
-                    let _ = add_problem_statement_for_problem(db, p_node_id, schema).await;
+                    let _ = add_problem_statement_for_problem(db, &mut redis, p_node_id, schema).await;
                 }
 
                 // 4. Re-add tags
@@ -274,7 +282,7 @@ pub async fn create_or_update_problem_from_vjudge(
         }
     }
 
-    let result = create_problem_with_user(db, problem, true).await;
+    let result = create_problem_with_user(db, &mut redis, problem, true).await;
     if let Err(err) = result {
         log::error!("Failed to create problem: {}", err);
         return Err(err);
@@ -302,6 +310,7 @@ pub struct SubmissionItem {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserSubmissionProp {
     pub user_id: i64,
+    pub ws_id: Option<String>,
     pub submissions: Vec<SubmissionItem>,
 }
 
@@ -309,149 +318,201 @@ pub async fn update_user_submission_from_vjudge(
     db: &DatabaseConnection,
     data: UserSubmissionProp,
 ) -> Result<()> {
-    let mut redis = env::REDIS_CLIENT.lock().unwrap().get_connection().unwrap();
-
-    for submission in data.submissions {
-        let problem_iden_str = format!("problem/{}", submission.remote_problem_id);
-        // Check if problem exists
-        let node_ids = get_node_ids_from_iden(db, &mut redis, &problem_iden_str).await;
-        let mut problem_exists = false;
-        let mut problem_node_id = -1;
-        let mut statement_node_id = -1;
-
-        if let Ok(ids) = node_ids {
-             if !ids.is_empty() {
-                for id in ids {
-                     let n_type = crate::graph::action::get_node_type(db, id).await.unwrap_or("".to_string());
-                     if n_type == "problem" {
-                         problem_node_id = id;
-                         problem_exists = true;
-                     } else if n_type == "problem_statement" {
-                         statement_node_id = id;
-                     }
-                }
-             }
-        } else {
-            log::trace!("Failed to get node ids from iden for problem {}", submission.remote_problem_id);
-            log::trace!("Error: {:?}", node_ids.err());
-        }
-
-        if !problem_exists {
-            log::info!("Problem {} not found, creating placeholder.", submission.remote_problem_id);
-            let placeholder_props = CreateProblemProps {
-                user_id: data.user_id,
-                problem_iden: submission.remote_problem_id.clone(),
-                problem_name: submission.remote_problem_id.clone(),
-                problem_statement: vec![
-                    ProblemStatementProp {
-                        statement_source: "vjudge".to_string(),
-                        iden: submission.remote_problem_id.clone(),
-                        problem_statements: vec![
-                            ContentType {
-                                iden: "statement".to_string(),
-                                content: "Not yet crawled".to_string(),
-                            }
-                        ],
-                        time_limit: 1000,
-                        memory_limit: 256 * 1024,
-                        sample_group: vec![],
-                        show_order: vec!["statement".to_string()],
-                    }
-                ],
-                creation_time: Some(chrono::Utc::now().naive_utc()),
-                tags: vec!["un_crawl".to_string()],
-            };
-            
-            let res = create_problem_with_user(db, &placeholder_props, true).await;
-            if let Ok(node) = res {
-                problem_node_id = node.node_id;
-                // Need to find statement node id
-                 use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
-                 if let Ok(statements) = ProblemStatementEdgeQuery::get_v(problem_node_id, db).await {
-                     if !statements.is_empty() {
-                         statement_node_id = statements[0];
-                     }
-                 }
-            } else {
-                log::error!("Failed to create placeholder problem");
-                continue;
-            }
-        }
-
-        if statement_node_id == -1 {
-             // Try fetching if problem exists but statement not found via iden (should not happen if consistent)
-             use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
-             if let Ok(statements) = ProblemStatementEdgeQuery::get_v(problem_node_id, db).await {
-                 if !statements.is_empty() {
-                     statement_node_id = statements[0];
-                 }
-             }
-        }
-        
-        if statement_node_id == -1 {
-            log::error!("Statement node not found for problem {}", problem_node_id);
-            continue;
-        }
-
-        // Check if record exists
-        let records = get_record_by_submission_url(db, &submission.url).await;
-        let (record_exists, existing_record_id) = if let Ok(records) = records && let Some(records) = records {
-            (true, records.node_id)
-        } else {
-            (false, -1)
-        };
-        let status = match submission.status.as_str() {
-            "Accepted" => RecordStatus::Accepted,
-            "WrongAnswer" => RecordStatus::WrongAnswer,
-            "TimeLimitExceeded" => RecordStatus::TimeLimitExceeded,
-            "MemoryLimitExceeded" => RecordStatus::MemoryLimitExceeded,
-            "RuntimeError" => RecordStatus::RuntimeError,
-            "CompilationError" => RecordStatus::CompileError,
-            _ => RecordStatus::UnknownError,
-        };
-        
-        // Convert timestamp
-        // Assuming submission.submit_time is ISO string
-        let submit_time = chrono::DateTime::parse_from_rfc3339(&submission.submit_time)
-            .map(|dt| dt.naive_utc())
-            .unwrap_or(chrono::Utc::now().naive_utc());
-
-
-        let record_id = if !record_exists {
-            // Create record
-            let record_prop = RecordNewProp {
-                platform: submission.remote_platform.clone(),
-                code: submission.code.clone(),
-                code_language: submission.language.clone(),
-                url: submission.url.clone(),
-                statement_node_id: statement_node_id,
-                public_status: true,
-            };
-            
-            let result = create_record_with_status(
-                db,
-                record_prop,
-                data.user_id,
-                status,
-                submission.score,
-                submit_time
-            ).await?;
-            result.node_id
-        } else {
-            existing_record_id
-        };
-        let mut record_map = std::collections::HashMap::new();
-        for (testcase_id, status, score, time, memory) in &submission.passed {
-            record_map.insert((*testcase_id).clone(), SubtaskUserRecord {
-                time: *time,
-                memory: *memory,
-                status: (*status).clone().into(),
-                subtask_status: vec![],
-                score: *score,
-            });
-        }
-        log::info!("Updating record {} for submission {}", record_id, submission.remote_id);
-        update_record_status_no_subtask_remote_judge(db, &mut redis, record_id, statement_node_id, record_map).await?;
+    let mut handles = vec![];
+    log::info!("{}.", data.ws_id.clone().unwrap_or("No WS ID provided".to_string()));
+    let ws_id = data.ws_id;
+    let ws_notify = if let Some(id) = ws_id {
+        Some(env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().get(&id).cloned()).unwrap_or(None)
+    } else {
+        log::warn!("No websocket id provided for submission update.");
+        None
+    };
+    if let Some(notifyRef) = &ws_notify {
+        let _ = notifyRef.emit("submission_update", &Json!{
+            "s": 0,
+            "n": data.submissions.len(),
+        });
+    } else {
+        log::debug!("No notifyRef available to send initial submission update.");
     }
+    for submission in data.submissions {
+        let db = db.clone();
+        let user_id = data.user_id;
+        let notifyRef = ws_notify.clone();
+        handles.push(tokio::spawn(async move {
+            if let Err(e) = process_single_submission(db, user_id, submission.clone()).await {
+                log::error!("Error processing submission: {:?}", e);
+                if let Some(notifyRef) = notifyRef {
+                    let _ = notifyRef.emit("submission_update", &Json!{
+                        "s": 1,
+                        "m": format!("Failed to process submission: {}", &submission.remote_id),
+                    });
+                } else {
+                    log::debug!("No notifyRef available to send error message for submission: {}", &submission.remote_id);
+                }
+            } else if let Some(notifyRef) = notifyRef {
+                let _ = notifyRef.emit("submission_update", &Json! {
+                    "s": 2,
+                    "m": format!("Successfully add submission: {}", &submission.remote_id),
+                });
+            }
+        }));
+    }
+    for handle in handles {
+        let _ = handle.await;
+    }
+    Ok(())
+}
+
+async fn process_single_submission(
+    db: DatabaseConnection,
+    user_id: i64,
+    submission: SubmissionItem,
+) -> Result<()> {
+    let remote_problem_id = submission.remote_problem_id.trim().to_string();
+    let lock = {
+        let mut map = PROBLEM_UPDATE_LOCKS.lock().unwrap();
+        map.entry(remote_problem_id.clone())
+            .or_insert_with(|| Arc::new(AsyncMutex::new(())))
+            .clone()
+    };
+    let _guard = lock.lock().await;
+
+    let mut redis = get_redis_connection();
+
+    // let problem_iden_str = format!("problem/{}", remote_problem_id);?
+    // Check if problem exists
+    let node_ids = get_problem_node_and_statement(&db, &mut redis, &remote_problem_id).await;
+    let mut problem_exists = false;
+    let mut problem_node_id = -1;
+    let mut statement_node_id = -1;
+
+    if let Ok(ids) = node_ids {
+        problem_exists = true;
+        problem_node_id = ids.0;
+        statement_node_id = ids.1;
+    } else {
+        log::debug!("Failed to get node ids from iden for problem {}", remote_problem_id);
+        log::debug!("Error: {:?}", node_ids.err());
+    }
+
+    if !problem_exists {
+        log::info!("Problem {} not found, creating placeholder.", remote_problem_id);
+        let placeholder_props = CreateProblemProps {
+            user_id: user_id,
+            problem_iden: format!("Rmj{}", remote_problem_id.clone()),
+            problem_name: remote_problem_id.clone(),
+            problem_statement: vec![
+                ProblemStatementProp {
+                    statement_source: "vjudge".to_string(),
+                    iden: remote_problem_id.clone(),
+                    problem_statements: vec![
+                        ContentType {
+                            iden: "statement".to_string(),
+                            content: "Not yet crawled".to_string(),
+                        }
+                    ],
+                    time_limit: 1000,
+                    memory_limit: 256 * 1024,
+                    sample_group: vec![],
+                    show_order: vec!["statement".to_string()],
+                }
+            ],
+            creation_time: Some(chrono::Utc::now().naive_utc()),
+            tags: vec!["un_crawl".to_string()],
+        };
+        
+        let res = create_problem_with_user(&db, &mut redis, &placeholder_props, true).await;
+        if let Ok(node) = res {
+            problem_node_id = node.node_id;
+            // Need to find statement node id
+                use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
+                if let Ok(statements) = ProblemStatementEdgeQuery::get_v(problem_node_id, &db).await {
+                    if !statements.is_empty() {
+                        statement_node_id = statements[0];
+                    }
+                }
+        } else {
+            log::error!("Failed to create placeholder problem");
+            log::error!("Error: {:?}", res.err());
+            return Ok(());
+        }
+    }
+
+    if statement_node_id == -1 {
+            // Try fetching if problem exists but statement not found via iden (should not happen if consistent)
+            use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
+            if let Ok(statements) = ProblemStatementEdgeQuery::get_v(problem_node_id, &db).await {
+                if !statements.is_empty() {
+                    statement_node_id = statements[0];
+                }
+            }
+    }
+    
+    if statement_node_id == -1 {
+        log::error!("Statement node not found for problem {}", problem_node_id);
+        return Ok(());
+    }
+
+    // Check if record exists
+    let records = get_record_by_submission_url(&db, &submission.url).await;
+    let (record_exists, existing_record_id) = if let Ok(records) = records && let Some(records) = records {
+        (true, records.node_id)
+    } else {
+        (false, -1)
+    };
+    let status = match submission.status.as_str() {
+        "Accepted" => RecordStatus::Accepted,
+        "WrongAnswer" => RecordStatus::WrongAnswer,
+        "TimeLimitExceeded" => RecordStatus::TimeLimitExceeded,
+        "MemoryLimitExceeded" => RecordStatus::MemoryLimitExceeded,
+        "RuntimeError" => RecordStatus::RuntimeError,
+        "CompilationError" => RecordStatus::CompileError,
+        _ => RecordStatus::UnknownError,
+    };
+    
+    // Convert timestamp
+    // Assuming submission.submit_time is ISO string
+    let submit_time = chrono::DateTime::parse_from_rfc3339(&submission.submit_time)
+        .map(|dt| dt.naive_utc())
+        .unwrap_or(chrono::Utc::now().naive_utc());
+
+
+    let record_id = if !record_exists {
+        // Create record
+        let record_prop = RecordNewProp {
+            platform: submission.remote_platform.clone(),
+            code: submission.code.clone(),
+            code_language: submission.language.clone(),
+            url: submission.url.clone(),
+            statement_node_id: statement_node_id,
+            public_status: true,
+        };
+        
+        let result = create_record_with_status(
+            &db,
+            record_prop,
+            user_id,
+            status,
+            submission.score,
+            submit_time
+        ).await?;
+        result.node_id
+    } else {
+        existing_record_id
+    };
+    let mut record_map = std::collections::HashMap::new();
+    for (testcase_id, status, score, time, memory) in &submission.passed {
+        record_map.insert((*testcase_id).clone(), SubtaskUserRecord {
+            time: *time,
+            memory: *memory,
+            status: (*status).clone().into(),
+            subtask_status: vec![],
+            score: *score,
+        });
+    }
+    log::info!("Updating record {} for submission {}", record_id, submission.remote_id);
+    update_record_status_no_subtask_remote_judge(&db, &mut redis, record_id, statement_node_id, record_map).await?;
+    
     Ok(())
 }

@@ -60,7 +60,7 @@ pub async fn create_training(
         }.save(db).await?;
     }
     // create node iden
-    create_iden(db, format!("training#{user_iden}#{pb_iden}").as_str(), vec![node.node_id]).await?;
+    create_iden(db, redis, format!("training#{user_iden}#{pb_iden}").as_str(), vec![node.node_id]).await?;
 
     // 为创建者授予训练权限
     log::info!("Granting training creator permissions for user {}", user_iden);

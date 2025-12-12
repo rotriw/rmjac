@@ -133,7 +133,8 @@ impl Create {
     }
 
     pub async fn exec(self) -> ResultHandler<String> {
-        let data = rmjac_core::model::problem::create_problem_with_user(&self.basic.db, &self.problem, true).await?;
+        let mut redis = get_redis_connection();
+        let data = rmjac_core::model::problem::create_problem_with_user(&self.basic.db, &mut redis, &self.problem, true).await?;
         Ok(Json! {
             "data": data,
         })
@@ -196,7 +197,8 @@ impl Manage {
     }
 
     pub async fn add_statement(self, statement: ProblemStatementProp) -> ResultHandler<String> {
-        let result = add_problem_statement_for_problem(&self.basic.db, self.problem_node_id, generate_problem_statement_schema(statement)).await?;
+        let mut redis = get_redis_connection();
+        let result = add_problem_statement_for_problem(&self.basic.db, &mut redis, self.problem_node_id, generate_problem_statement_schema(statement)).await?;
         Ok(Json! {
             "message": "success",
             "result": result,

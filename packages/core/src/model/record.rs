@@ -475,22 +475,21 @@ pub async fn get_record_status(
     while q.len() > 0 {
         let t = q.dequeue().unwrap();
         // check redis have node_{t} data.
-        if !redis.exists(format!("graph_node_{t}"))? || force_refresh {
-            log::trace!("Caching testcase node {t}");
-            if get_node_type(db, t).await? == "testcase_subtask" {
-                log::trace!("Caching subtask node {t}");
-                redis.set(format!("graph_node_{t}"), serde_json::to_string(&SubtaskNode::from_db(db, t).await?).unwrap())?;
-            }
-        }
         let data = redis.get(format!("graph_edge_testcase_{t}_v"))?;
         let edges = if let Some(data) = data && data.len() > 0 && !force_refresh {
-
             data.split(".").map(|v| v.parse::<i64>().unwrap_or(0)).collect::<Vec<i64>>()
         } else {
             let data = TestcaseEdgeQuery::get_order_asc(t, db).await?;
             redis.set(format!("graph_edge_testcase_{t}_v"), data.iter().map(|v| v.to_string()).collect::<Vec<String>>().join("."))?;
             data
         };
+        if !redis.exists(format!("graph_node_{t}"))? || force_refresh {
+            log::trace!("Caching testcase node {t}");
+            if edges.len() > 0 {
+                log::trace!("Caching subtask node {t}");
+                redis.set(format!("graph_node_{t}"), serde_json::to_string(&SubtaskNode::from_db(db, t).await?).unwrap())?;
+            }
+        }
         log::trace!("Processing node {t} with edges: {:?}", edges);
         for ver in edges {
             let _ = q.queue(ver);
@@ -612,7 +611,7 @@ pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask�
         let id = testcase_node.public.testcase_name;
 
         use crate::db::entity::edge::judge::{Column, Entity, ActiveModel};
-        let edge_exist = JudgeEdgeQuery::get_v_filter_extend_content(testcase_node.node_id, vec![Column::VNodeId.eq(record_id)], db, None, None).await?;
+        let edge_exist = JudgeEdgeQuery::get_v_one_filter_extend(testcase_node.node_id, Column::VNodeId.eq(record_id), db).await;
         let nv = detail_data.get(&id);
         log::debug!("Processing testcase {}: existing edges: {:?}, new value: {:?} order: {:?}", id, edge_exist, nv, testcase.order);
         now_max_id = now_max_id.max(testcase.order);
@@ -621,10 +620,10 @@ pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask�
         }
         let nv = nv.unwrap().clone();
         unused_data.remove(&id);
-        if edge_exist.len() > 0 {
+        if let Ok(edge_exist) = edge_exist {
             // update note detail.
             ActiveModel {
-                edge_id: Set(edge_exist[0].id),
+                edge_id: Set(edge_exist.id),
                 score: Set(nv.score),
                 status: Set(nv.status.to_string()),
                 time: Set(nv.time),
