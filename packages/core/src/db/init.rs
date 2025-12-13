@@ -221,6 +221,16 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             TestcaseName: text not_null,
         })
     );
+    tables.insert(
+        "node_vjudge_task".to_string(),
+        table_create!(iden::node::vjudge_task::VjudgeTask, {
+            NodeId: big_integer not_null primary_key,
+            Status: text not_null,
+            Log: text not_null,
+            CreatedAt: date_time not_null,
+            UpdatedAt: date_time not_null,
+        }),
+    );
 
     tables.insert(
         "edge".to_string(),
@@ -492,6 +502,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         "node_testcase".to_string(),
         Table::drop()
             .table(iden::node::testcase::Testcase::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        "node_vjudge_task".to_string(),
+        Table::drop()
+            .table(iden::node::vjudge_task::VjudgeTask::Table)
             .if_exists()
             .to_owned(),
     );

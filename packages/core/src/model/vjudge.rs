@@ -8,7 +8,7 @@ use crate::graph::node::{Node, NodeRaw};
 use crate::model::problem::get_problem_node_and_statement;
 use crate::model::vjudge::AddErrorResult::Warning;
 use crate::Result;
-use crate::model::record::{create_record_with_status, RecordNewProp, get_records_by_statement, update_record_status, update_record_score, update_record_status_no_subtask_remote_judge, SubtaskUserRecord, get_record_by_submission_url};
+use crate::model::record::{create_record_with_status, RecordNewProp, update_record_status_no_subtask_remote_judge, SubtaskUserRecord, get_record_by_submission_url};
 use crate::graph::node::record::RecordStatus;
 use crate::service::judge::service::add_task;
 use crate::utils::encrypt::gen_random_string;
@@ -23,6 +23,12 @@ use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use tokio::sync::Mutex as AsyncMutex;
 use crate::utils::get_redis_connection;
+use crate::graph::node::vjudge_task::{VjudgeTaskNode, VjudgeTaskNodeRaw, VjudgeTaskNodePublicRaw, VjudgeTaskNodePrivateRaw};
+use crate::graph::edge::misc::MiscEdgeRaw;
+use serde_json::json;
+use crate::graph::edge::perm_system::{PermSystemEdgeQuery, SystemPerm};
+use crate::model::perm::check_perm;
+use enum_const::EnumConst;
 
 lazy_static::lazy_static! {
     static ref PROBLEM_UPDATE_LOCKS: Mutex<HashMap<String, Arc<AsyncMutex<()>>>> = Mutex::new(HashMap::new());
@@ -312,12 +318,25 @@ pub struct UserSubmissionProp {
     pub user_id: i64,
     pub ws_id: Option<String>,
     pub submissions: Vec<SubmissionItem>,
+    pub task_id: Option<i64>,
 }
 
 pub async fn update_user_submission_from_vjudge(
     db: &DatabaseConnection,
     data: UserSubmissionProp,
 ) -> Result<()> {
+    // Check for task_id and update status if present
+    if let Some(task_id) = data.task_id {
+        if let Ok(task_node) = VjudgeTaskNode::from_db(db, task_id).await {
+            use crate::db::entity::node::vjudge_task::Column;
+            let log_msg = format!("Received batch of {} submissions.", data.submissions.len());
+            let _ = task_node.modify(db, Column::Log, format!("{}\n{}", task_node.public.log, log_msg)).await;
+            let _ = task_node.modify(db, Column::UpdatedAt, chrono::Utc::now().naive_utc()).await;
+        } else {
+             log::warn!("Received update for non-existent task_id: {}", task_id);
+        }
+    }
+
     let mut handles = vec![];
     log::info!("{}.", data.ws_id.clone().unwrap_or("No WS ID provided".to_string()));
     let ws_id = data.ws_id;
@@ -327,31 +346,31 @@ pub async fn update_user_submission_from_vjudge(
         log::warn!("No websocket id provided for submission update.");
         None
     };
-    if let Some(notifyRef) = &ws_notify {
-        let _ = notifyRef.emit("submission_update", &Json!{
+    if let Some(notify_ref) = &ws_notify {
+        let _ = notify_ref.emit("submission_update", &Json!{
             "s": 0,
             "n": data.submissions.len(),
         });
     } else {
-        log::debug!("No notifyRef available to send initial submission update.");
+        log::debug!("No notify_ref available to send initial submission update.");
     }
     for submission in data.submissions {
         let db = db.clone();
         let user_id = data.user_id;
-        let notifyRef = ws_notify.clone();
+        let notify_ref = ws_notify.clone();
         handles.push(tokio::spawn(async move {
             if let Err(e) = process_single_submission(db, user_id, submission.clone()).await {
                 log::error!("Error processing submission: {:?}", e);
-                if let Some(notifyRef) = notifyRef {
-                    let _ = notifyRef.emit("submission_update", &Json!{
+                if let Some(notify_ref) = notify_ref {
+                    let _ = notify_ref.emit("submission_update", &Json!{
                         "s": 1,
                         "m": format!("Failed to process submission: {}", &submission.remote_id),
                     });
                 } else {
-                    log::debug!("No notifyRef available to send error message for submission: {}", &submission.remote_id);
+                    log::debug!("No notify_ref available to send error message for submission: {}", &submission.remote_id);
                 }
-            } else if let Some(notifyRef) = notifyRef {
-                let _ = notifyRef.emit("submission_update", &Json! {
+            } else if let Some(notify_ref) = notify_ref {
+                let _ = notify_ref.emit("submission_update", &Json! {
                     "s": 2,
                     "m": format!("Successfully add submission: {}", &submission.remote_id),
                 });
@@ -515,4 +534,188 @@ async fn process_single_submission(
     update_record_status_no_subtask_remote_judge(&db, &mut redis, record_id, statement_node_id, record_map).await?;
     
     Ok(())
+}
+
+pub async fn add_vjudge_task(
+    db: &DatabaseConnection,
+    _user_id: i64,
+    vjudge_node_id: i64,
+    range: String, // "all", "recent", or "problem:ID"
+    ws_id: Option<String>
+) -> Result<VjudgeTaskNode> {
+    // 1. 创建任务节点 (Create VjudgeTaskNode)
+    let task = VjudgeTaskNodeRaw {
+        public: VjudgeTaskNodePublicRaw {
+            status: "pending".to_string(),
+            log: format!("Task created. Range: {}", range),
+        },
+        private: VjudgeTaskNodePrivateRaw {},
+    }.save(db).await?;
+
+    // 2. 连接 VjudgeAccountNode 和 VjudgeTaskNode (Link VjudgeAccountNode and VjudgeTaskNode)
+    MiscEdgeRaw {
+        u: vjudge_node_id,
+        v: task.node_id,
+        misc_type: "vjudge_task".to_string(),
+    }.save(db).await?;
+
+    // 3. 获取 VjudgeAccountNode (Get VjudgeAccountNode)
+    let vjudge_node = UserRemoteAccountNode::from_db(db, vjudge_node_id).await?;
+    
+    // 4. 发送任务到 Edge Server (Send task to Edge Server)
+    let operation = if range == "all" {
+        "sync_all"
+    } else if range == "recent" {
+        "sync_recent"
+    } else {
+        "sync_problem" // or "sync_user_remote_submission"
+    };
+
+    let payload = json!({
+        "operation": operation,
+        "vjudge_node": vjudge_node,
+        "range": range,
+        "ws_id": ws_id,
+        "task_id": task.node_id 
+    });
+    
+    let success = add_task(&payload).await;
+    
+    let new_status = if success { "dispatched" } else { "failed_to_dispatch" };
+    let new_log = if success { "Task dispatched to edge server." } else { "Failed to dispatch to edge server." };
+
+    // 5. 更新任务状态 (Update VjudgeTaskNode)
+    use crate::db::entity::node::vjudge_task::Column;
+    let task = task.modify(db, Column::Status, new_status.to_string()).await?;
+    let task = task.modify(db, Column::Log, format!("{}\n{}", task.public.log, new_log)).await?;
+
+    Ok(task)
+}
+
+pub async fn view_vjudge_task(
+    db: &DatabaseConnection,
+    vjudge_node_id: i64,
+) -> Result<Vec<VjudgeTaskNode>> {
+    use crate::graph::edge::misc::MiscEdgeQuery;
+    use crate::db::entity::edge::misc::Column as MiscColumn;
+    
+    // 查询与 VjudgeAccountNode 关联的所有任务 (Query all tasks associated with VjudgeAccountNode)
+    // u = vjudge_node, v = task
+    use sea_orm::sea_query::SimpleExpr;
+    let tasks = MiscEdgeQuery::get_v_filter_extend::<SimpleExpr>(
+        vjudge_node_id,
+        vec![MiscColumn::MiscType.eq("vjudge_task")],
+        db,
+        None, // limit
+        None  // offset
+    ).await?;
+    
+    // get_v_filter_extend returns Vec<(node_id, edge_id)>
+    // We need to fetch the actual VjudgeTaskNode for each ID.
+    let mut task_nodes = vec![];
+    for (node_id, _edge_id) in tasks {
+         if let Ok(node) = VjudgeTaskNode::from_db(db, node_id).await {
+             task_nodes.push(node);
+         }
+    }
+    
+    Ok(task_nodes)
+}
+
+pub async fn check_vjudge_account_owner(
+    db: &DatabaseConnection,
+    user_id: i64,
+    vjudge_node_id: i64
+) -> Result<bool> {
+    use crate::db::entity::edge::user_remote::Column as UserRemoteColumn;
+    use sea_orm::ColumnTrait;
+    use sea_orm::sea_query::SimpleExpr;
+    
+    // Check if edge exists between user_id (u) and vjudge_node_id (v)
+    let edges = UserRemoteEdgeQuery::get_v_filter_extend::<SimpleExpr>(
+        user_id,
+        vec![UserRemoteColumn::VNodeId.eq(vjudge_node_id)],
+        db,
+        None,
+        None
+    ).await?;
+    
+    Ok(!edges.is_empty())
+}
+
+pub async fn get_vjudge_accounts_by_user_id(
+    db: &DatabaseConnection,
+    user_id: i64
+) -> Result<Vec<UserRemoteAccountNode>> {
+    let ids = UserRemoteEdgeQuery::get_v(user_id, db).await?;
+    let mut accounts = vec![];
+    for id in ids {
+        if let Ok(account) = UserRemoteAccountNode::from_db(db, id).await {
+            accounts.push(account);
+        }
+    }
+    Ok(accounts)
+}
+
+pub async fn get_vjudge_account_by_id(
+    db: &DatabaseConnection,
+    node_id: i64
+) -> Result<UserRemoteAccountNode> {
+    UserRemoteAccountNode::from_db(db, node_id).await
+}
+
+pub async fn delete_vjudge_account_node(
+    db: &DatabaseConnection,
+    node_id: i64
+) -> Result<()> {
+    // Delete node and associated edges?
+    // Node::delete doesn't delete edges automatically usually unless cascaded in DB.
+    // Ideally we delete edges first.
+    // For now, call Node::delete.
+    let node = UserRemoteAccountNode::from_db(db, node_id).await?;
+    node.delete(db, node_id).await
+}
+
+pub async fn update_vjudge_account_node(
+    db: &DatabaseConnection,
+    node_id: i64,
+    auth: Option<UserRemoteAccountAuth>
+) -> Result<()> {
+    let node = UserRemoteAccountNode::from_db(db, node_id).await?;
+    if let Some(auth) = auth {
+        use crate::db::entity::node::user_remote::Column;
+        
+        let auth_str = serde_json::to_string(&auth)
+            .map_err(|e| CoreError::StringError(format!("Failed to serialize auth: {}", e)))?;
+            
+        let _ = node.modify(db, Column::Auth, auth_str).await?;
+    }
+    Ok(())
+}
+
+pub async fn check_system_manage_vjudge_perm(
+    db: &DatabaseConnection,
+    user_id: i64
+) -> bool {
+    let system_node = env::DEFAULT_NODES.lock().unwrap().default_system_node;
+    if system_node == -1 {
+        log::warn!("System node not found when checking manage vjudge perm");
+        return false;
+    }
+    
+    // Convert SystemPerm to i64 manually using EnumConst
+    let perm_val = SystemPerm::ManageVjudge.get_const_isize().unwrap() as i64;
+
+    let res = check_perm(
+        db,
+        user_id,
+        system_node,
+        PermSystemEdgeQuery,
+        perm_val
+    ).await;
+    
+    match res {
+        Ok(1) => true,
+        _ => false,
+    }
 }

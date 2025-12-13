@@ -8,6 +8,7 @@ pub mod record;
 pub mod token;
 pub mod user;
 pub mod training;
+pub mod vjudge_task;
 
 use crate::{
     Result,

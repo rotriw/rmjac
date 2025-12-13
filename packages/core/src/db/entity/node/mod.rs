@@ -21,6 +21,7 @@ pub mod training;
 pub mod training_problem;
 pub mod user_remote;
 pub mod testcase;
+pub mod vjudge_task;
 
 
 use crate::Result;

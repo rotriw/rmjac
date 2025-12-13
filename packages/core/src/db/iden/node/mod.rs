@@ -20,3 +20,4 @@ pub mod user_remote;
 pub mod testcase_subtask;
 
 pub mod testcase;
+pub mod vjudge_task;
