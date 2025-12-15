@@ -31,7 +31,7 @@ export const verifyApiKey = async (
   const params = new URLSearchParams();
   params.append("apiKey", apiKey);
   params.append("time", Math.floor(Date.now() / 1000).toString());
-  params.append("handle", handle);
+  params.append("handles", handle);
 
   const sortedParams = Array.from(params.entries()).sort((a, b) =>
     a[0].localeCompare(b[0])
@@ -59,6 +59,7 @@ export const verifyApiKey = async (
   const url = `https://codeforces.com/api/user.info?${paramString}&apiSig=${finalApiSig}`;
 
   const res = await fetch(url);
+// Debug: log the raw response text
 
   if (!res.ok) {
     throw new Error("Codeforces API request failed");

@@ -5,13 +5,16 @@ export interface ContentType {
 
 export interface ProblemStatement {
     statement_source: string; // 题面 来自的题库
-    problem_source: string;
-    iden: string;
-    problem_statements: ContentType[];
+    problem_source: string; // 题库来源
+    page_source: string; // 题目源代码
+    iden: string; // 题目来源标识符
+    problem_statements: ContentType[]; // 题目描述
     time_limit: number; // 时间限制，单位 ms
     memory_limit: number; // 内存限制，单位 KB
-    sample_group: [string, string][];
-    show_order: string[];
+    sample_group: [string, string][]; // 样例 [输入, 输出]
+    show_order: string[]; // 题目显示顺序
+    problem_difficulty: number | null; // 题目难度
+    problem_tag_list: string[]; // 题目标签
 }
 
 export interface Problem {
@@ -22,18 +25,4 @@ export interface Problem {
     creation_time: string; // 题目创建时间
     tags: string[]; // 输入描述
     user_id: number; // 题目创建者
-}
-
-import { RouterOps } from "./router";
-
-export class ProblemRouter {
-    protected ops: RouterOps;
-
-    constructor(ops: RouterOps) {
-        this.ops = ops;
-    }
-
-    async save_problem(url: string): Promise<Problem | ""> {
-        return "";
-    }
 }

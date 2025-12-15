@@ -2,7 +2,6 @@ import { connect } from "puppeteer-real-browser";
 //@ts-ignore
 import plugin from "puppeteer-extra-plugin-click-and-wait";
 import axios from "axios";
-
 class BrowserPool {
     private pool: any[] = [];
     private readonly maxSize: number;
@@ -79,4 +78,9 @@ export async function getPageContent(url: string, useBrowser: boolean): Promise<
     } else {
         return await getContentWithAxios(url);
     }
+}
+
+// deno-lint-ignore no-explicit-any
+export async function getOnePage(): Promise<any> {
+    return await browserPool.acquire();
 }

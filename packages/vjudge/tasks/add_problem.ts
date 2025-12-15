@@ -1,15 +1,16 @@
-import { Socket } from "npm:socket.io-client@^4.8.1";
-import { Problem } from "../declare/problem.ts";
-import { handle_problem } from "../router.ts";
+import { Socket } from "socket.io-client";
 
 export const run = async (data: any, socket: Socket) => {
     LOG.info(`Received update_problem_statement for ${data.url}`);
-    let res = await handle_problem(data.url);
-    if (res === "") {
-        LOG.error(`Failed to handle problem: ${data.url}`);
+    const problem = await VJUDGE_PROBLEM[data.platform].fetch?.(data.url);
+    if (!problem) {
+        LOG.error(`Failed to fetch problem: ${data.url}`);
         return;
     }
-    (res as Problem).creation_time = new Date().toISOString().slice(0, -1);
-    console.log(JSON.stringify(res));
-    socket.emit("create_problem", res)
+    const parsedProblem = await VJUDGE_PROBLEM[data.platform].parse?.(problem, data.url);
+    if (!parsedProblem) {
+        LOG.error(`Failed to parse problem: ${data.url}`);
+        return;
+    }
+    socket.emit("create_problem", parsedProblem)
 }

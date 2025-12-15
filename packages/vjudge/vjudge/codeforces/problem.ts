@@ -1,24 +1,20 @@
-import { Problem, ProblemRouter } from "../../declare/problem";
-import { parse } from "./parse";
-import { getPageContent } from "../../service/browser";
-import { RouterOps } from "../../declare/router";
+import { Problem } from "@/declare/problem.ts";
+import { getPageContent } from "@/service/browser.ts";
+import { parse as parseProblem } from "./parse/parse.ts";
 
-export class CodeforcesRouter extends ProblemRouter {
-    constructor(ops: RouterOps) {
-        super(ops);
+const fetch = async (url: string): Promise<string> => {
+    const content = await getPageContent(url, true);
+    if (!content) {
+        return "";
     }
+    return content;
+}
 
-    async get_problem(url: string, iden: string[]): Promise<Problem | ""> {
-        try {
-            const content = await getPageContent(url, this.ops.headless);
-            if (!content) {
-                return "";
-            }
-            console.log(content);
-            return parse(content, url);
-        } catch (e) {
-            LOG.error(`Error fetching ${url}:`, e);
-            return "";
-        }
-    }
+const parse = async (content: string, url: string): Promise<Problem | ""> => {
+    return await parseProblem(content, url);
+}
+
+export {
+    fetch,
+    parse,
 }
