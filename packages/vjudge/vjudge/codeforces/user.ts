@@ -1,10 +1,10 @@
 import { VerifiedContext } from "@/declare/verified.ts";
-import { getOnePage } from "@/service/browser.ts";
 import { verifyApiKey } from "./service/verify.ts";
-import { fetchUserSubmissions } from "./service/submission.ts";
+import { checkLoginWithPassword, fetchSubmissionWithId, fetchUserSubmissions, submitProblem } from "./service/submission.ts";
 import { UniversalSubmission } from "@/declare/submission.ts";
-import { CFSubmissionStatus } from "@/declare/codeforces.ts";
+import { CFSubmissionStatus, convertCFSubmissionStatus } from "@/declare/codeforces.ts";
 import { VjudgeAuth } from "../../declare/node.ts";
+import { Socket } from "npm:socket.io-client@^4.8.1";
 
 
 export interface CodeforcesContext extends VerifiedContext {
@@ -12,61 +12,31 @@ export interface CodeforcesContext extends VerifiedContext {
 }
 
 
-const convertCFSubmissionStatus = (status: string) =>  {
-    return CFSubmissionStatus[status as keyof typeof CFSubmissionStatus] || "UnknownError";
-}
-
-const verified_with_password = async (handle: string, password: string): Promise<boolean> => {
-    try {
-        const browser = await getOnePage();
-        const page = await browser.newPage();
-        console.log(page);
-        await page.goto("https://codeforces.com/enter");
-        const res = await page.clickAndWaitForNavigation("body");
-        console.log(res);
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        await page.type("input[name='handleOrEmail']", handle);
-        await page.type("input[name='password']", password);
-        await page.click("input[type='submit']");
-        await page.waitForNavigation(); 
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        try {
-            if (await page.url().includes(handle)) {
-                return true;
-            } else {
-                return false;
-            }
-        } catch (e) {
-            console.error(e);
-            return false;
-        }
-    } catch (e) {
-        console.error(e);
-        return false;
-    }
-}
-
 const verifiedAPIKEY = async (handle: string, auth: string): Promise<boolean> => {
     const [key, secret] = auth.split(":");
     await verifyApiKey(handle, key, secret);
     return true;
 }
 
-const verifiedPASSWORD = async (handle: string, auth: VjudgeAuth): Promise<boolean> => {
-    return await verified_with_password(handle, auth.password || "");
+const verifiedPASSWORD = async (handle: string, auth: VjudgeAuth, socket: Socket): Promise<boolean> => {
+    const cookies = await checkLoginWithPassword(handle, auth.password || "");
+    if (cookies === false) {
+        return false;
+    }
+    socket?.emit("verified_cookies", {
+        platform: "codeforces",
+        handle: handle,
+        cookies: cookies,
+    });
+    return true;
 }
 
-const syncOneTOKEN = async (handle: string, auth: string, id: string): Promise<UniversalSubmission> => {
-    return await sync_with_id(handle, auth, id);
+const syncOneTOKEN = async (handle: string, auth: VjudgeAuth, id: string, contest_id: string): Promise<UniversalSubmission> => {
+    const submission = await fetchSubmissionWithId(handle, auth.token || "", id, contest_id);
 }
 
-const syncOneAPIKEY = async (handle: string, auth: string, id: string, contest_id: string): Promise<UniversalSubmission[]> => {
-
-
-}
-
-const syncOnePASSWORD = async (handle: string, auth: string, id: string): Promise<UniversalSubmission[]> => {
-    return await sync_with_id(handle, auth, id);
+const syncOnePASSWORD = async (handle: string, auth: VjudgeAuth, id: string, contest_id: string): Promise<UniversalSubmission[]> => {
+    return await sync_with_id(handle, auth, id, contest_id);
 }
 
 const syncListAPIKEY = async (handle: string, auth: VjudgeAuth, from: number, count: number): Promise<UniversalSubmission[]> => {
@@ -123,21 +93,51 @@ const syncAllAPIKEY = async (handle: string, auth: VjudgeAuth): Promise<Universa
     }
 }
 
-const sync_with_id = async (handle: string, context: CodeforcesContext, id: string): Promise<UniversalSubmission[]> => {
+const sync_with_id = async (handle: string, auth: VjudgeAuth, id: string, contest_id: string): Promise<UniversalSubmission[]> => {
     // this method only allow PASSWORD | TOKEN.
     // todo.
-
+    const token = await checkLoginWithPassword(handle, auth.password || "");
+    if (token === false) {
+        return [];
+    }
+    const submission = await fetchSubmissionWithId(handle, token, id, contest_id);
     return [];
 }
 
+
+interface SubmitResult {
+    submission: string;
+    token: string;
+}
+
+const submitTOKEN = async (handle: string, auth: VjudgeAuth, contest_id: string, problem_id: string, code: string, language: string): Promise<SubmitResult> => {
+    const submission = await submitProblem(handle, auth.token || "", contest_id, problem_id, code, language);
+    return {
+        submission: submission,
+        token: auth.token || "",
+    };
+}
+
+const submitPASSWORD = async (handle: string, auth: VjudgeAuth, contest_id: string, problem_id: string, code: string, language: string): Promise<SubmitResult> => {
+    const token = await checkLoginWithPassword(handle, auth.password || "");
+    // require go back.
+    const submission = await submitProblem(handle, token || "", contest_id, problem_id, code, language);
+    return {
+        submission: submission,
+        token: token || "",
+    };
+}
 export {
     verifiedAPIKEY,
     verifiedPASSWORD,
 
-    syncOneAPIKEY,
+    // syncOneAPIKEY,
     syncOneTOKEN,
     syncOnePASSWORD,
 
     syncListAPIKEY,
     syncAllAPIKEY,
+
+    submitPASSWORD,
+    submitTOKEN,
 }

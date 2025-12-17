@@ -17,3 +17,8 @@ export const CFSubmissionStatus = {
     "REJECTED": "UnknownError",
     "SUBMITTED": "Waiting",
 }
+
+
+export const convertCFSubmissionStatus = (status: string) =>  {
+    return CFSubmissionStatus[status as keyof typeof CFSubmissionStatus] || "UnknownError";
+}

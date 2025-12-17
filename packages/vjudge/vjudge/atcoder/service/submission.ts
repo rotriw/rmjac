@@ -1,4 +1,6 @@
 import { z } from "npm:zod";
+import { get_loc } from "@/utils/cf_click.ts";
+import { getOnePage } from "../../../service/browser.ts";
 
 const submissionSchema = z.object({
   id: z.number(),
@@ -66,3 +68,39 @@ export async function syncSpecificContestStatus(contestId: string) {
   }
 }
 
+
+export async function loginWithPassword(handle: string, password: string) {
+    const url = "https://atcoder.jp/login";
+    const browser = await getOnePage();
+    const page = await browser.newPage();
+    await page.goto(url);
+    await page.setViewport({
+        width: 2000,
+        height: 1000,
+        deviceScaleFactor: 2,
+    });
+    for (let i = 0; i < 10; i ++ ) {
+        await page.keyboard.press('PageDown');
+    }
+    await new Promise(resolve => setTimeout(resolve, 4000));
+    const image = await page.screenshot({
+        type: "jpeg",
+        quality: 100,
+    });
+    const pos = await get_loc(image);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await page.mouse.click(pos.x / 2 + 50, pos.y / 2 + 50, {
+        button: "left",
+        clickCount: 2,
+    });
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await page.type("input[name='username']", handle);
+    await page.type("input[name='password']", password);
+    await page.click("button[type='submit']");
+    await page.waitForNavigation({ waitUntil: "domcontentloaded" });
+    for (const cookie of await browser.cookies()) {
+        if (cookie.name === "REVEL_SESSION") {
+            return cookie.value;
+        }
+    }
+}

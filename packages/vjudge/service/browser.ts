@@ -1,4 +1,5 @@
 import { connect } from "puppeteer-real-browser";
+import { Browser } from "npm:rebrowser-puppeteer-core";
 //@ts-ignore
 import plugin from "puppeteer-extra-plugin-click-and-wait";
 import axios from "axios";
@@ -10,16 +11,17 @@ class BrowserPool {
         this.maxSize = maxSize;
     }
 
-    async acquire(): Promise<any> {
+    async acquire(): Promise<Browser> {
         if (this.pool.length > 0) {
             return this.pool.pop()!;
         }
         const { browser } = await connect({
+            
             headless: false,
             plugins: [plugin()],
             args: [
                 '--no-sandbox',
-            ]
+            ],
         });
         await browser.newPage();
         return browser;
@@ -80,7 +82,6 @@ export async function getPageContent(url: string, useBrowser: boolean): Promise<
     }
 }
 
-// deno-lint-ignore no-explicit-any
-export async function getOnePage(): Promise<any> {
+export async function getOnePage() {
     return await browserPool.acquire();
 }
