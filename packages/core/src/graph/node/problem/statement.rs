@@ -6,6 +6,9 @@ pub struct ProblemStatementNodePublic {
     pub update_time: NaiveDateTime,
     pub sample_group: Vec<(String, String)>,
     pub show_order: Vec<String>,
+    pub page_source: Option<String>,
+    pub page_rendered: Option<String>,
+    pub problem_difficulty: Option<i32>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -19,6 +22,9 @@ pub struct ProblemStatementNodePublicRaw {
     pub creation_time: NaiveDateTime,
     pub sample_group_in: Vec<String>,
     pub sample_group_out: Vec<String>,
+    pub page_source: Option<String>,
+    pub page_rendered: Option<String>,
+    pub problem_difficulty: Option<i32>,
     pub show_order: Vec<String>,
 }
 
@@ -48,6 +54,9 @@ impl From<Model> for ProblemStatementNode {
                 source: model.source,
                 creation_time: model.creation_time,
                 update_time: model.update_time,
+                page_source: model.page_source,
+                page_rendered: model.page_rendered,
+                problem_difficulty: model.problem_difficulty,
                 sample_group: model.sample_group_in.into_iter().zip(model.sample_group_out).collect(),
                 show_order: model.show_order,
             },
@@ -68,6 +77,9 @@ impl From<ProblemStatementNodeRaw> for ActiveModel {
             sample_group_in: Set(value.public.sample_group_in),
             sample_group_out: Set(value.public.sample_group_out),
             show_order: Set(value.public.show_order),
+            page_source: Set(value.public.page_source),
+            page_rendered: Set(value.public.page_rendered),
+            problem_difficulty: Set(value.public.problem_difficulty),
         }
     }
 }

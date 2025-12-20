@@ -3,7 +3,7 @@ pub mod topo;
 use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo};
 use crate::db::entity::node::node;
 use crate::env::{
-    PATH_VIS, SAVED_NODE_CIRCLE_ID, SAVED_NODE_PATH, SAVED_NODE_PATH_LIST, SAVED_NODE_PATH_REV,
+    PATH_VIS, PERM_GRAPH, SAVED_NODE_CIRCLE_ID, SAVED_NODE_PATH, SAVED_NODE_PATH_LIST, SAVED_NODE_PATH_REV,
 };
 use crate::error::CoreError;
 use crate::graph::action::topo::TopoGraph;
@@ -15,6 +15,109 @@ use sea_orm::DatabaseConnection;
 use sea_orm::EntityTrait;
 use sea_orm::{ActiveModelBehavior, ActiveModelTrait, IntoActiveModel, QueryFilter};
 use serde::{Deserialize, Serialize};
+
+pub async fn load_perm_graph(db: &DatabaseConnection) -> Result<()> {
+    use crate::graph::edge::perm_view::PermViewEdgeQuery;
+    use crate::graph::edge::perm_manage::PermManageEdgeQuery;
+    use crate::graph::edge::perm_pages::PermPagesEdgeQuery;
+    use crate::graph::edge::perm_problem::PermProblemEdgeQuery;
+    use crate::graph::edge::perm_system::PermSystemEdgeQuery;
+
+    log::info!("Loading permission graph from database...");
+
+    let mut graph = crate::env::PermGraph::new();
+
+    // 加载 perm_view 边
+    log::info!("Loading perm_view edges...");
+    let perm_view_edges = PermViewEdgeQuery::get_all(db).await?;
+    log::info!("Loaded {} perm_view edges", perm_view_edges.len());
+    for (u, v, perm) in perm_view_edges {
+        // get_all 返回 (u_node_id, v_node_id, perm)，我们没有 edge_id，使用 0 作为占位符
+        graph.add_edge("perm_view", u, v, 0, perm);
+    }
+
+    // 加载 perm_manage 边
+    log::info!("Loading perm_manage edges...");
+    let perm_manage_edges = PermManageEdgeQuery::get_all(db).await?;
+    log::info!("Loaded {} perm_manage edges", perm_manage_edges.len());
+    for (u, v, perm) in perm_manage_edges {
+        graph.add_edge("perm_manage", u, v, 0, perm);
+    }
+
+    // 加载 perm_pages 边
+    log::info!("Loading perm_pages edges...");
+    let perm_pages_edges = PermPagesEdgeQuery::get_all(db).await?;
+    log::info!("Loaded {} perm_pages edges", perm_pages_edges.len());
+    for (u, v, perm) in perm_pages_edges {
+        graph.add_edge("perm_pages", u, v, 0, perm);
+    }
+
+    // 加载 perm_problem 边
+    log::info!("Loading perm_problem edges...");
+    let perm_problem_edges = PermProblemEdgeQuery::get_all(db).await?;
+    log::info!("Loaded {} perm_problem edges", perm_problem_edges.len());
+    for (u, v, perm) in perm_problem_edges {
+        graph.add_edge("perm_problem", u, v, 0, perm);
+    }
+
+    // 加载 perm_system 边
+    log::info!("Loading perm_system edges...");
+    let perm_system_edges = PermSystemEdgeQuery::get_all(db).await?;
+    log::info!("Loaded {} perm_system edges", perm_system_edges.len());
+    for (u, v, perm) in perm_system_edges {
+        graph.add_edge("perm_system", u, v, 0, perm);
+    }
+
+    // 将加载的图写入全局状态
+    let mut perm_graph = PERM_GRAPH.write().unwrap();
+    *perm_graph = graph;
+
+    log::info!("Permission graph loaded successfully!");
+    Ok(())
+}
+
+/// 向权限图中添加一条边（当创建新的权限边时调用）
+pub fn add_perm_edge(edge_type: &str, u: i64, v: i64, edge_id: i64, perm: i64) {
+    let mut graph = PERM_GRAPH.write().unwrap();
+    graph.add_edge(edge_type, u, v, edge_id, perm);
+    log::debug!("Added perm edge: {} {} -> {} (perm: {})", edge_type, u, v, perm);
+}
+
+/// 从权限图中删除一条边（通过边ID）
+pub fn remove_perm_edge_by_id(edge_type: &str, edge_id: i64) {
+    let mut graph = PERM_GRAPH.write().unwrap();
+    graph.remove_edge_by_id(edge_type, edge_id);
+    log::debug!("Removed perm edge by id: {} {}", edge_type, edge_id);
+}
+
+/// 从权限图中删除指定 u -> v 的边
+pub fn remove_perm_edge(edge_type: &str, u: i64, v: i64) {
+    let mut graph = PERM_GRAPH.write().unwrap();
+    graph.remove_edge(edge_type, u, v);
+    log::debug!("Removed perm edge: {} {} -> {}", edge_type, u, v);
+}
+
+/// 非 async 的权限检查函数
+/// 使用内存中的 PermGraph 进行 DFS 检查
+///
+/// 返回值：
+/// - 1: 有权限
+/// - 0: 无权限
+/// - -1: 超过最大步数
+pub fn check_perm_sync(edge_type: &str, u: i64, v: i64, required_perm: i64) -> i8 {
+    let graph = PERM_GRAPH.read().unwrap();
+    graph.check_perm_multi(edge_type, u, v, required_perm, 100)
+}
+
+/// 检查单个权限位的同步版本
+pub fn check_perm_single_sync(edge_type: &str, u: i64, v: i64, required_perm: i64) -> i8 {
+    let graph = PERM_GRAPH.read().unwrap();
+    graph.check_perm_dfs(edge_type, u, v, required_perm, 100)
+}
+
+// ============================================================================
+// 旧的基于数据库的权限检查系统（保留以便兼容）
+// ============================================================================
 
 macro_rules! path_vis {
     [$ckid:expr,$u:expr] => {
@@ -40,7 +143,8 @@ macro_rules! path_vis_insert {
 
 #[allow(clippy::too_many_arguments)]
 #[async_recursion(?Send)]
-pub async fn has_path_dfs<DbActive, DbModel, DbEntity, EdgeA, T>(
+#[deprecated(note = "Use check_perm_sync instead for better performance")]
+pub async fn has_path_dfs_database<DbActive, DbModel, DbEntity, EdgeA, T>(
     db: &DatabaseConnection,
     u: i64,
     v: i64,
@@ -98,7 +202,8 @@ where
         if ver.0 == v {
             return Ok(1);
         }
-        let val = has_path_dfs(
+        #[allow(deprecated)]
+        let val = has_path_dfs_database(
             db,
             ver.0,
             v,
@@ -132,11 +237,14 @@ pub fn gen_ckid() -> i32 {
     *ckid
 }
 
+/// 旧的 async 权限检查函数
+/// 现在内部使用新的同步检查，不再访问数据库
+#[deprecated(note = "Use check_perm_sync instead for better performance")]
 pub async fn has_path<DbActive, DbModel, DbEntity, EdgeA, T>(
-    db: &DatabaseConnection,
+    _db: &DatabaseConnection,
     u: i64,
     v: i64,
-    edge_type: &T,
+    _edge_type: &T,
     required_perm: i64,
 ) -> Result<i8>
 where
@@ -155,51 +263,8 @@ where
     DbEntity: EntityTrait,
     T: EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm + Sized + Send + Sync + Clone,
 {
-    let empty = vec![];
-    let data = SAVED_NODE_PATH_LIST
-        .lock()
-        .unwrap()
-        .get(T::get_edge_type())
-        .unwrap_or(&empty)
-        .clone();
-    for path in data {
-        if let Some(x) = SAVED_NODE_PATH
-            .lock()
-            .unwrap()
-            .get(&(path, T::get_edge_type().to_string()))
-            .and_then(|m| m.get(&v)) && T::check_perm(required_perm, *x) && let Some(x) = SAVED_NODE_PATH_REV
-            .lock()
-            .unwrap()
-            .get(&(path, T::get_edge_type().to_string()))
-            .and_then(|m| m.get(&u))
-        {
-            log::debug!("Cache hit.{u} -> {v}, perm: {x}");
-            if T::check_perm(required_perm, *x) {
-                return Ok(1);
-            }
-        }
-    }
-    let ckid = gen_ckid();
-    let mut required_perm = required_perm;
-    while required_perm > 0 {
-        let res = has_path_dfs(
-            db,
-            u,
-            v,
-            edge_type,
-            lowbit(required_perm),
-            ckid,
-            0,
-            100,
-            false,
-        )
-        .await?;
-        if res < 1 {
-            return Ok(res);
-        }
-        required_perm -= lowbit(required_perm);
-    }
-    Ok(1)
+    // 使用新的同步检查
+    Ok(check_perm_sync(T::get_edge_type(), u, v, required_perm))
 }
 
 pub fn lowbit(x: i64) -> i64 {

@@ -3,9 +3,9 @@ use chrono::NaiveDateTime;
 use enum_const::EnumConst;
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
-use rmjac_core::graph::edge::perm_pages::{PagesPerm, PermPagesEdgeQuery};
-use rmjac_core::graph::edge::perm_system::{PermSystemEdgeQuery, SystemPerm};
-use rmjac_core::model::perm::check_perm;
+use rmjac_core::graph::edge::perm_pages::PagesPerm;
+use rmjac_core::graph::edge::perm_system::SystemPerm;
+use rmjac_core::model::perm::{check_pages_perm, check_system_perm};
 use crate::handler::{BasicHandler, HttpError, ResultHandler};
 use rmjac_core::model::training::{add_problem_into_training_list_from_problem_iden, check_problem_list_in_training, create_training_problem_node_for_list, get_training_node_id_by_iden, modify_training_description, TrainingList};
 use rmjac_core::utils::get_redis_connection;
@@ -47,7 +47,7 @@ impl Create {
         let system_id = rmjac_core::env::DEFAULT_NODES.lock().unwrap().default_system_node;
         if let Some(user) = user
             && user.is_real
-            && check_perm(&self.basic.db, user.user_id, system_id, PermSystemEdgeQuery, SystemPerm::CreateTraining.get_const_isize().unwrap() as i64).await? == 1 {
+            && check_system_perm(user.user_id, system_id, SystemPerm::CreateTraining.get_const_isize().unwrap() as i64) == 1 {
             Ok(self)
         } else {
             Err(HttpError::HandlerError(PermissionDenied))
@@ -97,15 +97,15 @@ impl Manage {
         let node_id = self.node_id.unwrap();
         if let Some(user) = user
             && user.is_real {
-            if require_sudo == false && check_perm(&self.basic.db, user.user_id, node_id, PermPagesEdgeQuery, PagesPerm::EditPages.get_const_isize().unwrap() as i64).await? == 1 {
+            if require_sudo == false && check_pages_perm(user.user_id, node_id, PagesPerm::EditPages.get_const_isize().unwrap() as i64) == 1 {
                 return Ok(self);
             }
 
-            if check_perm(&self.basic.db, user.user_id, node_id, PermSystemEdgeQuery, PagesPerm::DeletePages.get_const_isize().unwrap() as i64).await? == 1 {
+            if check_system_perm(user.user_id, node_id, PagesPerm::DeletePages.get_const_isize().unwrap() as i64) == 1 {
                 return Ok(self);
             }
 
-            if check_perm(&self.basic.db, user.user_id, node_id, PermSystemEdgeQuery, SystemPerm::ManageAllTraining.get_const_isize().unwrap() as i64).await? == 1 {
+            if check_system_perm(user.user_id, node_id, SystemPerm::ManageAllTraining.get_const_isize().unwrap() as i64) == 1 {
                 return Ok(self);
             }
         }
@@ -203,10 +203,10 @@ impl View {
         let node_id = self.node_id.unwrap();
         if let Some(user) = user
             && user.is_real {
-            if check_perm(&self.basic.db, user.user_id, node_id, PermPagesEdgeQuery, PagesPerm::ReadPages.get_const_isize().unwrap() as i64).await? == 1 {
+            if check_pages_perm(user.user_id, node_id, PagesPerm::ReadPages.get_const_isize().unwrap() as i64) == 1 {
                 return Ok(self);
             }
-            if check_perm(&self.basic.db, user.user_id, node_id, PermSystemEdgeQuery, SystemPerm::ManageAllTraining.get_const_isize().unwrap() as i64).await? == 1 {
+            if check_system_perm(user.user_id, node_id, SystemPerm::ManageAllTraining.get_const_isize().unwrap() as i64) == 1 {
                 return Ok(self);
             }
         }

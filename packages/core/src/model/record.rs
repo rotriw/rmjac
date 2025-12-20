@@ -7,14 +7,15 @@ use crate::graph::node::{Node, NodeRaw};
 use crate::graph::node::record::{
     RecordNode, RecordNodePrivateRaw, RecordNodePublicRaw, RecordNodeRaw, RecordStatus,
 };
-use sea_orm::{DatabaseConnection, ColumnTrait, EntityTrait, QueryFilter, Set, ActiveModelTrait};
+use sea_orm::{DatabaseConnection, ColumnTrait, EntityTrait, QueryFilter, Set, ActiveModelTrait, NotSet};
 use sea_orm::sea_query::{IntoCondition, SimpleExpr};
 use serde::{Deserialize, Serialize};
 use tap::Conv;
+use crate::db::entity::node::problem_limit::Column;
 use crate::db::iden::node::record::Record::RecordUrl;
 use crate::error::CoreError;
 use crate::graph::action::get_node_type;
-use crate::graph::edge::{EdgeQuery, EdgeQueryOrder, EdgeRaw};
+use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryOrder, EdgeRaw};
 use crate::graph::edge::judge::{JudgeEdgeQuery, JudgeEdgeRaw};
 use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
 use crate::graph::edge::record::{RecordEdge, RecordEdgeQuery, RecordEdgeRaw};
@@ -324,7 +325,7 @@ pub async fn get_problem_user_status(db: &DatabaseConnection, user_id: i64, prob
         None,
         None
     ).await?;
-    if get_record.len() > 0 {
+    if !get_record.is_empty() {
         Ok(RecordStatus::Accepted)
     } else {
         let get_record = RecordEdgeQuery::get_u_filter_extend_content(
@@ -336,7 +337,7 @@ pub async fn get_problem_user_status(db: &DatabaseConnection, user_id: i64, prob
             None,
             None
         ).await?;
-        if get_record.len() > 0 {
+        if !get_record.is_empty() {
             return Ok(RecordStatus::Waiting);
         }
         Ok(RecordStatus::NotFound)
@@ -447,12 +448,45 @@ pub fn get_record_status_with_now_id(
     }
 }
 
+pub struct UpdateRecordRootStatusData {
+    pub record_id: i64,
+    pub time: i64,
+    pub memory: i64,
+    pub status: RecordStatus,
+    pub score: i64,
+}
+
+/*
+他妈的我是真傻逼。数据库里其实根本没有地方存time / memory.
+这里传进来纯属心理安慰。妈的。
+*/
+pub async fn update_record_root_status(db: &DatabaseConnection, redis: &mut redis::Connection, data: UpdateRecordRootStatusData) -> Result<()> {
+    let record_node = RecordNode::from_db(&db, data.record_id).await?;
+    use crate::db::entity::node::record::Column as NodeColumn;
+    record_node.modify(db, NodeColumn::RecordStatus, i64::from(data.status)).await?;
+    record_node.modify(db, NodeColumn::RecordScore, data.score).await?;
+    let record_edge = RecordEdgeQuery::get_from_record_node_id(data.record_id, db).await?;
+    if let Some(record_edge) = record_edge {
+        use crate::db::entity::edge::record::Column as EdgeColumn;
+        record_edge.modify(db, EdgeColumn::RecordStatus, i64::from(data.status)).await?;
+        record_edge.modify(db, EdgeColumn::Score, data.score).await?;
+    }
+    Ok(())
+}
+
+pub async fn update_record_remote_url(db: &DatabaseConnection, record_id: i64, url: &str) -> Result<()> {
+    let record_node = RecordNode::from_db(db, record_id).await?;
+    use crate::db::entity::node::record::Column as NodeColumn;
+    record_node.modify(db, NodeColumn::RecordUrl, Some(url)).await?;
+    Ok(())
+}
+
 pub async fn get_record_status(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,
     record_id: i64,
     statement_id: i64,
-    force_refresh: bool
+    force_refresh: bool // if true, force refresh all cache and recalculate the score.
 ) -> Result<SubtaskUserRecord> {
     let record_edges = JudgeEdgeQuery::get_u_for_all(record_id, db).await?;
     log::trace!("Fetched {:?} judge edges for record_id {}", record_edges, record_id);
@@ -496,12 +530,24 @@ pub async fn get_record_status(
         }
     }
     log::trace!("Record status processing done");
-    Ok(get_record_status_with_now_id(
+    let res = get_record_status_with_now_id(
         redis,
         record_id,
         get_rt,
         get_rt,
-    )?)
+    )?;
+
+    if force_refresh {
+        update_record_root_status(db, redis, UpdateRecordRootStatusData {
+            record_id,
+            time: res.time,
+            memory: res.memory,
+            status: res.status.clone(),
+            score: res.score,
+        }).await?;
+    }
+
+    Ok(res)
 }
 
 pub async fn get_record_status_with_record_id(
@@ -509,10 +555,9 @@ pub async fn get_record_status_with_record_id(
     redis: &mut redis::Connection,
     record_id: i64,
 ) -> Result<SubtaskUserRecord> {
-    let record_node = RecordNode::from_db(db, record_id).await?;
     let statement_id = RecordEdgeQuery::get_from_record_node_id(record_id, db).await?;
     if statement_id.is_none() {
-        return Err(CoreError::NotFound("Statement ID for record not found".to_string()).into());
+        return Err(CoreError::NotFound("Statement ID for record not found".to_string()));
     }
     get_record_status(db, redis, record_id, statement_id.unwrap().v, false).await
 }
@@ -531,7 +576,7 @@ pub async fn get_testcase_number(
     let mut count = 0;
     let mut q = queue::Queue::new();
     let _ = q.queue(root_id);
-    while q.len() > 0 {
+    while !q.is_empty(){
         let t = q.dequeue().unwrap();
         // check graph_node_{t}_v is not empty
         let graph_data = redis.get(format!("graph_node_{t}_v"))?;
@@ -544,10 +589,10 @@ pub async fn get_testcase_number(
             data.split(".").map(|v| v.parse::<i64>().unwrap_or(0)).collect::<Vec<i64>>()
         } else {
             let data = TestcaseEdgeQuery::get_v(t, db).await?;
-            redis.set(format!("graph_edge_testcase_{t}_v"), data.iter().map(|v| v.to_string()).collect::<Vec<String>>().join(".")).unwrap();            
+            redis.set(format!("graph_edge_testcase_{t}_v"), data.iter().map(|v| v.to_string()).collect::<Vec<String>>().join(".")).unwrap();
             data
         };
-        if edges.len() == 0 {
+        if edges.is_empty() {
             count += 1;
         }
         for ver in edges {
@@ -599,6 +644,7 @@ pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask�
     statement_id: i64,
     detail_data: HashMap<String, SubtaskUserRecord>
 ) -> Result<SubtaskUserRecord> {
+    log::debug!("Update record status no_subtask_remote_judge");
     let root_testcase_id = get_root_subtask_id(db, redis, statement_id).await?;
     log::debug!("Updating record {} status for statement {} with testcase root {}", record_id, statement_id, root_testcase_id);
     let testcase_list = TestcaseEdgeQuery::get_v_filter_extend_content::<SimpleExpr>(root_testcase_id, vec![], db, None, None).await?;
@@ -609,8 +655,8 @@ pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask�
         // get_node
         let testcase_node = TestcaseNode::from_db(db, testcase.v).await?;
         let id = testcase_node.public.testcase_name;
-
         use crate::db::entity::edge::judge::{Column, Entity, ActiveModel};
+        log::info!("Processing testcase {} for record {}", id, record_id);
         let edge_exist = JudgeEdgeQuery::get_v_one_filter_extend(testcase_node.node_id, Column::VNodeId.eq(record_id), db).await;
         let nv = detail_data.get(&id);
         log::debug!("Processing testcase {}: existing edges: {:?}, new value: {:?} order: {:?}", id, edge_exist, nv, testcase.order);
@@ -622,12 +668,26 @@ pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask�
         unused_data.remove(&id);
         if let Ok(edge_exist) = edge_exist {
             // update note detail.
+            // 考虑如果传入的time是-1, memory 是 -1 说明此题数据来源无法更新，不主动更新此值。
+            log::debug!("Processing testcase {}: existing edges: {:?}", id, edge_exist);
+            let new_time = if nv.time >= 0 {
+                Set(nv.time)
+            } else {
+                NotSet
+            };
+            let new_memory = if nv.memory >= 0 {
+                Set(nv.memory)
+            } else {
+                NotSet
+            };
             ActiveModel {
                 edge_id: Set(edge_exist.id),
+                u_node_id: Set(edge_exist.u),
+                v_node_id: Set(edge_exist.v),
                 score: Set(nv.score),
                 status: Set(nv.status.to_string()),
-                time: Set(nv.time),
-
+                time: new_time,
+                memory: new_memory,
                 ..Default::default()
             }.update(db).await?;
             continue;
@@ -643,22 +703,21 @@ pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask�
     }
     log::debug!("Unused testcase data after processing: {:?}", unused_data);
 
-    if unused_data.len() > 0 {
+    if !unused_data.is_empty() {
+        // 这个subtask会改变，应当清空。
         let _ = redis.del(format!("graph_edge_testcase_{root_testcase_id}_v"));
     }
 
-    // if unused data all number, sort it.
+    // 是无序的。
     let mut unused_data: Vec<(String, SubtaskUserRecord)> = unused_data.into_iter().collect();
     unused_data.sort_by(|a, b| {
         a.0.len().cmp(&b.0.len()).then(a.0.cmp(&b.0))
     });
     log::info!("Creating new testcase nodes for unused data: {:?}", unused_data);
 
-
-
     for unused in unused_data {
         log::debug!("Unused testcase data for record/statement {}: {:?}, ", record_id, unused);
-        // create new testcase node.
+        // create new vjudge testcase node. no time_limit, no memory_limit.
         let testcase_node = TestcaseNodeRaw {
             public: TestcaseNodePublicRaw {
                 time_limit: -2,

@@ -2,6 +2,7 @@ import { Socket } from "socket.io-client";
 import { VjudgeNode } from "@/declare/node.ts";
 import { VjudgeSyncAllFunction, VjudgeSyncOneFunction, VjudgeSyncListFunction } from "@/declare/modules.ts";
 import { UniversalSubmission } from "../declare/submission.ts";
+import { verifyMethod } from "../declare/verified.ts";
 
 
 interface SyncData {
@@ -67,13 +68,20 @@ const convertRange = (range: string): SyncRange => {
     }
 }
 
+const reflectVjudgeMethod: Record<string, verifyMethod | undefined> = {
+    "SyncCode": "APIKEY",
+    "Token": "TOKEN",
+    "Password": "PASSWORD",
+    "View": "ONLY_VERIFY",
+};
+
 export const run = async (data: SyncData, socket: Socket) => {
     const { vjudge_node, ws_id } = data;
-    const platform = vjudge_node.public.platform.toLowerCase();
-    const iden = data.vjudge_node.public.iden;
-    const vjudge_mode = vjudge_node.public.remote_mode;
-    const vjudge_method = vjudge_mode === "PublicAccount" ? "PUBLIC" : vjudge_mode === "SyncCode" ? "APIKEY" :  vjudge_node.private.auth.token ? "TOKEN" : "PASSWORD";
     try {
+        const platform = vjudge_node.public.platform.toLowerCase();
+        const iden = data.vjudge_node.public.iden;
+        const vjudge_mode = vjudge_node.public.remote_mode;
+        const vjudge_method = reflectVjudgeMethod[vjudge_mode] || "TOKEN";    
         const range = convertRange(data.range);
         let result: UniversalSubmission[] | UniversalSubmission | undefined = undefined;
         if (range.all) {

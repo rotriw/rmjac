@@ -1,5 +1,5 @@
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub enum UserRemoteAccountAuth {
+pub enum VjudgeAuth {
     Password(String),
     Token(String),
 }
@@ -24,7 +24,7 @@ impl From<i32> for RemoteMode {
 
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct UserRemoteAccountNodePublic {
+pub struct VjudgeNodePublic {
     pub platform: String,
     pub verified_code: String,
     pub verified: bool,
@@ -35,12 +35,12 @@ pub struct UserRemoteAccountNodePublic {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct UserRemoteAccountNodePrivate {
-    pub auth: Option<UserRemoteAccountAuth>,
+pub struct VjudgeNodePrivate {
+    pub auth: Option<VjudgeAuth>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct UserRemoteAccountNodePublicRaw {
+pub struct VjudgeNodePublicRaw {
     pub platform: String,
     pub verified_code: String,
     pub verified: bool,
@@ -51,31 +51,31 @@ pub struct UserRemoteAccountNodePublicRaw {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct UserRemoteAccountNodePrivateRaw {
-    pub auth: Option<UserRemoteAccountAuth>,
+pub struct VjudgeNodePrivateRaw {
+    pub auth: Option<VjudgeAuth>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Node)]
-pub struct UserRemoteAccountNode {
+pub struct VjudgeNode {
     pub node_id: i64,
-    pub public: UserRemoteAccountNodePublic,
-    pub private: UserRemoteAccountNodePrivate,
+    pub public: VjudgeNodePublic,
+    pub private: VjudgeNodePrivate,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
 #[node_raw(node_type = "user_remote_account")]
-pub struct UserRemoteAccountNodeRaw {
-    pub public: UserRemoteAccountNodePublicRaw,
-    pub private: UserRemoteAccountNodePrivateRaw,
+pub struct VjudgeNodeRaw {
+    pub public: VjudgeNodePublicRaw,
+    pub private: VjudgeNodePrivateRaw,
 }
 
-impl From<UserRemoteAccountNodeRaw> for ActiveModel {
-    fn from(value: UserRemoteAccountNodeRaw) -> Self {
+impl From<VjudgeNodeRaw> for ActiveModel {
+    fn from(value: VjudgeNodeRaw) -> Self {
         use sea_orm::ActiveValue::{NotSet, Set};
         let auth = value.private.auth;
         let auth = match auth {
-            Some(UserRemoteAccountAuth::Password(p)) => Some(format!("p_{:?}", p)),
-            Some(UserRemoteAccountAuth::Token(t)) => Some(format!("t_{:?}", t)),
+            Some(VjudgeAuth::Password(p)) => Some(format!("p_{:?}", p)),
+            Some(VjudgeAuth::Token(t)) => Some(format!("t_{:?}", t)),
             None => None,
         };
         Self {
@@ -92,12 +92,12 @@ impl From<UserRemoteAccountNodeRaw> for ActiveModel {
     }
 }
 
-impl From<Model> for UserRemoteAccountNode {
+impl From<Model> for VjudgeNode {
     fn from(model: Model) -> Self {
         let use_mode = model.use_mode.into();
-        UserRemoteAccountNode {
+        VjudgeNode {
             node_id: model.node_id,
-            public: UserRemoteAccountNodePublic {
+            public: VjudgeNodePublic {
                 iden: model.user_iden,
                 platform: model.platform,
                 verified_code: model.verified_code,
@@ -106,13 +106,13 @@ impl From<Model> for UserRemoteAccountNode {
                 updated_at: model.updated_at,
                 remote_mode: use_mode,
             },
-            private: UserRemoteAccountNodePrivate {
+            private: VjudgeNodePrivate {
                 auth: match model.auth {
                     Some(a) if a.starts_with("p_") => {
-                        Some(UserRemoteAccountAuth::Password(a[2..].to_string()))
+                        Some(VjudgeAuth::Password(a[2..].to_string()))
                     }
                     Some(a) if a.starts_with("t_") => {
-                        Some(UserRemoteAccountAuth::Token(a[2..].to_string()))
+                        Some(VjudgeAuth::Token(a[2..].to_string()))
                     }
                     _ => None,
                 },

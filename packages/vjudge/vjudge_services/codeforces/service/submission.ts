@@ -3,10 +3,10 @@ import "https://deno.land/x/dotenv@v3.2.2/load.ts";
 import { getOnePage } from "@/service/browser.ts";
 import * as cookie from "cookie";
 import { Cookie } from "npm:puppeteer-core";
-import { UniversalSubmission } from "../../../declare/submission.ts";
+import { UniversalSubmission } from "@/declare/submission.ts";
 import { JSDOM } from "jsdom";
 import { HTTPResponse } from "npm:puppeteer-core";
-import { convertCFSubmissionStatus } from "../../../declare/codeforces.ts";
+import { convertCFSubmissionStatus } from "@/declare/codeforces.ts";
 import { get_loc } from "../../../utils/cf_click.ts";
 import { CALIB_THIN_PRISM_MODEL } from "@techstark/opencv-js";
 
@@ -107,8 +107,10 @@ export async function loginWithPassword(
     await page.goto("https://codeforces.com/enter");
     // deno-lint-ignore ban-ts-comment
     //@ts-ignore
-    await page.clickAndWaitForNavigation("body");
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    if (!(await page.content()).includes("Please wait") && !(await page.content()).includes("Login")) {
+        await page.clickAndWaitForNavigation("body");
+        await new Promise(resolve => setTimeout(resolve, 3000));
+    }
     await page.type("input[name='handleOrEmail']", handle);
     await page.type("input[name='password']", password);
     await page.click("input[type='submit']");
@@ -179,6 +181,8 @@ export async function fetchSubmissionWithId(
     $.querySelectorAll("a")?.forEach(a => {
         if (a.href.includes(`/contest/${contest_id}/problem/`)) {
             problem_id = a.textContent || "";
+        } else if (a.href.includes(`/gym/${contest_id}/problem/`)) {
+            problem_id = a.textContent || "";
         }
     });
     let language = "";
@@ -207,15 +211,21 @@ export async function fetchSubmissionWithId(
     }
     
     // convert status.
+    const csrf_token = await page.evaluate(() => {
+        return document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+    });
+    console.log(csrf_token);
     const [response] = await Promise.all([
         page.waitForResponse(response => response.url().includes("submitSource")),
-        page.evaluate(async () => {
-            const res = await $.post("/data/submitSource", { submissionId: "353181729", csrf_token: "d75e4c8ea6aa6164cbfae852a1767d99"})
+        page.evaluate(async (id) => {
+            console.log(id);
+            console.log(document.querySelector("meta[name='csrf-token']")?.getAttribute("content"));
+            const res = await $.post("/data/submitSource", { submissionId: id, csrf_token: document.querySelector("meta[name='X-Csrf-Token']")?.getAttribute("content") || ""})
             return res;
-        })
+        }, id)
     ]);
-    console.log(response);
     const data = await response.json();
+    console.log(data);
     const code = data.source;
     const count = +data.testCount;
     const passed: [string, string, number, number, number][] = [];
@@ -223,17 +233,23 @@ export async function fetchSubmissionWithId(
         const status = convertCFSubmissionStatus(data[`verdict#${i}`]);
         const time = +data[`timeConsumed#${i}`];
         const memory = +data[`memoryConsumed#${i}`];
-        passed.push([`${i}`, status, time, memory, 0]);
+        passed.push([`${i}`, status, (status === "Accepted" ? 1 : 0), time, memory]);
+    }
+    if (data[`timeConsumed#${count + 1}`]) {
+        const status = convertCFSubmissionStatus(data[`verdict#${count + 1}`]);
+        const time = +data[`timeConsumed#${count + 1}`];
+        const memory = +data[`memoryConsumed#${count + 1}`];
+        passed.push([`${count + 1}`, status, (status === "Accepted" ? 1 : 0), time, memory]);
     }
     if (status === "OK") {
         status = "Accepted";
     } else {
-        status = "Wrong Answer";
+        status = convertCFSubmissionStatus(data[`verdict#${count + 1}`]);
     }
     const result: UniversalSubmission = {
-        remote_id: id,
+        remote_id: +id,
         remote_platform: "codeforces",
-        remote_problem_id: `CF${problem_id}`,
+        remote_problem_id: `${problem_id}`,
         language,
         code,
         status,
@@ -298,28 +314,21 @@ export async function submitProblem(
     await problem_select.select(problem_id);
     const language_select = await page.waitForSelector("select[name='programTypeId']");
     await language_select.select(language);
-    // await page.click("checkbox[name='toggleEditorCheckbox']");
-    // submit.
     await page.type("textarea[name='source']", code, {
         delay: 0,
     });
-    // await page.click("button[type='submit']");
-    const [response] = await Promise.all([
+    await Promise.all([
         page.waitForNavigation(),
         page.click("input[id='singlePageSubmitButton']")
     ]);
-
     const data = await page.content();
     const dom = new JSDOM(data);
     const $ = dom.window.document;
     const trs = $.querySelectorAll("tr");
-    let ids = "";
-    for (const tr of $.querySelectorAll("tr")) {
+    for (const tr of trs) {
         if (tr.getAttribute("data-submission-id") !== null) {
-            ids = tr.getAttribute("data-submission-id") || "";
-            break;
+            return tr.getAttribute("data-submission-id") || "";
         }
     }
-    console.log(ids);
-    return ids;
+    return "";
 }

@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use crate::Result;
 use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo, edge::create_edge};
 use crate::error::CoreError::NotFound;
@@ -450,6 +451,23 @@ where
             Ok(model.conv::<DbModel>().into())
         }
     }
+
+    fn modify<T: Into<sea_orm::Value> + Debug>(
+        &self,
+        db: &DatabaseConnection,
+        column: <DbActive::Entity as EntityTrait>::Column,
+        data: T,
+    ) -> impl Future<Output = Result<Self>> {
+        async move {
+            use tap::Conv;
+            let mut new_model = DbActive::new();
+            let edge_id_column = Self::get_edge_id_column();
+            new_model.set(edge_id_column, self.get_edge_id().into());
+            new_model.set(column, data.into());
+            let data = new_model.update(db).await?.conv::<DbModel>();
+            Ok(data.into())
+        }
+    }
 }
 
 pub trait EdgeRaw<Edge, EdgeModel, EdgeActive>
@@ -470,11 +488,27 @@ where
 {
     fn get_edge_type(&self) -> &str;
     fn get_edge_id_column(&self) -> <EdgeActive::Entity as EntityTrait>::Column;
+    fn get_u_node_id(&self) -> i64;
+    fn get_v_node_id(&self) -> i64;
+    
+    /// 获取权限值，对于非权限边返回 None
+    fn get_perm_value(&self) -> Option<i64> {
+        None
+    }
+    
     fn save(&self, db: &DatabaseConnection) -> impl Future<Output = Result<Edge>> {
         async {
-                        let edge_type = self.get_edge_type();
+            let edge_type = self.get_edge_type();
             let edge_id = create_edge(db, edge_type).await?.edge_id;
             log::debug!("Saving edge({edge_type}), data:{:?}", *self);
+            
+            // 如果是权限边，同步更新内存中的权限图
+            if let Some(perm) = self.get_perm_value() {
+                let u = self.get_u_node_id();
+                let v = self.get_v_node_id();
+                crate::model::perm::add_perm_edge_to_graph(edge_type, u, v, edge_id, perm);
+            }
+            
             let mut value = (*self).clone().conv::<EdgeActive>();
             value.set(self.get_edge_id_column(), edge_id.into());
             Ok(value.save_into_db(db).await?.into())

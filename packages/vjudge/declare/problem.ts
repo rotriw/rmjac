@@ -14,11 +14,11 @@ export interface ProblemStatement {
     sample_group: [string, string][]; // 样例 [输入, 输出]
     show_order: string[]; // 题目显示顺序
     problem_difficulty: number | null; // 题目难度
-    problem_tag_list: string[]; // 题目标签
+    page_rendered: string | null; // 题目渲染后的 HTML 内容
 }
 
 export interface Problem {
-    problem_source: string; // 题库来源
+    // problem_source: string; // 题库来源
     problem_iden: string; // 题目来源标识符
     problem_name: string; // 题目名称
     problem_statement: ProblemStatement[]; // 题目描述

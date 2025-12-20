@@ -22,4 +22,10 @@ pub enum ProblemStatement {
     SampleGroupOut,
     #[sea_orm(iden = "show_order")]
     ShowOrder,
+    #[sea_orm(iden = "page_source")]
+    PageSource,
+    #[sea_orm(iden = "page_rendered")]
+    PageRendered,
+    #[sea_orm(iden = "problem_difficulty")]
+    ProblemDifficulty,
 }

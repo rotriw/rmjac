@@ -17,7 +17,7 @@ export const run = async (data: VerifyAccountData, socket: Socket) => {
         if (!VJUDGE_USER[platform][`verified${vjudge_method}`]) {
             throw new Error("Verification method not found");
         }
-        const result = await (VJUDGE_USER[platform][`verified${vjudge_method}`] as VjudgeVerifiedFunction)(vjudge_node.public.iden, vjudge_node.private.auth) || false;
+        const result = await (VJUDGE_USER[platform][`verified${vjudge_method}`] as VjudgeVerifiedFunction)(vjudge_node.public.iden, vjudge_node.private.auth, vjudge_node, socket) || false;
         if (!result) {
             throw new Error("Verification failed");
         }

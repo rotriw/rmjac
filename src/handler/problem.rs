@@ -5,7 +5,7 @@ use sea_orm::DatabaseConnection;
 use sea_orm::sea_query::SimpleExpr;
 use tap::Conv;
 use rmjac_core::model::problem::{CreateProblemProps, ProblemStatementProp, add_editor, add_owner, add_problem_statement_for_problem, add_viewer, delete_editor, delete_owner, delete_problem_connections, delete_problem_statement_for_problem, delete_viewer, generate_problem_statement_schema, get_problem_with_node_id, modify_problem_statement, modify_problem_statement_source};
-use rmjac_core::model::perm::check_perm;
+use rmjac_core::model::perm::{check_problem_perm, check_system_perm};
 use rmjac_core::model::problem::get_problem_node_and_statement;
 use rmjac_core::model::record::get_specific_node_records;
 use rmjac_core::error::CoreError;
@@ -59,13 +59,11 @@ impl View {
             rmjac_core::env::DEFAULT_NODES.lock().unwrap().guest_user_node
         };
         let problem_node_id = self.problem_node_id.unwrap();
-        let check = check_perm(
-            &self.basic.db,
+        let check = check_problem_perm(
             user_node_id,
             problem_node_id,
-            PermProblemEdgeQuery,
             ProblemPermRaw::Perms(vec![ReadProblem]).conv::<i32>() as i64
-        ).await?;
+        );
         if check == 0 {
             return Err(HttpError::HandlerError(PermissionDenied))
         }
@@ -125,7 +123,7 @@ impl Create {
         let system_id = rmjac_core::env::DEFAULT_NODES.lock().unwrap().default_system_node;
         if let Some(user) = user
             && user.is_real
-            && check_perm(&self.basic.db, user.user_id, system_id, PermSystemEdgeQuery, SystemPerm::CreateProblem.get_const_isize().unwrap() as i64).await? == 1 {
+            && check_system_perm(user.user_id, system_id, SystemPerm::CreateProblem.get_const_isize().unwrap() as i64) == 1 {
             Ok(self)
         } else {
             Err(HttpError::HandlerError(PermissionDenied))
@@ -169,14 +167,14 @@ impl Manage {
         let user = &self.basic.user_context;
         if let Some(user) = user && user.is_real {
             let user_id = user.user_id;
-            if self.require_sudo == false && check_perm(&self.basic.db, user_id, self.problem_node_id, PermProblemEdgeQuery, ProblemPerm::EditProblem.get_const_isize().unwrap() as i64).await? == 1 {
+            if self.require_sudo == false && check_problem_perm(user_id, self.problem_node_id, ProblemPerm::EditProblem.get_const_isize().unwrap() as i64) == 1 {
                 return Ok(self);
             }
-            if self.require_sudo == true && check_perm(&self.basic.db, user_id, self.problem_node_id, PermProblemEdgeQuery, ProblemPerm::OwnProblem.get_const_isize().unwrap() as i64).await? == 1 {
+            if self.require_sudo == true && check_problem_perm(user_id, self.problem_node_id, ProblemPerm::OwnProblem.get_const_isize().unwrap() as i64) == 1 {
                 return Ok(self);
             }
             let system_id = rmjac_core::env::DEFAULT_NODES.lock().unwrap().default_system_node;
-            if check_perm(&self.basic.db, user_id, system_id, PermSystemEdgeQuery, SystemPerm::ProblemManage.get_const_isize().unwrap() as i64).await? == 1 {
+            if check_system_perm(user_id, system_id, SystemPerm::ProblemManage.get_const_isize().unwrap() as i64) == 1 {
                 return Ok(self);
             }
         }

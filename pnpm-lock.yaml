@@ -966,27 +966,33 @@ importers:
       '@mdpdf/mdpdf':
         specifier: ^0.1.4
         version: 0.1.4
+      '@types/cookie':
+        specifier: ^1.0.0
+        version: 1.0.0
       '@types/jsdom':
         specifier: ^21.1.7
         version: 21.1.7
       '@types/log4js':
         specifier: ^2.3.5
-        version: 2.3.5(supports-color@7.2.0)
+        version: 2.3.5
       axios:
         specifier: ^1.11.0
-        version: 1.11.0(debug@4.4.1(supports-color@7.2.0))
+        version: 1.11.0
+      cookie:
+        specifier: ^1.1.1
+        version: 1.1.1
       dotenv:
         specifier: ^17.2.1
         version: 17.2.1
       jsdom:
         specifier: ^26.1.0
-        version: 26.1.0(supports-color@7.2.0)
+        version: 26.1.0
       log4js:
         specifier: ^6.9.1
-        version: 6.9.1(supports-color@7.2.0)
+        version: 6.9.1
       mdpdf:
         specifier: ^3.1.0
-        version: 3.1.0(supports-color@7.2.0)(typescript@5.8.3)
+        version: 3.1.0(typescript@5.8.3)
       openai:
         specifier: ^6.9.1
         version: 6.9.1(ws@8.18.3)(zod@3.25.76)
@@ -998,16 +1004,16 @@ importers:
         version: 2.0.3
       puppeteer-extra-plugin-click-and-wait:
         specifier: ^2.3.3
-        version: 2.3.3(puppeteer-extra@3.3.6(puppeteer-core@24.32.0(supports-color@7.2.0))(puppeteer@24.32.0(supports-color@7.2.0)(typescript@5.8.3))(supports-color@7.2.0))(supports-color@7.2.0)
+        version: 2.3.3(puppeteer-extra@3.3.6(puppeteer-core@24.32.0)(puppeteer@24.32.0(typescript@5.8.3)))
       puppeteer-real-browser:
         specifier: ^1.4.4
-        version: 1.4.4(puppeteer-core@24.32.0(supports-color@7.2.0))(puppeteer@24.32.0(supports-color@7.2.0)(typescript@5.8.3))(supports-color@7.2.0)
+        version: 1.4.4(puppeteer-core@24.32.0)(puppeteer@24.32.0(typescript@5.8.3))
       socket.io:
         specifier: ^4.8.1
-        version: 4.8.1(supports-color@7.2.0)
+        version: 4.8.1
       socket.io-client:
         specifier: ^4.8.1
-        version: 4.8.1(supports-color@7.2.0)
+        version: 4.8.1
       tex-to-typst:
         specifier: ^0.0.19
         version: 0.0.19
@@ -2543,6 +2549,10 @@ packages:
   '@types/bezier-js@4.1.3':
     resolution: {integrity: sha512-FNVVCu5mx/rJCWBxLTcL7oOajmGtWtBTDjq6DSUWUI12GeePivrZZXz+UgE0D6VYsLEjvExRO03z4hVtu3pTEQ==}
 
+  '@types/cookie@1.0.0':
+    resolution: {integrity: sha512-mGFXbkDQJ6kAXByHS7QAggRXgols0mAdP4MuXgloGY1tXokvzaFFM4SMqWvf7AH0oafI7zlFJwoGWzmhDqTZ9w==}
+    deprecated: This is a stub types definition. cookie provides its own type definitions, so you do not need this installed.
+
   '@types/cors@2.8.19':
     resolution: {integrity: sha512-mFNylyeyqN93lfe/9CSxOGREz8cpzAhH+E93xJ4xWQf62V8sQ/24reV2nyzUWM6H6Xji+GGHpkbLe7pVoUEskg==}
 
@@ -3233,6 +3243,10 @@ packages:
   cookie@0.7.2:
     resolution: {integrity: sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==}
     engines: {node: '>= 0.6'}
+
+  cookie@1.1.1:
+    resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
+    engines: {node: '>=18'}
 
   cors@2.8.5:
     resolution: {integrity: sha512-KIHbLJqu73RGr/hnbrO9uBeixNGuvSQjul/jdFvS/KFSIH1hWVd1ng7zOHx+YrEfInLG7q4n6GHQ9cDtxv/P6g==}
@@ -6254,12 +6268,12 @@ snapshots:
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
-  '@puppeteer/browsers@2.11.0(supports-color@7.2.0)':
+  '@puppeteer/browsers@2.11.0':
     dependencies:
-      debug: 4.4.3(supports-color@7.2.0)
-      extract-zip: 2.0.1(supports-color@7.2.0)
+      debug: 4.4.3
+      extract-zip: 2.0.1
       progress: 2.0.3
-      proxy-agent: 6.5.0(supports-color@7.2.0)
+      proxy-agent: 6.5.0
       semver: 7.7.3
       tar-fs: 3.1.1
       yargs: 17.7.2
@@ -6269,12 +6283,12 @@ snapshots:
       - react-native-b4a
       - supports-color
 
-  '@puppeteer/browsers@2.6.1(supports-color@7.2.0)':
+  '@puppeteer/browsers@2.6.1':
     dependencies:
-      debug: 4.4.1(supports-color@7.2.0)
-      extract-zip: 2.0.1(supports-color@7.2.0)
+      debug: 4.4.1
+      extract-zip: 2.0.1
       progress: 2.0.3
-      proxy-agent: 6.5.0(supports-color@7.2.0)
+      proxy-agent: 6.5.0
       semver: 7.7.2
       tar-fs: 3.1.1
       unbzip2-stream: 1.4.3
@@ -6840,6 +6854,10 @@ snapshots:
 
   '@types/bezier-js@4.1.3': {}
 
+  '@types/cookie@1.0.0':
+    dependencies:
+      cookie: 1.1.1
+
   '@types/cors@2.8.19':
     dependencies:
       '@types/node': 20.19.0
@@ -6860,9 +6878,9 @@ snapshots:
 
   '@types/json5@0.0.29': {}
 
-  '@types/log4js@2.3.5(supports-color@7.2.0)':
+  '@types/log4js@2.3.5':
     dependencies:
-      log4js: 6.9.1(supports-color@7.2.0)
+      log4js: 6.9.1
     transitivePeerDependencies:
       - supports-color
 
@@ -7423,9 +7441,9 @@ snapshots:
 
   axe-core@4.10.3: {}
 
-  axios@1.11.0(debug@4.4.1(supports-color@7.2.0)):
+  axios@1.11.0:
     dependencies:
-      follow-redirects: 1.15.11(debug@4.4.1(supports-color@7.2.0))
+      follow-redirects: 1.15.11
       form-data: 4.0.4
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
@@ -7579,12 +7597,12 @@ snapshots:
 
   chownr@3.0.0: {}
 
-  chrome-launcher@1.2.1(supports-color@7.2.0):
+  chrome-launcher@1.2.1:
     dependencies:
       '@types/node': 20.19.0
       escape-string-regexp: 4.0.0
       is-wsl: 2.2.0
-      lighthouse-logger: 2.0.2(supports-color@7.2.0)
+      lighthouse-logger: 2.0.2
     transitivePeerDependencies:
       - supports-color
 
@@ -7691,6 +7709,8 @@ snapshots:
 
   cookie@0.7.2: {}
 
+  cookie@1.1.1: {}
+
   cors@2.8.5:
     dependencies:
       object-assign: 4.1.1
@@ -7771,11 +7791,19 @@ snapshots:
     optionalDependencies:
       supports-color: 7.2.0
 
+  debug@4.3.7:
+    dependencies:
+      ms: 2.1.3
+
   debug@4.3.7(supports-color@7.2.0):
     dependencies:
       ms: 2.1.3
     optionalDependencies:
       supports-color: 7.2.0
+
+  debug@4.4.1:
+    dependencies:
+      ms: 2.1.3
 
   debug@4.4.1(supports-color@7.2.0):
     dependencies:
@@ -7783,11 +7811,9 @@ snapshots:
     optionalDependencies:
       supports-color: 7.2.0
 
-  debug@4.4.3(supports-color@7.2.0):
+  debug@4.4.3:
     dependencies:
       ms: 2.1.3
-    optionalDependencies:
-      supports-color: 7.2.0
 
   decimal.js@10.6.0: {}
 
@@ -7873,6 +7899,18 @@ snapshots:
     dependencies:
       once: 1.4.0
 
+  engine.io-client@6.6.3:
+    dependencies:
+      '@socket.io/component-emitter': 3.1.2
+      debug: 4.3.7
+      engine.io-parser: 5.2.3
+      ws: 8.17.1
+      xmlhttprequest-ssl: 2.1.2
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
   engine.io-client@6.6.3(supports-color@7.2.0):
     dependencies:
       '@socket.io/component-emitter': 3.1.2
@@ -7887,7 +7925,7 @@ snapshots:
 
   engine.io-parser@5.2.3: {}
 
-  engine.io@6.6.4(supports-color@7.2.0):
+  engine.io@6.6.4:
     dependencies:
       '@types/cors': 2.8.19
       '@types/node': 20.19.0
@@ -7895,7 +7933,7 @@ snapshots:
       base64id: 2.0.0
       cookie: 0.7.2
       cors: 2.8.5
-      debug: 4.3.7(supports-color@7.2.0)
+      debug: 4.3.7
       engine.io-parser: 5.2.3
       ws: 8.17.1
     transitivePeerDependencies:
@@ -8250,9 +8288,9 @@ snapshots:
       iconv-lite: 0.4.24
       tmp: 0.0.33
 
-  extract-zip@2.0.1(supports-color@7.2.0):
+  extract-zip@2.0.1:
     dependencies:
-      debug: 4.4.1(supports-color@7.2.0)
+      debug: 4.4.1
       get-stream: 5.2.0
       yauzl: 2.10.0
     optionalDependencies:
@@ -8330,9 +8368,7 @@ snapshots:
 
   flatted@3.3.3: {}
 
-  follow-redirects@1.15.11(debug@4.4.1(supports-color@7.2.0)):
-    optionalDependencies:
-      debug: 4.4.1(supports-color@7.2.0)
+  follow-redirects@1.15.11: {}
 
   for-each@0.3.5:
     dependencies:
@@ -8416,19 +8452,19 @@ snapshots:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
-  get-uri@6.0.5(supports-color@7.2.0):
+  get-uri@6.0.5:
     dependencies:
       basic-ftp: 5.0.5
       data-uri-to-buffer: 6.0.2
-      debug: 4.4.1(supports-color@7.2.0)
+      debug: 4.4.1
     transitivePeerDependencies:
       - supports-color
 
-  ghost-cursor@1.4.1(supports-color@7.2.0):
+  ghost-cursor@1.4.1:
     dependencies:
       '@types/bezier-js': 4.1.3
       bezier-js: 6.1.4
-      debug: 4.4.1(supports-color@7.2.0)
+      debug: 4.4.1
     transitivePeerDependencies:
       - supports-color
 
@@ -8525,10 +8561,17 @@ snapshots:
       domutils: 3.2.2
       entities: 4.5.0
 
-  http-proxy-agent@7.0.2(supports-color@7.2.0):
+  http-proxy-agent@7.0.2:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.4.1(supports-color@7.2.0)
+      debug: 4.4.1
+    transitivePeerDependencies:
+      - supports-color
+
+  https-proxy-agent@7.0.6:
+    dependencies:
+      agent-base: 7.1.3
+      debug: 4.4.1
     transitivePeerDependencies:
       - supports-color
 
@@ -8759,14 +8802,14 @@ snapshots:
     dependencies:
       argparse: 2.0.1
 
-  jsdom@26.1.0(supports-color@7.2.0):
+  jsdom@26.1.0:
     dependencies:
       cssstyle: 4.6.0
       data-urls: 5.0.0
       decimal.js: 10.6.0
       html-encoding-sniffer: 4.0.0
-      http-proxy-agent: 7.0.2(supports-color@7.2.0)
-      https-proxy-agent: 7.0.6(supports-color@7.2.0)
+      http-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.6
       is-potential-custom-element-name: 1.0.1
       nwsapi: 2.2.21
       parse5: 7.3.0
@@ -8836,9 +8879,9 @@ snapshots:
       prelude-ls: 1.2.1
       type-check: 0.4.0
 
-  lighthouse-logger@2.0.2(supports-color@7.2.0):
+  lighthouse-logger@2.0.2:
     dependencies:
-      debug: 4.4.1(supports-color@7.2.0)
+      debug: 4.4.1
       marky: 1.3.0
     transitivePeerDependencies:
       - supports-color
@@ -8901,13 +8944,13 @@ snapshots:
 
   lodash@4.17.21: {}
 
-  log4js@6.9.1(supports-color@7.2.0):
+  log4js@6.9.1:
     dependencies:
       date-format: 4.0.14
-      debug: 4.4.1(supports-color@7.2.0)
+      debug: 4.4.1
       flatted: 3.3.3
       rfdc: 1.4.1
-      streamroller: 3.1.5(supports-color@7.2.0)
+      streamroller: 3.1.5
     transitivePeerDependencies:
       - supports-color
 
@@ -8943,14 +8986,14 @@ snapshots:
     dependencies:
       blueimp-md5: 2.19.0
 
-  mdpdf@3.1.0(supports-color@7.2.0)(typescript@5.8.3):
+  mdpdf@3.1.0(typescript@5.8.3):
     dependencies:
       cheerio: 1.0.0-rc.12
       file-url: 4.0.0
       handlebars: 4.7.8
       loophole: 1.1.0
       meow: 13.2.0
-      puppeteer: 24.32.0(supports-color@7.2.0)(typescript@5.8.3)
+      puppeteer: 24.32.0(typescript@5.8.3)
       showdown: 2.1.0
       showdown-emoji: 3.0.0
       showdown-highlight: 3.1.0
@@ -9159,16 +9202,16 @@ snapshots:
 
   p-map@7.0.3: {}
 
-  pac-proxy-agent@7.2.0(supports-color@7.2.0):
+  pac-proxy-agent@7.2.0:
     dependencies:
       '@tootallnate/quickjs-emscripten': 0.23.0
       agent-base: 7.1.3
-      debug: 4.4.1(supports-color@7.2.0)
-      get-uri: 6.0.5(supports-color@7.2.0)
-      http-proxy-agent: 7.0.2(supports-color@7.2.0)
-      https-proxy-agent: 7.0.6(supports-color@7.2.0)
+      debug: 4.4.1
+      get-uri: 6.0.5
+      http-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.6
       pac-resolver: 7.0.1
-      socks-proxy-agent: 8.0.5(supports-color@7.2.0)
+      socks-proxy-agent: 8.0.5
     transitivePeerDependencies:
       - supports-color
 
@@ -9263,16 +9306,16 @@ snapshots:
       object-assign: 4.1.1
       react-is: 16.13.1
 
-  proxy-agent@6.5.0(supports-color@7.2.0):
+  proxy-agent@6.5.0:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.4.1(supports-color@7.2.0)
-      http-proxy-agent: 7.0.2(supports-color@7.2.0)
-      https-proxy-agent: 7.0.6(supports-color@7.2.0)
+      debug: 4.4.1
+      http-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.6
       lru-cache: 7.18.3
-      pac-proxy-agent: 7.2.0(supports-color@7.2.0)
+      pac-proxy-agent: 7.2.0
       proxy-from-env: 1.1.0
-      socks-proxy-agent: 8.0.5(supports-color@7.2.0)
+      socks-proxy-agent: 8.0.5
     transitivePeerDependencies:
       - supports-color
 
@@ -9285,11 +9328,11 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  puppeteer-core@24.32.0(supports-color@7.2.0):
+  puppeteer-core@24.32.0:
     dependencies:
-      '@puppeteer/browsers': 2.11.0(supports-color@7.2.0)
+      '@puppeteer/browsers': 2.11.0
       chromium-bidi: 11.0.0(devtools-protocol@0.0.1534754)
-      debug: 4.4.3(supports-color@7.2.0)
+      debug: 4.4.3
       devtools-protocol: 0.0.1534754
       typed-query-selector: 2.12.0
       webdriver-bidi-protocol: 0.3.9
@@ -9302,42 +9345,42 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  puppeteer-extra-plugin-click-and-wait@2.3.3(puppeteer-extra@3.3.6(puppeteer-core@24.32.0(supports-color@7.2.0))(puppeteer@24.32.0(supports-color@7.2.0)(typescript@5.8.3))(supports-color@7.2.0))(supports-color@7.2.0):
+  puppeteer-extra-plugin-click-and-wait@2.3.3(puppeteer-extra@3.3.6(puppeteer-core@24.32.0)(puppeteer@24.32.0(typescript@5.8.3))):
     dependencies:
-      debug: 4.4.1(supports-color@7.2.0)
-      puppeteer-extra-plugin: 3.2.3(puppeteer-extra@3.3.6(puppeteer-core@24.32.0(supports-color@7.2.0))(puppeteer@24.32.0(supports-color@7.2.0)(typescript@5.8.3))(supports-color@7.2.0))(supports-color@7.2.0)
+      debug: 4.4.1
+      puppeteer-extra-plugin: 3.2.3(puppeteer-extra@3.3.6(puppeteer-core@24.32.0)(puppeteer@24.32.0(typescript@5.8.3)))
     optionalDependencies:
-      puppeteer-extra: 3.3.6(puppeteer-core@24.32.0(supports-color@7.2.0))(puppeteer@24.32.0(supports-color@7.2.0)(typescript@5.8.3))(supports-color@7.2.0)
+      puppeteer-extra: 3.3.6(puppeteer-core@24.32.0)(puppeteer@24.32.0(typescript@5.8.3))
     transitivePeerDependencies:
       - supports-color
 
-  puppeteer-extra-plugin@3.2.3(puppeteer-extra@3.3.6(puppeteer-core@24.32.0(supports-color@7.2.0))(puppeteer@24.32.0(supports-color@7.2.0)(typescript@5.8.3))(supports-color@7.2.0))(supports-color@7.2.0):
+  puppeteer-extra-plugin@3.2.3(puppeteer-extra@3.3.6(puppeteer-core@24.32.0)(puppeteer@24.32.0(typescript@5.8.3))):
     dependencies:
       '@types/debug': 4.1.12
-      debug: 4.4.1(supports-color@7.2.0)
+      debug: 4.4.1
       merge-deep: 3.0.3
     optionalDependencies:
-      puppeteer-extra: 3.3.6(puppeteer-core@24.32.0(supports-color@7.2.0))(puppeteer@24.32.0(supports-color@7.2.0)(typescript@5.8.3))(supports-color@7.2.0)
+      puppeteer-extra: 3.3.6(puppeteer-core@24.32.0)(puppeteer@24.32.0(typescript@5.8.3))
     transitivePeerDependencies:
       - supports-color
 
-  puppeteer-extra@3.3.6(puppeteer-core@24.32.0(supports-color@7.2.0))(puppeteer@24.32.0(supports-color@7.2.0)(typescript@5.8.3))(supports-color@7.2.0):
+  puppeteer-extra@3.3.6(puppeteer-core@24.32.0)(puppeteer@24.32.0(typescript@5.8.3)):
     dependencies:
       '@types/debug': 4.1.12
-      debug: 4.4.1(supports-color@7.2.0)
+      debug: 4.4.1
       deepmerge: 4.3.1
     optionalDependencies:
-      puppeteer: 24.32.0(supports-color@7.2.0)(typescript@5.8.3)
-      puppeteer-core: 24.32.0(supports-color@7.2.0)
+      puppeteer: 24.32.0(typescript@5.8.3)
+      puppeteer-core: 24.32.0
     transitivePeerDependencies:
       - supports-color
 
-  puppeteer-real-browser@1.4.4(puppeteer-core@24.32.0(supports-color@7.2.0))(puppeteer@24.32.0(supports-color@7.2.0)(typescript@5.8.3))(supports-color@7.2.0):
+  puppeteer-real-browser@1.4.4(puppeteer-core@24.32.0)(puppeteer@24.32.0(typescript@5.8.3)):
     dependencies:
-      chrome-launcher: 1.2.1(supports-color@7.2.0)
-      ghost-cursor: 1.4.1(supports-color@7.2.0)
-      puppeteer-extra: 3.3.6(puppeteer-core@24.32.0(supports-color@7.2.0))(puppeteer@24.32.0(supports-color@7.2.0)(typescript@5.8.3))(supports-color@7.2.0)
-      rebrowser-puppeteer-core: 23.10.3(supports-color@7.2.0)
+      chrome-launcher: 1.2.1
+      ghost-cursor: 1.4.1
+      puppeteer-extra: 3.3.6(puppeteer-core@24.32.0)(puppeteer@24.32.0(typescript@5.8.3))
+      rebrowser-puppeteer-core: 23.10.3
       tree-kill: 1.2.2
       xvfb: 0.4.0
     transitivePeerDependencies:
@@ -9351,13 +9394,13 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  puppeteer@24.32.0(supports-color@7.2.0)(typescript@5.8.3):
+  puppeteer@24.32.0(typescript@5.8.3):
     dependencies:
-      '@puppeteer/browsers': 2.11.0(supports-color@7.2.0)
+      '@puppeteer/browsers': 2.11.0
       chromium-bidi: 11.0.0(devtools-protocol@0.0.1534754)
       cosmiconfig: 9.0.0(typescript@5.8.3)
       devtools-protocol: 0.0.1534754
-      puppeteer-core: 24.32.0(supports-color@7.2.0)
+      puppeteer-core: 24.32.0
       typed-query-selector: 2.12.0
     transitivePeerDependencies:
       - bare-abort-controller
@@ -9406,11 +9449,11 @@ snapshots:
 
   react@19.1.0: {}
 
-  rebrowser-puppeteer-core@23.10.3(supports-color@7.2.0):
+  rebrowser-puppeteer-core@23.10.3:
     dependencies:
-      '@puppeteer/browsers': 2.6.1(supports-color@7.2.0)
+      '@puppeteer/browsers': 2.6.1
       chromium-bidi: 0.8.0(devtools-protocol@0.0.1367902)
-      debug: 4.4.1(supports-color@7.2.0)
+      debug: 4.4.1
       devtools-protocol: 0.0.1367902
       typed-query-selector: 2.12.0
       ws: 8.18.3
@@ -9643,10 +9686,21 @@ snapshots:
 
   smart-buffer@4.2.0: {}
 
-  socket.io-adapter@2.5.5(supports-color@7.2.0):
+  socket.io-adapter@2.5.5:
     dependencies:
-      debug: 4.3.7(supports-color@7.2.0)
+      debug: 4.3.7
       ws: 8.17.1
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
+  socket.io-client@4.8.1:
+    dependencies:
+      '@socket.io/component-emitter': 3.1.2
+      debug: 4.3.7
+      engine.io-client: 6.6.3
+      socket.io-parser: 4.2.4
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -9663,6 +9717,13 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  socket.io-parser@4.2.4:
+    dependencies:
+      '@socket.io/component-emitter': 3.1.2
+      debug: 4.3.7
+    transitivePeerDependencies:
+      - supports-color
+
   socket.io-parser@4.2.4(supports-color@7.2.0):
     dependencies:
       '@socket.io/component-emitter': 3.1.2
@@ -9670,24 +9731,24 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  socket.io@4.8.1(supports-color@7.2.0):
+  socket.io@4.8.1:
     dependencies:
       accepts: 1.3.8
       base64id: 2.0.0
       cors: 2.8.5
-      debug: 4.3.7(supports-color@7.2.0)
-      engine.io: 6.6.4(supports-color@7.2.0)
-      socket.io-adapter: 2.5.5(supports-color@7.2.0)
-      socket.io-parser: 4.2.4(supports-color@7.2.0)
+      debug: 4.3.7
+      engine.io: 6.6.4
+      socket.io-adapter: 2.5.5
+      socket.io-parser: 4.2.4
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
 
-  socks-proxy-agent@8.0.5(supports-color@7.2.0):
+  socks-proxy-agent@8.0.5:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.4.1(supports-color@7.2.0)
+      debug: 4.4.1
       socks: 2.8.7
     transitivePeerDependencies:
       - supports-color
@@ -9716,10 +9777,10 @@ snapshots:
       es-errors: 1.3.0
       internal-slot: 1.1.0
 
-  streamroller@3.1.5(supports-color@7.2.0):
+  streamroller@3.1.5:
     dependencies:
       date-format: 4.0.14
-      debug: 4.4.1(supports-color@7.2.0)
+      debug: 4.4.1
       fs-extra: 8.1.0
     transitivePeerDependencies:
       - supports-color

@@ -1,10 +1,10 @@
 import { Socket } from "socket.io-client";
-import { VjudgeAuth } from "./node.ts";
+import { VjudgeAuth, VjudgeNode } from "./node.ts";
 import { UniversalSubmission } from "./submission.ts";
 import { verifyMethod } from "./verified.ts";
 
 export type VjudgeUserVerifiedFunctionName = `verified${verifyMethod}`;
-export type VjudgeVerifiedFunction = (handle: string, context: VjudgeAuth, socket?: Socket) => Promise<boolean>;
+export type VjudgeVerifiedFunction = (handle: string, context: VjudgeAuth, vjudge_node: VjudgeNode, socket?: Socket) => Promise<boolean>;
 
 export type VjudgeUserSyncListFunctionName = `syncList${verifyMethod}`;
 export type VjudgeSyncListFunction = (handle: string, context: VjudgeAuth, from: number, count: number, socket?: Socket) => Promise<UniversalSubmission[]>;

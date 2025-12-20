@@ -2,7 +2,7 @@ use sea_orm::{ColumnTrait, DatabaseConnection};
 use crate::declare::UniversalSubmission;
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
 use crate::graph::edge::user_remote::{UserRemoteEdgeQuery, UserRemoteEdgeRaw};
-use crate::graph::node::user::remote_account::{RemoteMode, UserRemoteAccountAuth, UserRemoteAccountNode, UserRemoteAccountNodePrivateRaw, UserRemoteAccountNodePublicRaw, UserRemoteAccountNodeRaw};
+use crate::graph::node::user::remote_account::{RemoteMode, VjudgeAuth, VjudgeNode, VjudgeNodePrivateRaw, VjudgeNodePublicRaw, VjudgeNodeRaw};
 use crate::error::CoreError;
 use crate::graph::node::{Node, NodeRaw};
 use crate::model::problem::get_problem_node_and_statement;
@@ -26,8 +26,8 @@ use crate::utils::get_redis_connection;
 use crate::graph::node::vjudge_task::{VjudgeTaskNode, VjudgeTaskNodeRaw, VjudgeTaskNodePublicRaw, VjudgeTaskNodePrivateRaw};
 use crate::graph::edge::misc::MiscEdgeRaw;
 use serde_json::json;
-use crate::graph::edge::perm_system::{PermSystemEdgeQuery, SystemPerm};
-use crate::model::perm::check_perm;
+use crate::graph::edge::perm_system::SystemPerm;
+use crate::model::perm::check_system_perm;
 use enum_const::EnumConst;
 
 lazy_static::lazy_static! {
@@ -43,7 +43,7 @@ pub enum Platform {
 
 pub enum AddErrorResult {
     CoreError(CoreError),
-    Warning(String, UserRemoteAccountNode),
+    Warning(String, VjudgeNode),
 }
 
 impl From<CoreError> for AddErrorResult {
@@ -55,14 +55,14 @@ impl From<CoreError> for AddErrorResult {
 pub async fn add_unverified_account_for_user(
     db: &DatabaseConnection,
     user_id: i64,
+    iden: String,
     _platform_type: Platform,
     platform: String,
     remote_mode: RemoteMode,
-    auth: Option<UserRemoteAccountAuth>,
+    auth: Option<VjudgeAuth>,
     bypass_check: bool,
     ws_id: Option<String>,
-) -> Result<UserRemoteAccountNode, AddErrorResult>  {
-    let iden = format!("vjudge_{}_{}", user_id, &platform);
+) -> Result<VjudgeNode, AddErrorResult>  {
     let verified_code = if remote_mode == RemoteMode::PublicAccount {
         "".to_string()
     } else {
@@ -75,8 +75,8 @@ pub async fn add_unverified_account_for_user(
         }
         _ => {}
     };
-    let vjudge_node = UserRemoteAccountNodeRaw {
-        public: UserRemoteAccountNodePublicRaw {
+    let vjudge_node = VjudgeNodeRaw {
+        public: VjudgeNodePublicRaw {
             platform,
             verified_code,
             verified,
@@ -85,7 +85,7 @@ pub async fn add_unverified_account_for_user(
             updated_at: chrono::Utc::now().naive_utc(),
             remote_mode: remote_mode.clone(),
         },
-        private: UserRemoteAccountNodePrivateRaw {
+        private: VjudgeNodePrivateRaw {
             auth,
         },
     }.save(db).await?;
@@ -131,7 +131,7 @@ pub async fn verified_account(
     node_id: i64,
 ) -> Result<(), CoreError> {
     use crate::db::entity::node::user_remote::Column::Verified;
-    UserRemoteAccountNode::from_db(db, node_id).await?
+    VjudgeNode::from_db(db, node_id).await?
         .modify(db, Verified, true)
         .await?;
     Ok(())
@@ -145,7 +145,7 @@ pub async fn send_submission_sync_user_remote_submission(
     problem_id: i64,
     ws_id: Option<String>,
 ) -> Result<(), CoreError> {
-    let vjudge_node = UserRemoteAccountNode::from_db(db, vjudge_node_id).await?;
+    let vjudge_node = VjudgeNode::from_db(db, vjudge_node_id).await?;
     if vjudge_node.public.remote_mode == RemoteMode::PublicAccount {
         return Err(CoreError::VjudgeError("Public account cannot sync submission.".to_string()));
     }
@@ -220,74 +220,63 @@ pub async fn create_or_update_problem_from_vjudge(
     // Check if problem exists
     let iden_str = format!("problem/{}", problem.problem_iden);
     let node_ids = get_node_ids_from_iden(db, &mut redis, &iden_str).await;
-    
-    if let Ok(ids) = node_ids {
-        if !ids.is_empty() {
-             // Update existing problem
-            let mut p_node_id = -1;
-            for id in ids {
-                let n_type = crate::graph::action::get_node_type(db, id).await.unwrap_or("".to_string());
-                if n_type == "problem" {
-                    p_node_id = id;
-                    break;
-                }
-            }
-            
-            if p_node_id != -1 {
-                log::info!("Updating existing problem: {} (Node ID: {})", problem.problem_name, p_node_id);
-                
-                // 1. Update Problem Node Name
-                let p_node = ProblemNode::from_db(db, p_node_id).await;
-                 if let Ok(node) = p_node {
-                     use crate::db::entity::node::problem::Column::Name;
-                     let _ = node.modify(db, Name, problem.problem_name.clone()).await;
-                 }
-
-                // 2. Delete existing connections (statements, tags)
-                let _ = delete_problem_connections(db, &mut redis, p_node_id).await;
-
-                // 3. Re-add statements
-                for statement in &problem.problem_statement {
-                    let schema = generate_problem_statement_schema(statement.clone());
-                    let _ = add_problem_statement_for_problem(db, &mut redis, p_node_id, schema).await;
-                }
-
-                // 4. Re-add tags
-                for i in &problem.tags {
-                    use crate::db::entity::node::problem_tag::Column as ProblemTagColumn;
-                    let id = ProblemTagNode::from_db_filter(db, ProblemTagColumn::TagName.eq(i)).await;
-                     let tag_node_id = if let Ok(nodes) = id {
-                        if nodes.is_empty() {
-                            let new_tag = ProblemTagNodeRaw {
-                                public: ProblemTagNodePublicRaw {
-                                    tag_name: i.clone(),
-                                    tag_description: "".to_string(),
-                                },
-                                private: ProblemTagNodePrivateRaw {},
-                            }.save(db).await;
-                            match new_tag {
-                                Ok(t) => t.node_id,
-                                Err(_) => continue,
-                            }
-                        } else {
-                            nodes[0].node_id
-                        }
-                    } else {
-                         continue;
-                    };
-                    
-                    use crate::graph::edge::problem_tag::ProblemTagEdgeRaw;
-                    let _ = ProblemTagEdgeRaw {
-                        u: p_node_id,
-                        v: tag_node_id,
-                    }.save(db).await;
-                }
-                
-                return Ok(());
+    if let Ok(ids) = node_ids && !ids.is_empty() {
+         // Update existing problem
+        let mut p_node_id = -1;
+        for id in ids {
+            let n_type = crate::graph::action::get_node_type(db, id).await.unwrap_or("".to_string());
+            if n_type == "problem" {
+                p_node_id = id;
+                break;
             }
         }
+        if p_node_id != -1 {
+            log::info!("Updating existing problem: {} (Node ID: {})", problem.problem_name, p_node_id);
+            // 1. Update Problem Node Name
+            let p_node = ProblemNode::from_db(db, p_node_id).await;
+            if let Ok(node) = p_node {
+                use crate::db::entity::node::problem::Column::Name;
+                let _ = node.modify(db, Name, problem.problem_name.clone()).await;
+            }
+            // 2. Delete existing connections (statements, tags)
+            let _ = delete_problem_connections(db, &mut redis, p_node_id).await;
+            // 3. Re-add statements
+            for statement in &problem.problem_statement {
+                let schema = generate_problem_statement_schema(statement.clone());
+                let _ = add_problem_statement_for_problem(db, &mut redis, p_node_id, schema).await;
+            }
+            // 4. Re-add tags
+            for i in &problem.tags {
+                use crate::db::entity::node::problem_tag::Column as ProblemTagColumn;
+                let id = ProblemTagNode::from_db_filter(db, ProblemTagColumn::TagName.eq(i)).await;
+                let tag_node_id = if let Ok(nodes) = id {
+                    if nodes.is_empty() {
+                        let new_tag = ProblemTagNodeRaw {
+                            public: ProblemTagNodePublicRaw {
+                                tag_name: i.clone(),
+                                tag_description: "".to_string(),
+                            },
+                            private: ProblemTagNodePrivateRaw {},
+                        }.save(db).await;
+                        match new_tag {
+                            Ok(t) => t.node_id,
+                            Err(_) => continue,
+                        }
+                    } else {
+                        nodes[0].node_id
+                    }
+                } else {
+                    continue;
+                };
+                use crate::graph::edge::problem_tag::ProblemTagEdgeRaw;
+                let _ = ProblemTagEdgeRaw {
+                    u: p_node_id,
+                    v: tag_node_id,
+                }.save(db).await;
+            }
+            return Ok(());
+        }
     }
-
     let result = create_problem_with_user(db, &mut redis, problem, true).await;
     if let Err(err) = result {
         log::error!("Failed to create problem: {}", err);
@@ -333,17 +322,16 @@ pub async fn update_user_submission_from_vjudge(
             let _ = task_node.modify(db, Column::Log, format!("{}\n{}", task_node.public.log, log_msg)).await;
             let _ = task_node.modify(db, Column::UpdatedAt, chrono::Utc::now().naive_utc()).await;
         } else {
-             log::warn!("Received update for non-existent task_id: {}", task_id);
+            log::warn!("Received update for non-existent task_id: {}", task_id);
         }
     }
 
     let mut handles = vec![];
-    log::info!("{}.", data.ws_id.clone().unwrap_or("No WS ID provided".to_string()));
     let ws_id = data.ws_id;
     let ws_notify = if let Some(id) = ws_id {
         Some(env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().get(&id).cloned()).unwrap_or(None)
     } else {
-        log::warn!("No websocket id provided for submission update.");
+        log::debug!("No websocket id provided for submission update.");
         None
     };
     if let Some(notify_ref) = &ws_notify {
@@ -360,7 +348,7 @@ pub async fn update_user_submission_from_vjudge(
         let notify_ref = ws_notify.clone();
         handles.push(tokio::spawn(async move {
             if let Err(e) = process_single_submission(db, user_id, submission.clone()).await {
-                log::error!("Error processing submission: {:?}", e);
+                log::warn!("Error processing submission: {:?}", e);
                 if let Some(notify_ref) = notify_ref {
                     let _ = notify_ref.emit("submission_update", &Json!{
                         "s": 1,
@@ -395,17 +383,13 @@ async fn process_single_submission(
             .or_insert_with(|| Arc::new(AsyncMutex::new(())))
             .clone()
     };
+    //保证每时刻对于同一道题而言，不能存在多个并发，可能导致创建多道相同的题目。
     let _guard = lock.lock().await;
-
     let mut redis = get_redis_connection();
-
-    // let problem_iden_str = format!("problem/{}", remote_problem_id);?
-    // Check if problem exists
     let node_ids = get_problem_node_and_statement(&db, &mut redis, &remote_problem_id).await;
     let mut problem_exists = false;
     let mut problem_node_id = -1;
     let mut statement_node_id = -1;
-
     if let Ok(ids) = node_ids {
         problem_exists = true;
         problem_node_id = ids.0;
@@ -414,11 +398,12 @@ async fn process_single_submission(
         log::debug!("Failed to get node ids from iden for problem {}", remote_problem_id);
         log::debug!("Error: {:?}", node_ids.err());
     }
-
     if !problem_exists {
+        // 如果题目不存在，就以 System 用户的名义创建一个占位题目
+        let system_node_id = env::DEFAULT_NODES.lock().unwrap().default_system_node;
         log::info!("Problem {} not found, creating placeholder.", remote_problem_id);
         let placeholder_props = CreateProblemProps {
-            user_id: user_id,
+            user_id: system_node_id,
             problem_iden: format!("Rmj{}", remote_problem_id.clone()),
             problem_name: remote_problem_id.clone(),
             problem_statement: vec![
@@ -434,48 +419,44 @@ async fn process_single_submission(
                     time_limit: 1000,
                     memory_limit: 256 * 1024,
                     sample_group: vec![],
+                    page_source: None,
+                    page_rendered: None,
+                    problem_difficulty: None,
                     show_order: vec!["statement".to_string()],
                 }
             ],
             creation_time: Some(chrono::Utc::now().naive_utc()),
             tags: vec!["un_crawl".to_string()],
         };
-        
         let res = create_problem_with_user(&db, &mut redis, &placeholder_props, true).await;
         if let Ok(node) = res {
             problem_node_id = node.node_id;
             // Need to find statement node id
-                use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
-                if let Ok(statements) = ProblemStatementEdgeQuery::get_v(problem_node_id, &db).await {
-                    if !statements.is_empty() {
-                        statement_node_id = statements[0];
-                    }
-                }
+            use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
+            if let Ok(statements) = ProblemStatementEdgeQuery::get_v(problem_node_id, &db).await
+                && !statements.is_empty() {
+                    statement_node_id = statements[0];
+            }
         } else {
             log::error!("Failed to create placeholder problem");
             log::error!("Error: {:?}", res.err());
             return Ok(());
         }
     }
-
-    if statement_node_id == -1 {
-            // Try fetching if problem exists but statement not found via iden (should not happen if consistent)
-            use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
-            if let Ok(statements) = ProblemStatementEdgeQuery::get_v(problem_node_id, &db).await {
-                if !statements.is_empty() {
-                    statement_node_id = statements[0];
-                }
-            }
+    use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
+    if statement_node_id == -1
+        && let Ok(statements) = ProblemStatementEdgeQuery::get_v(problem_node_id, &db).await
+        && !statements.is_empty() {
+        statement_node_id = statements[0];
     }
-    
     if statement_node_id == -1 {
         log::error!("Statement node not found for problem {}", problem_node_id);
         return Ok(());
     }
-
-    // Check if record exists
+    // 判断是上传新纪录还是更新已有纪录
     let records = get_record_by_submission_url(&db, &submission.url).await;
     let (record_exists, existing_record_id) = if let Ok(records) = records && let Some(records) = records {
+        log::debug!("Found existing records {} for submission {}", records.node_id, submission.url);
         (true, records.node_id)
     } else {
         (false, -1)
@@ -489,25 +470,20 @@ async fn process_single_submission(
         "CompilationError" => RecordStatus::CompileError,
         _ => RecordStatus::UnknownError,
     };
-    
     // Convert timestamp
-    // Assuming submission.submit_time is ISO string
     let submit_time = chrono::DateTime::parse_from_rfc3339(&submission.submit_time)
         .map(|dt| dt.naive_utc())
         .unwrap_or(chrono::Utc::now().naive_utc());
-
-
     let record_id = if !record_exists {
-        // Create record
+        // 创建新记录
         let record_prop = RecordNewProp {
             platform: submission.remote_platform.clone(),
             code: submission.code.clone(),
             code_language: submission.language.clone(),
             url: submission.url.clone(),
-            statement_node_id: statement_node_id,
+            statement_node_id,
             public_status: true,
         };
-        
         let result = create_record_with_status(
             &db,
             record_prop,
@@ -530,9 +506,8 @@ async fn process_single_submission(
             score: *score,
         });
     }
-    log::info!("Updating record {} for submission {}", record_id, submission.remote_id);
+    log::info!("Updating record {} for submission {}, statement_node_id={statement_node_id}", record_id, submission.remote_id);
     update_record_status_no_subtask_remote_judge(&db, &mut redis, record_id, statement_node_id, record_map).await?;
-    
     Ok(())
 }
 
@@ -540,10 +515,9 @@ pub async fn add_vjudge_task(
     db: &DatabaseConnection,
     _user_id: i64,
     vjudge_node_id: i64,
-    range: String, // "all", "recent", or "problem:ID"
+    range: String,
     ws_id: Option<String>
 ) -> Result<VjudgeTaskNode> {
-    // 1. 创建任务节点 (Create VjudgeTaskNode)
     let task = VjudgeTaskNodeRaw {
         public: VjudgeTaskNodePublicRaw {
             status: "pending".to_string(),
@@ -560,7 +534,7 @@ pub async fn add_vjudge_task(
     }.save(db).await?;
 
     // 3. 获取 VjudgeAccountNode (Get VjudgeAccountNode)
-    let vjudge_node = UserRemoteAccountNode::from_db(db, vjudge_node_id).await?;
+    let vjudge_node = VjudgeNode::from_db(db, vjudge_node_id).await?;
     
     // 4. 发送任务到 Edge Server (Send task to Edge Server)
     let operation = if range == "all" {
@@ -576,19 +550,15 @@ pub async fn add_vjudge_task(
         "vjudge_node": vjudge_node,
         "range": range,
         "ws_id": ws_id,
-        "task_id": task.node_id 
+        "task_id": task.node_id
     });
-    
     let success = add_task(&payload).await;
-    
     let new_status = if success { "dispatched" } else { "failed_to_dispatch" };
     let new_log = if success { "Task dispatched to edge server." } else { "Failed to dispatch to edge server." };
-
     // 5. 更新任务状态 (Update VjudgeTaskNode)
     use crate::db::entity::node::vjudge_task::Column;
     let task = task.modify(db, Column::Status, new_status.to_string()).await?;
     let task = task.modify(db, Column::Log, format!("{}\n{}", task.public.log, new_log)).await?;
-
     Ok(task)
 }
 
@@ -598,7 +568,6 @@ pub async fn view_vjudge_task(
 ) -> Result<Vec<VjudgeTaskNode>> {
     use crate::graph::edge::misc::MiscEdgeQuery;
     use crate::db::entity::edge::misc::Column as MiscColumn;
-    
     // 查询与 VjudgeAccountNode 关联的所有任务 (Query all tasks associated with VjudgeAccountNode)
     // u = vjudge_node, v = task
     use sea_orm::sea_query::SimpleExpr;
@@ -609,16 +578,14 @@ pub async fn view_vjudge_task(
         None, // limit
         None  // offset
     ).await?;
-    
     // get_v_filter_extend returns Vec<(node_id, edge_id)>
     // We need to fetch the actual VjudgeTaskNode for each ID.
     let mut task_nodes = vec![];
     for (node_id, _edge_id) in tasks {
-         if let Ok(node) = VjudgeTaskNode::from_db(db, node_id).await {
-             task_nodes.push(node);
-         }
+        if let Ok(node) = VjudgeTaskNode::from_db(db, node_id).await {
+            task_nodes.push(node);
+        }
     }
-    
     Ok(task_nodes)
 }
 
@@ -630,7 +597,6 @@ pub async fn check_vjudge_account_owner(
     use crate::db::entity::edge::user_remote::Column as UserRemoteColumn;
     use sea_orm::ColumnTrait;
     use sea_orm::sea_query::SimpleExpr;
-    
     // Check if edge exists between user_id (u) and vjudge_node_id (v)
     let edges = UserRemoteEdgeQuery::get_v_filter_extend::<SimpleExpr>(
         user_id,
@@ -639,18 +605,17 @@ pub async fn check_vjudge_account_owner(
         None,
         None
     ).await?;
-    
     Ok(!edges.is_empty())
 }
 
 pub async fn get_vjudge_accounts_by_user_id(
     db: &DatabaseConnection,
     user_id: i64
-) -> Result<Vec<UserRemoteAccountNode>> {
+) -> Result<Vec<VjudgeNode>> {
     let ids = UserRemoteEdgeQuery::get_v(user_id, db).await?;
     let mut accounts = vec![];
     for id in ids {
-        if let Ok(account) = UserRemoteAccountNode::from_db(db, id).await {
+        if let Ok(account) = VjudgeNode::from_db(db, id).await {
             accounts.push(account);
         }
     }
@@ -660,8 +625,8 @@ pub async fn get_vjudge_accounts_by_user_id(
 pub async fn get_vjudge_account_by_id(
     db: &DatabaseConnection,
     node_id: i64
-) -> Result<UserRemoteAccountNode> {
-    UserRemoteAccountNode::from_db(db, node_id).await
+) -> Result<VjudgeNode> {
+    VjudgeNode::from_db(db, node_id).await
 }
 
 pub async fn delete_vjudge_account_node(
@@ -672,29 +637,28 @@ pub async fn delete_vjudge_account_node(
     // Node::delete doesn't delete edges automatically usually unless cascaded in DB.
     // Ideally we delete edges first.
     // For now, call Node::delete.
-    let node = UserRemoteAccountNode::from_db(db, node_id).await?;
+    let node = VjudgeNode::from_db(db, node_id).await?;
     node.delete(db, node_id).await
 }
 
 pub async fn update_vjudge_account_node(
     db: &DatabaseConnection,
     node_id: i64,
-    auth: Option<UserRemoteAccountAuth>
+    auth: Option<VjudgeAuth>
 ) -> Result<()> {
-    let node = UserRemoteAccountNode::from_db(db, node_id).await?;
+    let node = VjudgeNode::from_db(db, node_id).await?;
     if let Some(auth) = auth {
         use crate::db::entity::node::user_remote::Column;
-        
         let auth_str = serde_json::to_string(&auth)
             .map_err(|e| CoreError::StringError(format!("Failed to serialize auth: {}", e)))?;
-            
         let _ = node.modify(db, Column::Auth, auth_str).await?;
     }
     Ok(())
 }
 
-pub async fn check_system_manage_vjudge_perm(
-    db: &DatabaseConnection,
+/// 检查用户是否有管理 Vjudge 的系统权限
+/// 使用同步的权限检查（非 async）
+pub fn check_system_manage_vjudge_perm(
     user_id: i64
 ) -> bool {
     let system_node = env::DEFAULT_NODES.lock().unwrap().default_system_node;
@@ -702,20 +666,18 @@ pub async fn check_system_manage_vjudge_perm(
         log::warn!("System node not found when checking manage vjudge perm");
         return false;
     }
-    
     // Convert SystemPerm to i64 manually using EnumConst
     let perm_val = SystemPerm::ManageVjudge.get_const_isize().unwrap() as i64;
+    let res = check_system_perm(user_id, system_node, perm_val);
+    res == 1
+}
 
-    let res = check_perm(
-        db,
-        user_id,
-        system_node,
-        PermSystemEdgeQuery,
-        perm_val
-    ).await;
-    
-    match res {
-        Ok(1) => true,
-        _ => false,
-    }
+/// 旧的 async 版本，保留以便兼容
+#[deprecated(note = "Use check_system_manage_vjudge_perm instead")]
+#[allow(unused_variables)]
+pub async fn check_system_manage_vjudge_perm_async(
+    db: &DatabaseConnection,
+    user_id: i64
+) -> bool {
+    check_system_manage_vjudge_perm(user_id)
 }

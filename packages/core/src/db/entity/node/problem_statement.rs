@@ -22,6 +22,9 @@ pub struct Model {
     pub update_time: DateTime,
     pub sample_group_in: Vec<String>,
     pub sample_group_out: Vec<String>,
+    pub page_source: Option<String>,
+    pub page_rendered: Option<String>,
+    pub problem_difficulty: Option<i32>,
     pub show_order: Vec<String>,
 }
 

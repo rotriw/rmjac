@@ -19,6 +19,14 @@ impl EdgeRaw<ProblemTagEdge, problem_tag::Model, problem_tag::ActiveModel> for P
     fn get_edge_id_column(&self) -> <<problem_tag::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
         problem_tag::Column::EdgeId
     }
+    
+    fn get_u_node_id(&self) -> i64 {
+        self.u
+    }
+    
+    fn get_v_node_id(&self) -> i64 {
+        self.v
+    }
 }
 
 impl From<ProblemTagEdgeRaw> for problem_tag::ActiveModel {

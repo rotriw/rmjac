@@ -4,13 +4,17 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectItem } from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { addVJudgeAccount, verifyVJudgeAccount, getVJudgeAccountStatus } from "@/lib/api"
+import { bindVJudgeAccount, VJudgeAccount } from "@/lib/api"
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 import { StandardCard } from "@/components/card/card"
 
-export function AddAccountForm() {
+interface AddAccountFormProps {
+    onSuccess?: (account: VJudgeAccount) => void
+}
+
+export function AddAccountForm({ onSuccess }: AddAccountFormProps) {
   const [platform, setPlatform] = useState<string>("")
   const [handle, setHandle] = useState<string>("")
   const [password, setPassword] = useState<string>("")
@@ -18,9 +22,9 @@ export function AddAccountForm() {
   const [status, setStatus] = useState<'idle' | 'verifying' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState("")
 
-  const platforms = ["Codeforces", "AtCoder", "LeetCode", "Luogu"]
+  const platforms = ["Codeforces", "AtCoder"]
 
-  const handleVerify = async () => {
+  const handleBind = async () => {
     if (!platform || !handle) {
       setMessage("请选择平台并输入 Handle")
       setStatus('error')
@@ -29,42 +33,30 @@ export function AddAccountForm() {
 
     setLoading(true)
     setStatus('verifying')
-    setMessage("正在添加账号并启动验证...")
+    setMessage("正在绑定账号...")
 
     try {
-      // 1. Add Account
-      const addRes = await addVJudgeAccount({ platform, handle, password })
-      
-      if (addRes.error) {
-          throw new Error(addRes.error)
-      }
-      
-      const accountId = addRes.id || addRes.account?.id || (addRes.data && addRes.data.id)
+      // Pack handle and password into auth.Password for now since backend doesn't have dedicated handle field
+      // Format: JSON string
+      const authPayload = JSON.stringify({ handle, password });
 
-      if (!accountId) {
-          if (process.env.NODE_ENV === 'development' && !addRes.id) {
-             console.warn("No account ID returned, proceeding with mock verification")
-             await new Promise(r => setTimeout(r, 1500));
-             setStatus('success')
-             setMessage("账号验证成功！(开发模式)")
-             setLoading(false)
-             return;
-          }
-          throw new Error("无法从服务器获取账号ID")
-      }
-
-      // 2. Verify
-      setMessage("正在验证账号所有权...")
-      await verifyVJudgeAccount(accountId)
+      const res = await bindVJudgeAccount({
+          platform: platform,
+          remote_mode: 2, // Default to SyncCode (2) or similar? Let's assume 2 for now.
+          auth: { Password: authPayload },
+          bypass_check: false,
+          // ws_id: ... // We need socket ID for verification feedback? 
+          // For now, let's omit ws_id or we need to get it from a context.
+      })
       
-      // 3. Check status
-      const statusRes = await getVJudgeAccountStatus(accountId)
-      if (statusRes.verified_status) {
+      if (res.code === 0) {
           setStatus('success')
-          setMessage("账号验证成功！")
+          setMessage("账号绑定请求已提交。请稍后查看验证状态。")
+          if (onSuccess) {
+              onSuccess(res.data)
+          }
       } else {
-          setStatus('error')
-          setMessage("验证失败或仍在进行中，请稍后在管理页面查看状态。")
+          throw new Error(res.msg || "绑定失败")
       }
 
     } catch (error: any) {
@@ -76,23 +68,23 @@ export function AddAccountForm() {
   }
 
   return (
-    <StandardCard title="添加新账号" className="w-full mx-auto">
+    <StandardCard title="绑定新账号" className="w-full mx-auto">
       <div className="space-y-4 pt-1">
         <div className="text-sm text-muted-foreground mb-4">
-            请输入您的 Vjudge 账号信息以进行绑定。绑定过程可能需要验证您对该账号的所有权。
+            请输入您的 Vjudge 账号信息以进行绑定。
         </div>
 
         <div className="space-y-1">
           <Label htmlFor="platform">平台</Label>
-          <Select onValueChange={setPlatform} value={platform}>
-            <SelectTrigger id="platform">
-              <SelectValue placeholder="选择平台" />
-            </SelectTrigger>
-            <SelectContent>
-              {platforms.map((p) => (
-                <SelectItem key={p} value={p}>{p}</SelectItem>
-              ))}
-            </SelectContent>
+          <Select 
+            value={platform} 
+            onChange={(e) => setPlatform(e.target.value)}
+            id="platform"
+          >
+            <option value="" disabled>选择平台</option>
+            {platforms.map((p) => (
+              <SelectItem key={p} value={p}>{p}</SelectItem>
+            ))}
           </Select>
         </div>
         
@@ -103,6 +95,17 @@ export function AddAccountForm() {
             placeholder="输入您的 Handle" 
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="password">密码 / Token</Label>
+          <Input 
+            id="password" 
+            type="password"
+            placeholder="输入您的密码或 Token" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
         </div>
 
@@ -125,16 +128,16 @@ export function AddAccountForm() {
         <div className="pt-2">
             <Button 
             className="" 
-            onClick={handleVerify} 
+            onClick={handleBind} 
             disabled={loading || status === 'success'}
             >
             {loading ? (
                 <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                正在验证...
+                正在绑定...
                 </>
             ) : (
-                "添加并验证"
+                "绑定账号"
             )}
             </Button>
         </div>

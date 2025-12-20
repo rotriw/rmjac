@@ -3,6 +3,7 @@ export interface VjudgeNode {
     public: {
         platform: string;
         iden: string;
+        verified_code: string;
         remote_mode: "PublicAccount" | "SyncCode" | "All";
     };
     private: {

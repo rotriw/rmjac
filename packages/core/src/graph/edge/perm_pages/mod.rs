@@ -59,6 +59,19 @@ impl EdgeRaw<PermPagesEdge, Model, ActiveModel> for PermPagesEdgeRaw {
     ) -> <<ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
         Column::EdgeId
     }
+
+    fn get_u_node_id(&self) -> i64 {
+        self.u
+    }
+
+    fn get_v_node_id(&self) -> i64 {
+        self.v
+    }
+    
+    fn get_perm_value(&self) -> Option<i64> {
+        use tap::Conv;
+        Some(self.perms.clone().conv::<i32>() as i64)
+    }
 }
 
 impl From<PermPagesEdgeRaw> for ActiveModel {

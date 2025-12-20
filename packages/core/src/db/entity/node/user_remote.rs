@@ -2,10 +2,10 @@ use chrono::NaiveDateTime;
 use crate::db::entity::node::{DbNodeActiveModel, DbNodeInfo};
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter};
-use crate::graph::node::user::remote_account::UserRemoteAccountNode;
+use crate::graph::node::user::remote_account::VjudgeNode;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "node_user_remote_account")]
+#[sea_orm(table_name = "node_user_remote")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub node_id: i64,
@@ -30,4 +30,4 @@ impl DbNodeInfo for ActiveModel {
     }
 }
 
-impl DbNodeActiveModel<Model, UserRemoteAccountNode> for ActiveModel {}
+impl DbNodeActiveModel<Model, VjudgeNode> for ActiveModel {}

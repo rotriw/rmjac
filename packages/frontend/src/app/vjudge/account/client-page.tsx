@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VJudgeAccountCard } from "@/components/vjudge/account-card"
 import { AddAccountForm } from "@/components/vjudge/add-account-form"
-import { VJudgeAccount } from "@/lib/api"
+import { VJudgeAccount, getMyVJudgeAccounts } from "@/lib/api"
 import { StandardCard } from "@/components/card/card"
 
 interface ClientPageProps {
@@ -12,7 +12,12 @@ interface ClientPageProps {
 }
 
 export function ClientVjudgeAccountPage({ initialAccounts }: ClientPageProps) {
-  const [accounts] = useState<VJudgeAccount[]>(initialAccounts)
+  const [accounts, setAccounts] = useState<VJudgeAccount[]>(initialAccounts)
+
+  const refreshAccounts = async () => {
+      const data = await getMyVJudgeAccounts();
+      setAccounts(data);
+  }
 
   return (
     <div className="space-y-6">
@@ -30,7 +35,7 @@ export function ClientVjudgeAccountPage({ initialAccounts }: ClientPageProps) {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
                         {accounts.map(account => (
-                            <VJudgeAccountCard key={account.id} account={account} />
+                            <VJudgeAccountCard key={account.node_id} account={account} />
                         ))}
                     </div>
                 )}
@@ -38,7 +43,7 @@ export function ClientVjudgeAccountPage({ initialAccounts }: ClientPageProps) {
         </TabsContent>
         <TabsContent value="add">
           <div className="">
-             <AddAccountForm />
+             <AddAccountForm onSuccess={refreshAccounts} />
           </div>
         </TabsContent>
       </Tabs>

@@ -1,6 +1,6 @@
 
 export interface UniversalSubmission {
-    remote_id: string; // 远程提交ID
+    remote_id: number; // 远程提交ID
     remote_platform: string; // 远程平台
     remote_problem_id: string; // 远程题目ID
     language: string; // 语言

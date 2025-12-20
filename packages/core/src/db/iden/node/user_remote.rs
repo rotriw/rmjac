@@ -1,7 +1,7 @@
 use sea_orm::DeriveIden;
 
 #[derive(DeriveIden)]
-pub enum UserRemoteAccount {
+pub enum Vjudge {
     #[sea_orm(iden = "node_user_remote")]
     Table,
     #[sea_orm(iden = "node_id")]

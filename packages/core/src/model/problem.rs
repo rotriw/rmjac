@@ -143,6 +143,9 @@ pub fn generate_problem_statement_schema(statement: ProblemStatementProp) -> (Pr
             sample_group_in: statement.sample_group.iter().map(|(a, _)| a.clone()).collect(),
             sample_group_out: statement.sample_group.iter().map(|(_, b)| b.clone()).collect(),
             show_order: statement.show_order.clone(),
+            page_source: statement.page_source.clone(),
+            page_rendered: statement.page_rendered.clone(),
+            problem_difficulty: statement.problem_difficulty,
         },
         private: ProblemStatementNodePrivateRaw {},
     }, ProblemLimitNodeRaw {
@@ -174,6 +177,9 @@ pub struct ProblemStatementProp {
     pub memory_limit: i64,
     pub sample_group: Vec<(String, String)>,
     pub show_order: Vec<String>,
+    pub page_source: Option<String>,
+    pub page_rendered: Option<String>,
+    pub problem_difficulty: Option<i32>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

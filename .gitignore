@@ -28,3 +28,6 @@ flamegraph.svg
 packages/vjudge/data/*
 
 .env
+
+.claude
+.idea

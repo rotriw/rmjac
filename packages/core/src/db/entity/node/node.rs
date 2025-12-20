@@ -24,3 +24,9 @@ pub async fn create_node(db: &DatabaseConnection, node_type: &str) -> Result<Mod
     };
     Ok(new_node.insert(db).await?)
 }
+
+pub async fn get_total(db: &DatabaseConnection) -> Result<u64, CoreError> {
+    use sea_orm::EntityTrait;
+    let count = Entity::find().count(db).await?;
+    Ok(count)
+}

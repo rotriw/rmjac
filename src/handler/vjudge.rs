@@ -17,7 +17,7 @@ use rmjac_core::model::vjudge::{
     AddErrorResult
 };
 use rmjac_core::graph::node::user::remote_account::{
-    RemoteMode, UserRemoteAccountAuth
+    RemoteMode, VjudgeAuth
 };
 use serde::{Deserialize};
 use serde_json::json;
@@ -26,15 +26,16 @@ use serde_json::json;
 pub struct BindAccountReq {
     pub platform: String,
     pub remote_mode: i32,
-    pub auth: Option<UserRemoteAccountAuth>,
+    pub auth: Option<VjudgeAuth>,
     pub bypass_check: Option<bool>,
     pub ws_id: Option<String>,
+    pub iden: String,
 }
 
 #[derive(Deserialize)]
 pub struct UpdateAccountReq {
     pub node_id: i64,
-    pub auth: Option<UserRemoteAccountAuth>,
+    pub auth: Option<VjudgeAuth>,
 }
 
 #[derive(Deserialize)]
@@ -91,6 +92,7 @@ impl BindAccount {
         let result = add_unverified_account_for_user(
             &self.db,
             self.user_id.unwrap(),
+            self.data.iden,
             platform,
             self.data.platform.clone(),
             remote_mode,
@@ -188,7 +190,7 @@ impl AccountList {
         let user_context = req.extensions().get::<UserAuthCotext>().cloned();
         if let Some(uc) = user_context && uc.is_real {
             self.user_id = Some(uc.user_id);
-            self.is_admin = check_system_manage_vjudge_perm(&self.db, uc.user_id).await;
+            self.is_admin = check_system_manage_vjudge_perm(uc.user_id);
             Ok(self)
         } else {
             Err(HttpError::HandlerError(HandlerError::PermissionDenied))
@@ -263,7 +265,7 @@ impl AccountManage {
         let user_context = req.extensions().get::<UserAuthCotext>().cloned();
         if let Some(uc) = user_context && uc.is_real {
             self.user_id = Some(uc.user_id);
-            if check_system_manage_vjudge_perm(&self.db, uc.user_id).await || check_vjudge_account_owner(&self.db, uc.user_id, self.node_id).await.unwrap_or(false) {
+            if check_system_manage_vjudge_perm(uc.user_id) || check_vjudge_account_owner(&self.db, uc.user_id, self.node_id).await.unwrap_or(false) {
                 Ok(self)
             } else {
                 Err(HttpError::HandlerError(HandlerError::PermissionDenied))
@@ -360,7 +362,7 @@ impl TaskManage {
         let user_context = req.extensions().get::<UserAuthCotext>().cloned();
         if let Some(uc) = user_context && uc.is_real {
             self.user_id = Some(uc.user_id);
-            if check_system_manage_vjudge_perm(&self.db, uc.user_id).await || check_vjudge_account_owner(&self.db, uc.user_id, self.node_id).await.unwrap_or(false) {
+            if check_system_manage_vjudge_perm(uc.user_id) || check_vjudge_account_owner(&self.db, uc.user_id, self.node_id).await.unwrap_or(false) {
                 Ok(self)
             } else {
                 Err(HttpError::HandlerError(HandlerError::PermissionDenied))

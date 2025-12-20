@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { StandardCard } from "@/components/card/card"
 import { FormQuery, FormField } from "@/components/tools/query"
-import { getVJudgeAccounts, syncVJudgeAccount, VJudgeAccount } from "@/lib/api"
+import { getMyVJudgeAccounts, assignVJudgeTask, VJudgeAccount } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
@@ -12,17 +12,14 @@ interface AddTaskCardProps {
 }
 
 export function AddTaskCard({ onSubmitSuccess }: AddTaskCardProps) {
-  const [accounts, setAccounts] = useState<VJudgeAccount[]>([
-    
-  ])
+  const [accounts, setAccounts] = useState<VJudgeAccount[]>([])
   const [loading, setLoading] = useState(false)
   const [values, setValues] = useState<Record<string, any>>({
     scope: "recent",
-    limit: "50"
   })
 
   useEffect(() => {
-    getVJudgeAccounts().then(data => {
+    getMyVJudgeAccounts().then(data => {
       setAccounts(data || [])
     }).catch(err => {
       console.error("Failed to load accounts", err)
@@ -36,15 +33,18 @@ export function AddTaskCard({ onSubmitSuccess }: AddTaskCardProps) {
     }
 
     setLoading(true)
-    onSubmitSuccess?.() // Show status card immediately
     
     try {
-      await syncVJudgeAccount({
-        account_id: values.account_id,
-        scope: values.scope,
-        limit: values.scope === "recent" ? parseInt(values.limit) : undefined
+      const res = await assignVJudgeTask({
+        vjudge_node_id: Number(values.account_id),
+        range: values.scope,
       })
-      // alert("任务已提交")
+      
+      if (res.code === 0) {
+          onSubmitSuccess?.() // Show status card immediately
+      } else {
+          alert(res.msg || "提交失败")
+      }
     } catch (e) {
       console.error(e)
       alert("提交失败")
@@ -67,15 +67,20 @@ export function AddTaskCard({ onSubmitSuccess }: AddTaskCardProps) {
         name: "account_id",
         title: "选择账号",
         cols: 1,
-        options: accounts.map(acc => ({
-          label: `${acc.platform} - ${acc.handle}`,
-          value: acc.id,
-          description: {
-            "public": "公共账号",
-            "sync_only": "仅同步数据",
-            "submit": "授权远程提交"
-          }[acc.permission || "submit"] || "允许提交"
-        }))
+        options: accounts.map(acc => {
+            let handle = "Unknown";
+            if (acc.private?.auth?.Password) {
+                try {
+                    const authData = JSON.parse(acc.private.auth.Password);
+                    handle = authData.handle || "Unknown";
+                } catch {}
+            }
+            return {
+              label: `${acc.public.platform} - ${handle}`,
+              value: acc.node_id.toString(),
+              description: acc.public.verified ? "已验证" : "未验证"
+            }
+        })
     })
 
   fields.push({
@@ -89,12 +94,6 @@ export function AddTaskCard({ onSubmitSuccess }: AddTaskCardProps) {
   })
 
   if (values.scope === "recent") {
-    fields.push({
-      type: "input",
-      name: "limit",
-      title: "提交记录数量",
-      inputType: "number"
-    })
     fields.push({
       type: "info",
       content: "仅允许同步最多近100个提交记录。",
@@ -134,4 +133,3 @@ export function AddTaskCard({ onSubmitSuccess }: AddTaskCardProps) {
     </StandardCard>
   )
 }
-

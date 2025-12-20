@@ -12,7 +12,7 @@ interface SubmitData {
     language: string;
 }
 
-const submit = async (data: SubmitData) => {
+const run = async (data: SubmitData) => {
     const { handle, token, contest_id, problem_id, code, language, platform, vjudge_node } = data;
     const submit_method = vjudge_node.public.remote_mode === "PublicAccount" ? "PUBLIC" : vjudge_node.public.remote_mode === "SyncCode" ? "APIKEY" : vjudge_node.private.auth.token ? "TOKEN" : "PASSWORD";
     if (VJUDGE_USER[platform][`submit${submit_method}`]) {

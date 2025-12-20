@@ -1,7 +1,11 @@
 use std::fs;
 use sea_orm::DatabaseConnection;
+use crate::db::entity::node::node::get_total;
 use crate::env::{DB_SCHEMA, DB_URL, EDGE_AUTH_PUBLICKEY};
 use crate::error::CoreError;
+use crate::graph::action::{init_spot, load_perm_graph};
+use crate::graph::edge::EdgeType::PermProblem;
+use crate::graph::edge::perm_problem::PermProblemEdgeQuery;
 
 pub mod judge;
 pub mod track;
@@ -11,6 +15,15 @@ pub async fn service_start(db: &DatabaseConnection, db_url: &str, db_schema: &st
     log::info!("Initializing default nodes");
     let default_nodes = crate::graph::action::get_default_node(db).await?;
     log::info!("Default nodes initialized: {:?}", default_nodes);
+    
+    // 加载权限图到内存
+    log::info!("Loading permission graph into memory...");
+    load_perm_graph(db).await?;
+    log::info!("Permission graph loaded successfully!");
+    
+    log::info!("guest as init spot.");
+    let total = get_total(db).await?;
+    init_spot(db, &PermProblemEdgeQuery, default_nodes.guest_user_node, total as i64).await?;
     let mut default_nodes_env = crate::env::DEFAULT_NODES.lock().unwrap();
     *default_nodes_env = default_nodes;
     log::info!("Loading DB connection: {db_url}, schema: {db_schema}");

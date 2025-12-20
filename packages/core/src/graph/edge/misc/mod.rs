@@ -21,6 +21,14 @@ impl EdgeRaw<MiscEdge, misc::Model, misc::ActiveModel> for MiscEdgeRaw {
     fn get_edge_id_column(&self) -> <<misc::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
         misc::Column::EdgeId
     }
+    
+    fn get_u_node_id(&self) -> i64 {
+        self.u
+    }
+    
+    fn get_v_node_id(&self) -> i64 {
+        self.v
+    }
 }
 
 impl From<MiscEdgeRaw> for misc::ActiveModel {

@@ -41,6 +41,8 @@ pub enum RecordStatus {
     NotFound = 1001,
     #[serde(rename = "Skipped")]
     Skipped = 1002,
+    #[serde(rename = "Judging")]
+    Judging = 1100,
 }
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct RecordNodePublic {
@@ -184,6 +186,9 @@ impl From<i64> for RecordStatus {
             900 => RecordStatus::UnknownError,
             902 => RecordStatus::Deleted,
             1000 => RecordStatus::OnlyArchived,
+            1001 => RecordStatus::NotFound,
+            1002 => RecordStatus::Skipped,
+            1100 => RecordStatus::Judging,
             _ => RecordStatus::UnknownError,
         }
     }
@@ -219,6 +224,7 @@ impl fmt::Display for RecordStatus {
             RecordStatus::OnlyArchived => write!(f, "OnlyArchived"),
             RecordStatus::NotFound => write!(f, "NotFound"),
             RecordStatus::Skipped => write!(f, "Skipped"),
+            RecordStatus::Judging => write!(f, "Judging"),
         }
     }
 }
@@ -247,6 +253,7 @@ impl From<String> for RecordStatus {
             "Skipped" => RecordStatus::Skipped,
             "Idleness Limit Exceeded" => RecordStatus::IdlenessLimitExceeded,
             "Dangerous Code" => RecordStatus::DangerousCode,
+            "Judging" => RecordStatus::Judging,
             _ => RecordStatus::UnknownError,
         }
     }

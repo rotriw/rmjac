@@ -3,8 +3,6 @@ import * as server from "./server.ts";
 import * as fs from "node:fs";
 import process from "node:process";
 import { Problem } from "./declare/problem.ts";
-import { VjudgeAuth } from "@/declare/node.ts";
-import { VjudgeUser } from "@/declare/modules.ts";
 
 
 declare global {
@@ -12,28 +10,24 @@ declare global {
     var PRIVATE_KEY: string;
     var PRIVATE_PWD: string;
     var SERVER_URL: string;
-    var VJUDGE_USER: Record<string, VjudgeUser>;
-    var VJUDGE_PROBLEM: Record<string, {
-        fetch?: (url: string) => Promise<string>;
-        parse?: (html: string, url: string) => Promise<Problem>;
-    }>;
+    var taskHandlerMap: Record<string, Record<string, (task: any) => Promise<any>>>;
 }
 
-async function load_vjudge_module() {
-    global.VJUDGE_USER = {};
-    global.VJUDGE_PROBLEM = {};
-    const vjudge_modules = fs.readdirSync("./vjudge");
-    for (const module of vjudge_modules) {
-        LOG.info(`Loading vjudge module: ${module}`);
-        const user_module_func = (await import(`./vjudge/${module}/user.ts`));
-        VJUDGE_USER[module] = user_module_func;
-        const problem_module_func = (await import(`./vjudge/${module}/problem.ts`));
-        VJUDGE_PROBLEM[module] = problem_module_func;
+async function load_vjudge_services() {
+    global.taskHandlerMap = {};
+    if (!fs.existsSync("./vjudge_services")) return;
+    const services = fs.readdirSync("./vjudge_services");
+    for (const service of services) {
+        if (fs.statSync(`./vjudge_services/${service}`).isDirectory()) {
+            LOG.info(`Loading vjudge service: ${service}`);
+            const { apply } = await import(`./vjudge_services/${service}/apply.ts`);
+            if (apply) apply();
+        }
     }
 }
 
 async function start_service() {
-    await load_vjudge_module();
+    await load_vjudge_services();
     LOG.info("Service Start.");
     global.PRIVATE_KEY = fs.readFileSync(process.env.PRIVATE_PATH || "./private.asc").toString();
     global.PRIVATE_PWD = process.env.PRIVATE_PWD || "";

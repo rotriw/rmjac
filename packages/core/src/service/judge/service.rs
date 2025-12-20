@@ -1,3 +1,5 @@
+use crate::service::judge::vjudge_service::problem::handle_problem_create;
+use crate::service::judge::vjudge_service::sync::handle_update_vjudge_submission;
 use std::fmt::Debug;
 use axum::routing::get;
 use serde::{Deserialize, Serialize};
@@ -13,6 +15,7 @@ use crate::model::problem::CreateProblemProps;
 use crate::model::user::check_user_token;
 use crate::utils::encrypt::change_string_format;
 use crate::model::vjudge::{create_or_update_problem_from_vjudge, update_user_submission_from_vjudge, UserSubmissionProp};
+use crate::service::judge::vjudge_service::user::{handle_submit_done, handle_verified_result};
 
 fn trust_auth(socket: &SocketRef) {
     log::info!("Socket {} authenticated successfully", socket.id);
@@ -43,7 +46,7 @@ async fn auth(socket: SocketRef, Data(key): Data<String>) {
     let _ = socket.emit("auth_response", "Authentication successful");
 }
 
-fn check_auth(socket: SocketRef) -> bool {
+pub fn check_auth(socket: SocketRef) -> bool {
     log::trace!("Checking auth for socket: {}", socket.id);
     if let Some(auth_count) = env::EDGE_AUTH_MAP.lock().unwrap().get(&socket.id.to_string()) {
         log::trace!("{} auth success: {:?}", socket.id, auth_count);
@@ -59,28 +62,6 @@ pub struct UpdateStatusProp {
     pub id: String,
 }
 
-#[auth_socket_connect]
-async fn update_status(socket: SocketRef, Data(_key): Data<String>) {
-    // todo
-}
-
-#[auth_socket_connect]
-async fn create_problem_back(socket: SocketRef, Data(problem): Data<serde_json::Value>) {
-    let problem = serde_json::from_value::<CreateProblemProps>(problem).unwrap();
-    log::debug!("Creating/Updating problem from socket {}.", socket.id);
-    let db = get_connect().await;
-    if let Err(err) = db {
-        log::error!("Failed to connect to database: {}", err);
-        return;
-    }
-    let db = db.unwrap();
-    
-    if let Err(err) = create_or_update_problem_from_vjudge(&db, &problem).await {
-        log::error!("Failed to create/update problem: {}", err);
-    }
-}
-
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct VerifiedResultProp {
     pub user_id: i64,
@@ -88,54 +69,6 @@ pub struct VerifiedResultProp {
     pub ws_id: String,
 
 }
-
-#[auth_socket_connect]
-async fn handle_verified_result(socket: SocketRef, Data(result): Data<VerifiedResultProp>) {
-    let user_socket =  {
-        let data = env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap();
-        data.get(&result.ws_id).cloned()
-    };
-    if result.result {
-        let db = get_connect().await;
-        if let Err(err) = db {
-            log::error!("Failed to connect to database: {}", err);
-            if let Some(user_socket) = user_socket {
-                let _ = user_socket.emit("vjudge_account_verified", "0Failed to connect to database, please retry.");
-            }
-            return;
-        }
-        let db = db.unwrap();
-        let x = verified_account(&db, result.user_id).await;
-        if let Err(err) = x {
-            if let Some(user_socket) = &user_socket {
-                let _ = user_socket.emit("vjudge_account_verified", &format!("0Failed to verify account, please retry. {:?}", err));
-            }
-        }
-        if let Some(user_socket) = &user_socket {
-            let _ = user_socket.emit("vjudge_account_verified", "1Account verified successfully.");
-        }
-    } else {
-        if let Some(user_socket) = &user_socket {
-            let _ = user_socket.emit("vjudge_account_verified", "0Account verified Failed.");
-        }
-    }
-}
-
-#[auth_socket_connect]
-async fn update_user_submission_back(socket: SocketRef, Data(data): Data<UserSubmissionProp>) {
-    log::debug!("Updating user submission from socket {}.", socket.id);
-    let db = get_connect().await;
-    if let Err(err) = db {
-        log::error!("Failed to connect to database: {}", err);
-        return;
-    }
-    let db = db.unwrap();
-    
-    if let Err(err) = update_user_submission_from_vjudge(&db, data).await {
-        log::error!("Failed to update user submissions: {}", err);
-    }
-}
-
 fn erase_socket(id: &str) {
     log::debug!("Erasing socket: {}", id);
     env::EDGE_SOCKETS.lock().unwrap().remove(&id.to_string());
@@ -177,20 +110,19 @@ pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
     true
 }
 
+
 async fn on_connect(socket: SocketRef, Data(_data): Data<Value>) {
     log::debug!("Socket io connected: {:?} {:?}", socket.ns(), socket.id);
     socket.on("auth", auth);
-    socket.on("update_status", update_status);
-    socket.on("create_problem", create_problem_back);
-    socket.on("update_user_submission", update_user_submission_back);
-    socket.on("verified_done", handle_verified_result);
+    socket.on("fetch_done_success", handle_problem_create);
+    socket.on("sync_done_success", handle_update_vjudge_submission);
+    socket.on("submit_done_success", handle_submit_done);
+    socket.on("verified_done_success", handle_verified_result);
     socket.on_disconnect(async |socket: SocketRef| {
         log::debug!("Socket io disconnected: {:?} {:?}", socket.ns(), socket.id);
         erase_socket(socket.id.as_str());
     });
 }
-
-
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserVerifiedProp {
@@ -225,7 +157,6 @@ async fn on_user_connect(socket: SocketRef, Data(_data): Data<Value>) {
         env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().remove(&socket.ns().to_string());
     });
 }
-
 
 pub async fn service_start(port: u16) -> Result<()> {
     log::info!("VJudge Task server(with user.) will be started at ::{port}");

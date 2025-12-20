@@ -1,6 +1,7 @@
 import { io, Socket } from "socket.io-client";
 import * as openpgp from "openpgp";
 import fs from "node:fs";
+import { task_handler } from "./task_handler.ts";
 
 async function auth(socket: Socket<any>) {
     const message = await openpgp.createCleartextMessage({
@@ -40,21 +41,12 @@ export async function connect() {
         }, 1000);
     });
 
-    const tasks = fs.readdirSync("./tasks");
-    // deno-lint-ignore no-explicit-any
-    const taskMap: Record<string, (task: any, socket: Socket) => Promise<void>> = {};
-    for (const task of tasks) {
-        const func = (await import(`./tasks/${task}`))["run"];
-        taskMap[task.split(".")[0]] = func;
-        LOG.info(`Loaded task: ${task} operation`);
-    }
-    
     // deno-lint-ignore no-explicit-any
     socket.on("task", async (data: any) => {
         console.log(data);
         if (typeof data === "string") {
             data = JSON.parse(data);
         }
-        await taskMap[data.operation](data, socket);
+        await task_handler(data, socket);
     });
 }

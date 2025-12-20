@@ -1,16 +1,10 @@
-import { TitleCard } from "@/components/card/card";
-import { getVJudgeAccounts } from "@/lib/api";
-import { ClientVjudgeAccountPage } from "./client-page";
+import { ClientVjudgeAccountPage } from "./client-page"
+import { getMyVJudgeAccounts } from "@/lib/api"
 
-export default async function ViewVjudgePage() {
-  const accounts = await getVJudgeAccounts();
+export const dynamic = "force-dynamic"
 
-  return (
-    <div className="container mx-auto py-6 px-4 md:px-6">
-        <div className="mb-6">
-            <TitleCard title="Vjudge 账号管理" description="管理您绑定的 Vjudge 账号与权限" />
-        </div>
-        <ClientVjudgeAccountPage initialAccounts={accounts} />
-    </div>
-  )
+export default async function VjudgeAccountPage() {
+  const accounts = await getMyVJudgeAccounts()
+
+  return <ClientVjudgeAccountPage initialAccounts={accounts} />
 }

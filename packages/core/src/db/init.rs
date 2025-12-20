@@ -14,7 +14,7 @@ use crate::{
     graph::{
         edge::{
             EdgeRaw,
-          },
+        },
         node::{
             NodeRaw,
             pages::{PagesNodePrivateRaw, PagesNodePublicRaw, PagesNodeRaw},
@@ -74,7 +74,10 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             Source: text not_null,
             Content: json not_null,
             CreationTime: date_time not_null,
-            UpdateTime: date_time not_null
+            UpdateTime: date_time not_null,
+            PageSource: text,
+            PageRendered: text,
+            ProblemDifficulty: integer,
         })
         .col(
             ColumnDef::new(iden::node::problem_statement::ProblemStatement::SampleGroupIn).array(ColumnType::Text)
@@ -184,7 +187,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
     );
     tables.insert(
         "node_user_remote_account".to_string(),
-        table_create!(iden::node::user_remote::UserRemoteAccount, {
+        table_create!(iden::node::user_remote::Vjudge, {
             NodeId: big_integer not_null primary_key,
             UserIden: text not_null,
             Platform: text not_null,
@@ -487,7 +490,7 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
     tables.insert(
         "node_user_remote_account".to_string(),
         Table::drop()
-            .table(iden::node::user_remote::UserRemoteAccount::Table)
+            .table(iden::node::user_remote::Vjudge::Table)
             .if_exists()
             .to_owned(),
     );
@@ -669,7 +672,7 @@ pub async fn init(
 ) -> Result<(), CoreError> {
     let connection_options = ConnectOptions::new(url)
         .set_schema_search_path(schema)
-        .max_connections(10)
+        .max_connections(100)
         .sqlx_logging_level(LevelFilter::Trace)
         .to_owned();
     log::info!("Database Update: {}", up.join(", "));

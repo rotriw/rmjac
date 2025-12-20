@@ -4,8 +4,8 @@ use serde::Deserialize;
 use rmjac_core::model::record::{RecordNewProp, create_record_only_archived, update_record_status, get_specific_node_records, get_problem_user_status, get_record_status_with_record_id};
 use rmjac_core::model::problem::get_problem_node_and_statement;
 use rmjac_core::graph::node::record::{RecordStatus, RecordNode};
-use rmjac_core::model::perm::check_perm;
-use rmjac_core::graph::edge::perm_system::{PermSystemEdgeQuery, SystemPerm};
+use rmjac_core::model::perm::check_system_perm;
+use rmjac_core::graph::edge::perm_system::SystemPerm;
 use rmjac_core::graph::node::Node;
 
 use rmjac_core::error::QueryNotFound;
@@ -121,8 +121,8 @@ impl Create {
         };
 
         // Check if user has CreateRecord permission
-        let system_id = 0; // System node ID
-        if check_perm(&self.basic.db, user_node_id, system_id, PermSystemEdgeQuery, SystemPerm::CreateRecord.get_const_isize().unwrap() as i64).await? == 1 {
+        let system_id = rmjac_core::env::DEFAULT_NODES.lock().unwrap().default_system_node;
+        if check_system_perm(user_node_id, system_id, SystemPerm::CreateRecord.get_const_isize().unwrap() as i64) == 1 {
             Ok(self)
         } else {
             Err(HttpError::HandlerError(HandlerError::PermissionDenied))
