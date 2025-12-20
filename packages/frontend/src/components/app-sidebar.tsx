@@ -23,10 +23,7 @@ let side_bar = {};
 let sb = false;
 
 export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  if (!sb) {
-    side_bar = await(await getSidebar());
-    sb = true;
-  }
+  side_bar = await(await getSidebar());
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>

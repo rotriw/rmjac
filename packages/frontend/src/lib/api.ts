@@ -233,6 +233,7 @@ export async function getSidebar(): Promise<any> {
   try {
     const manage = await cookies();
     console.log(manage.toString());
+    console.log(666);
     const response = await fetch(`${API_BASE_URL}/api/user/sidebar?path=/`, {
       headers: {
         cookie: manage.toString()

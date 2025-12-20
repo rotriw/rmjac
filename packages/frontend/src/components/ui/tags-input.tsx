@@ -95,18 +95,18 @@ export function TagsInput({
   return (
     <div className={cn("relative", className)}>
       {/* Tags Display */}
-      <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[42px] items-center">
+      <div className="flex flex-wrap gap-2 border rounded-md p-0 items-center shadow-xs">
         {value.map((tag, index) => (
           <div
             key={index}
-            className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm"
+            className="flex items-center gap-0 p-0 ml-1 px-2 bg-blue-100 text-blue-800 rounded-md text-sm"
           >
-            <span>{tag}</span>
+            <span className="px-1">{tag}</span>
             {!disabled && (
               <button
                 type="button"
                 onClick={() => removeTag(index)}
-                className="hover:bg-blue-200 rounded p-0.5 transition-colors"
+                className="hover:bg-blue-200 rounded p-0 transition-colors"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -124,7 +124,7 @@ export function TagsInput({
             onFocus={() => setShowSuggestions(true)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
             placeholder={value.length === 0 ? placeholder : ""}
-            className="flex-1 min-w-[100px] outline-none bg-transparent text-sm"
+            className="flex-1 min-w-[100px] outline-none bg-transparent text-sm p-2 min-h-8 h-8 outline-none"
           />
         )}
 

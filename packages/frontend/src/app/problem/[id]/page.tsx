@@ -119,8 +119,10 @@ function renderContent(content: ContentItem[]) {
     "input": "Input",
     "output": "Output",
     "statement": "Statement",
+    "problem statement": "题目描述",
     "sample_input": "样例输入",
     "sample_output": "样例输出",
+    "constraints": "约定",
     "hint": "提示",
     "source": "来源",
   };
@@ -128,8 +130,8 @@ function renderContent(content: ContentItem[]) {
     console.log(item);
     switch (item.iden) {
       default:
-        return <div className="mb-2">
-          <TypstRenderer content={`== ${refname[item.iden as keyof typeof refname] || item.iden} \n ${item.content.replaceAll('\\n', '\n')}\n\n`} />
+        return <div className="mb-4">
+          <TypstRenderer content={`== ${refname[item.iden as keyof typeof refname] || item.iden} \n ${item.content.replaceAll('\\n', '\n').replaceAll('\n', '\n\n')}`} />
         </div>
     }
   })

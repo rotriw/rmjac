@@ -1,5 +1,5 @@
 import { Badge } from "../ui/badge"
-import { Card, CardContent, CardDescription, CardTitle } from "../ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
 
 function StandardCard({
   title,
@@ -12,11 +12,13 @@ function StandardCard({
 }) {
   return (
     <>
-      <Card className={`mb-2 shadow-none rounded-sm p-2 gap-3 ${className}`} {...props}>
-        <CardContent className="p-0">
-          <Badge className="text-sm mb-1 bg-gray-200 text-neutral-900 font-bold">{title}</Badge>
-        </CardContent>
+      <Card className={`mb-2 p-0 shadow-none rounded-sm gap-0 ${className} relative`} {...props}>
+        <span className="text-xs font-bold text-border px-1 position-sticky top-0 z-2 absolute w-fit bg-background" style={{ top: -7, left: 10 }}>
+          {title}
+        </span>
+        <div className="pb-5 pt-5 px-3">
           {children}
+        </div>
       </Card>
     </>
   )

@@ -88,7 +88,7 @@ function FormQuery({
     switch (field.type) {
       case "input":
         return (
-          <div key={index} className="space-y-2">
+          <div key={index} className="space-y-1">
             <Label htmlFor={field.name}>{field.title}</Label>
             <Input
               id={field.name}
@@ -97,13 +97,14 @@ function FormQuery({
               value={values[field.name] || ""}
               onChange={(e) => handleChange(field.name, e.target.value)}
               placeholder={field.title}
+              className="text-sm h-8"
             />
           </div>
         )
 
       case "select":
         return (
-          <div key={index} className="space-y-2">
+          <div key={index} className="space-y-1">
             <Label htmlFor={field.name}>{field.title}</Label>
             <Select
               id={field.name}
@@ -123,7 +124,7 @@ function FormQuery({
 
       case "choice-card":
         return (
-          <div key={index} className="space-y-2">
+          <div key={index} className="space-y-1">
             <Label>{field.title}</Label>
             <div className={cn("grid gap-4", field.cols === 1 ? "grid-cols-1" : "grid-cols-2")}>
               {field.options.map((opt) => (
@@ -170,6 +171,7 @@ function FormQuery({
               onChange={(tags) => handleChange(field.name, tags)}
               suggestions={field.suggestions}
               placeholder="输入标签后按回车添加"
+              className="text-sm h-8"
             />
           </div>
         )
@@ -213,7 +215,7 @@ function FormQuery({
 
   return (
     <form {...props}>
-      <div className="space-y-6">
+      <div className="space-y-0">
         {fields.map((field, index) => renderField(field, index))}
       </div>
     </form>
