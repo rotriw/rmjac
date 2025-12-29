@@ -3,11 +3,105 @@
 import { Button } from "@/components/ui/button"
 import { deleteVJudgeAccount, assignVJudgeTask } from "@/lib/api"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { Loader2 } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { Badge, ChevronRight, LibraryIcon, Loader2, SendIcon, Sheet, Tag } from "lucide-react"
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarSeparator, useSidebar } from "../ui/sidebar"
+import { SheetTrigger, SheetContent, SheetHeader, SheetTitle } from "../ui/sheet"
 
 interface ManageActionsProps {
     nodeId: number
+}
+
+export function ProblemRightSidebar({
+  problemId,
+  mainLimit,
+  tags,
+  userRecords = [],
+  viewMode = "statement",
+  onViewModeChange,
+  ...props
+}: ProblemRightSidebarProps) {
+  const [width, setWidth] = useState(320)
+  const [isResizing, setIsResizing] = useState(false)
+  const { isMobile } = useSidebar()
+
+  const startResizing = useCallback(() => {
+    setIsResizing(true)
+  }, [])
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false)
+  }, [])
+
+  const resize = useCallback(
+    (mouseMoveEvent: MouseEvent) => {
+      if (isResizing) {
+        const newWidth = window.innerWidth - mouseMoveEvent.clientX
+        if (newWidth > 200 && newWidth < 600) {
+          setWidth(newWidth)
+        }
+      }
+    },
+    [isResizing]
+  )
+
+  useEffect(() => {
+    window.addEventListener("mousemove", resize)
+    window.addEventListener("mouseup", stopResizing)
+    return () => {
+      window.removeEventListener("mousemove", resize)
+      window.removeEventListener("mouseup", stopResizing)
+    }
+  }, [resize, stopResizing])
+
+
+  return (
+    <Sidebar
+      side="right"
+      variant="sidebar"
+      collapsible="none"
+      className="border-l bg-sidebar lg:h-screen lg:sticky lg:top-0 transition-none w-full lg:w-auto"
+      style={{ width: !isMobile ? `${width}px` : undefined }}
+      {...props}
+    >
+      {!isMobile && (
+        <div
+          className="absolute left-0 top-0 w-1 h-full cursor-col-resize hover:bg-primary/30 transition-colors z-50"
+          onMouseDown={startResizing}
+        />
+      )}
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => onViewModeChange?.(viewMode === "statement" ? "submit" : "statement")}
+                  className={`h-auto py-3 flex-col items-start gap-1 transition-all rounded-lg mx-1 border backdrop-blur-md ${
+                    viewMode === "submit"
+                      ? "bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90 hover:text-white"
+                      : "bg-white/5 dark:bg-white/5 border-white/10 dark:border-white/10 hover:bg-white/10 dark:hover:bg-white/10 !text-sidebar-foreground"
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full px-1">
+                    <div className="flex items-center gap-2">
+                      <SendIcon className={`size-4 ${viewMode === "submit" ? "text-primary-foreground" : "text-primary/80"}`} />
+                      <span className="font-semibold text-xs">{viewMode === "submit" ? "返回题面" : "提交题目"}</span>
+                    </div>
+                  </div>
+                  <div className={`text-[10px] pl-7 font-medium ${viewMode === "submit" ? "text-primary-foreground/80" : "text-muted-foreground/80"}`}>
+                    {viewMode === "submit" ? "点击返回" : "点击提交"}
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+      </SidebarContent>
+    </Sidebar>
+  )
 }
 
 export function ManageActions({ nodeId }: ManageActionsProps) {

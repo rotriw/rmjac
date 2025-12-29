@@ -1,14 +1,11 @@
 import Link from "next/link"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { StandardCard, TitleCard } from "@/components/card/card"
+import { StandardCard } from "@/components/card/card"
 import { TypstRenderer } from "@/components/typst-renderer"
 import { API_BASE_URL } from "@/lib/api_client"
-import ProblemClient from "./problem-client"
-import { CardTitle } from "@/components/ui/card"
+import ProblemContainer from "./problem-container"
 
-interface Record {
+export interface Record {
   node_id: number
   public: {
     record_status: number
@@ -19,12 +16,12 @@ interface Record {
   }
 }
 
-interface ContentItem {
+export interface ContentItem {
   iden: string
   content: string
 }
 
-interface ProblemStatementNode {
+export interface ProblemStatementNode {
   node_id: number
   public: {
     statements: ContentItem[]
@@ -36,7 +33,7 @@ interface ProblemStatementNode {
   }
 }
 
-interface ProblemLimitNode {
+export interface ProblemLimitNode {
   node_id: number
   public: {
     time_limit: number
@@ -44,7 +41,7 @@ interface ProblemLimitNode {
   }
 }
 
-interface ProblemTagNode {
+export interface ProblemTagNode {
   node_id: number
   public: {
     tag_name: string
@@ -52,7 +49,7 @@ interface ProblemTagNode {
   }
 }
 
-interface ProblemNode {
+export interface ProblemNode {
   node_id: number
   public: {
     name: string
@@ -60,7 +57,7 @@ interface ProblemNode {
   }
 }
 
-interface ProblemModel {
+export interface ProblemModel {
   problem_node: ProblemNode
   problem_statement_node: Array<[ProblemStatementNode, ProblemLimitNode]>
   tag: ProblemTagNode[]
@@ -107,7 +104,7 @@ async function checkUserLogin(): Promise<boolean> {
       credentials: 'include',
     })
     return response.ok
-  } catch (error) {
+  } catch {
     return false
   }
 }
@@ -126,7 +123,7 @@ function renderContent(content: ContentItem[]) {
     "hint": "提示",
     "source": "来源",
   };
-  return content.map((item, index) => {
+  return content.map((item) => {
     console.log(item);
     switch (item.iden) {
       default:
@@ -158,7 +155,7 @@ export default async function ProblemPage({ params }: { params: Promise<{ id: st
     )
   }
 
-  const { model, statement, user_recent_records, user_last_accepted_record } = problemData
+  const { model, statement, user_recent_records } = problemData
   console.log(problemData);
   // Find the statement node by statement ID
   let statementIndex = model.problem_statement_node.findIndex(([stmt]) => stmt.node_id === statement)
@@ -169,78 +166,19 @@ export default async function ProblemPage({ params }: { params: Promise<{ id: st
   const mainLimit = statementIndex >= 0 ? model.problem_statement_node[statementIndex][1] : null
   console.log(mainStatement);
   return (
-    <div className="container mx-auto py-6 px-4 md:px-6">
-      <TitleCard 
-        title={model.problem_node.public.name} 
-        description={`ID: ${id}`}
-      />
-      
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3">
-          <StandardCard>
-            {mainStatement?.public?.statements ? (
-              renderContent(mainStatement.public.statements)
-            ) : (
-              <div className="text-gray-500">暂无题目描述</div>
-            )}
-          </StandardCard>
-
-          <ProblemClient
-            problemId={id}
-            timeLimit={mainLimit?.public?.time_limit}
-            memoryLimit={mainLimit?.public?.memory_limit}
-            userRecords={user_recent_records}
-            isLoggedIn={isLoggedIn}
-          />
-        </div>
-
-        <div className="lg:col-span-1">
-          <div className="space-y-2">
-            <StandardCard title="操作">
-              <Link href={`/problem/${id}/edit`}>
-                <Button className="w-full">
-                  编辑题目
-                </Button>
-              </Link>
-            </StandardCard>
-            {mainLimit && (
-              <StandardCard title="限制">
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    ⏱️ {mainLimit.public.time_limit}ms
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    💾 {mainLimit.public.memory_limit}MB
-                  </Badge>
-                </div>
-              </StandardCard>
-            )}
-
-            <StandardCard title="题目信息">
-
-              {/*<StandardCard title="相关">
-                <span className="text-gray-600">{model?.author?.name}</span>
-              </StandardCard>*/}
-
-              {model.tag && model.tag.length > 0 && (
-                <StandardCard title="标签">
-                  <div className="flex flex-wrap gap-2">
-                    {model.tag.map((tag) => (
-                      <Badge key={tag.node_id} variant="secondary">
-                        {tag.public.tag_name}
-                      </Badge>
-                    ))}
-                  </div>
-                </StandardCard>
-              )}
-            </StandardCard>
-
-
-            <Link href="/problem">
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ProblemContainer
+      id={id}
+      model={model}
+      mainLimit={mainLimit}
+      user_recent_records={user_recent_records}
+      isLoggedIn={isLoggedIn}
+      statement={statement}
+    >
+        {mainStatement?.public?.statements ? (
+          renderContent(mainStatement.public.statements)
+        ) : (
+          <div className="text-gray-500">暂无题目描述</div>
+        )}
+    </ProblemContainer>
   )
 }

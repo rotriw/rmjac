@@ -28,7 +28,7 @@ export const apikey = async (task: SyncTaskData): Promise<{ event: string, data:
             return {
                 remote_id: submission.id,
                 remote_platform: "codeforces",
-                remote_problem_id: `${submission.problem.contestId}${submission.problem.index}`,
+                remote_problem_id: `CF${submission.problem.contestId}${submission.problem.index}`,
                 language: submission.programmingLanguage,
                 code,
                 status,

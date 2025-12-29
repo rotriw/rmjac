@@ -101,11 +101,7 @@ pub async fn add_unverified_account_for_user(
         (&RemoteMode::PublicAccount, _, _) => Ok(vjudge_node),
         (_, true, _) => Ok(vjudge_node),
         (_, _, Some(ws_id)) => {
-            let success = add_task(&Json! {
-                "operation": "verify_remote_account",
-                "vjudge_node": vjudge_node,
-                "ws_id": ws_id,
-            }).await;
+            let success =
             if !success {
                 return Err(Warning("Warning: No edge server online.".to_string(), vjudge_node));
             }
@@ -123,6 +119,19 @@ pub async fn add_unverified_account_for_user(
             Ok(vjudge_node)
         }
     }
+}
+
+pub async fn verified_account_by_id(
+    db: &DatabaseConnection,
+    vjudge_node_id: i64,
+    ws_id: String,
+) -> Result<bool> {
+    let vjudge_node = VjudgeNode::from_db(&db, vjudge_node_id).await?;
+    Ok(add_task(&Json! {
+        "operation": "verify_remote_account",
+        "vjudge_node": vjudge_node,
+        "ws_id": ws_id,
+    }).await)
 }
 
 

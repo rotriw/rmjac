@@ -144,16 +144,16 @@ export async function RegisterForm({
       })});
     const res = await result.json();
     console.log(res);
-    if (res?.node_id) {
+    if (res?.user?.node_id) {
       redirect('/register/success?email=' + data.get("email"));
     } else {
-      if (res?.error === "(Core Error)User IDEN already exists") {
+      if (res?.error === "(Core Error)_User IDEN already exists") {
         redirect(`/register?email=${data.get("email")}&err=iden_exist`);
-      } else if (res?.error === "(Core Error)User Email already exists") {
+      } else if (res?.error === "(Core Error)_User Email already exists") {
         redirect(`/register?email=${data.get("email")}&err=iden_exist`);
-      } else if (res?.error === "Captcha is invalid") {
+      } else if (res?.error === "(Handler Error)Conflict: Captcha is invalid") {
         redirect(`/register?email=${data.get("email")}&err=captcha_invalid`);
-      } else if (res?.error === "Captcha is expired") {
+      } else if (res?.error === "(Handler Error)Conflict: Captcha is expired") {
         redirect(`/register?email=${data.get("email")}&err=captcha_expired`);
       }
       console.log(res);

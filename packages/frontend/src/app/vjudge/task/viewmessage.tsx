@@ -1,27 +1,13 @@
 "use client"
-import { RECORD_STATUS_COLOR_MAP, RECORD_STATUS_COLOR_MAP_INTER } from "@/app/record/[id]/shared";
+import { RECORD_STATUS_COLOR_MAP } from "@/app/record/[id]/shared";
 import { socket } from "@/lib/socket";
 import { useEffect, useReducer, useState } from "react";
-import { darken, hex2oklch, lighten } from "colorizr";
 import { StandardCard } from "@/components/card/card";
+import { Loader2 } from "lucide-react";
 
 const reflect: Record<string, string> = {
   "waiting_number": "正在等待远端服务器传回数据...",
   "updating": "正在更新提交状态...",
-}
-
-// Function to determine if text should be light or dark based on background color
-function getContrastTextColor(hexColor: string): string {
-  try {
-    const oklch = hex2oklch(hexColor);
-    // oklch[0] is lightness (0 to 1). 
-    // If lightness is high (> 0.6-0.7), use dark text. Otherwise use light text.
-    // Adjust threshold as needed. 
-    return oklch[0] > 0.65 ? "black" : "white";
-  } catch (e) {
-    // Fallback if parsing fails
-    return "white";
-  }
 }
 
 export const ViewVjudgeMessage = () => {
@@ -79,42 +65,66 @@ export const ViewVjudgeMessage = () => {
   }, []);
 
   const percentage = totalNumber > 0 ? Math.min(100, Math.max(0, (currentNumber / totalNumber) * 100)) : 0;
-  
-  // Calculate dynamic text color
-  const textColor = getContrastTextColor(background);
 
   return (
-    <>
-      <div className="relative w-full min-h-30 rounded-sm overflow-hidden bg-amber-50 dark:bg-gray-800">
+    <div className="space-y-4">
+      <div className="relative w-full min-h-[120px] rounded-sm overflow-hidden bg-muted/30 border border-dashed">
         {/* Progress Bar Layer */}
-        <div 
-            className="absolute top-0 left-0 h-full transition-all duration-500 ease-in-out"
-            style={{ 
+        <div
+            className="absolute top-0 left-0 h-full transition-all duration-700 ease-in-out opacity-20"
+            style={{
                 width: `${totalNumber > 0 ? percentage : 100}%`,
                 background: background
-            }} 
+            }}
         />
         
         {/* Content Layer */}
-        <div 
-            className="relative z-10 p-4 h-full flex flex-col justify-end min-h-30 transition-colors duration-500"
-            style={{ color: textColor }}
-        >
-          <div className="text-xl font-semibold flex items-center gap-1 min-w-1000">
-              <span className="opacity-90">{ reflect[status] || "未知状态"}</span>
+        <div className="relative z-10 p-6 h-full flex flex-col justify-center items-center text-center">
+          <div
+            className="text-2xl font-bold mb-2 transition-colors duration-500"
+            style={{ color: background }}
+          >
+            {reflect[status] || "正在处理..."}
           </div>
-          {totalNumber > 0 && (
-             <div className="text-sm font-mono mt-1 opacity-80">
-                {currentNumber} / {totalNumber} {currMessage}
-             </div>
+          
+          {totalNumber > 0 ? (
+            <div className="space-y-2 w-full max-w-md">
+              <div className="flex justify-between text-xs font-mono text-muted-foreground">
+                <span>进度: {currentNumber} / {totalNumber}</span>
+                <span>{Math.round(percentage)}%</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="h-full transition-all duration-500"
+                  style={{ width: `${percentage}%`, background: background }}
+                />
+              </div>
+              <div className="text-xs text-muted-foreground italic truncate">
+                {currMessage}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              等待远端响应...
+            </div>
           )}
         </div>
-        
       </div>
-      <div className="h-2" ></div>
-      <StandardCard title="详细信息">
-        <code className="whitespace-pre-wrap break-words bg-gray-50 min-h-30 max-h-50 overflow-y-scroll rounded-sm text-neutral-400 text-sm">{message}</code>
+
+      <StandardCard title="执行日志">
+        <div className="bg-neutral-950 rounded-sm p-4 font-mono text-xs text-neutral-400 min-h-[200px] max-h-[400px] overflow-y-auto border border-neutral-800">
+          {message ? (
+            <pre className="whitespace-pre-wrap break-words leading-relaxed">
+              {message}
+            </pre>
+          ) : (
+            <div className="flex items-center justify-center h-full opacity-30 italic">
+              暂无日志输出
+            </div>
+          )}
+        </div>
       </StandardCard>
-    </>
+    </div>
   );
 }

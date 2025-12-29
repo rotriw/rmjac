@@ -246,7 +246,7 @@ pub async fn get_user_records<T: IntoCondition>(
     let page = if page < 1 { 1 } else { page };
     let offset = number_per_page * (page - 1);
     
-    RecordEdgeQuery::get_u_filter_extend_content(
+    RecordEdgeQuery::get_v_filter_extend_content(
         user_id,
         filter,
         db,
@@ -304,6 +304,32 @@ pub async fn get_specific_node_records<T: IntoCondition>(
         }
     }
 }
+
+pub async fn get_user_with_statement_records(
+    db: &DatabaseConnection,
+    user_id: i64,
+    statement_id: i64,
+    number_per_page: u64,
+    page: u64,
+) -> Result<Vec<RecordEdge>> {
+    log::debug!("Getting records for user id: {} and statement id: {}", user_id, statement_id);
+    let page = if page < 1 { 1 } else { page };
+    let offset = number_per_page * (page - 1);
+
+    use db::entity::edge::record::Column;
+    use sea_orm::{ColumnTrait, QuerySelect};
+
+    RecordEdgeQuery::get_v_filter_extend_content(
+        user_id,
+        vec![
+            Column::VNodeId.eq(statement_id),
+        ],
+        db,
+        Some(number_per_page),
+        Some(offset),
+    ).await
+}
+
 
 pub async fn get_problem_user_status(db: &DatabaseConnection, user_id: i64, problem_id: i64) -> Result<RecordStatus> {
     let node_type = get_node_type(db, problem_id).await?;

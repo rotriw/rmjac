@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { VJudgeRightSidebar } from "./rightbar/vjudge-right-sidebar";
 
 export const metadata: Metadata = {
-  title: "Rmjac",
-  description: "",
+  title: "Rmjac - VJudge",
+  description: "VJudge Account Management",
 };
 
 export default async function RootLayout({
@@ -15,9 +16,10 @@ export default async function RootLayout({
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset >
+      <SidebarInset>
         {children}
       </SidebarInset>
+      <VJudgeRightSidebar />
     </SidebarProvider>
   );
 }

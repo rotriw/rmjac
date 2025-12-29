@@ -16,18 +16,15 @@ export default function RegisterSuccessPage({
           注册您的 Rmj.ac 账号
         </a>
         <div className="flex flex-col gap-6">
-        <Card>
+        <Card className="shadow-none text-neutral-700">
           <CardContent className="duration-300">
-          <span>注册成功！请前往您的邮箱<a className="px-1 font-semibold underline underline-offset-4">{(searchParams || {})['email']}</a>
-          激活账号。</span>
-          <Button className="mt-4" variant="default" asChild>
-            <a href="/login">
-              <LogInIcon className="mr-2 h-4 w-4" />
-              前往登录
-            </a>
-            </Button>
+          <span className="font-semibold">注册成功，验证邮件已发往您的邮箱。</span>
+          <span className="text-sm mt-1"><br/>若未收到，请点击重新发送。<br/>未验证邮件的帐号可能无法查看题目。<br/></span>
           </CardContent>
         </Card>
+        <div className="text-muted-foreground *:[a]:hover:text-primary text-center text-xs text-balance *:[a]:underline *:[a]:underline-offset-4">
+          &copy; Rotriw. Some rights reserved.
+        </div>
         </div>
       </div>
     </div>

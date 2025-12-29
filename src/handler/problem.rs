@@ -7,7 +7,7 @@ use tap::Conv;
 use rmjac_core::model::problem::{CreateProblemProps, ProblemStatementProp, add_editor, add_owner, add_problem_statement_for_problem, add_viewer, delete_editor, delete_owner, delete_problem_connections, delete_problem_statement_for_problem, delete_viewer, generate_problem_statement_schema, get_problem_with_node_id, modify_problem_statement, modify_problem_statement_source};
 use rmjac_core::model::perm::{check_problem_perm, check_system_perm};
 use rmjac_core::model::problem::get_problem_node_and_statement;
-use rmjac_core::model::record::get_specific_node_records;
+use rmjac_core::model::record::{get_specific_node_records, get_user_with_statement_records};
 use rmjac_core::error::CoreError;
 use rmjac_core::graph::edge::{EdgeQuery};
 use rmjac_core::graph::edge::perm_problem::{PermProblemEdgeQuery, ProblemPerm, ProblemPermRaw};
@@ -81,8 +81,9 @@ impl View {
         let problem_node_id = &self.problem_node_id.unwrap();
         let problem_statement_node_id = &self.problem_statement_node_id.unwrap();
         let model = get_problem_with_node_id(&self.basic.db, &mut redis, *problem_node_id).await?;
-        let get_user_ten_data = if let Some(uc) = &self.basic.user_context && uc.is_real {
-            Some(get_specific_node_records::<SimpleExpr>(&self.basic.db, uc.user_id, 10, 1, vec![]).await?)
+        let get_user_submit_data = if let Some(uc) = &self.basic.user_context && uc.is_real {
+            let data = get_user_with_statement_records(&self.basic.db, uc.user_id, self.problem_statement_node_id.unwrap(), 100, 1).await;
+            data.ok()
         } else {
             None
         };
@@ -96,7 +97,7 @@ impl View {
         Ok(Json! {
             "model": model,
             "statement": problem_statement_node_id,
-            "user_recent_records": get_user_ten_data,
+            "user_recent_records": get_user_submit_data,
             "user_last_accepted_record": get_user_accepted_data
         })
     }

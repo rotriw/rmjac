@@ -249,7 +249,7 @@ export async function fetchSubmissionWithId(
     const result: UniversalSubmission = {
         remote_id: +id,
         remote_platform: "codeforces",
-        remote_problem_id: `${problem_id}`,
+        remote_problem_id: `CF${problem_id}`,
         language,
         code,
         status,
