@@ -4,7 +4,7 @@ use actix_web::{get, post, web, Scope, services, HttpRequest, HttpMessage};
 use sea_orm::DatabaseConnection;
 use sea_orm::sea_query::SimpleExpr;
 use tap::Conv;
-use rmjac_core::model::problem::{CreateProblemProps, ProblemStatementProp, add_editor, add_owner, add_problem_statement_for_problem, add_viewer, delete_editor, delete_owner, delete_problem_connections, delete_problem_statement_for_problem, delete_viewer, generate_problem_statement_schema, get_problem_with_node_id, modify_problem_statement, modify_problem_statement_source};
+use rmjac_core::model::problem::{CreateProblemProps, ProblemListQuery, ProblemStatementProp, add_editor, add_owner, add_problem_statement_for_problem, add_viewer, delete_editor, delete_owner, delete_problem_connections, delete_problem_statement_for_problem, delete_viewer, generate_problem_statement_schema, get_problem_with_node_id, modify_problem_statement, modify_problem_statement_source};
 use rmjac_core::model::perm::{check_problem_perm, check_system_perm};
 use rmjac_core::model::problem::get_problem_node_and_statement;
 use rmjac_core::model::record::{get_specific_node_records, get_user_with_statement_records};
@@ -283,6 +283,114 @@ impl Manage {
 
 }
 
+pub struct List {
+    basic: BasicHandler,
+}
+
+impl List {
+    pub fn entry(req: HttpRequest, db: web::Data<DatabaseConnection>) -> Self {
+        Self {
+            basic: BasicHandler {
+                db: db.get_ref().clone(),
+                req: req.clone(),
+                user_context: req.extensions().get::<UserAuthCotext>().cloned(),
+            },
+        }
+    }
+
+    pub async fn perm(self) -> ResultHandler<Self> {
+        Ok(self)
+    }
+
+    pub async fn exec(self, query: ProblemListQuery) -> ResultHandler<String> {
+        let page = query.page.unwrap_or(1);
+        let per_page = query.per_page.unwrap_or(20);
+        let mut redis = get_redis_connection();
+
+        use rmjac_core::db::entity::node::problem::Column;
+        use sea_orm::{EntityTrait, QueryFilter, QueryOrder, PaginatorTrait};
+        use rmjac_core::db::entity::node::problem::Entity;
+
+        let mut db_query = Entity::find();
+
+        if let Some(name) = query.name {
+            db_query = db_query.filter(Column::Name.contains(&name));
+        }
+
+        if let Some(author_search) = query.author {
+            use rmjac_core::graph::edge::misc::MiscEdgeQuery;
+            use rmjac_core::db::entity::edge::misc::Column as MiscColumn;
+            
+            let user_node_id = if let Ok(user) = rmjac_core::db::entity::node::user::get_user_by_iden(&self.basic.db, &author_search).await {
+                Some(user.node_id)
+            } else if let Ok(user_id) = author_search.parse::<i64>() {
+                Some(user_id)
+            } else {
+                None
+            };
+
+            if let Some(uid) = user_node_id {
+                let problem_ids = MiscEdgeQuery::get_v_filter(uid, MiscColumn::MiscType.eq("author"), &self.basic.db).await.unwrap_or_default();
+                db_query = db_query.filter(Column::NodeId.is_in(problem_ids));
+            }
+        }
+
+        if let Some(tags) = query.tag {
+            for tag_name in tags {
+                use rmjac_core::db::entity::node::problem_tag::Column as TagColumn;
+                use rmjac_core::db::entity::node::problem_tag::Entity as TagEntity;
+                use rmjac_core::graph::edge::problem_tag::ProblemTagEdgeQuery;
+
+                if let Ok(Some(tag_node)) = TagEntity::find().filter(TagColumn::TagName.eq(tag_name)).one(&self.basic.db).await {
+                    let problem_ids = ProblemTagEdgeQuery::get_u(tag_node.node_id, &self.basic.db).await.unwrap_or_default();
+                    db_query = db_query.filter(Column::NodeId.is_in(problem_ids));
+                }
+            }
+        }
+
+        let total = db_query.clone().count(&self.basic.db).await
+            .map_err(|e| HttpError::CoreError(e.into()))?;
+
+        let problems: Vec<rmjac_core::db::entity::node::problem::Model> = db_query
+            .order_by_desc(Column::NodeId)
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all(&self.basic.db)
+            .await
+            .map_err(|e| HttpError::CoreError(e.into()))?;
+
+        let mut result_list = vec![];
+        for p in problems {
+            let model = get_problem_with_node_id(&self.basic.db, &mut redis, p.node_id).await?;
+            let idens = rmjac_core::service::iden::get_node_id_iden(&self.basic.db, &mut redis, p.node_id).await.unwrap_or_default();
+            let iden = idens.first().cloned().unwrap_or_else(|| "unknown".to_string());
+
+            result_list.push(serde_json::json!({
+                "model": model,
+                "iden": iden,
+            }));
+        }
+
+        Ok(Json! {
+            "problems": result_list,
+            "page": page,
+            "per_page": per_page,
+            "total": total
+        })
+    }
+}
+
+#[get("/list")]
+pub async fn list_problems(
+    req: HttpRequest,
+    db: web::Data<DatabaseConnection>,
+    query: web::Query<ProblemListQuery>
+) -> ResultHandler<String> {
+    List::entry(req, db)
+        .perm().await?
+        .exec(query.into_inner()).await
+}
+
 #[get("/view/{iden}")]
 pub async fn get_view(req: HttpRequest, db: web::Data<DatabaseConnection>, data: web::Path<String>) -> ResultHandler<String> {
     let iden = data.into_inner();
@@ -388,6 +496,7 @@ pub fn service() -> Scope {
         update_problem_statement_source,
         add_problem_iden,
         add_problem_editor,
+        list_problems,
     ];
     let service2 = services![
         remove_problem_editor,

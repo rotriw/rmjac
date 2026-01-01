@@ -198,7 +198,12 @@ export interface TrainingsResponse {
 // Training API functions
 export async function getAllTrainings(): Promise<TrainingsResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/training/trainings`)
+    const manage = await cookies();
+    const response = await fetch(`${API_BASE_URL}/api/training/trainings`, {
+      headers: {
+        cookie: manage.toString()
+      }
+    })
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -214,9 +219,15 @@ export async function getAllTrainings(): Promise<TrainingsResponse> {
 
 export async function getTrainingByIden(user_iden: string, training_iden: string): Promise<TrainingModel> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/training/training/${user_iden}/${training_iden}`)
+    const manage = await cookies();
+    const response = await fetch(`${API_BASE_URL}/api/training/view/${user_iden}/${training_iden}`, {
+      headers: {
+        cookie: manage.toString()
+      }
+    })
 
     if (!response.ok) {
+      console.log(await response.json());
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -311,7 +322,12 @@ export async function getUserInfo(): Promise<any> {
 
 export async function getTrainingByNodeId(node_id: number): Promise<any> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/training/training/node/${node_id}`)
+    const manage = await cookies();
+    const response = await fetch(`${API_BASE_URL}/api/training/training/node/${node_id}`, {
+      headers: {
+        cookie: manage.toString()
+      }
+    })
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)

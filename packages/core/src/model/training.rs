@@ -5,8 +5,8 @@ use chrono::NaiveDateTime;
 use redis::TypedCommands;
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
-use crate::graph::edge::{EdgeQuery, EdgeQueryOrder, EdgeRaw};
-use crate::graph::edge::training_problem::{TrainingProblemEdgeQuery, TrainingProblemEdgeRaw, TrainingProblemType};
+use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryOrder, EdgeRaw};
+use crate::graph::edge::training_problem::{TrainingProblemEdge, TrainingProblemEdgeQuery, TrainingProblemEdgeRaw, TrainingProblemType};
 use crate::graph::edge::perm_pages::{PermPagesEdgeRaw, PagesPerm};
 use crate::graph::node::{Node, NodeRaw};
 use crate::Result;
@@ -219,9 +219,17 @@ pub async fn get_training_node_id_by_iden(db: &DatabaseConnection, redis: &mut r
 }
 
 pub async fn get_training(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64) -> Result<Training> {
-    log::info!("Fetching training with node ID: {}", node_id);
+    // log::info!("Fetching training with node ID: {}", node_id);
     let training_node = TrainingNode::from_db(db, node_id).await?;
-    let problem_list = get_training_problem_list(db, redis, training_node.node_id).await?;
+    // log::info!("Training node ID: {}", training_node.node_id);
+    let training_problem_node_id = {
+        let edges = TrainingProblemEdgeQuery::get_order_asc_extend(training_node.node_id, db).await?;
+        if edges.is_empty() {
+            return Err(CoreError::NotFound("No problem list found for this training".to_string()));
+        }
+        edges[0].v
+    };
+    let problem_list = get_training_problem_list(db, redis, training_problem_node_id).await?;
     let result = Training {
         training_node,
         problem_list,
@@ -230,6 +238,14 @@ pub async fn get_training(db: &DatabaseConnection, redis: &mut redis::Connection
     Ok(result)
 }
 
+
+pub async fn get_training_problem_id(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64) -> Result<i64> {
+    let edges = TrainingProblemEdgeQuery::get_order_asc_extend(node_id, db).await?;
+    if edges.is_empty() {
+        return Err(CoreError::NotFound("No problem list found for this training".to_string()));
+    }
+    Ok(edges[0].v)
+}
 
 pub async fn add_problem_into_training_list(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64, problem_node_id: i64) -> Result<Vec<(i64, i64)>> {
     let mut problem_list = get_training_problem_list_one_with_order(db, redis, node_id).await?;
@@ -324,6 +340,15 @@ pub async fn remove_problem_from_training_list(db: &DatabaseConnection, redis: &
         }
     }
     Err(CoreError::QueryNotFound(QueryNotFound::NodeNotFound))
+}
+
+pub async fn update_training_problem_order(db: &DatabaseConnection, _redis: &mut redis::Connection, training_list_id: i64, orders: Vec<(i64, i64)>) -> Result<()> {
+    use sea_orm::entity::prelude::*;
+    for (node_id, order) in orders {
+        let edge:TrainingProblemEdge = TrainingProblemEdgeQuery::get_v_one_filter_extend(training_list_id, crate::db::entity::edge::training_problem::Column::VNodeId.eq(node_id), db).await?;
+        edge.modify(db, crate::db::entity::edge::training_problem::Column::Order, order).await?;
+    }
+    Ok(())
 }
 
 /// Delete all connections for a training (edges only)

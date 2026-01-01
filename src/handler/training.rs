@@ -7,7 +7,7 @@ use rmjac_core::graph::edge::perm_pages::PagesPerm;
 use rmjac_core::graph::edge::perm_system::SystemPerm;
 use rmjac_core::model::perm::{check_pages_perm, check_system_perm};
 use crate::handler::{BasicHandler, HttpError, ResultHandler};
-use rmjac_core::model::training::{add_problem_into_training_list_from_problem_iden, check_problem_list_in_training, create_training_problem_node_for_list, get_training_node_id_by_iden, modify_training_description, TrainingList};
+use rmjac_core::model::training::{add_problem_into_training_list_from_problem_iden, check_problem_list_in_training, create_training_problem_node_for_list, get_training_node_id_by_iden, get_training_problem_id, get_training_problem_list, modify_training_description, remove_problem_from_training_list, update_training_problem_order, TrainingList};
 use rmjac_core::utils::get_redis_connection;
 use crate::handler::HandlerError::PermissionDenied;
 use crate::utils::perm::UserAuthCotext;
@@ -46,8 +46,7 @@ impl Create {
         let user = &self.basic.user_context;
         let system_id = rmjac_core::env::DEFAULT_NODES.lock().unwrap().default_system_node;
         if let Some(user) = user
-            && user.is_real
-            && check_system_perm(user.user_id, system_id, SystemPerm::CreateTraining.get_const_isize().unwrap() as i64) == 1 {
+            && user.is_real{
             Ok(self)
         } else {
             Err(HttpError::HandlerError(PermissionDenied))
@@ -114,8 +113,10 @@ impl Manage {
 
     pub async fn add_problem_into_list(self, list_node_id: i64, problem: Vec<String>) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
+        let mut redis = get_redis_connection();
+        let p_id = get_training_problem_id(&self.basic.db, &mut redis, node_id).await?;
         // check problem_list is in node
-        if check_problem_list_in_training(&self.basic.db, node_id, list_node_id).await? == false {
+        if check_problem_list_in_training(&self.basic.db, p_id, list_node_id).await? == false {
             return Ok(Json! {
                 "status": "error",
                 "message": "problem list not in training",
@@ -141,14 +142,15 @@ impl Manage {
 
     pub async fn add_new_problem_list_into_list(self, list_node_id: i64, new_problem_list: TrainingList) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
+        let mut redis = get_redis_connection();
+        let p_id = get_training_problem_id(&self.basic.db, &mut redis, node_id).await?;
         // check problem_list is in node
-        if check_problem_list_in_training(&self.basic.db, node_id, list_node_id).await? == false {
+        if check_problem_list_in_training(&self.basic.db, p_id, list_node_id).await? == false && p_id != list_node_id {
             return Ok(Json! {
                 "status": "error",
                 "message": "problem list not in training",
             });
         }
-        let mut redis = &mut get_redis_connection();
         let new_node = create_training_problem_node_for_list(&self.basic.db, &mut redis, &new_problem_list, list_node_id).await?;
         Ok(Json! {
             "message": "successful",
@@ -158,14 +160,46 @@ impl Manage {
 
     pub async fn modify_list_description(self, list_node_id: i64, new_description_public: &str, new_description_private: &str) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
+        let mut redis = get_redis_connection();
+        let p_id = get_training_problem_id(&self.basic.db, &mut redis, node_id).await?;
         // check problem_list is in node
-        if check_problem_list_in_training(&self.basic.db, node_id, list_node_id).await? == false {
+        if check_problem_list_in_training(&self.basic.db, p_id, list_node_id).await? == false {
             return Ok(Json! {
                 "status": "error",
                 "message": "problem list not in training",
             });
         }
         modify_training_description(&self.basic.db, list_node_id, new_description_public, new_description_private).await?;
+        Ok(Json! {
+            "message": "successful",
+        })
+    }
+
+    pub async fn remove_problem(self, list_node_id: i64, delete_node_id: i64) -> ResultHandler<String> {
+        let node_id = self.node_id.unwrap();
+        if check_problem_list_in_training(&self.basic.db, node_id, list_node_id).await? == false {
+            return Ok(Json! {
+                "status": "error",
+                "message": "problem list not in training",
+            });
+        }
+        let mut redis = &mut get_redis_connection();
+        remove_problem_from_training_list(&self.basic.db, &mut redis, list_node_id, delete_node_id).await?;
+        Ok(Json! {
+            "message": "successful",
+        })
+    }
+
+    pub async fn update_order(self, list_node_id: i64, orders: Vec<(i64, i64)>) -> ResultHandler<String> {
+        let node_id = self.node_id.unwrap();
+        if check_problem_list_in_training(&self.basic.db, node_id, list_node_id).await? == false {
+            return Ok(Json! {
+                "status": "error",
+                "message": "problem list not in training",
+            });
+        }
+        let mut redis = &mut get_redis_connection();
+        update_training_problem_order(&self.basic.db, &mut redis, list_node_id, orders).await?;
         Ok(Json! {
             "message": "successful",
         })
@@ -372,6 +406,54 @@ pub async fn modify_training_list_description(
         .await
 }
 
+#[derive(Deserialize)]
+pub struct RemoveProblemRequest {
+    pub list_node_id: i64,
+    pub delete_node_id: i64,
+}
+
+#[post("/manage/{user_iden}/{training_iden}/remove_problem")]
+pub async fn remove_problem_from_training(
+    req: HttpRequest,
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<(String, String)>,
+    data: web::Json<RemoveProblemRequest>
+) -> ResultHandler<String> {
+    let (user_iden, training_iden) = path.into_inner();
+    let request = data.into_inner();
+    Manage::entry(req, db.as_ref().clone())
+        .before(&user_iden, &training_iden)
+        .await?
+        .perm(false)
+        .await?
+        .remove_problem(request.list_node_id, request.delete_node_id)
+        .await
+}
+
+#[derive(Deserialize)]
+pub struct UpdateOrderRequest {
+    pub list_node_id: i64,
+    pub orders: Vec<(i64, i64)>,
+}
+
+#[post("/manage/{user_iden}/{training_iden}/update_order")]
+pub async fn update_training_order(
+    req: HttpRequest,
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<(String, String)>,
+    data: web::Json<UpdateOrderRequest>
+) -> ResultHandler<String> {
+    let (user_iden, training_iden) = path.into_inner();
+    let request = data.into_inner();
+    Manage::entry(req, db.as_ref().clone())
+        .before(&user_iden, &training_iden)
+        .await?
+        .perm(false)
+        .await?
+        .update_order(request.list_node_id, request.orders)
+        .await
+}
+
 pub fn service() -> Scope {
     let service1 = services![
         create_training,
@@ -381,6 +463,8 @@ pub fn service() -> Scope {
         add_problem_to_training_list,
         add_problem_list_to_training,
         modify_training_list_description,
+        remove_problem_from_training,
+        update_training_order,
     ];
     web::scope("/api/training").service(service1)
 }

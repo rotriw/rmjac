@@ -285,6 +285,16 @@ pub struct ProblemModel {
     pub author: Option<SimplyUser>,
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct ProblemListQuery {
+    pub page: Option<u64>,
+    pub per_page: Option<u64>,
+    pub name: Option<String>,
+    pub tag: Option<Vec<String>>,
+    pub author: Option<String>,
+    pub difficulty: Option<i32>,
+}
+
 pub async fn get_problem_node_and_statement(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,
