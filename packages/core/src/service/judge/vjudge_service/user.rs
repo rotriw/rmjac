@@ -12,6 +12,7 @@ use crate::utils::get_redis_connection;
 
 #[auth_socket_connect]
 async fn handle_verified_result(socket: SocketRef, Data(result): Data<VerifiedResultProp>) {
+    log::info!("Handling verified result from socket {}.", socket.id);
     let user_socket =  {
         let data = env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap();
         data.get(&result.ws_id).cloned()
@@ -26,7 +27,7 @@ async fn handle_verified_result(socket: SocketRef, Data(result): Data<VerifiedRe
             return;
         }
         let db = db.unwrap();
-        let x = verified_account(&db, result.user_id).await;
+        let x = verified_account(&db, result.node_id).await;
         if let Err(err) = x
             && let Some(user_socket) = &user_socket
         {

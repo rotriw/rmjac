@@ -12,7 +12,7 @@ interface VJudgeAccountCardProps {
 }
 
 export function VJudgeAccountCard({ account }: VJudgeAccountCardProps) {
-  let handle = "Unknown"
+  let handle = account.public.iden;
   
   // Try to extract handle from auth
   if (account.private.auth?.Password) {

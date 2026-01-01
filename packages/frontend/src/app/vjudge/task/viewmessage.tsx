@@ -1,18 +1,26 @@
 "use client"
 import { RECORD_STATUS_COLOR_MAP } from "@/app/record/[id]/shared";
 import { socket } from "@/lib/socket";
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useReducer, useState, useRef } from "react";
 import { StandardCard } from "@/components/card/card";
 import { Loader2 } from "lucide-react";
 
 const reflect: Record<string, string> = {
   "waiting_number": "正在等待远端服务器传回数据...",
   "updating": "正在更新提交状态...",
+  "completed": "任务已完成",
+  "failed": "任务失败",
 }
 
-export const ViewVjudgeMessage = () => {
-  const [status, setStatus] = useState<string>("waiting");
-  const [currMessage, setCurrMessage] = useState<string>("1");
+interface ViewVjudgeMessageProps {
+  initialLog?: string;
+  initialStatus?: string;
+}
+
+export const ViewVjudgeMessage = ({ initialLog, initialStatus }: ViewVjudgeMessageProps) => {
+  const logEndRef = useRef<HTMLDivElement>(null);
+  const [status, setStatus] = useState<string>(initialStatus || "waiting");
+  const [currMessage, setCurrMessage] = useState<string>("");
   const [background, setBackground] = useState<string>(RECORD_STATUS_COLOR_MAP["Waiting"]);
 
   function add_tot(old: number, n: number) {
@@ -30,7 +38,7 @@ export const ViewVjudgeMessage = () => {
 
   const [totalNumber, setTotalNumber] = useReducer(add_tot, 0);
   const [currentNumber, setCurrentNumber] = useReducer(add_cur, 0);
-  const [message, setMessage] = useReducer(add_meesage, "");
+  const [message, setMessage] = useReducer(add_meesage, initialLog || "");
 
   function add_step(msg: string) {
     setCurrentNumber(1);
@@ -38,17 +46,34 @@ export const ViewVjudgeMessage = () => {
   }
 
   useEffect(() => {
-    function onSubmit(ndata: string) {
+    if (initialStatus === "completed") {
+      setStatus("completed");
+      setBackground(RECORD_STATUS_COLOR_MAP["Accepted"]);
+    }
+  }, [initialStatus]);
+
+  useEffect(() => {
+    if (logEndRef.current) {
+      logEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [message]);
+
+  useEffect(() => {
+    function onSubmit(ndata: string | { n?: number; m?: string; s: number; t?: number }) {
       const data: {
-      n: number | undefined;
-      m: string | undefined;
-      s: number;
-      t: number | undefined;
-    } = JSON.parse(ndata);
+        n?: number;
+        m?: string;
+        s: number;
+        t?: number;
+      } = typeof ndata === 'string' ? JSON.parse(ndata) : ndata;
+      
       console.log("Received submission update:", data);
       if (data.s === 0) { // update task.
         setStatus("updating");
-        setTotalNumber(totalNumber + data.n!);
+        setTotalNumber(data.n || 0);
+        setBackground(RECORD_STATUS_COLOR_MAP["Accepted"]);
+      } else if (data.s === 3) { // task completed
+        setStatus("completed");
         setBackground(RECORD_STATUS_COLOR_MAP["Accepted"]);
       } else if (data.s === 1) {
         add_step(`[ERROR] ${data.m ? data.m : ""}`);
@@ -87,20 +112,24 @@ export const ViewVjudgeMessage = () => {
             {reflect[status] || "正在处理..."}
           </div>
           
-          {totalNumber > 0 ? (
+          {totalNumber > 0 || status === "completed" || status === "failed" ? (
             <div className="space-y-2 w-full max-w-md">
-              <div className="flex justify-between text-xs font-mono text-muted-foreground">
-                <span>进度: {currentNumber} / {totalNumber}</span>
-                <span>{Math.round(percentage)}%</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                <div
-                  className="h-full transition-all duration-500"
-                  style={{ width: `${percentage}%`, background: background }}
-                />
-              </div>
+              {totalNumber > 0 && (
+                <>
+                  <div className="flex justify-between text-xs font-mono text-muted-foreground">
+                    <span>进度: {currentNumber} / {totalNumber}</span>
+                    <span>{Math.round(percentage)}%</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="h-full transition-all duration-500"
+                      style={{ width: `${percentage}%`, background: background }}
+                    />
+                  </div>
+                </>
+              )}
               <div className="text-xs text-muted-foreground italic truncate">
-                {currMessage}
+                {currMessage || (status === "completed" ? "所有操作已成功完成" : "")}
               </div>
             </div>
           ) : (
@@ -115,9 +144,12 @@ export const ViewVjudgeMessage = () => {
       <StandardCard title="执行日志">
         <div className="bg-neutral-950 rounded-sm p-4 font-mono text-xs text-neutral-400 min-h-[200px] max-h-[400px] overflow-y-auto border border-neutral-800">
           {message ? (
-            <pre className="whitespace-pre-wrap break-words leading-relaxed">
-              {message}
-            </pre>
+            <div className="space-y-1">
+              <pre className="whitespace-pre-wrap break-words leading-relaxed">
+                {message}
+              </pre>
+              <div ref={logEndRef} />
+            </div>
           ) : (
             <div className="flex items-center justify-center h-full opacity-30 italic">
               暂无日志输出

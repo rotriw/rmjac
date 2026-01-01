@@ -101,7 +101,13 @@ pub async fn add_unverified_account_for_user(
         (&RemoteMode::PublicAccount, _, _) => Ok(vjudge_node),
         (_, true, _) => Ok(vjudge_node),
         (_, _, Some(ws_id)) => {
-            let success =
+            let success = add_task(&Json! {
+               "operation": "verify",
+                "vjudge_node": vjudge_node,
+                "ws_id": ws_id,
+                "platform": vjudge_node.public.platform.to_lowercase(),
+                "method": convert_method(&vjudge_node),
+            }).await;
             if !success {
                 return Err(Warning("Warning: No edge server online.".to_string(), vjudge_node));
             }
@@ -110,8 +116,10 @@ pub async fn add_unverified_account_for_user(
         (_, _, None) => {
             log::warn!("No websocket id provided when verifying vjudge account(no public account, no websocket listener).");
             let success = add_task(&Json! {
-                "operation": "verify_remote_account",
+                "operation": "verify",
                 "vjudge_node": vjudge_node,
+                "platform": vjudge_node.public.platform.clone().to_lowercase(),
+                "method": convert_method(&vjudge_node),
             }).await;
             if !success {
                 return Err(Warning("Warning: No edge server online.".to_string(), vjudge_node));
@@ -121,17 +129,39 @@ pub async fn add_unverified_account_for_user(
     }
 }
 
+
+pub fn convert_method(vjudge_node: &VjudgeNode) -> String {
+    match (vjudge_node.public.remote_mode.clone(), vjudge_node.private.auth.clone(), vjudge_node.public.platform.as_str()) {
+        (RemoteMode::PublicAccount, _, _) => "public_account".to_string(),
+        (RemoteMode::OnlySync, Some(VjudgeAuth::Token(_)), "codeforces") => "apikey".to_string(),
+        (RemoteMode::SyncCode, Some(VjudgeAuth::Token(_)), "codeforces") => "token".to_string(),
+        (_, Some(VjudgeAuth::Password(_)), "codeforces") => "password".to_string(),
+        (RemoteMode::OnlySync, None, _) => "code".to_string(),
+        (RemoteMode::OnlySync, Some(VjudgeAuth::Token(_)), _) => "apikey".to_string(),
+        (RemoteMode::SyncCode, Some(VjudgeAuth::Token(_)), _) => "apikey".to_string(),
+        (RemoteMode::SyncCode, Some(VjudgeAuth::Password(_)), _) => "apikey".to_string(),
+        _ => "unknown".to_string(),
+    }
+}
+
 pub async fn verified_account_by_id(
     db: &DatabaseConnection,
     vjudge_node_id: i64,
-    ws_id: String,
-) -> Result<bool> {
-    let vjudge_node = VjudgeNode::from_db(&db, vjudge_node_id).await?;
-    Ok(add_task(&Json! {
-        "operation": "verify_remote_account",
+    ws_id: &str,
+) -> bool {
+    let vjudge_node = VjudgeNode::from_db(db, vjudge_node_id).await;
+    if vjudge_node.is_err() {
+        return false;
+    }
+    let vjudge_node = vjudge_node.unwrap();
+
+    add_task(&Json! {
+        "operation": "verify",
         "vjudge_node": vjudge_node,
+        "platform": vjudge_node.public.platform.to_lowercase(),
+        "method": convert_method(&vjudge_node),
         "ws_id": ws_id,
-    }).await)
+    }).await
 }
 
 
@@ -351,6 +381,7 @@ pub async fn update_user_submission_from_vjudge(
     } else {
         log::debug!("No notify_ref available to send initial submission update.");
     }
+    let mut log_data = format!("Processing {} submissions for user {}.\n", data.submissions.len(), data.user_id);
     for submission in data.submissions {
         let db = db.clone();
         let user_id = data.user_id;
@@ -366,16 +397,30 @@ pub async fn update_user_submission_from_vjudge(
                 } else {
                     log::debug!("No notify_ref available to send error message for submission: {}", &submission.remote_id);
                 }
+                return format!("Failed to process submission {}: {:?}\n", &submission.remote_id, e);
             } else if let Some(notify_ref) = notify_ref {
                 let _ = notify_ref.emit("submission_update", &Json! {
                     "s": 2,
                     "m": format!("Successfully add submission: {}", &submission.remote_id),
                 });
+                return format!("Successfully processed submission {}.\n", &submission.remote_id);
             }
+            format!("Successfully processed submission {}.\n", &submission.remote_id)
         }));
     }
+
     for handle in handles {
-        let _ = handle.await;
+        let data = handle.await;
+        log_data += &data.unwrap_or("Failed to join submission processing task.\n".to_string());
+    }
+    // update task log if present
+    if let Some(task_id) = data.task_id {
+        if let Ok(task_node) = VjudgeTaskNode::from_db(db, task_id).await {
+            use crate::db::entity::node::vjudge_task::Column;
+            let _ = task_node.modify(db, Column::Log, log_data).await;
+            let _ = task_node.modify(db, Column::Status, "completed".to_string()).await;
+            let _ = task_node.modify(db, Column::UpdatedAt, chrono::Utc::now().naive_utc()).await;
+        }
     }
     Ok(())
 }
@@ -522,7 +567,7 @@ async fn process_single_submission(
 
 pub async fn add_vjudge_task(
     db: &DatabaseConnection,
-    _user_id: i64,
+    user_id: i64,
     vjudge_node_id: i64,
     range: String,
     ws_id: Option<String>
@@ -546,17 +591,18 @@ pub async fn add_vjudge_task(
     let vjudge_node = VjudgeNode::from_db(db, vjudge_node_id).await?;
     
     // 4. 发送任务到 Edge Server (Send task to Edge Server)
-    let operation = if range == "all" {
-        "sync_all"
-    } else if range == "recent" {
-        "sync_recent"
+    let operation = if range == "one" {
+        "syncOne"
     } else {
-        "sync_problem" // or "sync_user_remote_submission"
+        "syncList"
     };
 
     let payload = json!({
         "operation": operation,
         "vjudge_node": vjudge_node,
+        "platform": vjudge_node.public.platform.to_lowercase(),
+        "method": convert_method(&vjudge_node),
+        "user_id": user_id,
         "range": range,
         "ws_id": ws_id,
         "task_id": task.node_id

@@ -53,6 +53,7 @@ export function VJudgeRightSidebar({ ...props }: React.ComponentProps<typeof Sid
   }, [])
 
   const fetchTasks = useCallback(async () => {
+    console.log(accounts);
     // If we have accounts, fetch tasks for the first one or all?
     // The API listVJudgeTasks requires a nodeId.
     // For the sidebar, maybe we show tasks for the currently selected account if in manage page,
@@ -63,7 +64,7 @@ export function VJudgeRightSidebar({ ...props }: React.ComponentProps<typeof Sid
         // For now, let's fetch tasks for the first account as a placeholder
         // In a real app, we might want a global task list API.
         const allTasks: VJudgeTask[] = []
-        for (const acc of accounts.slice(0, 3)) {
+        for (const acc of accounts) {
           const accTasks = await listVJudgeTasks(acc.node_id)
           allTasks.push(...accTasks)
         }
@@ -117,15 +118,7 @@ export function VJudgeRightSidebar({ ...props }: React.ComponentProps<typeof Sid
   }, [resize, stopResizing])
 
   const getHandle = (account: VJudgeAccount) => {
-    if (account.private?.auth?.Password) {
-      try {
-        const authData = JSON.parse(account.private.auth.Password)
-        return authData.handle || "Unknown"
-      } catch {
-        return "Unknown"
-      }
-    }
-    return "Unknown"
+    return account.public.iden;
   }
 
   return (

@@ -25,7 +25,7 @@ use serde_json::json;
 #[derive(Deserialize)]
 pub struct BindAccountReq {
     pub platform: String,
-    pub remote_mode: i32,
+    pub method: String,
     pub auth: Option<VjudgeAuth>,
     pub bypass_check: Option<bool>,
     pub ws_id: Option<String>,
@@ -87,8 +87,15 @@ impl BindAccount {
             "atcoder" => Platform::Atcoder,
             _ => return Err(HttpError::HandlerError(HandlerError::InvalidInput("Invalid platform".to_string()))),
         };
-        let remote_mode = RemoteMode::from(self.data.remote_mode);
-        
+        let remote_mode = match (platform, self.data.method.to_lowercase().as_str()) {
+            (Platform::Codeforces, "password") => RemoteMode::SyncCode,
+            (Platform::Codeforces, "token") => RemoteMode::SyncCode,
+            (Platform::Codeforces, "apikey") => RemoteMode::OnlySync,
+            (Platform::Atcoder, "password") => RemoteMode::SyncCode,
+            (Platform::Atcoder, "token") => RemoteMode::SyncCode,
+            _ => return Err(HttpError::HandlerError(HandlerError::InvalidInput("Invalid method for platform".to_string()))),
+        };
+
         let result = add_unverified_account_for_user(
             &self.db,
             self.user_id.unwrap(),

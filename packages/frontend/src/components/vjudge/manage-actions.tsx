@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button"
 import { deleteVJudgeAccount, assignVJudgeTask } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
-import { Badge, ChevronRight, LibraryIcon, Loader2, SendIcon, Sheet, Tag } from "lucide-react"
+import { Badge, ChevronRight, LibraryIcon, Loader2, RefreshCwIcon, SendIcon, Sheet, Tag } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarSeparator, useSidebar } from "../ui/sidebar"
 import { SheetTrigger, SheetContent, SheetHeader, SheetTitle } from "../ui/sheet"
+import { socket } from "@/lib/socket"
 
 interface ManageActionsProps {
     nodeId: number
@@ -108,6 +109,7 @@ export function ManageActions({ nodeId }: ManageActionsProps) {
     const router = useRouter()
     const [deleting, setDeleting] = useState(false)
     const [syncing, setSyncing] = useState(false)
+    const [verifying, setVerifying] = useState(false)
 
     const handleDelete = async () => {
         if (!confirm("确定要解除绑定该账号吗？")) return
@@ -140,6 +142,25 @@ export function ManageActions({ nodeId }: ManageActionsProps) {
         }
     }
 
+    const handleVerify = async () => {
+        
+        setVerifying(true)
+        try {
+          socket.on('vjudge_account_verified', (data) => {
+            setVerifying(false)
+            if (data[0] === '1') {
+              alert("已验证，请刷新。");
+            }
+          })
+          socket.emit('refresh_vjudge_account', {
+            node_id: nodeId,
+          })
+        } catch (e) {
+            console.error(e)
+            alert("更新验证状态失败")
+        }
+    }
+
     return (
         <div className="flex flex-wrap gap-4">
             <Button variant="outline" onClick={handleSync} disabled={syncing}>
@@ -149,6 +170,10 @@ export function ManageActions({ nodeId }: ManageActionsProps) {
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
                 {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 解除绑定
+            </Button>
+            <Button variant="outline" onClick={handleVerify} disabled={verifying}>
+              {verifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              更新验证状态
             </Button>
         </div>
     )

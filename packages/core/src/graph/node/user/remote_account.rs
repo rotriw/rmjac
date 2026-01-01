@@ -74,8 +74,8 @@ impl From<VjudgeNodeRaw> for ActiveModel {
         use sea_orm::ActiveValue::{NotSet, Set};
         let auth = value.private.auth;
         let auth = match auth {
-            Some(VjudgeAuth::Password(p)) => Some(format!("p_{:?}", p)),
-            Some(VjudgeAuth::Token(t)) => Some(format!("t_{:?}", t)),
+            Some(VjudgeAuth::Password(p)) => Some(format!("p_{}", p)),
+            Some(VjudgeAuth::Token(t)) => Some(format!("t_{}", t)),
             None => None,
         };
         Self {

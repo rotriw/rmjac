@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
-import { StandardCard } from "@/components/card/card"
+import { StandardCard, TitleCard } from "@/components/card/card"
 import { ViewVjudgeMessage } from "./viewmessage"
 import { AddTaskCard } from "./add-task"
 import { VJudgeTask, listVJudgeTasks, getMyVJudgeAccounts } from "@/lib/api"
@@ -26,17 +26,28 @@ export function VjudgePageContent() {
       setLoading(true)
       setError("")
       try {
-        // Since we don't have a getVJudgeTaskDetail(id) API, 
-        // we have to find it from the list of tasks for an account.
-        // This is a bit inefficient but works with current API.
-        const accounts = await getMyVJudgeAccounts()
-        let foundTask = null
-        for (const acc of accounts) {
-          const tasks = await listVJudgeTasks(acc.node_id)
-          const t = tasks.find(t => t.node_id === Number(taskId))
-          if (t) {
-            foundTask = t
-            break
+        // We need to find which account this task belongs to.
+        // Currently, the backend doesn't provide a direct getTaskById API.
+        // However, we can optimize by checking the account_id if it was provided in the URL,
+        // or by fetching all accounts and their tasks.
+        const accountId = searchParams.get("account_id");
+        let foundTask = null;
+
+        if (accountId) {
+          const tasks = await listVJudgeTasks(Number(accountId));
+          foundTask = tasks.find(t => t.node_id === Number(taskId)) || null;
+        }
+
+        if (!foundTask) {
+          const accounts = await getMyVJudgeAccounts();
+          for (const acc of accounts) {
+            if (acc.node_id === Number(accountId)) continue; // Already checked
+            const tasks = await listVJudgeTasks(acc.node_id);
+            const t = tasks.find(t => t.node_id === Number(taskId));
+            if (t) {
+              foundTask = t;
+              break;
+            }
           }
         }
 
@@ -80,13 +91,9 @@ export function VjudgePageContent() {
   return (
     <div className="animate-in fade-in duration-300">
       {taskId && task ? (
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 text-primary mb-2">
-            <History className="size-5" />
-            <h2 className="text-lg font-bold">任务 #{taskId} 执行详情</h2>
-          </div>
-          
-          <ViewVjudgeMessage />
+        <div className="">
+          <TitleCard title={`任务详情`} description={`TASKID: ${taskId}`} />
+          <ViewVjudgeMessage initialLog={task.public.log} initialStatus={task.public.status} />
           
           <StandardCard title="任务元数据">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">

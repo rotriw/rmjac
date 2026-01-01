@@ -5,18 +5,20 @@ function StandardCard({
   title,
   children,
   className,
+  childrenClassName = "pt-5 pb-5 px-3",
   ...props
 }: React.ComponentProps<"div"> & {
   title?: string
   className?: string
+  childrenClassName?: string
 }) {
   return (
     <>
-      <Card className={`mb-2 p-0 rounded-sm gap-0 ${className} text-neutral-800 shadow-sm border-0`} {...props}>
+      <Card className={`mb-2 p-0 rounded-sm gap-0 ${className} text-neutral-800 shadow-sm border-1 border-neutral-100`} {...props}>
         <span className="text-xs font-bold px-3 pt-2 text-neutral-600">
           {title}
         </span>
-        <div className="pb-5 pt-5 px-3">
+        <div className={`${childrenClassName}`}>
           {children}
         </div>
       </Card>

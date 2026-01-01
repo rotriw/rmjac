@@ -30,6 +30,7 @@ interface ChoiceCardField extends BaseFormField {
   type: "choice-card"
   name: string
   title?: string
+  description?: string
   options: { label: string; value: string; description?: string }[]
   cols?: number
 }
@@ -126,6 +127,7 @@ function FormQuery({
         return (
           <div key={index} className="space-y-1">
             <Label>{field.title}</Label>
+            <div>{field.description}</div>
             <div className={cn("grid gap-4", field.cols === 1 ? "grid-cols-1" : "grid-cols-2")}>
               {field.options.map((opt) => (
                 <div

@@ -10,10 +10,18 @@ const convertCFSubmissionStatus = (status: string) =>  {
 export const apikey = async (task: SyncTaskData): Promise<{ event: string, data: UniversalSubmission[] }> => {
     const handle = task.vjudge_node.public.iden;
     const auth = task.vjudge_node.private.auth;
-    const [from, count] = task.range.split(":").map(Number);
     
+    let [from, count] = [0, 20];
+    if (task.range === "all") {
+        from = 1;
+        count = 10000;
+    } else if (task.range) {
+        const parts = task.range.split(":");
+        from = parseInt(parts[0]) || 0;
+        count = parseInt(parts[1]) || 20;
+    }
     try {
-        const [key, secret] = (auth.token || ":").split(":");
+        const [key, secret] = (auth.Token || ":").split(":");
         const submissions = await fetchUserSubmissions(handle, key, secret, from, count);
         const mappedSubmissions = submissions.map(submission => {
             const code = submission.sourceBase64 ? atob(submission.sourceBase64) : "[archive]";

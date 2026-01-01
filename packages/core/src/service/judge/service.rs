@@ -8,7 +8,7 @@ use socketioxide::SocketIo;
 use serde_json::Value;
 use macro_socket_auth::auth_socket_connect;
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use crate::model::vjudge::verified_account;
+use crate::model::vjudge::{verified_account, verified_account_by_id};
 use crate::{env, Result};
 use crate::env::db::get_connect;
 use crate::model::problem::CreateProblemProps;
@@ -64,7 +64,7 @@ pub struct UpdateStatusProp {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct VerifiedResultProp {
-    pub user_id: i64,
+    pub node_id: i64,
     pub result: bool,
     pub ws_id: String,
 
@@ -146,15 +146,42 @@ pub async fn auth_user(socket: SocketRef, Data(user): Data<UserVerifiedProp>) {
     else {
         log::debug!("User {} with socket {} authenticated successfully", user.user_id, socket.id);
         env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().insert(socket.id.to_string(), socket.clone());
+        env::USER_WEBSOCKET_CONNECTIONS_ACCOUNT.lock().unwrap().insert(socket.id.to_string(), user.user_id);
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct VJudgeVerifiedProp {
+    pub node_id: i64,
+}
+
+pub async fn handle_vjudge_verified(socket: SocketRef, Data(data): Data<VJudgeVerifiedProp>) {
+    log::debug!("Handling vjudge verified for socket {}.", socket.id);
+    let db = get_connect().await;
+    if let Err(err) = db {
+        log::error!("Failed to connect to database: {}", err);
+        return;
+    }
+    let db = db.unwrap();
+    let user_id = {
+        let data = env::USER_WEBSOCKET_CONNECTIONS_ACCOUNT.lock().unwrap();
+        data.get(&socket.id.to_string()).cloned()
+    };
+    if let Some(user_id) = user_id {
+       verified_account_by_id(&db, data.node_id, socket.id.as_str()).await;
+    } else {
+        log::warn!("No user id found for socket {}.", socket.id);
     }
 }
 
 async fn on_user_connect(socket: SocketRef, Data(_data): Data<Value>) {
     log::debug!("User notify connected: {:?} {:?}", &socket.ns(), socket.id);
     socket.on("auth", auth_user);
+    socket.on("refresh_vjudge_account", handle_vjudge_verified);
     socket.on_disconnect(async |socket: SocketRef| {
        log::debug!("User notify disconnected: {:?} {:?}", socket.ns(), socket.id);
         env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().remove(&socket.ns().to_string());
+        env::USER_WEBSOCKET_CONNECTIONS_ACCOUNT.lock().unwrap().remove(&socket.ns().to_string());
     });
 }
 

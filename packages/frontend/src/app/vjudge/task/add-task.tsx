@@ -4,17 +4,20 @@ import { useEffect, useState } from "react"
 import { StandardCard } from "@/components/card/card"
 import { FormQuery, FormField } from "@/components/tools/query"
 import { getMyVJudgeAccounts, assignVJudgeTask, VJudgeAccount } from "@/lib/api"
+import { socket } from "@/lib/socket"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 interface AddTaskCardProps {
-  onSubmitSuccess?: () => void
+  onSubmitSuccess?: (taskId: number, accountId: number) => void
 }
 
 export function AddTaskCard({ onSubmitSuccess }: AddTaskCardProps) {
+  const router = useRouter()
   const [accounts, setAccounts] = useState<VJudgeAccount[]>([])
   const [loading, setLoading] = useState(false)
-  const [values, setValues] = useState<Record<string, any>>({
+  const [values, setValues] = useState<Record<string, string | string[]>>({
     scope: "recent",
   })
 
@@ -37,11 +40,18 @@ export function AddTaskCard({ onSubmitSuccess }: AddTaskCardProps) {
     try {
       const res = await assignVJudgeTask({
         vjudge_node_id: Number(values.account_id),
-        range: values.scope,
+        range: values.scope as string,
+        ws_id: socket.id,
       })
       
-      if (res.code === 0) {
-          onSubmitSuccess?.() // Show status card immediately
+      if (res.code === 0 && res.data) {
+          const taskId = res.data.node_id;
+          const accountId = Number(values.account_id);
+          if (onSubmitSuccess) {
+            onSubmitSuccess(taskId, accountId);
+          } else {
+            router.push(`/vjudge/task?id=${taskId}&account_id=${accountId}`);
+          }
       } else {
           alert(res.msg || "提交失败")
       }
@@ -88,7 +98,7 @@ export function AddTaskCard({ onSubmitSuccess }: AddTaskCardProps) {
       name: "scope",
       title: "同步范围",
       options: [
-        { label: "最近题目", value: "recent", description: "仅同步最近提交的题目" },
+        { label: "最近题目", value: "1:50", description: "仅同步最近提交的题目" },
         { label: "全部同步", value: "all", description: "同步所有历史提交记录, 该行为每个帐号5天内仅允许执行一次。" }
       ]
   })

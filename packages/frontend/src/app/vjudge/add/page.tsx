@@ -13,55 +13,227 @@ import {
   AlertCircle,
   ChevronRight,
   ChevronLeft,
-  Globe,
   ShieldCheck,
-  KeyRound
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { TitleCard, StandardCard } from "@/components/card/card"
+import { Badge } from "@/components/ui/badge"
+import { TreeTable, TreeTableNode } from "@/components/table/treetable"
+import { oklch2hex } from 'colorizr'
+import { RECORD_STATUS_COLOR_MAP_INTER } from "@/app/record/[id]/shared"
 
-const PLATFORMS = [
-  { id: "Codeforces", name: "Codeforces", icon: Globe },
-  { id: "AtCoder", name: "AtCoder", icon: Globe },
-  { id: "POJ", name: "POJ", icon: Globe },
-  { id: "HDU", name: "HDU", icon: Globe },
-]
+/*
+  stable: 0 - 稳定。通常来源可靠的API或官方支持。
+  1 - 一般而言。通常来自较为可靠的API，该网站通常可信。但并非官方。
+  2 - 较不稳定。实现方法并不是非常优雅，但通常不会因为网站改版而失效。
+  3 - 不稳定。实现方法较为勉强，可能会因为网站改版而失效。
+*/
 
-const REMOTE_MODES = [
-  { id: 1, name: "OnlySubmit", description: "仅用于提交题目，不同步代码。" },
-  { id: 2, name: "SyncCode", description: "提交题目并尝试同步代码到本地。" },
-  { id: 3, name: "FullManaged", description: "完全托管模式。" },
-]
+interface RequireField {
+  id: string;
+  name: string;
+  type: string;
+  placeholder: string;
+}
+
+interface AllowMethod {
+  name: string;
+  description: string;
+  stable: number;
+  require_fields: RequireField[];
+  calc_func: (fields: Record<string, string>) => string;
+  tips?: string[];
+  is_pwd?: boolean;
+}
+
+interface Platform {
+  url: string;
+  color: string;
+  allow_method: AllowMethod[];
+}
+
+const PlatformData: Record<string, Platform> = {
+  "Codeforces": {
+    "url": "codeforces.com",
+    "color": oklch2hex([0.86, 0.06, 259]), // TLE Blue style
+    "allow_method": [{
+      "name": "APIKEY",
+      "description": "使用 Codeforces API Key 进行绑定（推荐）",
+      "stable": 0,
+      "tips": ["https://codeforces.com/settings/api"],
+      "require_fields": [{
+        "id": "handle",
+        "name": "用户名",
+        "type": "text",
+        "placeholder": "your_handle"
+      }, {
+        "id": "api_key",
+        "name": "API Key",
+        "type": "text",
+        "placeholder": "your_api_key"
+      }, {
+        "id": "api_secret",
+        "name": "API Secret",
+        "type": "password",
+        "placeholder": "your_api_secret"
+      }],
+      "calc_func": (fields: Record<string, string>) => {
+        return JSON.stringify({
+          method: "apikey",
+          handle: fields["handle"],
+          auth: {
+            "Token": `${fields["api_key"]}:${fields["api_secret"]}`
+          }
+        })
+      }
+    }, {
+      "name": "Cookie",
+      "description": "使用 Cookie 进行绑定（推荐）",
+      "stable": 1,
+      "tips": ["请通过绑定教程，填入您的SESSIONID即可。"],
+      "require_fields": [{
+        "id": "handle",
+        "name": "用户名",
+        "type": "text",
+        "placeholder": "your_handle"
+      }, {
+        "id": "cookie",
+        "name": "Cookie",
+        "type": "text",
+        "placeholder": "your_cookie（SESSIONID）"
+      }],
+      "calc_func": (fields: Record<string, string>) => {
+        return JSON.stringify({
+          method: "token",
+          handle: fields["handle"],
+          auth: {
+            "Token": fields["cookie"]
+          }
+        })
+      }
+    }, {
+      "name": "Password",
+      "description": "使用用户名和密码进行绑定",
+      is_pwd: true,
+      "stable": 2,
+      "require_fields": [{
+        "id": "handle",
+        "name": "用户名",
+        "type": "text",
+        "placeholder": "your_handle"
+      }, {
+        "id": "password",
+        "name": "密码",
+        "type": "password",
+        "placeholder": "your_password"
+      }],
+      "calc_func": (fields: Record<string, string>) => {
+        return JSON.stringify({
+          method: "password",
+          handle: fields["handle"],
+          auth: {
+            "Password": fields["password"]
+          }
+        })
+      }
+    }],
+  },
+  "AtCoder": {
+    "url": "atcoder.jp",
+    "color": oklch2hex([0.86, 0.06, 100]), // Accepted Green style
+    "allow_method": [{
+      "name": "Cookie",
+      "description": "使用 Cookie 进行绑定",
+      "stable": 1,
+      "require_fields": [{
+        "id": "handle",
+        "name": "用户名",
+        "type": "text",
+        "placeholder": "your_handle"
+      }, {
+        "id": "cookie",
+        "name": "Cookie",
+        "type": "text",
+        "placeholder": "your_cookie"
+      }],
+      "calc_func": (fields: Record<string, string>) => {
+        return JSON.stringify({
+          method: "token",
+          handle: fields["handle"],
+          auth: { "Token": fields["cookie"] }
+        })
+      }
+    }]
+  },
+  "POJ": {
+    "url": "poj.org",
+    "color": oklch2hex([0.86, 0.06, 46]), // Compile Error Yellow style
+    "allow_method": [{
+      "name": "Password",
+      "description": "使用用户名和密码进行绑定",
+      "stable": 2,
+      "require_fields": [{
+        "id": "handle",
+        "name": "用户名",
+        "type": "text",
+        "placeholder": "your_handle"
+      }, {
+        "id": "password",
+        "name": "密码",
+        "type": "password",
+        "placeholder": "your_password"
+      }],
+      "calc_func": (fields: Record<string, string>) => {
+        return JSON.stringify({
+          method: "password",
+          handle: fields["handle"],
+          auth: { "Password": fields["password"] }
+        })
+      }
+    }]
+  }
+}
+
+function ShowStableStatus(stable: number) {
+  switch (stable) {
+    case 0:
+      return <Badge variant="default" className="bg-green-100 text-neutral-800 text-[10px] h-5">稳定性 | 稳定</Badge>
+    case 1:
+      return <Badge variant="default" className="bg-yellow-100 text-neutral-800 text-[10px] h-5">稳定性 | 1</Badge>
+    case 2:
+      return <Badge variant="default" className="bg-red-100 text-neutral-800 text-[10px] h-5">稳定性 | 2</Badge>
+    case 3:
+      return <Badge variant="default" className="bg-gray-100 text-neutral-800 text-[10px] h-5">稳定性 | 3</Badge>
+    default:
+      return <Badge variant="default" className="bg-gray-100 text-neutral-800 text-[10px] h-5">稳定性 | Unknown</Badge>
+  }
+}
 
 export default function AddVJudgeAccountPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
-  const [formData, setFormData] = useState({
-    platform: "",
-    remote_mode: 2,
-    handle: "",
-    password: "",
-  })
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null)
+  const [selectedMethod, setSelectedMethod] = useState<AllowMethod | null>(null)
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
+  
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
 
-  const nextStep = () => setStep(s => s + 1)
-  const prevStep = () => setStep(s => s - 1)
-
   const handleBind = async () => {
+    if (!selectedPlatform || !selectedMethod) return
+    
     setLoading(true)
     setError("")
     try {
-      const authPayload = JSON.stringify({ 
-        handle: formData.handle, 
-        password: formData.password 
-      })
+      const authPayload = selectedMethod.calc_func(fieldValues)
+      const payload = JSON.parse(authPayload)
 
       const res = await bindVJudgeAccount({
-        platform: formData.platform,
-        remote_mode: formData.remote_mode,
-        auth: { Password: authPayload },
+        platform: selectedPlatform,
+        method: payload.method,
+        auth: payload.auth,
+        iden: payload.handle,
         bypass_check: false,
       })
 
@@ -75,15 +247,49 @@ export default function AddVJudgeAccountPage() {
         setError(res.msg || "绑定失败")
       }
     } catch (err: unknown) {
-      const error = err as Error;
+      const error = err as Error
       setError(error.message || "发生未知错误")
     } finally {
       setLoading(false)
     }
   }
 
+  const treeData: TreeTableNode[] = Object.entries(PlatformData).map(([name, platform]) => ({
+    id: name,
+    content_title: name,
+    content: <div className="text-xs font-bold">{platform.url}</div>,
+    background: platform.color,
+    defaultExpanded: true,
+    children: platform.allow_method.map((method) => {
+      const isSelected = selectedPlatform === name && selectedMethod?.name === method.name;
+      return {
+        id: `${name}-${method.name}`,
+        content_title: method.name,
+        background: isSelected ? RECORD_STATUS_COLOR_MAP_INTER["Accepted"] : undefined,
+        content: (
+          <div
+            className={cn(
+              "flex items-center justify-between w-full cursor-pointer py-1",
+              isSelected ? "font-bold text-primary" : ""
+            )}
+            onClick={() => {
+              setSelectedPlatform(name)
+              setSelectedMethod(method)
+            }}
+          >
+            <div className="text-xs text-muted-foreground">{method.description}</div>
+            <div className="flex items-center gap-2">
+              {ShowStableStatus(method.stable)}
+              {isSelected && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+            </div>
+          </div>
+        )
+      };
+    })
+  }))
+
   return (
-    <div className="py-6 px-4 md:px-6 animate-in fade-in duration-300">
+    <div className="py-6 px-4 md:px-6 animate-in fade-in duration-300 max-w-4xl min-w-xl mx-auto">
       <div className="mb-6">
         <TitleCard
           title="绑定新账号"
@@ -91,167 +297,89 @@ export default function AddVJudgeAccountPage() {
         />
       </div>
 
-      {/* Progress Steps */}
-      <div className="flex items-center justify-between mb-6 max-w-md">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center flex-1 last:flex-none">
-            <div className={cn(
-              "size-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors",
-              step === i ? "border-primary bg-primary text-primary-foreground" :
-              step > i ? "border-primary bg-primary/10 text-primary" : "border-muted text-muted-foreground"
-            )}>
-              {step > i ? <CheckCircle2 className="size-4" /> : i}
+      <StandardCard title="" childrenClassName="p-5">
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="flex items-center gap-2">
+              <Badge variant={step === 1 ? "default" : "outline"} className="rounded-full w-5 h-5 p-0 flex items-center justify-center text-[10px]">1</Badge>
+              <span className={cn("text-xs font-medium", step === 1 ? "text-primary" : "text-muted-foreground")}>选择平台</span>
             </div>
-            {i < 3 && (
-              <div className={cn(
-                "h-0.5 flex-1 mx-2 transition-colors",
-                step > i ? "bg-primary" : "bg-muted"
-              )} />
-            )}
+            <div className="w-8 h-[1px] bg-muted" />
+            <div className="flex items-center gap-2">
+              <Badge variant={step === 2 ? "default" : "outline"} className="rounded-full w-5 h-5 p-0 flex items-center justify-center text-[10px]">2</Badge>
+              <span className={cn("text-xs font-medium", step === 2 ? "text-primary" : "text-muted-foreground")}>填写凭据</span>
+            </div>
           </div>
-        ))}
-      </div>
 
-      <StandardCard
-        title={
-          step === 1 ? "第一步：选择平台" :
-          step === 2 ? "第二步：选择绑定类型" :
-          "第三步：填写账号信息"
-        }
-        className="max-w-2xl"
-      >
-        <div className="min-h-[200px] flex flex-col">
-          {step === 1 && (
-            <div className="grid grid-cols-2 gap-4">
-              {PLATFORMS.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    setFormData({ ...formData, platform: p.id })
-                    nextStep()
-                  }}
-                  className={cn(
-                    "flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all hover:border-primary hover:bg-primary/5 group",
-                    formData.platform === p.id ? "border-primary bg-primary/5" : "border-muted"
-                  )}
+          {step === 1 ? (
+            <div className="space-y-4 animate-in slide-in-from-left-4 duration-300 flex-1 flex flex-col">
+              <TreeTable data={treeData} />
+              <div className="mt-auto pt-6 flex justify-end">
+                <Button 
+                  disabled={!selectedMethod} 
+                  onClick={() => setStep(2)}
                 >
-                  <p.icon className={cn(
-                    "size-10 mb-3 transition-colors",
-                    formData.platform === p.id ? "text-primary" : "text-muted-foreground group-hover:text-primary"
-                  )} />
-                  <span className="font-semibold">{p.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-4">
-              {REMOTE_MODES.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => setFormData({ ...formData, remote_mode: m.id })}
-                  className={cn(
-                    "w-full flex items-start gap-4 p-4 rounded-xl border-2 text-left transition-all hover:border-primary hover:bg-primary/5",
-                    formData.remote_mode === m.id ? "border-primary bg-primary/5" : "border-muted"
-                  )}
-                >
-                  <div className={cn(
-                    "mt-1 p-2 rounded-lg",
-                    formData.remote_mode === m.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                  )}>
-                    <ShieldCheck className="size-5" />
-                  </div>
-                  <div>
-                    <div className="font-bold">{m.name}</div>
-                    <div className="text-sm text-muted-foreground">{m.description}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="handle">Handle / 用户名</Label>
-                <div className="relative">
-                  <Globe className="absolute left-3 top-3 size-4 text-muted-foreground" />
-                  <Input 
-                    id="handle" 
-                    placeholder="输入您的平台用户名" 
-                    className="pl-10"
-                    value={formData.handle}
-                    onChange={(e) => setFormData({ ...formData, handle: e.target.value })}
-                  />
-                </div>
+                  下一步 <ChevronRight className="ml-2 w-4 h-4" />
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">密码 / Token</Label>
-                <div className="relative">
-                  <KeyRound className="absolute left-3 top-3 size-4 text-muted-foreground" />
-                  <Input 
-                    id="password" 
-                    type="password"
-                    placeholder="输入您的登录密码或 API Token" 
-                    className="pl-10"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  />
-                </div>
+            </div>
+          ) : (
+            <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+              <div className="space-y-4">
+                {selectedMethod?.require_fields.map((field) => (
+                  <div key={field.id} className="space-y-2">
+                    <Label htmlFor={field.id}>{field.name}</Label>
+                    <Input
+                      id={field.id}
+                      type={field.type}
+                      placeholder={field.placeholder}
+                      value={fieldValues[field.id] || ""}
+                      onChange={(e) => setFieldValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+                
+                {selectedMethod?.tips && (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>提示</AlertTitle>
+                    <AlertDescription>
+                      <ul className="list-disc list-inside text-xs">
+                        {selectedMethod.tips.map((tip, i) => (
+                          <li key={i}>{tip}</li>
+                        ))}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
 
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>绑定失败</AlertTitle>
+                  <AlertTitle>错误</AlertTitle>
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
               {success && (
-                <Alert className="bg-green-50 text-green-900 border-green-200">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertTitle>绑定成功</AlertTitle>
-                  <AlertDescription>正在为您跳转到管理页面...</AlertDescription>
+                <Alert className="border-green-500 bg-green-50 text-green-700">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <AlertTitle>成功</AlertTitle>
+                  <AlertDescription>账号绑定成功！正在跳转...</AlertDescription>
                 </Alert>
               )}
+
+              <div className="mt-auto pt-6 flex justify-between">
+                <Button variant="outline" onClick={() => setStep(1)} disabled={loading}>
+                  <ChevronLeft className="mr-2 w-4 h-4" /> 上一步
+                </Button>
+                <Button onClick={handleBind} disabled={loading || success}>
+                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+                  立即绑定
+                </Button>
+              </div>
             </div>
-          )}
-        </div>
-        <div className="flex justify-between border-t border-dashed mt-6 pt-6">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={prevStep}
-            disabled={step === 1 || loading || success}
-            className="h-8 text-xs"
-          >
-            <ChevronLeft className="mr-2 size-3" /> 上一步
-          </Button>
-          
-          {step < 3 ? (
-            <Button 
-              size="sm"
-              onClick={nextStep} 
-              disabled={step === 1 && !formData.platform}
-              className="h-8 text-xs"
-            >
-              下一步 <ChevronRight className="ml-2 size-3" />
-            </Button>
-          ) : (
-            <Button 
-              size="sm"
-              onClick={handleBind} 
-              disabled={loading || success || !formData.handle || !formData.password}
-              className="h-8 text-xs min-w-[100px]"
-            >
-              {loading ? (
-                <><Loader2 className="mr-2 size-3 animate-spin" /> 绑定中...</>
-              ) : (
-                "立即绑定"
-              )}
-            </Button>
           )}
         </div>
       </StandardCard>

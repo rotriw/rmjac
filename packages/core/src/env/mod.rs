@@ -206,6 +206,7 @@ lazy_static! {
     pub static ref SLICE_WORD_ACMAC: Mutex<AcMachine> = Mutex::new(AcMachine::build(SLICE_WORD_LIST.lock().unwrap().clone().iter().map(AsRef::as_ref).collect()));
 
     pub static ref USER_WEBSOCKET_CONNECTIONS: Mutex<HashMap<String, SocketRef>> = Mutex::new(HashMap::new());
+    pub static ref USER_WEBSOCKET_CONNECTIONS_ACCOUNT: Mutex<HashMap<String, i64>> = Mutex::new(HashMap::new());
 
     /// 全局权限图，使用 RwLock 以支持并发读取和独占写入
     pub static ref PERM_GRAPH: RwLock<PermGraph> = RwLock::new(PermGraph::new());

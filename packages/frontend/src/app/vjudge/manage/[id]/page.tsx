@@ -8,7 +8,8 @@ export default async function ManageVjudgeAccountPage({ params }: { params: Prom
   let account;
   try {
       account = await getVJudgeAccountDetail(parseInt(id));
-  } catch (e) {
+  } catch (_e) {
+    console.error(_e);
       notFound();
   }
 
@@ -16,13 +17,7 @@ export default async function ManageVjudgeAccountPage({ params }: { params: Prom
     notFound();
   }
 
-  let handle = "Unknown"
-  if (account.private?.auth?.Password) {
-      try {
-          const authData = JSON.parse(account.private.auth.Password);
-          handle = authData.handle || "Unknown";
-      } catch {}
-  }
+  const handle = account.public.iden;
 
   return (
     <div className="py-6 px-4 md:px-6 animate-in fade-in duration-300">
@@ -32,7 +27,6 @@ export default async function ManageVjudgeAccountPage({ params }: { params: Prom
                 description={`管理 ${handle} 的设置与权限`} 
             />
         </div>
-        
         <div className="grid gap-6">
             <StandardCard title="账号详情">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 text-xs">
