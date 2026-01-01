@@ -74,6 +74,7 @@ pub async fn create_training(
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct TrainingList {
+    pub node_id: Option<i64>,
     pub description: String,
     pub own_problem: Vec<TrainingProblem>,
 }
@@ -152,6 +153,7 @@ pub struct Training {
 pub async fn get_training_problem_list(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64) -> Result<TrainingList> {
     let training_problem_node = TrainingProblemNode::from_db(db, node_id).await?;
     let mut result = TrainingList {
+        node_id: Some(node_id),
         description: training_problem_node.public.description.clone(),
         own_problem: vec![],
     };
@@ -217,6 +219,7 @@ pub async fn get_training_node_id_by_iden(db: &DatabaseConnection, redis: &mut r
 }
 
 pub async fn get_training(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64) -> Result<Training> {
+    log::info!("Fetching training with node ID: {}", node_id);
     let training_node = TrainingNode::from_db(db, node_id).await?;
     let problem_list = get_training_problem_list(db, redis, training_node.node_id).await?;
     let result = Training {

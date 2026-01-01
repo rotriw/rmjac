@@ -303,6 +303,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
             Order: big_integer not_null,
+            ProblemType: text not_null,
         })
     );
     tables.insert(

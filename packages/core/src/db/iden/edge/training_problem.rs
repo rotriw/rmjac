@@ -11,5 +11,7 @@ pub enum TrainingProblem {
     #[sea_orm(iden = "v_node_id")]
     VNodeId,
     #[sea_orm(iden = "order")]
-    Order
+    Order,
+    #[sea_orm(iden = "problem_type")]
+    ProblemType,
 }
