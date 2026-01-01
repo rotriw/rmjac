@@ -1,7 +1,7 @@
 use actix_web::{get, post, web, Scope, services, HttpRequest, HttpMessage};
-use sea_orm::DatabaseConnection;
+use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
 use serde::Deserialize;
-use rmjac_core::model::record::{RecordNewProp, create_record_only_archived, update_record_status, get_specific_node_records, get_problem_user_status, get_record_status_with_record_id};
+use rmjac_core::model::record::{RecordNewProp, create_record_only_archived, update_record_status, get_problem_user_status, get_record_status_with_record_id};
 use rmjac_core::model::problem::get_problem_node_and_statement;
 use rmjac_core::graph::node::record::{RecordStatus, RecordNode};
 use rmjac_core::model::perm::check_system_perm;
@@ -215,8 +215,10 @@ pub struct List {
 pub struct ListRecordsQuery {
     pub page: Option<u64>,
     pub per_page: Option<u64>,
-    pub user_id: Option<i64>,
-    pub problem_id: Option<i64>,
+    pub user: Option<String>,
+    pub problem: Option<String>,
+    pub status: Option<i64>,
+    pub platform: Option<String>,
 }
 
 impl List {
@@ -239,48 +241,112 @@ impl List {
     pub async fn exec(self, query: ListRecordsQuery) -> ResultHandler<String> {
         let page = query.page.unwrap_or(1);
         let per_page = query.per_page.unwrap_or(20);
-        
-        let current_user_id = if let Some(uc) = &self.basic.user_context && uc.is_real {
-            Some(uc.user_id)
-        } else {
-            None
-        };
+        let mut redis = get_redis_connection();
 
-        let records = if let Some(user_id) = query.user_id {
-            // Get records for specific user
-            if current_user_id == Some(user_id) {
-                // User viewing their own records - show all
-                get_specific_node_records::<SimpleExpr>(&self.basic.db, user_id, per_page, page, vec![]).await?
-            } else {
-                // User viewing another user's records - only show public ones
-                // This would need a custom query to join with record nodes and filter by public_status
-                // For now, we'll use the existing function which shows all edges, but the actual records
-                // will be filtered when converting from nodes (public_status controls code visibility)
-                get_specific_node_records::<SimpleExpr>(&self.basic.db, user_id, per_page, page, vec![]).await?
+        use rmjac_core::db::entity::edge::record::Column;
+        use sea_orm::{ColumnTrait, PaginatorTrait};
+        let mut filters = vec![];
+        if let Some(status) = query.status {
+            filters.push(Column::RecordStatus.eq(status));
+        }
+        if let Some(platform) = query.platform {
+            filters.push(Column::Platform.eq(platform));
+        }
+
+        use rmjac_core::db::entity::edge::record::Entity;
+        let mut db_query = Entity::find();
+        
+        if let Some(user_search) = query.user {
+            // Try iden first
+            if let Ok(user) = rmjac_core::db::entity::node::user::get_user_by_iden(&self.basic.db, &user_search).await {
+                db_query = db_query.filter(Column::UNodeId.eq(user.node_id));
+            } else if let Ok(user_id) = user_search.parse::<i64>() {
+                // Then try ID
+                db_query = db_query.filter(Column::UNodeId.eq(user_id));
             }
-        } else if let Some(problem_id) = query.problem_id {
-            // Get records for specific problem - only show public records or user's own records
-            if let Some(_current_user) = current_user_id {
-                // Logged in user - show public records and their own records
-                // TODO: Implement proper filtering. For now showing all records
-                get_specific_node_records::<SimpleExpr>(&self.basic.db, problem_id, per_page, page, vec![]).await?
-            } else {
-                // Anonymous user - only show public records
-                // TODO: Implement proper filtering. For now showing all records
-                get_specific_node_records::<SimpleExpr>(&self.basic.db, problem_id, per_page, page, vec![]).await?
+        }
+
+        if let Some(problem_search) = query.problem {
+            // Try iden first
+            if let Ok((problem_node_id, _)) = get_problem_node_and_statement(&self.basic.db, &mut redis, &problem_search).await {
+                db_query = db_query.filter(Column::VNodeId.eq(problem_node_id));
+            } else if let Ok(problem_id) = problem_search.parse::<i64>() {
+                // Then try ID
+                db_query = db_query.filter(Column::VNodeId.eq(problem_id));
             }
-        } else if let Some(user_id) = current_user_id {
-            // Get current user's own records - show all
-            get_specific_node_records::<SimpleExpr>(&self.basic.db, user_id, per_page, page, vec![]).await?
-        } else {
-            // No permission to see all records without login
-            return Err(HttpError::HandlerError(HandlerError::PermissionDenied));
-        };
+        }
+
+        for f in filters {
+            db_query = db_query.filter(f);
+        }
+
+        let total = db_query.clone().count(&self.basic.db).await
+            .map_err(|e| HttpError::CoreError(e.into()))?;
+
+        let edges: Vec<rmjac_core::db::entity::edge::record::Model> = db_query
+            .order_by_desc(Column::RecordNodeId)
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all(&self.basic.db)
+            .await
+            .map_err(|e| HttpError::CoreError(e.into()))?;
+            
+        let mut records = vec![];
+        for edge in edges {
+            let record_edge: rmjac_core::graph::edge::record::RecordEdge = edge.into();
+            let problem_node_id = record_edge.v;
+            let node_type = rmjac_core::graph::action::get_node_type(&self.basic.db, problem_node_id).await.unwrap_or_default();
+            
+            let (problem_name, problem_iden) = if node_type == "problem_statement" {
+                let idens = rmjac_core::service::iden::get_node_id_iden(&self.basic.db, &mut redis, problem_node_id).await.unwrap_or_default();
+                let iden = idens.first().cloned().unwrap_or_else(|| "unknown".to_string());
+                
+                // Find the problem node connected to this statement
+                use rmjac_core::graph::edge::problem_statement::ProblemStatementEdgeQuery;
+                use rmjac_core::graph::edge::EdgeQuery;
+                let problem_node_ids = ProblemStatementEdgeQuery::get_u(problem_node_id, &self.basic.db).await.unwrap_or_default();
+                
+                let name = if let Some(&p_id) = problem_node_ids.first() {
+                    let problem = rmjac_core::graph::node::problem::ProblemNode::from_db(&self.basic.db, p_id).await;
+                    match problem {
+                        Ok(p) => p.public.name,
+                        Err(_) => "Unknown Problem".to_string(),
+                    }
+                } else {
+                    "Unknown Problem".to_string()
+                };
+                (name, iden)
+            } else {
+                let problem = rmjac_core::graph::node::problem::ProblemNode::from_db(&self.basic.db, problem_node_id).await;
+                let idens = rmjac_core::service::iden::get_node_id_iden(&self.basic.db, &mut redis, problem_node_id).await.unwrap_or_default();
+                let iden = idens.first().cloned().unwrap_or_else(|| "unknown".to_string());
+                
+                match problem {
+                    Ok(p) => (p.public.name, iden),
+                    Err(_) => ("Unknown Problem".to_string(), iden),
+                }
+            };
+
+            let user = rmjac_core::graph::node::user::UserNode::from_db(&self.basic.db, record_edge.u).await;
+            let (user_name, user_iden) = match user {
+                Ok(u) => (u.public.name, u.public.iden),
+                Err(_) => ("Unknown User".to_string(), "unknown".to_string()),
+            };
+
+            records.push(serde_json::json!({
+                "edge": record_edge,
+                "problem_name": problem_name,
+                "problem_iden": problem_iden,
+                "user_name": user_name,
+                "user_iden": user_iden,
+            }));
+        }
 
         Ok(Json! {
             "records": records,
             "page": page,
-            "per_page": per_page
+            "per_page": per_page,
+            "total": total
         })
     }
 }

@@ -17,6 +17,7 @@ export interface TreeTableNode {
   children?: TreeTableNode[];
   defaultExpanded?: boolean;
   node_index?: number;
+  onClick?: () => void;
 }
 
 export interface TreeTableProps {
@@ -29,7 +30,6 @@ export interface TreeTableProps {
 const TreeNode = ({ 
   node, 
   depth = 0,
-  isLast = false,
   index,
   enableRootCollapseCard = false,
   rootCollapseCardClassName,
@@ -48,9 +48,11 @@ const TreeNode = ({
     if (hasChildren) {
       setExpanded(!expanded);
     }
+    if (node.onClick) {
+      node.onClick();
+    }
   };
 
-  const baseColor = node.background || "transparent";
   const lighterColor = node.background ? lighten(node.background, 5) : undefined;
   const lightestColor = node.background ? lighten(node.background, 1) : undefined;
   const darkerColor = node.background ? darken(node.background, 60) : undefined;
@@ -67,7 +69,7 @@ const TreeNode = ({
         className={cn(
           "flex items-center w-full transition-all duration-300 ease-in-out relative overflow-hidden",
           !isCollapsedRoot ? "border-b last:border-b-0" : "", // Border separator when not collapsed card
-          hasChildren ? "cursor-pointer" : ""
+          (hasChildren || node.onClick) ? "cursor-pointer hover:brightness-95 active:brightness-90" : ""
         )}
         style={{
           // Row background: Always use the alternating light colors.
