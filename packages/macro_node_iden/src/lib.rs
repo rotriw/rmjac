@@ -6,6 +6,7 @@ use syn::{parse_macro_input, Attribute, DeriveInput, Expr, Lit, Meta};
 pub fn derive_node(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
+    let node_name = proc_macro2::Literal::string(&name.to_string());
     let expanded = quote! {
         impl Node<ActiveModel, Model, Entity> for #name {
             fn get_node_id(&self) -> i64 {
@@ -13,6 +14,9 @@ pub fn derive_node(input: TokenStream) -> TokenStream {
             }
             fn get_node_id_column() -> <<ActiveModel as sea_orm::ActiveModelTrait>::Entity as EntityTrait>::Column {
                 Column::NodeId
+            }
+            fn get_node_type() -> &'static str {
+                #node_name
             }
         }
     };

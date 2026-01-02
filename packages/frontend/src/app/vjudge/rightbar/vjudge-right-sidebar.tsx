@@ -28,7 +28,7 @@ import {
   Filter
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { VJudgeAccount, getMyVJudgeAccounts, VJudgeTask, listVJudgeTasks } from "@/lib/api"
+import { VJudgeAccount, getMyVJudgeAccounts, VJudgeTask, listVJudgeTasks } from "@/api/server/vjudge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"

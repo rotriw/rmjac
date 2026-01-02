@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { cn } from "@/lib/utils"
 import { TitleCard } from "@/components/card/card"
+import { toast } from "sonner"
 import { FormQuery } from "@/components/tools/query"
 import { StandardCard } from "@/components/card/card"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
@@ -15,11 +17,18 @@ import {
   updateTrainingOrder,
   type TrainingProblem,
   type TrainingList
-} from "@/lib/api_client"
+} from "@/api/client/training"
 import { TreeTable, TreeTableNode } from "@/components/table/treetable"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Trash2, ArrowUp, ArrowDown, Plus, FolderPlus } from "lucide-react"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet"
 
 interface TrainingData {
   training_node: {
@@ -45,6 +54,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
   const [trainingData, setTrainingData] = useState<TrainingData | null>(null)
   const [loading, setLoading] = useState(true)
   const [formValues, setFormValues] = useState<Record<string, string>>({})
+  const [activeListNodeId, setActiveListNodeId] = useState<number | null>(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -67,9 +77,27 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
     fetchData()
   }, [fetchData])
 
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '') as ManageMode
+      if (['info', 'problems', 'permissions'].includes(hash)) {
+        setMode(hash)
+      }
+    }
+
+    handleHashChange()
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  const handleModeChange = (newMode: ManageMode) => {
+    setMode(newMode)
+    window.location.hash = newMode
+  }
+
   const handleInfoSubmit = async () => {
     // TODO: Implement info update API if available
-    alert("信息更新功能待实现")
+    toast.info("信息更新功能待实现")
   }
 
   const handleAddProblem = async (list_node_id: number, problemsStr: string) => {
@@ -79,10 +107,10 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
         list_node_id,
         problems
       })
-      alert(res.message || "添加成功")
+      toast.success(res.message || "添加成功")
       fetchData()
     } catch {
-      alert("添加失败")
+      toast.error("添加失败")
     }
   }
 
@@ -92,26 +120,30 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
     data: { description?: string; node_id?: string; iden?: string }
   ) => {
     try {
-      let own_problem: TrainingProblem;
+      let problem_list_data: unknown;
       if (type === "ProblemTraining") {
-        own_problem = { ProblemTraining: { description: data.description || "", own_problem: [], node_id: 0 } };
+        problem_list_data = {
+          description: data.description || "New Module",
+          own_problem: []
+        };
       } else if (type === "ProblemPresetTraining") {
-        own_problem = { ProblemPresetTraining: [parseInt(data.node_id || "0"), data.iden || ""] };
+        problem_list_data = {
+          ProblemPresetTraining: [parseInt(data.node_id || "0"), data.iden || ""]
+        };
       } else {
-        own_problem = { ExistTraining: [parseInt(data.node_id || "0"), data.iden || ""] };
+        problem_list_data = {
+          ExistTraining: [parseInt(data.node_id || "0"), data.iden || ""]
+        };
       }
 
       const res = await addProblemListToTraining(user_iden, training_iden, {
         list_node_id,
-        problem_list: {
-          description: data.description || "New Item",
-          own_problem: [own_problem]
-        }
+        problem_list: problem_list_data
       })
-      alert(res.message || "操作成功")
+      toast.success(res.message || "操作成功")
       fetchData()
     } catch {
-      alert("操作失败")
+      toast.error("操作失败")
     }
   }
 
@@ -122,10 +154,10 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
         list_node_id,
         delete_node_id
       })
-      alert(res.message || "删除成功")
+      toast.success(res.message || "删除成功")
       fetchData()
     } catch {
-      alert("删除失败")
+      toast.error("删除失败")
     }
   }
 
@@ -154,7 +186,25 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
       })
       fetchData()
     } catch {
-      alert("排序失败")
+      toast.error("排序失败")
+    }
+  }
+
+  const handleReorder = async (list_node_id: number, newOrderIds: (string | number)[]) => {
+    const orders: [number, number][] = newOrderIds.map((id, idx) => {
+      const nodeId = parseInt(id.toString().split('-')[1])
+      return [nodeId, idx]
+    })
+
+    try {
+      await updateTrainingOrder(user_iden, training_iden, {
+        list_node_id,
+        orders
+      })
+      fetchData()
+      toast.success("排序已更新")
+    } catch {
+      toast.error("排序失败")
     }
   }
 
@@ -169,7 +219,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
       })
       fetchData()
     } catch {
-      alert("修改失败")
+      toast.error("修改失败")
     }
   }
 
@@ -224,7 +274,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
           content_title = "题目"
           content = (
             <div className="flex items-center justify-between w-full">
-              <span className="font-medium">{problemIden[1]}</span>
+              <span className="font-medium">{problemIden[1].replaceAll("problem", "")}</span>
               <div className="flex items-center gap-1">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleMove(parentListNodeId, index, 'up', list.own_problem) }} disabled={index === 0}><ArrowUp className="h-4 w-4" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleMove(parentListNodeId, index, 'down', list.own_problem) }} disabled={index === list.own_problem.length - 1}><ArrowDown className="h-4 w-4" /></Button>
@@ -247,6 +297,15 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
             </div>
           )
           children = transformToTreeNodes(subTraining, nodeId)
+          return {
+            id,
+            content_title,
+            content,
+            children,
+            background: isSubTraining ? "#f3f4f6" : undefined,
+            defaultExpanded: true,
+            onAdd: () => setActiveListNodeId(nodeId)
+          }
         } else if (p.ProblemPresetTraining) {
           const preset = p.ProblemPresetTraining
           content_title = "预设"
@@ -288,9 +347,9 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
 
     const treeData = transformToTreeNodes(trainingData.problem_list, trainingData.problem_list.node_id)
 
-    const renderAddTools = (listNodeId: number) => (
-      <div className="mt-4 p-4 border rounded-lg bg-muted/30 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    const renderAddTools = (listNodeId: number, isSheet = false) => (
+      <div className={cn("space-y-4", !isSheet && "mt-4 p-4 border rounded-lg bg-muted/30")}>
+        <div className={cn("grid gap-4", !isSheet ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
           <div className="space-y-2">
             <p className="text-sm font-medium flex items-center gap-2"><Plus className="h-4 w-4" /> 快速添加题目</p>
             <div className="flex gap-2">
@@ -304,6 +363,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
                 onClick={() => {
                   const input = document.getElementById(`add-p-${listNodeId}`) as HTMLInputElement
                   handleAddProblem(listNodeId, input.value)
+                  if (isSheet) setActiveListNodeId(null)
                 }}
               >
                 添加
@@ -340,6 +400,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
                     const [node_id, iden] = input.value.split(",")
                     handleAddTrainingProblem(listNodeId, type, { node_id, iden, description: iden })
                   }
+                  if (isSheet) setActiveListNodeId(null)
                 }}
               >
                 执行
@@ -357,10 +418,33 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
             <div className="text-sm text-muted-foreground">
               当前根列表: <span className="font-mono">{trainingData.problem_list.description}</span> (ID: {trainingData.problem_list.node_id})
             </div>
+            <Button variant="outline" size="sm" onClick={() => setActiveListNodeId(trainingData.problem_list.node_id)}>
+              <Plus className="h-4 w-4 mr-2" /> 管理根列表
+            </Button>
           </div>
-          <TreeTable data={treeData} />
-          {renderAddTools(trainingData.problem_list.node_id)}
+          <TreeTable
+            data={treeData}
+            enableReorder={true}
+            onReorder={(parentId, newOrder) => {
+              const listNodeId = parentId ? parseInt(parentId.toString().split('-')[1]) : trainingData.problem_list.node_id
+              handleReorder(listNodeId, newOrder)
+            }}
+          />
         </StandardCard>
+
+        <Sheet open={activeListNodeId !== null} onOpenChange={(open) => !open && setActiveListNodeId(null)}>
+          <SheetContent side="right" className="sm:max-w-md">
+            <SheetHeader>
+              <SheetTitle>添加内容</SheetTitle>
+              <SheetDescription>
+                正在向节点 (ID: {activeListNodeId}) 添加题目或子模块。
+              </SheetDescription>
+            </SheetHeader>
+            <div className="py-6">
+              {activeListNodeId !== null && renderAddTools(activeListNodeId, true)}
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     )
   }
@@ -392,7 +476,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
             </div>
           </div>
         </SidebarInset>
-        <ManageRightSidebar mode={mode} setMode={setMode} />
+        <ManageRightSidebar mode={mode} setMode={handleModeChange} />
       </div>
     </SidebarProvider>
   )

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StandardCard } from "@/components/card/card"
-import { getAllProblems, getAcceptanceRate, difficultyColors, statusColors, statusLabels, type Problem } from "@/lib/api"
+import { getAllProblems, getAcceptanceRate, difficultyColors, statusColors, statusLabels, type Problem } from "@/api/server/problem"
 
 export default function ProblemsPage() {
   const [problems, setProblems] = useState<Problem[]>([])

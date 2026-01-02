@@ -295,6 +295,20 @@ pub struct ProblemListQuery {
     pub difficulty: Option<i32>,
 }
 
+pub async fn get_problem_iden(
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    problem_node_id: i64,
+) -> Result<String> {
+    let iden_list = get_node_id_iden(db, redis, problem_node_id).await?;
+    for iden in iden_list {
+        if iden.starts_with("problem") {
+            return Ok(iden["problem".len()..].to_string());
+        }
+    }
+    Err(CoreError::NotFound("Cannot find problem iden for this problem".to_string()))
+}
+
 pub async fn get_problem_node_and_statement(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,

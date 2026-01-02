@@ -12,7 +12,7 @@ use rmjac_core::db::entity::node::user::{get_user_by_email, get_user_by_iden};
 use rmjac_core::error::CoreError;
 use rmjac_core::model::user::{change_user_password, create_default_user, revoke_all_user_tokens, SimplyUser, UserUpdateProps};
 use rmjac_core::utils::get_redis_connection;
-use crate::handler::{HandlerError, HttpError};
+use crate::handler::{BasicHandler, HandlerError, HttpError};
 use crate::handler::HandlerError::Conflict;
 use crate::utils::perm::UserAuthCotext;
 
@@ -425,6 +425,22 @@ pub async fn get_sidebar(req: HttpRequest, db: web::Data<DatabaseConnection>, _p
         // require logout
         let mut log_out = basic_sidebar;
         log_out.push(SidebarItem {
+                title: "我的记录".to_string(),
+                url: "/record".to_string(),
+                show: None,
+                reg: None,
+                icon: "DiscIcon".to_string(),
+                number: None,
+        });
+        log_out.push(SidebarItem {
+            title: "Vjudge 服务".to_string(),
+            url: "/vjudge/account".to_string(),
+            show: None,
+            reg: None,
+            icon: "Cloud".to_string(),
+            number: None,
+        });
+        log_out.push(SidebarItem {
             title: "登出".to_string(),
             url: "/logout".to_string(),
             show: None,
@@ -454,6 +470,64 @@ pub async fn get_sidebar(req: HttpRequest, db: web::Data<DatabaseConnection>, _p
     }
 }
 
+pub struct Profile {
+    basic: BasicHandler,
+    iden: String,
+    user_id: Option<i64>,
+}
+
+impl Profile {
+    pub fn entry(req: HttpRequest, db: web::Data<DatabaseConnection>, iden: String) -> Self {
+        let user_context = req.extensions().get::<UserAuthCotext>().cloned();
+        Self {
+            basic: BasicHandler {
+                db: db.get_ref().clone(),
+                user_context,
+                req,
+            },
+            iden,
+            user_id: None,
+        }
+    }
+
+    pub async fn before(self) -> ResultHandler<Self> {
+        let user_id = if let Ok(user) = get_user_by_iden(&self.basic.db, &self.iden).await {
+            user.node_id
+        } else if let Ok(user) = get_user_by_email(&self.basic.db, &self.iden).await {
+            user.node_id
+        } else if let Ok(uid) = self.iden.parse::<i64>() {
+            uid
+        } else {
+            return Err(HttpError::CoreError(CoreError::UserNotFound));
+        };
+        let mut _res = self;
+        _res.user_id = Some(user_id);
+        Ok(_res)
+    }
+
+    pub async fn perm(self) -> ResultHandler<Self> {
+        Ok(self)
+    }
+
+    pub async fn exec(self) -> ResultHandler<String> {
+        let user_id = self.user_id.ok_or(HttpError::CoreError(CoreError::UserNotFound))?;
+        let user = SimplyUser::from_db(&self.basic.db, user_id).await?;
+        Ok(Json! {
+            "user": user
+        })
+    }
+}
+
+#[get("/profile/{iden}")]
+pub async fn get_profile(
+    req: HttpRequest,
+    db: web::Data<DatabaseConnection>,
+    path: web::Path<String>,
+) -> ResultHandler<String> {
+    let iden = path.into_inner();
+    Profile::entry(req, db, iden).before().await?.perm().await?.exec().await
+}
+
 pub fn service() -> Scope {
     let service = services![
         post_register,
@@ -463,7 +537,8 @@ pub fn service() -> Scope {
         post_logout,
         post_manage,
         get_sidebar,
-        get_user_info
+        get_user_info,
+        get_profile
     ];
     web::scope("/api/user").service(service)
 }

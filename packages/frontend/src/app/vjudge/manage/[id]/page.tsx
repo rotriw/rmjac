@@ -1,5 +1,5 @@
 import { TitleCard, StandardCard } from "@/components/card/card";
-import { getVJudgeAccountDetail } from "@/lib/api";
+import { getVJudgeAccountDetail } from "@/api/server/vjudge";
 import { notFound } from "next/navigation";
 import { ManageActions } from "@/components/vjudge/manage-actions";
 

@@ -10,14 +10,16 @@ import {
 } from "@/components/ui/sidebar"
 import { LogOut, User } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { getUserInfo } from "@/lib/api"
+import { getUserInfo } from "@/api/server/user"
 import Link from "next/link"
+import { getGravatarUrl } from "@/lib/gravatar"
 
 interface UserData {
   node_id: number
   avatar: string
   name: string
   iden: string
+  email?: string
 }
 
 export function UserAvatar() {
@@ -94,7 +96,7 @@ export function UserAvatar() {
               >
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage
-                    src={user.avatar || "/default-avatar.png"}
+                    src={user.avatar || (user.email ? getGravatarUrl(user.email) : "/default-avatar.png")}
                     alt={user.name}
                     className="object-cover"
                   />

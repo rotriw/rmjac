@@ -1,13 +1,19 @@
 use actix_web::{HttpMessage, HttpRequest, Scope, get, post, services, web};
 use chrono::NaiveDateTime;
 use enum_const::EnumConst;
+use redis::TypedCommands;
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use rmjac_core::graph::edge::Edge;
 use rmjac_core::graph::edge::perm_pages::PagesPerm;
 use rmjac_core::graph::edge::perm_system::SystemPerm;
+use rmjac_core::graph::edge::training_problem::TrainingProblemEdge;
 use rmjac_core::model::perm::{check_pages_perm, check_system_perm};
+use rmjac_core::model::problem::get_problem_node_and_statement;
 use crate::handler::{BasicHandler, HttpError, ResultHandler};
-use rmjac_core::model::training::{add_problem_into_training_list_from_problem_iden, check_problem_list_in_training, create_training_problem_node_for_list, get_training_node_id_by_iden, get_training_problem_id, get_training_problem_list, modify_training_description, remove_problem_from_training_list, update_training_problem_order, TrainingList};
+use rmjac_core::model::training::{add_problem_into_training_list_from_problem_iden, check_problem_list_in_training, create_training_problem_node_for_list, get_training_node_id_by_iden, get_training_problem_id, get_training_problem_list, modify_training_description, update_training_problem_order, TrainingList};
+
 use rmjac_core::utils::get_redis_connection;
 use crate::handler::HandlerError::PermissionDenied;
 use crate::utils::perm::UserAuthCotext;
@@ -125,7 +131,7 @@ impl Manage {
         let mut redis = &mut get_redis_connection();
         let mut result = vec![];
         for p in &problem {
-            let feedback = add_problem_into_training_list_from_problem_iden(&self.basic.db, &mut redis, node_id, p).await;
+            let feedback = add_problem_into_training_list_from_problem_iden(&self.basic.db, &mut redis, list_node_id, p).await;
             if let Err(e) = feedback {
                 return Ok(Json! {
                     "message": format!("add problem {} failed: {}", p, e),
@@ -145,7 +151,7 @@ impl Manage {
         let mut redis = get_redis_connection();
         let p_id = get_training_problem_id(&self.basic.db, &mut redis, node_id).await?;
         // check problem_list is in node
-        if check_problem_list_in_training(&self.basic.db, p_id, list_node_id).await? == false && p_id != list_node_id {
+        if check_problem_list_in_training(&self.basic.db, p_id, list_node_id).await? == false {
             return Ok(Json! {
                 "status": "error",
                 "message": "problem list not in training",
@@ -175,16 +181,18 @@ impl Manage {
         })
     }
 
-    pub async fn remove_problem(self, list_node_id: i64, delete_node_id: i64) -> ResultHandler<String> {
+    pub async fn remove_problem(self, list_node_id: i64, delete_edge_id: i64) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
-        if check_problem_list_in_training(&self.basic.db, node_id, list_node_id).await? == false {
+        let mut redis = get_redis_connection();
+        let edge = TrainingProblemEdge::from_db(&self.basic.db, delete_edge_id).await?;
+        if  edge.u != list_node_id {
             return Ok(Json! {
                 "status": "error",
-                "message": "problem list not in training",
+                "message": "mismatched list node id and edge",
             });
         }
-        let mut redis = &mut get_redis_connection();
-        remove_problem_from_training_list(&self.basic.db, &mut redis, list_node_id, delete_node_id).await?;
+        let _ = edge.delete(&self.basic.db).await?;
+        let _ = redis.del::<_>(format!("training_{node_id}"));
         Ok(Json! {
             "message": "successful",
         })
@@ -192,7 +200,9 @@ impl Manage {
 
     pub async fn update_order(self, list_node_id: i64, orders: Vec<(i64, i64)>) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
-        if check_problem_list_in_training(&self.basic.db, node_id, list_node_id).await? == false {
+        let mut redis = get_redis_connection();
+        let p_id = get_training_problem_id(&self.basic.db, &mut redis, node_id).await?;
+        if check_problem_list_in_training(&self.basic.db, p_id, list_node_id).await? == false {
             return Ok(Json! {
                 "status": "error",
                 "message": "problem list not in training",
@@ -250,10 +260,12 @@ impl View {
     pub async fn view_problem(self) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
         let mut redis = &mut get_redis_connection();
-        let training_data = rmjac_core::model::training::get_training(&self.basic.db, &mut redis, node_id).await?;
+        let training = rmjac_core::model::training::get_training(&self.basic.db, &mut redis, node_id).await?;
+        // 对一些内容进行解析。
         Ok(Json! {
-            "data": training_data,
+            "data": training,
         })
+
     }
 
     pub async fn get_problem_accept_status(self) -> ResultHandler<String> {

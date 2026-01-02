@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
@@ -38,7 +39,7 @@ export default function ProblemClient({
 
   const handleSaveCode = () => {
     if (!isLoggedIn) {
-      alert("请先登录后再保存代码")
+      toast.error("请先登录后再保存代码")
       return
     }
     console.log("保存代码:", { problemId, code, language })

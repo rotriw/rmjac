@@ -62,6 +62,8 @@ where
 {
     fn get_node_id(&self) -> i64;
 
+    fn get_node_type() -> &'static str;
+
     fn get_node_id_column() -> <DbNodeActive::Entity as EntityTrait>::Column {
         <DbNodeActive::Entity as EntityTrait>::Column::from_str("node_id")
             .ok()
@@ -85,7 +87,7 @@ where
                 .filter(node_id_column.eq(node_id))
                 .one(db)
                 .await?
-                .ok_or_else(|| CoreError::NotFound(format!("Node with id {node_id} not found")))?;
+                .ok_or_else(|| CoreError::NotFound(format!("Node({}) with id {node_id} not found", Self::get_node_type())))?;
             Ok(model.conv::<DbModel>().into())
         }
     }

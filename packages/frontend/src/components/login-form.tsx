@@ -7,7 +7,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { redirect } from "next/navigation"
-import { API_BASE_URL } from "@/lib/api_client"
+import { API_BASE_URL } from "@/api/client/config"
 import { cookies } from "next/headers"
 
 export function LoginForm({

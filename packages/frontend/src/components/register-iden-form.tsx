@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { CheckIcon } from "lucide-react";
-import { API_BASE_URL } from "@/lib/api_client";
+import { API_BASE_URL } from "@/api/client/config";
 
 
 export function RegisterIdenForm({ iden }: { iden?: string }) {

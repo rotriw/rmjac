@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { VJudgeAccount } from "@/lib/api"
+import { VJudgeAccount } from "@/api/server/vjudge"
 import Link from "next/link"
 import { CheckCircle2, XCircle, Settings } from "lucide-react"
 

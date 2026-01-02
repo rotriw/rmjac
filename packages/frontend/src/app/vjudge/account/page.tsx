@@ -1,5 +1,5 @@
 import { ClientVjudgeAccountPage } from "./client-page"
-import { getMyVJudgeAccounts } from "@/lib/api"
+import { getMyVJudgeAccounts } from "@/api/server/vjudge"
 
 export const dynamic = "force-dynamic"
 

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { StandardCard } from "@/components/card/card"
 import { Save } from "lucide-react"
 import { ProblemModule, SampleGroup, ProblemData } from "../../create/types"
-import { getProblemForEdit, updateProblemStatement, updateProblemSource } from "@/lib/api_client"
+import { getProblemForEdit, updateProblemStatement, updateProblemSource } from "@/api/client/problem"
 import { DetailData } from "@/components/problem/detail-data"
 
 interface EditPageProps {

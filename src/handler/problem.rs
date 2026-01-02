@@ -1,5 +1,5 @@
 use enum_const::EnumConst;
-use sea_orm::ColumnTrait;
+use sea_orm::{ColumnTrait, QuerySelect};
 use actix_web::{get, post, web, Scope, services, HttpRequest, HttpMessage};
 use sea_orm::DatabaseConnection;
 use sea_orm::sea_query::SimpleExpr;

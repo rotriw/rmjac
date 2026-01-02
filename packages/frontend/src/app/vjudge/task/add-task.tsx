@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react"
 import { StandardCard } from "@/components/card/card"
 import { FormQuery, FormField } from "@/components/tools/query"
-import { getMyVJudgeAccounts, assignVJudgeTask, VJudgeAccount } from "@/lib/api"
+import { getMyVJudgeAccounts, assignVJudgeTask, type VJudgeAccount } from "@/api/client/vjudge"
 import { socket } from "@/lib/socket"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -22,16 +23,16 @@ export function AddTaskCard({ onSubmitSuccess }: AddTaskCardProps) {
   })
 
   useEffect(() => {
-    getMyVJudgeAccounts().then(data => {
+    getMyVJudgeAccounts().then((data: VJudgeAccount[]) => {
       setAccounts(data || [])
-    }).catch(err => {
+    }).catch((err: Error) => {
       console.error("Failed to load accounts", err)
     })
   }, [])
 
   const handleSubmit = async () => {
     if (!values.account_id) {
-      alert("请选择账号")
+      toast.error("请选择账号")
       return
     }
 
@@ -53,11 +54,11 @@ export function AddTaskCard({ onSubmitSuccess }: AddTaskCardProps) {
             router.push(`/vjudge/task?id=${taskId}&account_id=${accountId}`);
           }
       } else {
-          alert(res.msg || "提交失败")
+          toast.error(res.msg || "提交失败")
       }
     } catch (e) {
       console.error(e)
-      alert("提交失败")
+      toast.error("提交失败")
     } finally {
       setLoading(false)
     }

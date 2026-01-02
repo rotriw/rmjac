@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { StandardCard, TitleCard } from "@/components/card/card"
 import { ViewVjudgeMessage } from "./viewmessage"
 import { AddTaskCard } from "./add-task"
-import { VJudgeTask, listVJudgeTasks, getMyVJudgeAccounts } from "@/lib/api"
+import { VJudgeTask, listVJudgeTasks, getMyVJudgeAccounts } from "@/api/server/vjudge"
 import { Loader2, History, PlusCircle, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 

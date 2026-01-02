@@ -5,7 +5,7 @@ import { TitleCard } from "@/components/card/card"
 import { FormQuery, FormField } from "@/components/tools/query";
 import { StandardCard } from "@/components/card/card";
 import { ProblemData } from "./types";
-import {createProblem} from "@/lib/api_client";
+import {createProblem} from "@/api/client/problem";
 import { DetailData } from "@/components/problem/detail-data"
 
 export function ProblemTool() {

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { TreeTable, TreeTableNode } from "@/components/table/treetable";
 import { Input } from "@/components/ui/input";
-import { listRecords } from "@/lib/api";
+import { listRecords } from "@/api/server/record";
 import { RecordStatus, RECORD_STATUS_COLOR_MAP_INTER, Icond } from "./[id]/shared";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";

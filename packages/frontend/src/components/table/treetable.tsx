@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { useState, useMemo } from "react";
+import { ChevronRight, Plus, GripVertical } from "lucide-react";
 import { darken, lighten } from "colorizr";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,8 @@ export interface TreeTableNode {
   defaultExpanded?: boolean;
   node_index?: number;
   onClick?: () => void;
+  onAdd?: () => void;
+  onReorder?: (newOrder: (string | number)[]) => void;
 }
 
 export interface TreeTableProps {
@@ -25,21 +27,97 @@ export interface TreeTableProps {
   className?: string;
   enableRootCollapseCard?: boolean;
   rootCollapseCardClassName?: string;
+  enableReorder?: boolean;
+  onReorder?: (parentId: string | number | null, newOrder: (string | number)[]) => void;
 }
 
-const TreeNode = ({ 
-  node, 
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+const SortableTreeNode = ({
+  node,
   depth = 0,
   index,
   enableRootCollapseCard = false,
   rootCollapseCardClassName,
-}: { 
-  node: TreeTableNode; 
+  enableReorder = false,
+  onReorder,
+}: {
+  node: TreeTableNode;
   depth?: number;
   isLast?: boolean;
   index: number;
   enableRootCollapseCard?: boolean;
   rootCollapseCardClassName?: string;
+  enableReorder?: boolean;
+  onReorder?: (parentId: string | number | null, newOrder: (string | number)[]) => void;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: node.id, disabled: !enableReorder });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 0,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <TreeNode
+        node={node}
+        depth={depth}
+        index={index}
+        enableRootCollapseCard={enableRootCollapseCard}
+        rootCollapseCardClassName={rootCollapseCardClassName}
+        enableReorder={enableReorder}
+        dragHandleProps={enableReorder ? { ...attributes, ...listeners } : undefined}
+        onReorder={onReorder}
+      />
+    </div>
+  );
+};
+
+const TreeNode = ({
+  node,
+  depth = 0,
+  index,
+  enableRootCollapseCard = false,
+  rootCollapseCardClassName,
+  enableReorder = false,
+  dragHandleProps,
+  onReorder,
+}: {
+  node: TreeTableNode;
+  depth?: number;
+  isLast?: boolean;
+  index: number;
+  enableRootCollapseCard?: boolean;
+  rootCollapseCardClassName?: string;
+  enableReorder?: boolean;
+  dragHandleProps?: Record<string, unknown>;
+  onReorder?: (parentId: string | number | null, newOrder: (string | number)[]) => void;
 }) => {
   const [expanded, setExpanded] = useState(node.defaultExpanded ? true : false);
   const hasChildren = node.children && node.children.length > 0;
@@ -86,6 +164,17 @@ const TreeNode = ({
             {/* Indentation */}
             <div style={{ width: `${depth * 20}px` }} className="shrink-0 transition-all duration-300" />
             
+            {/* Drag Handle */}
+            {dragHandleProps && (
+              <div
+                {...dragHandleProps}
+                className="shrink-0 mr-1 cursor-grab active:cursor-grabbing p-1 hover:bg-black/5 rounded"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+              </div>
+            )}
+
             {/* Arrow - Always outside the dark box for consistent "Retract" animation */}
             {(isRoot && enableRootCollapseCard) ?<></> : <div className="shrink-0 flex items-center justify-center w-4 h-4 mr-2">
                 {hasChildren && (
@@ -145,6 +234,17 @@ const TreeNode = ({
                      <div className="flex-1 min-w-0">
                         {node.content}
                      </div>
+                     {node.onAdd && (
+                        <div
+                          className="shrink-0 ml-2 p-1 rounded-md hover:bg-black/5 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            node.onAdd?.();
+                          }}
+                        >
+                          <Plus className="w-4 h-4" style={{ color: darkestColor }} />
+                        </div>
+                     )}
                 </div>
             )}
         </div>
@@ -152,24 +252,22 @@ const TreeNode = ({
 
       {/* Recursive Children */}
       {hasChildren && (
-        <div 
+        <div
           className={cn(
             "grid transition-all duration-300 ease-in-out",
             expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
           )}
         >
           <div className="overflow-hidden flex flex-col w-full">
-            {node.children!.map((child, index) => (
-              <TreeNode 
-                key={child.id} 
-                node={child} 
-                depth={depth + 1}
-                index={index + 1}
-                isLast={index === node.children!.length - 1}
-                enableRootCollapseCard={enableRootCollapseCard}
-                rootCollapseCardClassName={rootCollapseCardClassName}
-              />
-            ))}
+            <SortableTreeList
+              data={node.children!}
+              depth={depth + 1}
+              parentId={node.id}
+              enableRootCollapseCard={enableRootCollapseCard}
+              rootCollapseCardClassName={rootCollapseCardClassName}
+              enableReorder={enableReorder}
+              onReorder={onReorder}
+            />
           </div>
         </div>
       )}
@@ -177,22 +275,85 @@ const TreeNode = ({
   );
 };
 
-export function TreeTable({ data, className, enableRootCollapseCard = false, rootCollapseCardClassName }: TreeTableProps) {
+const SortableTreeList = ({
+  data,
+  depth = 0,
+  parentId = null,
+  enableRootCollapseCard = false,
+  rootCollapseCardClassName,
+  enableReorder = false,
+  onReorder,
+}: {
+  data: TreeTableNode[];
+  depth?: number;
+  parentId?: string | number | null;
+  enableRootCollapseCard?: boolean;
+  rootCollapseCardClassName?: string;
+  enableReorder?: boolean;
+  onReorder?: (parentId: string | number | null, newOrder: (string | number)[]) => void;
+}) => {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = data.findIndex((item) => item.id === active.id);
+      const newIndex = data.findIndex((item) => item.id === over.id);
+      const newOrder = arrayMove(data, oldIndex, newIndex).map(item => item.id);
+      onReorder?.(parentId, newOrder);
+    }
+  };
+
+  const ids = useMemo(() => data.map(item => item.id), [data]);
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        {data.map((node, index) => (
+          <SortableTreeNode
+            key={node.id}
+            node={node}
+            depth={depth}
+            index={index}
+            isLast={index === data.length - 1}
+            enableRootCollapseCard={enableRootCollapseCard}
+            rootCollapseCardClassName={rootCollapseCardClassName}
+            enableReorder={enableReorder}
+            onReorder={onReorder}
+          />
+        ))}
+      </SortableContext>
+    </DndContext>
+  );
+};
+
+export function TreeTable({ data, className, enableRootCollapseCard = false, rootCollapseCardClassName, enableReorder = false, onReorder }: TreeTableProps) {
   return (
     <div className={cn(
-        "w-full flex flex-col rounded-md border overflow-hidden", 
+        "w-full flex flex-col rounded-md border overflow-hidden",
         className
     )}>
-      {data.map((node, index) => (
-        <TreeNode 
-          key={node.id} 
-          index={index}
-          node={node} 
-          isLast={index === data.length - 1}
-          enableRootCollapseCard={enableRootCollapseCard}
-          rootCollapseCardClassName={rootCollapseCardClassName}
-        />
-      ))}
+      <SortableTreeList
+        data={data}
+        enableRootCollapseCard={enableRootCollapseCard}
+        rootCollapseCardClassName={rootCollapseCardClassName}
+        enableReorder={enableReorder}
+        onReorder={onReorder}
+      />
     </div>
   );
 }

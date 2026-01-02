@@ -14,5 +14,6 @@ export const apply = () => {
         "syncOneapikey": syncOne.apikey,
         "submittoken": submit.submit,
         "verifyapikey": verify.apikey,
+        "verifypassword": verify.password,
     };
 };

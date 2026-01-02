@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { StandardCard } from "@/components/card/card"
 import { TypstRenderer } from "@/components/typst-renderer"
-import { API_BASE_URL } from "@/lib/api_client"
+import { API_BASE_URL } from "@/api/client/config"
 import ProblemContainer from "./problem-container"
 
 export interface Record {

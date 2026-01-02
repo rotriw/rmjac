@@ -16,7 +16,7 @@ use crate::graph::action::get_node_type;
 use crate::graph::node::record::RecordStatus;
 use crate::graph::node::training::{TrainingNode, TrainingNodePrivateRaw, TrainingNodePublicRaw, TrainingNodeRaw};
 use crate::graph::node::training::problem::{TrainingProblemNode, TrainingProblemNodePrivateRaw, TrainingProblemNodePublicRaw, TrainingProblemNodeRaw};
-use crate::model::problem::{get_problem, get_problem_node_and_statement};
+use crate::model::problem::{get_problem, get_problem_iden, get_problem_node_and_statement};
 use crate::service::iden::{create_iden, get_node_id_iden, get_node_ids_from_iden};
 use crate::utils::get_redis_connection;
 
@@ -81,7 +81,7 @@ pub struct TrainingList {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum TrainingProblem {
-    ProblemIden(String),
+    ProblemIden((i64, String)), // edge_id, problem_iden
     ProblemTraining(TrainingList),
     ProblemPresetTraining((i64, String)),
     ExistTraining((i64, String)),
@@ -108,7 +108,7 @@ pub async fn create_training_problem_node(db: &DatabaseConnection, problem: &Tra
                     }.save(db).await?;
                 }
             }
-            TrainingProblem::ProblemIden(iden) => {
+            TrainingProblem::ProblemIden((_edge_id, iden)) => {
                 let problem = get_problem(db, redis, iden).await;
                 if let Ok(problem) = problem {
                     TrainingProblemEdgeRaw {
@@ -164,8 +164,8 @@ pub async fn get_training_problem_list(db: &DatabaseConnection, redis: &mut redi
             TrainingProblemType::Default => {
                 let node_type = get_node_type(db, next_node_id).await?;
                 if node_type == "problem" || node_type == "problem_statement" {
-                    let problem_iden = get_node_id_iden(db, redis, next_node_id).await?[0].clone();
-                    result.own_problem.push(TrainingProblem::ProblemIden(problem_iden));
+                    let problem_iden = get_problem_iden(db, redis, next_node_id).await?;
+                    result.own_problem.push(TrainingProblem::ProblemIden((edge.id, problem_iden)));
                 } else {
                     let sub_problem = get_training_problem_list(db, redis, next_node_id).await?;
                     result.own_problem.push(TrainingProblem::ProblemTraining(sub_problem));
@@ -212,6 +212,10 @@ pub async fn get_training_problem_list_one_with_order(db: &DatabaseConnection, _
     Ok(result)
 }
 
+pub async fn get_training_problem_list_edges_with_order(db: &DatabaseConnection, _redis: &mut redis::Connection, node_id: i64) -> Result<Vec<TrainingProblemEdge>> {
+    let _training_problem_node = TrainingProblemNode::from_db(db, node_id).await?;
+    TrainingProblemEdgeQuery::get_order_asc_extend(node_id, db).await
+}
 
 pub async fn get_training_node_id_by_iden(db: &DatabaseConnection, redis: &mut redis::Connection, user_iden: &str, pb_iden: &str) -> Result<i64> {
     let user_id = get_user_by_iden(db, user_iden).await?.node_id.to_string();
@@ -331,22 +335,18 @@ pub async fn add_problem_into_training_list_from_problem_iden(db: &DatabaseConne
     }).await
 }
 
-pub async fn remove_problem_from_training_list(db: &DatabaseConnection, redis: &mut redis::Connection, training_list_id: i64, delete_node_id: i64) -> Result<()> {
-    let problem_list = get_training_problem_list_one_with_order(db, redis, training_list_id).await?;
-    for (i, _order) in &problem_list {
-        if *i == delete_node_id {
-            TrainingProblemEdgeQuery::delete(db, training_list_id, *i).await?;
-            return Ok(());
-        }
-    }
-    Err(CoreError::QueryNotFound(QueryNotFound::NodeNotFound))
-}
-
 pub async fn update_training_problem_order(db: &DatabaseConnection, _redis: &mut redis::Connection, training_list_id: i64, orders: Vec<(i64, i64)>) -> Result<()> {
     use sea_orm::entity::prelude::*;
-    for (node_id, order) in orders {
-        let edge:TrainingProblemEdge = TrainingProblemEdgeQuery::get_v_one_filter_extend(training_list_id, crate::db::entity::edge::training_problem::Column::VNodeId.eq(node_id), db).await?;
-        edge.modify(db, crate::db::entity::edge::training_problem::Column::Order, order).await?;
+    for (id, order) in orders {
+        let edge = TrainingProblemEdgeQuery::get_v_one_filter_extend(training_list_id, crate::db::entity::edge::training_problem::Column::VNodeId.eq(id), db).await;
+        if let Ok(edge) = edge {
+            edge.modify(db, crate::db::entity::edge::training_problem::Column::Order, order).await?;
+            continue;
+        }
+        let edge = TrainingProblemEdge::from_db(db, id).await;
+        if let Ok(edge) = edge && edge.u == training_list_id {
+            edge.modify(db, crate::db::entity::edge::training_problem::Column::Order, order).await?;
+        }
     }
     Ok(())
 }
@@ -437,8 +437,6 @@ pub async fn remove_all_problem_from_training(
     Ok(())
 }
 
-/// Remove a problem from training list by node ID (delete edge only)
-/// This is a more efficient version that works directly with node IDs
 pub async fn remove_problem_from_training_by_node_id(
     db: &DatabaseConnection,
     redis: &mut redis::Connection,
@@ -572,10 +570,13 @@ pub async fn grant_training_access(
 #[async_recursion]
 pub async fn check_problem_list_in_training(
     db: &DatabaseConnection,
-    training_node_id: i64,
+    now_node_id: i64,
     list_node_id: i64,
 ) -> Result<bool> {
-    let problem_list = get_training_problem_list_one_with_order(db, &mut get_redis_connection(), training_node_id).await?;
+    if now_node_id == list_node_id {
+        return Ok(true);
+    }
+    let problem_list = get_training_problem_list_one_with_order(db, &mut get_redis_connection(), now_node_id).await?;
     for (node_id, _) in problem_list {
         if node_id == list_node_id {
             return Ok(true);

@@ -15,7 +15,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { getSidebar } from "@/lib/api"
+import { getSidebar } from "@/api/server/user"
 import { useEffect } from "react"
 
 

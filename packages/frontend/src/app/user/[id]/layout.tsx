@@ -1,5 +1,4 @@
 import { AppSidebar } from "@/components/app-sidebar"
-import { NavActions } from "@/components/nav-actions"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -47,7 +46,7 @@ export default function RootLayout({
             </Breadcrumb>
           </div>
           <div className="ml-auto px-3">
-            <NavActions />
+            {/* <NavActions /> */}
           </div>
         </header>
         {children}

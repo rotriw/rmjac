@@ -1,7 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { deleteVJudgeAccount, assignVJudgeTask } from "@/lib/api"
+import { toast } from "sonner"
+import { deleteVJudgeAccount, assignVJudgeTask } from "@/api/server/vjudge"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { Badge, ChevronRight, LibraryIcon, Loader2, RefreshCwIcon, SendIcon, Sheet, Tag } from "lucide-react"
@@ -120,7 +121,7 @@ export function ManageActions({ nodeId }: ManageActionsProps) {
             router.refresh()
         } catch (e) {
             console.error(e)
-            alert("解除绑定失败")
+            toast.error("解除绑定失败")
         } finally {
             setDeleting(false)
         }
@@ -133,10 +134,10 @@ export function ManageActions({ nodeId }: ManageActionsProps) {
                 vjudge_node_id: nodeId,
                 range: "recent"
             })
-            alert("同步任务已提交")
+            toast.success("同步任务已提交")
         } catch (e) {
             console.error(e)
-            alert("提交同步任务失败")
+            toast.error("提交同步任务失败")
         } finally {
             setSyncing(false)
         }
@@ -149,7 +150,7 @@ export function ManageActions({ nodeId }: ManageActionsProps) {
           socket.on('vjudge_account_verified', (data) => {
             setVerifying(false)
             if (data[0] === '1') {
-              alert("已验证，请刷新。");
+              toast.success("已验证，请刷新。");
             }
           })
           socket.emit('refresh_vjudge_account', {
@@ -157,7 +158,7 @@ export function ManageActions({ nodeId }: ManageActionsProps) {
           })
         } catch (e) {
             console.error(e)
-            alert("更新验证状态失败")
+            toast.error("更新验证状态失败")
         }
     }
 

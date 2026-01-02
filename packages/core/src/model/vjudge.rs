@@ -131,15 +131,15 @@ pub async fn add_unverified_account_for_user(
 
 
 pub fn convert_method(vjudge_node: &VjudgeNode) -> String {
-    match (vjudge_node.public.remote_mode.clone(), vjudge_node.private.auth.clone(), vjudge_node.public.platform.as_str()) {
+    match (vjudge_node.public.remote_mode.clone(), vjudge_node.private.auth.clone(), vjudge_node.public.platform.to_lowercase().as_str()) {
         (RemoteMode::PublicAccount, _, _) => "public_account".to_string(),
         (RemoteMode::OnlySync, Some(VjudgeAuth::Token(_)), "codeforces") => "apikey".to_string(),
         (RemoteMode::SyncCode, Some(VjudgeAuth::Token(_)), "codeforces") => "token".to_string(),
         (_, Some(VjudgeAuth::Password(_)), "codeforces") => "password".to_string(),
         (RemoteMode::OnlySync, None, _) => "code".to_string(),
         (RemoteMode::OnlySync, Some(VjudgeAuth::Token(_)), _) => "apikey".to_string(),
-        (RemoteMode::SyncCode, Some(VjudgeAuth::Token(_)), _) => "apikey".to_string(),
-        (RemoteMode::SyncCode, Some(VjudgeAuth::Password(_)), _) => "apikey".to_string(),
+        (RemoteMode::SyncCode, Some(VjudgeAuth::Token(_)), _) => "token".to_string(),
+        (RemoteMode::SyncCode, Some(VjudgeAuth::Password(_)), _) => "password".to_string(),
         _ => "unknown".to_string(),
     }
 }

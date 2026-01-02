@@ -2,7 +2,7 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react";
-import { API_BASE_URL } from "@/lib/api_client";
+import { API_BASE_URL } from "@/api/client/config";
 
 export function CaptchaForm({ defaultChallengeCode, challengeVerify, challengeTime, email }: {
   defaultChallengeCode: string,

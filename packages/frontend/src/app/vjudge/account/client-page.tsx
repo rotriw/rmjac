@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { VJudgeAccountCard } from "@/components/vjudge/account-card"
-import { VJudgeAccount } from "@/lib/api"
+import { VJudgeAccount } from "@/api/server/vjudge"
 import { StandardCard, TitleCard } from "@/components/card/card"
 import { UserPlus } from "lucide-react"
 import Link from "next/link"

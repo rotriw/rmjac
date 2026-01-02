@@ -3,7 +3,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { StandardCard, TitleCard } from "@/components/card/card"
-import { getTrainingByIden, TrainingProblem } from "@/lib/api"
+import { getTrainingByIden, TrainingProblem } from "@/api/server/training"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import React from "react"
 

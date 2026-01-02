@@ -1,74 +1,4 @@
-
-
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1824'
-
-export async function createProblem(problemData: {
-  problem_iden: string
-  problem_name: string
-  problem_statement: Array<{
-    statement_source: string
-    problem_iden?: string
-    problem_statements: any[]
-    time_limit: number
-    memory_limit: number
-  }>
-  creation_time?: string
-  tags: string[]
-}): Promise<any> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(problemData),
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error('Failed to create problem:', error)
-    throw error
-  }
-}
-
-export async function deleteProblem(iden: string): Promise<void> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/problem/view/${iden}`, {
-      method: 'DELETE',
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-  } catch (error) {
-    console.error(`Failed to delete problem ${iden}:`, error)
-    throw error
-  }
-}
-
-export async function getProblemForEdit(iden: string): Promise<any> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/view/${iden}`, {
-      credentials: 'include',
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error(`Failed to fetch problem ${iden} for editing:`, error)
-    throw error
-  }
-}
+import { API_BASE_URL } from './config'
 
 export interface TrainingNode {
   node_id: number
@@ -110,7 +40,7 @@ export async function getTrainingByIden(user_iden: string, training_iden: string
     })
 
     if (!response.ok) {
-      console.log(await response.json());
+      console.error(`Failed to fetch training ${training_iden}:`, await response.json())
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -118,33 +48,6 @@ export async function getTrainingByIden(user_iden: string, training_iden: string
     return data
   } catch (error) {
     console.error(`Failed to fetch training ${training_iden}:`, error)
-    throw error
-  }
-}
-
-
-export async function updateProblemStatement(iden: string, content: Array<{
-  iden: string
-  content: string
-}>): Promise<any> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/manage/${iden}/update_statement_content`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(content),
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error(`Failed to update problem statement ${iden}:`, error)
     throw error
   }
 }
@@ -283,29 +186,6 @@ export async function updateTrainingOrder(user_iden: string, training_iden: stri
     return await response.json()
   } catch (error) {
     console.error('Failed to update training order:', error)
-    throw error
-  }
-}
-
-export async function updateProblemSource(iden: string, source: string): Promise<any> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/manage/${iden}/update_statement_source`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(source),
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error(`Failed to update problem source ${iden}:`, error)
     throw error
   }
 }

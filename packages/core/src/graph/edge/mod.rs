@@ -1,9 +1,10 @@
+use sea_orm::ColumnTrait;
 use std::fmt::Debug;
 use crate::Result;
 use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo, edge::create_edge};
 use crate::error::CoreError::NotFound;
 use sea_orm::sea_query::IntoCondition;
-use sea_orm::{ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel, QuerySelect};
+use sea_orm::{ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect};
 use std::str::FromStr;
 use tap::Conv;
 
@@ -466,6 +467,16 @@ where
             new_model.set(column, data.into());
             let data = new_model.update(db).await?.conv::<DbModel>();
             Ok(data.into())
+        }
+    }
+
+    fn delete(&self, db: &DatabaseConnection) -> impl Future<Output = Result<()>> {
+        async move {
+            let mut edge = DbActive::new();
+            let edge_id_column = Self::get_edge_id_column();
+            edge.set(edge_id_column, self.get_edge_id().into());
+            edge.delete(db).await?;
+            Ok(())
         }
     }
 }

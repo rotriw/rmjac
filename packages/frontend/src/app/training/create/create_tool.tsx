@@ -1,10 +1,11 @@
 "use client"
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
 import { useSearchParams } from "next/navigation"
 import { TitleCard } from "@/components/card/card"
 import { FormQuery, FormField } from "@/components/tools/query";
 import { StandardCard } from "@/components/card/card";
-import { createTraining } from "@/lib/api_client";
+import { createTraining } from "@/api/client/training";
 
 export function TrainingCreateTool() {
   const searchParams = useSearchParams()
@@ -127,7 +128,7 @@ export function TrainingCreateTool() {
       }, {
         type: "button" as const,
         title: "开始导入 (API 待实现)",
-        onClick: () => alert("API 待实现")
+        onClick: () => toast.info("API 待实现")
       }]
     }] : []),
     {

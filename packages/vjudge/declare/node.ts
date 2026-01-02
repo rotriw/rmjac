@@ -12,6 +12,6 @@ export interface VjudgeNode {
 }
 
 export interface VjudgeAuth {
-    password?: string;
-    token?: string;
+    Password?: string;
+    Token?: string;
 }

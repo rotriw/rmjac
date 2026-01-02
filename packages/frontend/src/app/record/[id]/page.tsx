@@ -1,7 +1,7 @@
 import { StandardCard, TitleCard } from "@/components/card/card";
 import { TreeTable, TreeTableNode } from "@/components/table/treetable";
 import { Icond, RecordNode, RecordStatus, SubtaskUserRecord, RECORD_STATUS_COLOR_MAP, RECORD_STATUS_COLOR_MAP_INTER } from "./shared";
-import { getRecord } from "@/lib/api";
+import { getRecord } from "@/api/server/record";
 
 export function ShowColorfulCard( {status, score} : {status: RecordStatus, score?: number} ) {
   console.log(status);

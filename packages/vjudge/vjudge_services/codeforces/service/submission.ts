@@ -117,10 +117,10 @@ export async function loginWithPassword(
 
     await page.waitForNavigation({ waitUntil: "domcontentloaded" });
     // await new Promise(resolve => setTimeout(resolve, 3000));
-    // if (!(await page.content()).includes(handle)) {
-    //     return "";
+    if (!(await page.content()).includes(handle)) {
+        return "";
 
-    // }
+    }
     console.log(await browser.cookies());
     const cookies = await browser.cookies();
     for (const cookie of cookies) {
