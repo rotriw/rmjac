@@ -1,5 +1,4 @@
-use crate::service::judge::declare::{CompileOption, Language};
-use crate::service::judge::provider::language::cpp::{Cpp, CppStd, O2};
+use crate::service::judge::service::{CompileOption, Language};
 
 pub struct Java;
 

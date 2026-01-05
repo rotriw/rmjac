@@ -1,60 +1,7 @@
-use std::collections::HashMap;
-use crate::service::judge::declare::{ChoiceOption, CompileOption, CompileOptionService, CompileOptionValue, Language};
-use macro_node_iden::option_service;
-
-#[derive(PartialOrd, PartialEq)]
-pub struct ContestID;
-#[derive(PartialOrd, PartialEq)]
-pub struct ProblemID;
-
-impl CompileOption for ContestID {
-    fn valid(&self, value: &'static str) -> bool {
-        value.len() <= 7 && value.chars().all(|c| c.is_ascii_digit())
-    }
-
-    fn export_compile_name(&self) -> &'static str {
-        "--c_id="
-    }
-
-    fn export_show_name(&self) -> &'static str {
-        "Contest ID"
-    }
-
-    fn export_allowed_option(&self) -> Vec<Box<dyn CompileOptionValue>> {
-        vec![]
-    }
-
-    fn is_compile(&self) -> bool {
-        false
-    }
-
-    fn is_input(&self) -> bool {
-        true
-    }
-}
-
-impl CompileOption for ProblemID {
-    fn valid(&self, value: &'static str) -> bool {
-        value.len() <= 3 && value.chars().all(|c| c.is_ascii_digit() || c.is_ascii_uppercase())
-    }
-
-    fn export_compile_name(&self) -> &'static str {
-        "--p_id="
-    }
-
-    fn export_show_name(&self) -> &'static str {
-        "Problem ID"
-    }
-
-    fn export_allowed_option(&self) -> Vec<Box<dyn CompileOptionValue>> {
-        vec![]
-    }
-}
-
 option_service! {
-    platform: "Codeforces",
+    platform: "codeforces",
     options: [ContestID, ProblemID],
-    service: CodeforcesJudgeService,
+    service: CodeforcesCompileService,
     language_id: CodeforcesLanguage,
     export: CodeforcesJudgeData {
         url: String,
@@ -100,19 +47,48 @@ option_service! {
     export_data: convert
 }
 
+pub struct CodeforcesJudgeService {
+    pub compile: CodeforcesCompileService
+}
+impl JudgeService<CodeforcesCompileService, CodeforcesLanguage> for CodeforcesJudgeService {
+    fn platform_name(&self) -> &'static str {
+        "codeforces"
+    }
+
+    fn convert_to_json(&self, value: CodeforcesJudgeData, vjudge_node: VjudgeNode, context: SubmitContext) -> String {
+        Json! {
+            "operation": "submit",
+            "platform": "codeforces",
+            "vjudge_node": vjudge_node,
+            "url": value.url,
+            "context": context,
+            "language_id": value.select_id,
+        }
+    }
+
+    fn get_compile_option(&self) -> &CodeforcesCompileService {
+        &self.compile
+    }
+}
+
+
+pub fn default_judge_service() -> CodeforcesJudgeService {
+    let compile = default_compile_service();
+    CodeforcesJudgeService {
+        compile: compile
+    }
+}
+
+
 pub fn convert(option: ChoiceOption<CodeforcesLanguage>) -> CodeforcesJudgeData {
     let mut url = "https://codeforces.com".to_string();
     let mut contest_id = "".to_string();
     let mut problem_id = "".to_string();
-    for (option, value) in option.option_choices {
+    for (option, v) in option.option_choices {
         if option.export_show_name() == "Contest ID" {
-            if let Some(v) = value.first() {
-                contest_id = v.value().to_string();
-            }
+            contest_id = v.value().to_string();
         } else if option.export_show_name() == "Problem ID" {
-            if let Some(v) = value.first() {
-                problem_id = v.value().to_string();
-            }
+            problem_id = v.value().to_string();
         }
     }
     if !contest_id.is_empty() && !problem_id.is_empty() {
@@ -127,3 +103,59 @@ pub fn convert(option: ChoiceOption<CodeforcesLanguage>) -> CodeforcesJudgeData 
         select_id: option.language.language_id,
     }
 }
+
+
+#[derive(PartialOrd, PartialEq)]
+pub struct ContestID;
+#[derive(PartialOrd, PartialEq)]
+pub struct ProblemID;
+
+impl CompileOption for ContestID {
+    fn valid(&self, value: &str) -> bool {
+        value.len() <= 7 && value.chars().all(|c| c.is_ascii_digit())
+    }
+
+    fn export_compile_name(&self) -> &'static str {
+        "--c_id="
+    }
+
+    fn export_show_name(&self) -> &'static str {
+        "Contest ID"
+    }
+
+    fn export_allowed_option(&self) -> Vec<Box<dyn CompileOptionValue>> {
+        vec![]
+    }
+
+    fn is_compile(&self) -> bool {
+        false
+    }
+
+    fn is_input(&self) -> bool {
+        true
+    }
+}
+
+impl CompileOption for ProblemID {
+    fn valid(&self, value: &str) -> bool {
+        value.len() <= 3 && value.chars().all(|c| c.is_ascii_digit() || c.is_ascii_uppercase())
+    }
+
+    fn export_compile_name(&self) -> &'static str {
+        "--p_id="
+    }
+
+    fn export_show_name(&self) -> &'static str {
+        "Problem ID"
+    }
+
+    fn export_allowed_option(&self) -> Vec<Box<dyn CompileOptionValue>> {
+        vec![]
+    }
+}
+
+use std::collections::HashMap;
+use crate::service::judge::service::{ChoiceOption, CompileOption, CompileOptionService, CompileOptionValue, Language, JudgeService, SubmitContext}; // Add SubmitContext import
+use macro_node_iden::option_service;
+use crate::db::iden::edge::judge::Judge;
+use crate::graph::node::user::remote_account::VjudgeNode;

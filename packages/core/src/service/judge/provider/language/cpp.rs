@@ -1,4 +1,4 @@
-use crate::service::judge::declare::{CompileOption, CompileOptionValue, Language};
+use crate::service::judge::service::{CompileOption, CompileOptionValue, Language};
 
 pub struct Cpp;
 
