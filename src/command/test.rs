@@ -14,7 +14,7 @@
 
 // use rmjac_core::async_run;
 // use rmjac_core::graph::node::record::subtask::SubtaskCalcMethod;
-// use rmjac_core::service::judge::calc::handle_score;
+// use rmjac_core::service::socket::calc::handle_score;
 // use rmjac_core::graph::node::record::RecordStatus::Accepted;
 // use rmjac_core::model::problem::get_problem;
 // use rmjac_core::model::problem::ProblemStatementProp;

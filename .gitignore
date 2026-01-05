@@ -31,3 +31,4 @@ packages/vjudge/data/*
 
 .claude
 .idea
+*.wasm

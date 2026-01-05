@@ -426,7 +426,7 @@ pub fn get_record_status_with_now_id(
     log::trace!("Now result before calc: {:?}", now_result);
     log::trace!("Current value: {:?}", now_value);
 
-    use crate::service::judge::calc::handle_score;
+    use crate::service::socket::calc::handle_score;
     let judge_node = redis.get(format!("graph_node_{}", subtask_root_id))?.unwrap_or("".to_string());
     let judge_node = serde_json::from_str::<SubtaskNode>(&judge_node);
     if let Err(err) = judge_node {
@@ -515,7 +515,7 @@ pub async fn get_record_status(
     force_refresh: bool // if true, force refresh all cache and recalculate the score.
 ) -> Result<SubtaskUserRecord> {
     let record_edges = JudgeEdgeQuery::get_u_for_all(record_id, db).await?;
-    log::trace!("Fetched {:?} judge edges for record_id {}", record_edges, record_id);
+    log::trace!("Fetched {:?} socket edges for record_id {}", record_edges, record_id);
 
     for edge in record_edges {
         let record = SubtaskUserRecord {
@@ -607,8 +607,8 @@ pub async fn get_testcase_number(
         // check graph_node_{t}_v is not empty
         let graph_data = redis.get(format!("graph_node_{t}_v"))?;
         if graph_data.is_none() {
-            let vdata = TestcaseNode::from_db(db, t).await?;
-            redis.set(format!("graph_node_{t}_v"), serde_json::to_string(&vdata).unwrap()).unwrap();
+            let v_data = TestcaseNode::from_db(db, t).await?;
+            redis.set(format!("graph_node_{t}_v"), serde_json::to_string(&v_data).unwrap()).unwrap();
         }
         let data = redis.get(format!("graph_edge_testcase_{t}_v"))?;
         let edges = if let Some(data) = data {
@@ -764,7 +764,7 @@ pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask�
         }
         .save(db).await?;
         now_max_id += 1;
-        // create judge edge
+        // create socket edge
         JudgeEdgeRaw {
             u: testcase_node.node_id,
             v: record_id,

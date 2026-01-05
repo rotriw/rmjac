@@ -1,6 +1,5 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { StandardCard } from "@/components/card/card"
 import { TypstRenderer } from "@/components/typst-renderer"
 import { API_BASE_URL } from "@/api/client/config"
 import ProblemContainer from "./problem-container"
@@ -123,15 +122,16 @@ function renderContent(content: ContentItem[]) {
     "hint": "提示",
     "source": "来源",
   };
-  return content.map((item) => {
-    console.log(item);
-    switch (item.iden) {
-      default:
-        return <div className="mb-4">
-          <TypstRenderer content={`== ${refname[item.iden as keyof typeof refname] || item.iden} \n ${item.content.replaceAll('\\n', '\n').replaceAll('\n', '\n\n')}`} />
-        </div>
-    }
-  })
+  const parts: string[] = []
+  for (const item of content) {
+    const title = refname[item.iden as keyof typeof refname] || item.iden
+    const body = item.content.replaceAll('\\n', '\n').replaceAll('\n', '\n\n')
+    parts.push(`== ${title}\n${body}`)
+  }
+
+  return (
+    <TypstRenderer content={parts.join("\n\n")} />
+  )
 }
 
 export default async function ProblemPage({ params }: { params: Promise<{ id: string }> }) {

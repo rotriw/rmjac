@@ -6,6 +6,15 @@ import { Button } from "@/components/ui/button"
 import { StandardCard } from "@/components/card/card"
 import { Save } from "lucide-react"
 import { ProblemModule, SampleGroup, ProblemData } from "../../create/types"
+
+interface ProblemStatement {
+  public: {
+    statements: Array<{ iden: string; content: string }>;
+    sample_group?: Array<[string, string]>;
+    source?: string;
+    iden?: string;
+  };
+}
 import { getProblemForEdit, updateProblemStatement, updateProblemSource } from "@/api/client/problem"
 import { DetailData } from "@/components/problem/detail-data"
 
@@ -16,7 +25,7 @@ interface EditPageProps {
 export default function EditPage({ params }: EditPageProps) {
   const [problemId, setProblemId] = useState<string>("");
   const [formValues, setFormValues] = useState<Record<string, string | ProblemData[]>>({})
-  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string; data?: any } | null>(null);
+  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string; data?: unknown } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -40,16 +49,16 @@ export default function EditPage({ params }: EditPageProps) {
         if (data && data.model) {
           const problemStatements = data.model.problem_statement_node || [];
           
-          const transformedProblems: ProblemData[] = problemStatements.map(([statement, limit]: [any, any], index: number) => {
-            const modules: ProblemModule[] = statement.public.statements.map((s: any) => ({
+          const transformedProblems: ProblemData[] = problemStatements.map(([statement]: [ProblemStatement, unknown], index: number) => {
+            const modules: ProblemModule[] = statement.public.statements.map((s) => ({
               id: `module_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 6)}`,
               title: getTitleFromType(s.iden),
               content: s.content,
-              type: s.iden as any
+              type: s.iden as "background" | "description" | "input" | "output" | "sample" | "custom"
             }));
             
             const sampleGroups: SampleGroup[] = statement.public.sample_group ? 
-              statement.public.sample_group.map((sample: any[], i: number) => ({
+              statement.public.sample_group.map((sample: [string, string], i: number) => ({
                 id: `sample_${Date.now()}_${index}_${i}`,
                 input: sample[0] || "",
                 output: sample[1] || "",
@@ -162,11 +171,10 @@ export default function EditPage({ params }: EditPageProps) {
         </div>
       </div>
 
-      <DetailData 
+      <DetailData
         values={formValues}
         onChange={handleFormChange}
         mode="edit"
-        problemId={problemId}
       />
 
       {submitResult && (

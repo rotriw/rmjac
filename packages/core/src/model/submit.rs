@@ -5,7 +5,7 @@ use crate::graph::node::record::{RecordNode, RecordStatus};
 use crate::graph::node::user::remote_account::VjudgeNode;
 use crate::model::record::{create_record_with_status, update_record_message, update_record_root_status, RecordNewProp, UpdateRecordRootStatusData};
 use crate::Result;
-use crate::service::judge::service::add_task;
+use crate::service::socket::service::add_task;
 use crate::utils::get_redis_connection;
 
 pub async fn submit_vjudge_code(db: &DatabaseConnection, statement_id: i64, user_id: i64, vjudge_id: i64, code: &str, language: &str, public_view: bool) -> Result<RecordNode> {

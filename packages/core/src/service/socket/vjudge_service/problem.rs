@@ -1,4 +1,4 @@
-use crate::service::judge::service::check_auth;
+use crate::service::socket::service::check_auth;
 use socketioxide::extract::{Data, SocketRef};
 use macro_socket_auth::auth_socket_connect;
 use crate::env::db::get_connect;

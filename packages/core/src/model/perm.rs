@@ -57,10 +57,6 @@ pub fn check_manage_perm<K: Into<i64>>(u: i64, v: i64, perm: K) -> i8 {
     check_perm_sync("perm_manage", u, v, perm.into())
 }
 
-// ============================================================================
-// 权限图维护 API
-// ============================================================================
-
 /// 添加权限边到内存图（创建新边时调用）
 pub fn add_perm_edge_to_graph(edge_type: &str, u: i64, v: i64, edge_id: i64, perm: i64) {
     add_perm_edge(edge_type, u, v, edge_id, perm);
@@ -75,10 +71,6 @@ pub fn remove_perm_edge_from_graph_by_id(edge_type: &str, edge_id: i64) {
 pub fn remove_perm_edge_from_graph(edge_type: &str, u: i64, v: i64) {
     remove_perm_edge(edge_type, u, v);
 }
-
-// ============================================================================
-// 旧的 async API（保留以便兼容，内部使用新的同步检查）
-// ============================================================================
 
 /// 旧的 async 权限检查函数
 /// 现在内部使用同步检查，不再访问数据库
@@ -107,7 +99,6 @@ where
     DbEntity: EntityTrait,
     T: Sized + Send + Sync + Clone + EdgeQuery<DbActive, DbModel, DbEntity, EdgeA> + EdgeQueryPerm,
 {
-    // 使用新的同步检查
     Ok(check_perm_sync(T::get_edge_type(), u, v, perm.into()))
 }
 

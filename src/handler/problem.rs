@@ -477,7 +477,7 @@ pub async fn view_problem_visitor(req: HttpRequest, db: web::Data<DatabaseConnec
 
 #[post("/test/add_task")]
 pub async fn test_add_task(_req: HttpRequest, task: web::Json<serde_json::Value>) -> ResultHandler<String> {
-    use rmjac_core::service::judge::service::add_task;
+    use rmjac_core::service::socket::service::add_task;
     let success = add_task(&task.into_inner()).await;
     Ok(Json! {
         "success": success,

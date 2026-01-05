@@ -22,7 +22,7 @@ pub struct JudgeEdgeRaw {
 
 impl EdgeRaw<JudgeEdge, Model, ActiveModel> for JudgeEdgeRaw {
     fn get_edge_type(&self) -> &str {
-        "judge"
+        "socket"
     }
 
     fn get_edge_id_column(
@@ -86,7 +86,7 @@ impl Edge<ActiveModel, Model, Entity> for JudgeEdge {
 
 impl EdgeQuery<ActiveModel, Model, Entity, JudgeEdge> for JudgeEdgeQuery {
     fn get_edge_type() -> &'static str {
-        "judge"
+        "socket"
     }
 }
 

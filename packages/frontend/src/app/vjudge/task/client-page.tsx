@@ -113,11 +113,9 @@ export function VjudgePageContent() {
           </StandardCard>
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 text-primary mb-2">
-            <PlusCircle className="size-5" />
-            <h2 className="text-lg font-bold">创建新同步任务</h2>
-          </div>
+        <div className="">
+          <TitleCard title={`Vjudge 任务`} description={`新增任务`} />
+          <div className="h-5" />
           <AddTaskCard />
         </div>
       )}

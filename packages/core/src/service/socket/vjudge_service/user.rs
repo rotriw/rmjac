@@ -1,4 +1,4 @@
-use crate::service::judge::service::check_auth;
+use crate::service::socket::service::check_auth;
 use serde::{Deserialize, Serialize};
 use socketioxide::extract::{Data, SocketRef};
 use macro_socket_auth::auth_socket_connect;
@@ -7,7 +7,7 @@ use crate::env::db::get_connect;
 use crate::graph::node::record::RecordStatus;
 use crate::model::record::{update_record_message, update_record_remote_url, update_record_root_status, UpdateRecordRootStatusData};
 use crate::model::vjudge::verified_account;
-use crate::service::judge::service::VerifiedResultProp;
+use crate::service::socket::service::VerifiedResultProp;
 use crate::utils::get_redis_connection;
 
 #[auth_socket_connect]

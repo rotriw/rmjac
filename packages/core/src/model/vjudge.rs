@@ -10,7 +10,7 @@ use crate::model::vjudge::AddErrorResult::Warning;
 use crate::Result;
 use crate::model::record::{create_record_with_status, RecordNewProp, update_record_status_no_subtask_remote_judge, SubtaskUserRecord, get_record_by_submission_url};
 use crate::graph::node::record::RecordStatus;
-use crate::service::judge::service::add_task;
+use crate::service::socket::service::add_task;
 use crate::utils::encrypt::gen_random_string;
 use crate::model::problem::{CreateProblemProps, delete_problem_connections, generate_problem_statement_schema, add_problem_statement_for_problem, create_problem_with_user, ProblemStatementProp};
 use crate::graph::node::problem::ProblemNode;
@@ -95,7 +95,7 @@ pub async fn add_unverified_account_for_user(
         v: vjudge_node.node_id,
     }.save(db).await?;
 
-    use crate::service::judge::service::add_task;
+    use crate::service::socket::service::add_task;
 
     match (&remote_mode, bypass_check, ws_id) {
         (&RemoteMode::PublicAccount, _, _) => Ok(vjudge_node),

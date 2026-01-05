@@ -7,9 +7,10 @@ use crate::graph::action::{init_spot, load_perm_graph};
 use crate::graph::edge::EdgeType::PermProblem;
 use crate::graph::edge::perm_problem::PermProblemEdgeQuery;
 
-pub mod judge;
+pub mod socket;
 pub mod track;
 pub mod iden;
+pub mod judge;
 
 pub async fn service_start(db: &DatabaseConnection, db_url: &str, db_schema: &str, vjudge_port: u16, vjudge_secret_path: &str) -> Result<(), CoreError> {
     log::info!("Initializing default nodes");
@@ -20,10 +21,6 @@ pub async fn service_start(db: &DatabaseConnection, db_url: &str, db_schema: &st
     log::info!("Loading permission graph into memory...");
     load_perm_graph(db).await?;
     log::info!("Permission graph loaded successfully!");
-    
-    log::info!("guest as init spot.");
-    let total = get_total(db).await?;
-    init_spot(db, &PermProblemEdgeQuery, default_nodes.guest_user_node, total as i64).await?;
     let mut default_nodes_env = crate::env::DEFAULT_NODES.lock().unwrap();
     *default_nodes_env = default_nodes;
     log::info!("Loading DB connection: {db_url}, schema: {db_schema}");
@@ -31,9 +28,9 @@ pub async fn service_start(db: &DatabaseConnection, db_url: &str, db_schema: &st
     *DB_SCHEMA.lock().unwrap() = db_schema.to_string();
     let data = fs::read_to_string(vjudge_secret_path)?;
     *EDGE_AUTH_PUBLICKEY.lock().unwrap() = data.clone();
-    log::info!("Starting judge service on port: {vjudge_port}");
+    log::info!("Starting socket service on port: {vjudge_port}");
     tokio::spawn(async move {
-        judge::service::service_start(vjudge_port).await.unwrap();
+        socket::service::service_start(vjudge_port).await.unwrap();
     });
     Ok(())
 }
