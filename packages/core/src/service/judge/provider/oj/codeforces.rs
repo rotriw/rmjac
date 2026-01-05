@@ -50,32 +50,28 @@ option_service! {
 pub struct CodeforcesJudgeService {
     pub compile: CodeforcesCompileService
 }
-impl JudgeService<CodeforcesCompileService, CodeforcesLanguage> for CodeforcesJudgeService {
-    fn platform_name(&self) -> &'static str {
+impl JudgeService for CodeforcesJudgeService {
+    fn platform_name(&self) -> &str {
         "codeforces"
     }
 
-    fn convert_to_json(&self, value: CodeforcesJudgeData, vjudge_node: VjudgeNode, context: SubmitContext) -> String {
-        Json! {
+    fn convert_to_json(&self, value: ChoiceOption<Box<dyn Language>>, vjudge_node: VjudgeNode, context: SubmitContext) -> String {
+        let data = self.compile.export_data(ChoiceOption {
+            option_choices: value.option_choices,
+            language: value.language.as_any().downcast_ref::<CodeforcesLanguage>().unwrap().clone(),
+        });
+        json!({
             "operation": "submit",
             "platform": "codeforces",
             "vjudge_node": vjudge_node,
-            "url": value.url,
+            "url": data.url,
             "context": context,
-            "language_id": value.select_id,
-        }
+            "language_id": data.select_id,
+        }).to_string()
     }
 
-    fn get_compile_option(&self) -> &CodeforcesCompileService {
-        &self.compile
-    }
-}
-
-
-pub fn default_judge_service() -> CodeforcesJudgeService {
-    let compile = default_compile_service();
-    CodeforcesJudgeService {
-        compile: compile
+    fn get_compile_option(&self) -> Box<dyn CompileOptionService> {
+        Box::new(self.compile.clone())
     }
 }
 
@@ -111,7 +107,8 @@ pub struct ContestID;
 pub struct ProblemID;
 
 impl CompileOption for ContestID {
-    fn valid(&self, value: &str) -> bool {
+    fn valid(&self, value: &Box<dyn CompileOptionValue>) -> bool {
+        let value = value.value();
         value.len() <= 7 && value.chars().all(|c| c.is_ascii_digit())
     }
 
@@ -137,7 +134,8 @@ impl CompileOption for ContestID {
 }
 
 impl CompileOption for ProblemID {
-    fn valid(&self, value: &str) -> bool {
+    fn valid(&self, value: &Box<dyn CompileOptionValue>) -> bool {
+        let value = value.value();
         value.len() <= 3 && value.chars().all(|c| c.is_ascii_digit() || c.is_ascii_uppercase())
     }
 
@@ -154,8 +152,15 @@ impl CompileOption for ProblemID {
     }
 }
 
+pub fn default_judge_service() -> impl JudgeService {
+    let compile = default_compile_service();
+    CodeforcesJudgeService {
+        compile
+    }
+}
+
 use std::collections::HashMap;
-use crate::service::judge::service::{ChoiceOption, CompileOption, CompileOptionService, CompileOptionValue, Language, JudgeService, SubmitContext}; // Add SubmitContext import
+use crate::service::judge::service::{ChoiceOption, CompileOption, CompileOptionService, CompileOptionValue, Language, JudgeService, SubmitContext};
 use macro_node_iden::option_service;
-use crate::db::iden::edge::judge::Judge;
 use crate::graph::node::user::remote_account::VjudgeNode;
+use serde_json::json;

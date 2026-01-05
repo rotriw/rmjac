@@ -1,6 +1,8 @@
 use std::collections::HashMap;
-use crate::service::judge::service::{ChoiceOption, CompileOption, CompileOptionService, CompileOptionValue, Language, JudgeService};
+use crate::service::judge::service::{ChoiceOption, CompileOption, CompileOptionService, CompileOptionValue, Language, JudgeService, SubmitContext};
 use macro_node_iden::option_service;
+use crate::graph::node::user::remote_account::VjudgeNode;
+use serde_json::json;
 
 #[derive(PartialOrd, PartialEq)]
 pub struct ContestID;
@@ -8,7 +10,8 @@ pub struct ContestID;
 pub struct ProblemID;
 
 impl CompileOption for ContestID {
-    fn valid(&self, value: &str) -> bool {
+    fn valid(&self, value: &Box<dyn CompileOptionValue>) -> bool {
+        let value = value.value();
         value.len() <= 10 && value.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
     }
 
@@ -34,7 +37,8 @@ impl CompileOption for ContestID {
 }
 
 impl CompileOption for ProblemID {
-    fn valid(&self, value: &str) -> bool {
+    fn valid(&self, value: &Box<dyn CompileOptionValue>) -> bool {
+        let value = value.value();
         value.len() <= 10 && value.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
     }
 
@@ -181,6 +185,43 @@ option_service! {
     },
     export_data: convert
 }
+
+
+pub struct AtcoderJudgeService {
+    compile: AtCoderCompileService,
+}
+impl JudgeService for AtcoderJudgeService {
+    fn platform_name(&self) -> &'static str {
+        "atcoder"
+    }
+
+    fn convert_to_json(&self, value: ChoiceOption<Box<dyn Language>>, vjudge_node: VjudgeNode, context: SubmitContext) -> String {
+        let data = self.compile.export_data(ChoiceOption {
+            option_choices: value.option_choices,
+            language: value.language.as_any().downcast_ref::<AtCoderLanguage>().unwrap().clone(),
+        });
+        json!({
+            "operation": "submit",
+            "platform": "atcoder",
+            "vjudge_node": vjudge_node,
+            "url": data.url,
+            "context": context,
+            "language_id": data.select_id,
+        }).to_string()
+    }
+
+    fn get_compile_option(&self) -> Box<dyn CompileOptionService> {
+        Box::new(self.compile.clone())
+    }
+}
+
+pub fn default_judge_service() -> impl JudgeService {
+    let compile = default_compile_service();
+    AtcoderJudgeService {
+        compile
+    }
+}
+
 
 pub fn convert(option: ChoiceOption<AtCoderLanguage>) -> AtCoderJudgeData {
     let mut url = "https://atcoder.jp".to_string();

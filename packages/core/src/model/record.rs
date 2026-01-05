@@ -676,13 +676,12 @@ pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask�
     let testcase_list = TestcaseEdgeQuery::get_v_filter_extend_content::<SimpleExpr>(root_testcase_id, vec![], db, None, None).await?;
     let mut unused_data = detail_data.clone();
     let mut now_max_id = 0;
-    log::trace!("Testcase list: {:?}", testcase_list);
     for testcase in testcase_list {
         // get_node
         let testcase_node = TestcaseNode::from_db(db, testcase.v).await?;
         let id = testcase_node.public.testcase_name;
         use crate::db::entity::edge::judge::{Column, Entity, ActiveModel};
-        log::info!("Processing testcase {} for record {}", id, record_id);
+        log::debug!("Processing testcase {} for record {}", id, record_id);
         let edge_exist = JudgeEdgeQuery::get_v_one_filter_extend(testcase_node.node_id, Column::VNodeId.eq(record_id), db).await;
         let nv = detail_data.get(&id);
         log::debug!("Processing testcase {}: existing edges: {:?}, new value: {:?} order: {:?}", id, edge_exist, nv, testcase.order);
@@ -734,7 +733,6 @@ pub async fn update_record_status_no_subtask_remote_judge( // 对于无subtask�
         let _ = redis.del(format!("graph_edge_testcase_{root_testcase_id}_v"));
     }
 
-    // 是无序的。
     let mut unused_data: Vec<(String, SubtaskUserRecord)> = unused_data.into_iter().collect();
     unused_data.sort_by(|a, b| {
         a.0.len().cmp(&b.0.len()).then(a.0.cmp(&b.0))

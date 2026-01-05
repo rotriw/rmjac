@@ -1,9 +1,33 @@
+#[enum_dispatch::enum_dispatch(JudgeService)]
+pub enum Tool {
+    Codeforces(CodeforcesJudgeService),
+    Atcoder(AtcoderJudgeService)
+}
+
+
+type DJudgeService = dyn JudgeService;
+
+pub fn get_tool(platform: &str) -> Result<Box<DJudgeService>> {
+    use crate::service::judge::provider::oj::*;
+    match platform {
+        "codeforces" => Ok(Box::new(codeforces::default_judge_service())),
+        "atcoder" => Ok(Box::new(atcoder::default_judge_service())),
+        _ => Err(NotFound(format!("Judge service for platform {} not found.", platform))),
+    }
+}
+
 use std::collections::HashMap;
+use std::any::Any;
 use std::hash::Hash;
 use serde::{Deserialize, Serialize};
 use regex::Regex;
 use serde_json::json;
+use crate::Result;
+use crate::error::CoreError::NotFound;
 use crate::graph::node::user::remote_account::VjudgeNode;
+use crate::model::vjudge::Platform;
+use crate::service::judge::provider::oj::atcoder::AtcoderJudgeService;
+use crate::service::judge::provider::oj::codeforces::CodeforcesJudgeService;
 use crate::service::socket::service::add_task;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -16,8 +40,16 @@ pub trait CompileOptionValue {
     fn show(&self) -> &str {
         self.value()
     }
+    fn clone_box(&self) -> Box<dyn CompileOptionValue>;
 }
 
+impl Clone for Box<dyn CompileOptionValue> {
+    fn clone(&self) -> Box<dyn CompileOptionValue> {
+        self.clone_box()
+    }
+}
+
+#[derive(Clone)]
 pub struct StringOption {
     pub value: String,
 }
@@ -27,15 +59,18 @@ impl CompileOptionValue for StringOption {
         self.value.as_str()
     }
 
+    fn clone_box(&self) -> Box<dyn CompileOptionValue> {
+        Box::new(self.clone())
+    }
 }
 
 
 pub trait CompileOption {
-    fn valid(&self, _value: &str) -> bool {
-        false
+    fn valid(&self, _value: &Box<dyn CompileOptionValue>) -> bool {
+        true
     }
-    fn export_compile_name(&self) -> &'static str; // --std(gcc choose version)
-    fn export_show_name(&self) -> &'static str {
+    fn export_compile_name(&self) -> &str; // --std(gcc choose version)
+    fn export_show_name(&self) -> &str {
         self.export_compile_name() // default to compile name.
     }
     fn export_allowed_option(&self) -> Vec<Box<dyn CompileOptionValue>>; // allowed value.
@@ -46,15 +81,29 @@ pub trait CompileOption {
         !self.is_compile()
     }
     fn is_input(&self) -> bool { false }
-
 }
 
 
-pub trait Language {
+pub trait Language: Any + Send + Sync {
+    fn as_any(&self) -> &dyn Any;
     fn export_allow_compile_options(&self) -> Vec<Box<dyn CompileOption>>;
-    fn export_name(&self) -> &'static str;
+    fn export_name(&self) -> &str;
 
-    fn export_compile_name(&self) -> &'static str;
+    fn export_compile_name(&self) -> &str;
+
+    fn parse_option(&self, mut options: HashMap<String, Box<dyn CompileOptionValue>>) -> Vec<(Box<dyn CompileOption>, Box<dyn CompileOptionValue>)> {
+        let allowed_options = self.export_allow_compile_options();
+        let mut option_choices = Vec::new();
+        for option in allowed_options {
+            let compile_name = option.export_compile_name();
+            if let Some(value) = options.remove(compile_name) {
+                if option.valid(&value) {
+                    option_choices.push((option, value));
+                }
+            }
+        }
+        option_choices
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,9 +126,9 @@ pub struct ChoiceOption<L> {
     pub language: L,
 }
 
-pub trait CompileOptionService<L> where L: Language {
-    fn get_registered_language(&self) -> Vec<L>;
-    type R;
+
+pub trait CompileOptionService {
+    fn get_registered_language(&self) -> Vec<Box<dyn Language>>;
 
     fn export_all_allowed_language(&self) -> Vec<LanguageChoiceInformation> {
         let languages = self.get_registered_language();
@@ -104,63 +153,68 @@ pub trait CompileOptionService<L> where L: Language {
         }
         res
     }
-
-    fn export_data(&self, choice: ChoiceOption<L>) -> Self::R;
 }
 
+pub trait JudgeService {
 
+    fn platform_name(&self) -> &str;
 
-pub trait JudgeService<S, L> where S: CompileOptionService<L>, L: Language {
+    fn convert_to_json(&self, value: ChoiceOption<Box<dyn Language>>, vjudge_node: VjudgeNode, context: SubmitContext) -> String {
+        Json! {
+            "operation": "submit",
+            "platform": self.platform_name(),
+            "vjudge_node": vjudge_node,
+            "context": context,
+            "option": {
+                "language": value.language.export_name(),
+                "compile_options": value.option_choices.iter().map(|(opt, val)| {
+                    (opt.export_compile_name(), val.value())
+                }).collect::<HashMap<_,_>>()
+            }
+        }
+    }
 
-
-    fn platform_name(&self) -> &'static str;
-
-    fn convert_to_json(&self, value: S::R, vjudge_node: VjudgeNode, context: SubmitContext) -> String;
-
-    fn parser(&self, language: &str, options: HashMap<String, String>, vjudge_node: VjudgeNode, context: SubmitContext) -> String {
+    fn get_language(&self, language: &str) -> Box<dyn Language> {
         let allowed_language = self.get_compile_option().get_registered_language();
         for i in allowed_language {
             if i.export_name() == language || i.export_compile_name() == language {
-                let mut parsed_options:Vec<(Box<dyn CompileOption>, Box<dyn CompileOptionValue>)> = Vec::new();
-                let allowed_options = i.export_allow_compile_options();
-                for (option) in allowed_options {
-                    if let Some(v) = &options.get(option.export_compile_name()) {
-                        match (option.is_input(), option.valid(v), option.export_allowed_option()) {
-                            (false, _, ao) => {
-                                for allowed in ao {
-                                    if allowed.value() == v.as_str() {
-                                        parsed_options.push((option, allowed));
-                                        break;
-                                    }
-                                }
-                            },
-                            (true, true, _) => {
-                                parsed_options.push((option, Box::new(StringOption {
-                                    value: (*v).clone()
-                                })));
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-                let choice = ChoiceOption {
-                    option_choices: parsed_options,
-                    language: i
-                };
-
-                return self.convert_to_json(self.get_compile_option().export_data(choice), vjudge_node, context);
+                return i;
             }
         }
-        "Invalid language.".to_string()
+        Box::new(UnknownLanguage)
     }
 
-
-    fn send_judge_task(&self, language: &str, options: HashMap<String, String>, vjudge_node: VjudgeNode, context: SubmitContext) -> impl Future<Output = bool> {
-        async {
-            log::debug!("create judge task {} {:?}", self.platform_name(), options);
-            add_task(&self.parser(language, options, vjudge_node, context)).await
+    fn parser(&self, shell: &str) -> String {
+        let re = Regex::new(r"--(?P<key>[a-zA-Z0-9_]+)=(?P<value>[^\s]+)").unwrap();
+        let mut parsed_options = HashMap::new();
+        for caps in re.captures_iter(shell) {
+            parsed_options.insert(caps["key"].to_string(), caps["value"].to_string());
         }
+        let language_name = re.replace_all(shell, "").trim().to_string();
+
+        json!({
+            "language": language_name,
+            "options": parsed_options
+        }).to_string()
+    }
+    fn get_compile_option(&self) -> Box<dyn CompileOptionService>;
+}
+
+pub struct UnknownLanguage;
+impl Language for UnknownLanguage {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn export_allow_compile_options(&self) -> Vec<Box<dyn CompileOption>> {
+        vec![]
     }
 
-    fn get_compile_option(&self) -> &S;
+    fn export_compile_name(&self) -> &str {
+        "unknown"
+    }
+
+    fn export_name(&self) -> &str {
+        "unknown"
+    }
+
 }

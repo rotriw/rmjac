@@ -36,6 +36,8 @@ lazy_static::lazy_static! {
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Platform {
     Codeforces,
     Atcoder,

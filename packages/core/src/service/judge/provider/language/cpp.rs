@@ -14,6 +14,10 @@ impl CompileOptionValue for CppStandard {
     fn value(&self) -> &'static str {
         self.standard
     }
+
+    fn clone_box(&self) -> Box<dyn CompileOptionValue> {
+        Box::new(CppStandard { standard: self.standard })
+    }
 }
 
 
@@ -51,6 +55,10 @@ impl CompileOption for O2 {
 }
 
 impl Language for Cpp {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
     fn export_allow_compile_options(&self) -> Vec<Box<dyn CompileOption>> {
         vec![Box::new(CppStd {}), Box::new(O2 {})]
     }

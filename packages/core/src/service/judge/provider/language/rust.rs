@@ -14,6 +14,10 @@ impl CompileOptionValue for Opts {
     fn value(&self) -> &'static str {
         self.value
     }
+
+    fn clone_box(&self) -> Box<dyn CompileOptionValue> {
+        Box::new(Opts { value: self.value })
+    }
 }
 impl CompileOption for RustVersion {
     fn export_compile_name(&self) -> &'static str {
@@ -53,6 +57,10 @@ impl CompileOption for OptLevel {
 }
 
 impl Language for Rust {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
     fn export_allow_compile_options(&self) -> Vec<Box<dyn CompileOption>> {
         vec![Box::new(RustVersion {}), Box::new(OptLevel {})]
     }

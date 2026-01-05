@@ -3,6 +3,10 @@ use crate::service::judge::service::{CompileOption, Language};
 pub struct Python;
 
 impl Language for Python {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
     fn export_allow_compile_options(&self) -> Vec<Box<dyn CompileOption>> {
         vec![]
     }
