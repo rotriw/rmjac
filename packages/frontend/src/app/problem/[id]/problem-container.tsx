@@ -14,6 +14,7 @@ interface ProblemContainerProps {
   user_recent_records: Record[] | undefined
   isLoggedIn: boolean
   statement: number
+  platform: string
   children?: React.ReactNode
 }
 
@@ -24,6 +25,7 @@ export default function ProblemContainer({
   user_recent_records,
   isLoggedIn,
   statement,
+  platform,
   children
 }: ProblemContainerProps) {
   const [viewMode, setViewMode] = useState<"statement" | "submit">("statement")
@@ -45,10 +47,10 @@ export default function ProblemContainer({
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <ProblemClient
               problemId={id}
-              timeLimit={mainLimit?.public?.time_limit}
-              memoryLimit={mainLimit?.public?.memory_limit}
+              statementId={statement}
               userRecords={user_recent_records}
               isLoggedIn={isLoggedIn}
+              platform={platform}
             />
           </div>
         )}

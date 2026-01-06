@@ -5,7 +5,7 @@ import { API_BASE_URL } from './config'
 
 // Content types for problem statements
 export interface ContentType {
-  type: 'text' | 'code' | 'image' | 'math' | 'typst'
+  iden: string
   content: string
 }
 

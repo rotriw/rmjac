@@ -2,6 +2,13 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, Attribute, DeriveInput, Expr, Lit, Meta};
 
+mod option_service;
+
+#[proc_macro]
+pub fn option_service(input: TokenStream) -> TokenStream {
+    option_service::option_service_impl(input)
+}
+
 #[proc_macro_derive(Node)]
 pub fn derive_node(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);

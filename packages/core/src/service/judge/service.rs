@@ -183,6 +183,15 @@ pub trait JudgeService {
         }
         Box::new(UnknownLanguage)
     }
+    
+    fn get_option(&self, language: &str, options: HashMap<String, Box<dyn CompileOptionValue>>) -> ChoiceOption<Box<dyn Language>> {
+        let lang = self.get_language(language);
+        let option_choices = lang.parse_option(options);
+        ChoiceOption {
+            option_choices,
+            language: lang
+        }
+    }
 
     fn parser(&self, shell: &str) -> String {
         let re = Regex::new(r"--(?P<key>[a-zA-Z0-9_]+)=(?P<value>[^\s]+)").unwrap();

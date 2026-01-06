@@ -2,6 +2,7 @@
 pub struct ProblemStatementNodePublic {
     pub statements: Vec<ContentType>,
     pub source: String,
+    pub iden: String,
     pub creation_time: NaiveDateTime,
     pub update_time: NaiveDateTime,
     pub sample_group: Vec<(String, String)>,
@@ -52,6 +53,7 @@ impl From<Model> for ProblemStatementNode {
             public: ProblemStatementNodePublic {
                 statements: model.content,
                 source: model.source,
+                iden: model.iden,
                 creation_time: model.creation_time,
                 update_time: model.update_time,
                 page_source: model.page_source,

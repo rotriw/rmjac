@@ -8,7 +8,7 @@ use crate::{
         },
     },
     env,
-    error::{CoreError, QueryExists},
+    error::CoreError,
     graph::{
         edge::{
             EdgeRaw, EdgeQuery,
@@ -25,49 +25,116 @@ use crate::{
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use tap::Conv;
+use crate::error::CoreError::QueryExists;
+use crate::error::QueryExists::{RegisterEmailExist, RegisterIDENExist};
 use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPermRaw};
 use crate::utils::get_redis_connection;
 
-pub async fn create_default_user(
-    db: &DatabaseConnection,
-    iden: &str,
-    name: &str,
-    email: &str,
-    avatar: &str,
-    password: &str,
-) -> Result<UserNode, CoreError> {
-    if entity::node::user::check_iden_exists(db, iden).await? {
-        return Err(CoreError::QueryExists(QueryExists::RegisterIDENExist));
-    }
-    if entity::node::user::check_email_exists(db, email).await? {
-        return Err(CoreError::QueryExists(QueryExists::RegisterEmailExist));
-    }
-    let user = UserNodeRaw {
-        public: UserNodePublicRaw {
-            name: name.to_string(),
-            email: email.to_string(),
-            iden: iden.to_string(),
-            creation_time: chrono::Utc::now().naive_utc(),
-            last_login_time: chrono::Utc::now().naive_utc(),
-            avatar: avatar.to_string(),
-        },
-        private: UserNodePrivateRaw {
-            password: encode_password(&password.to_string()),
-        },
-    };
-    let result = user.save(db).await?;
-    let default_node_id = env::DEFAULT_NODES.lock().unwrap().default_strategy_node;
-    if default_node_id != -1 {
-        PermProblemEdgeRaw {
-            u:  result.node_id,
-            v: default_node_id,
-            perms: ProblemPermRaw::All
-        }.save(db).await?;
 
-    } else {
-        log::error!("Default strategy node not set, user will not have default permissions.");
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserRaw {
+    pub iden: String,
+    pub name: String,
+    pub email: String,
+    pub avatar: String,
+    pub password: String
+}
+
+impl UserRaw {
+    async fn err_on_exists(&self, db: &DatabaseConnection) -> Result<()> {
+        let UserRaw {
+            iden,
+            email,
+            ..
+        } = self;
+         if entity::node::user::check_email_exists(db, email).await? {
+            Err(QueryExists(RegisterEmailExist))
+        } else if entity::node::user::check_iden_exists(db, iden).await? {
+            Err(QueryExists(RegisterIDENExist))
+        } else {
+            Ok(())
+        }
     }
-    Ok(result)
+    pub async fn save(&self, db: &DatabaseConnection) -> Result<UserNode> {
+        self.err_on_exists(db).await?;
+
+        let UserRaw {
+            iden,
+            name,
+            email,
+            avatar,
+            password
+        } = self;
+        let user = UserNodeRaw {
+            public: UserNodePublicRaw {
+                name: name.to_string(),
+                email: email.to_string(),
+                iden: iden.to_string(),
+                creation_time: chrono::Utc::now().naive_utc(),
+                last_login_time: chrono::Utc::now().naive_utc(),
+                avatar: avatar.to_string(),
+            },
+            private: UserNodePrivateRaw {
+                password: encode_password(&password.to_string()),
+            },
+        }.save(db).await?;
+        let default_node_id = env::DEFAULT_NODES.lock().unwrap().default_strategy_node;
+        if default_node_id != -1 {
+            PermProblemEdgeRaw {
+                u:  user.node_id,
+                v: default_node_id,
+                perms: ProblemPermRaw::All
+            }.save(db).await?;
+
+        } else {
+            log::error!("Default strategy node not set, user will not have default permissions.");
+        }
+        Ok(user)
+    }
+}
+
+pub struct User {
+    pub node_id: i64,
+    pub user_node: Option<UserNode>,
+}
+
+pub struct Token {
+    pub node_id: i64,
+    pub token: TokenNode,
+}
+
+impl User {
+    fn from(id: i64) -> Self {
+        Self {
+            node_id: id,
+            user_node: None,
+        }
+    }
+
+    async fn load(&self, db: &DatabaseConnection) -> Result<Self> {
+        let user = UserNode::from_db(db, self.node_id).await?;
+        Ok(Self {
+            node_id: self.node_id,
+            user_node: Some(user)
+        })
+    }
+}
+
+pub struct LoginUser {
+    pub user: User,
+    pub token: Token,
+}
+
+impl LoginUser {
+    async fn logout() {
+
+    }
+}
+
+impl From<LoginUser> for User {
+    fn from(v: LoginUser) -> User {
+        v.user
+    }
 }
 
 pub async fn check_iden_exists(db: &DatabaseConnection, iden: &str) -> Result<bool, CoreError> {
@@ -119,7 +186,7 @@ pub async fn user_login(
     let redis_key = format!("user_token:{}:{}", user.node_id, token.private.token);
     let redis_value = user.node_id.to_string();
     let redis_expiration = 24 * 3600;
-    let _: () = redis.set_ex(redis_key, redis_value, redis_expiration).unwrap();
+    let _: () = redis.set_ex(redis_key, redis_value, redis_expiration)?;
     Ok((user, token))
 }
 

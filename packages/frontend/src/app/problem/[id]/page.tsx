@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { TypstRenderer } from "@/components/typst-renderer"
 import { API_BASE_URL } from "@/api/client/config"
 import ProblemContainer from "./problem-container"
+import { ProblemStatementNode } from "@/api/server/problem"
 
 export interface Record {
   node_id: number
@@ -15,22 +16,7 @@ export interface Record {
   }
 }
 
-export interface ContentItem {
-  iden: string
-  content: string
-}
 
-export interface ProblemStatementNode {
-  node_id: number
-  public: {
-    statements: ContentItem[]
-    source: string
-    creation_time: string
-    update_time: string
-    sample_group: [string, string][]
-    show_order: string[]
-  }
-}
 
 export interface ProblemLimitNode {
   node_id: number
@@ -108,7 +94,9 @@ async function checkUserLogin(): Promise<boolean> {
   }
 }
 
-function renderContent(content: ContentItem[]) {
+import { ContentType } from "@/api/server/problem"
+
+function renderContent(content: ContentType[]) {
   const refname = {
     "background": "题目背景",
     "description": "题目描述",
@@ -173,6 +161,7 @@ export default async function ProblemPage({ params }: { params: Promise<{ id: st
       user_recent_records={user_recent_records}
       isLoggedIn={isLoggedIn}
       statement={statement}
+      platform={mainStatement?.public?.source || "local"}
     >
         {mainStatement?.public?.statements ? (
           renderContent(mainStatement.public.statements)
@@ -182,3 +171,4 @@ export default async function ProblemPage({ params }: { params: Promise<{ id: st
     </ProblemContainer>
   )
 }
+

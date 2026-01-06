@@ -150,6 +150,10 @@ impl CompileOption for ProblemID {
     fn export_allowed_option(&self) -> Vec<Box<dyn CompileOptionValue>> {
         vec![]
     }
+
+    fn is_input(&self) -> bool {
+        true
+    }
 }
 
 pub fn default_judge_service() -> impl JudgeService {

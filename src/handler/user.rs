@@ -8,9 +8,10 @@ use crate::{
 use actix_web::{HttpRequest, Scope, get, post, services, web, HttpMessage};
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
+use tap::Conv;
 use rmjac_core::db::entity::node::user::{get_user_by_email, get_user_by_iden};
 use rmjac_core::error::CoreError;
-use rmjac_core::model::user::{change_user_password, create_default_user, revoke_all_user_tokens, SimplyUser, UserUpdateProps};
+use rmjac_core::model::user::{change_user_password, revoke_all_user_tokens, SimplyUser, UserRaw, UserUpdateProps};
 use rmjac_core::utils::get_redis_connection;
 use crate::handler::{BasicHandler, HandlerError, HttpError};
 use crate::handler::HandlerError::Conflict;
@@ -37,6 +38,18 @@ pub struct UserCreateUser {
     pub avatar: String,
     pub password: String,
     pub verify: UserCreaterUserVerify,
+}
+
+impl From<UserCreateUser> for UserRaw {
+    fn from(value: UserCreateUser) -> Self {
+        Self {
+            iden: value.iden,
+            password: value.password,
+            email: value.email,
+            avatar: value.avatar,
+            name: value.name
+        }
+    }
 }
 
 pub struct Register {
@@ -110,18 +123,10 @@ impl Register {
         })
     }
     pub async fn exec(self) -> ResultHandler<String> {
-        let user = self.data;
-        let _res = create_default_user(
-            &self.db,
-            user.iden.as_str(),
-            user.name.as_str(),
-            user.email.as_str(),
-            user.avatar.as_str(),
-            user.password.as_str(),
-        ).await?;
+        let user = self.data.conv::<UserRaw>().save(&self.db).await?;
         Ok(Json! {
             "message": "User created successfully",
-            "user": _res
+            "user": user
         })
     }
 }

@@ -464,7 +464,7 @@ async fn process_single_submission(
             problem_name: remote_problem_id.clone(),
             problem_statement: vec![
                 ProblemStatementProp {
-                    statement_source: "vjudge".to_string(),
+                    statement_source: submission.remote_problem_id.to_lowercase().to_string(),
                     iden: remote_problem_id.clone(),
                     problem_statements: vec![
                         ContentType {
