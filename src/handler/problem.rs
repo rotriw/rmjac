@@ -1,12 +1,10 @@
 use enum_const::EnumConst;
 use sea_orm::{ColumnTrait, QuerySelect};
-use actix_web::{get, post, web, Scope, services, HttpRequest, HttpMessage};
-use sea_orm::DatabaseConnection;
+use actix_web::{post, web, Scope, HttpMessage, HttpRequest};
 use tap::Conv;
-use rmjac_core::model::problem::{CreateProblemProps, ProblemListQuery, ProblemStatementProp, ProblemFactory, ProblemRepository, ProblemPermissionService, Problem, ProblemStatement};
+use rmjac_core::model::problem::{CreateProblemProps, ProblemListQuery, ProblemStatementProp, ProblemFactory, ProblemRepository, ProblemPermissionService, ProblemStatement};
 use rmjac_core::model::perm::{check_problem_perm, check_system_perm};
 use rmjac_core::model::record::RecordRepository;
-use rmjac_core::error::CoreError;
 use rmjac_core::graph::edge::{EdgeQuery, problem_statement::ProblemStatementEdgeQuery};
 use rmjac_core::graph::edge::perm_problem::{PermProblemEdgeQuery, ProblemPerm, ProblemPermRaw};
 use rmjac_core::graph::edge::perm_problem::ProblemPerm::ReadProblem;
@@ -19,7 +17,6 @@ use crate::handler::{BasicHandler, HttpError, ResultHandler};
 use crate::handler::HandlerError::PermissionDenied;
 use crate::utils::perm::UserAuthCotext;
 use macro_handler::{generate_handler, handler, from_path, export, perm, route};
-use serde::Deserialize;
 
 // View Handler - 查看题目
 #[generate_handler]
@@ -192,10 +189,8 @@ mod list {
                 
                 let user_node_id = if let Ok(user) = rmjac_core::db::entity::node::user::get_user_by_iden(&self.basic.db, &author_search).await {
                     Some(user.node_id)
-                } else if let Ok(user_id) = author_search.parse::<i64>() {
-                    Some(user_id)
                 } else {
-                    None
+                    author_search.parse::<i64>().ok()
                 };
 
                 if let Some(uid) = user_node_id {
@@ -265,7 +260,7 @@ mod manage {
 
     impl Manage {
         #[from_path(iden)]
-        #[export(problem_node_id, statement_node_id)]
+        #[export(problem_node_id, _statement_node_id)]
         async fn before_resolve(&self, iden: &str) -> ResultHandler<(i64, i64)> {
             let mut redis = get_redis_connection();
             let data = {
@@ -385,7 +380,7 @@ mod manage {
 
         #[handler]
         #[route("/manage/{iden}/add_iden")]
-        async fn post_add_iden(&self, problem_node_id: i64, new_iden: String) -> ResultHandler<String> {
+        async fn post_add_iden(&self, problem_node_id: i64, _new_iden: String) -> ResultHandler<String> {
             if !self.check_owner_perm_sync(problem_node_id) {
                 return Err(HttpError::HandlerError(PermissionDenied));
             }

@@ -1,5 +1,4 @@
-use actix_web::{web, HttpRequest, Scope, HttpMessage};
-use sea_orm::DatabaseConnection;
+use actix_web::{web, Scope, HttpMessage};
 use serde::Deserialize;
 use std::collections::HashMap;
 use rmjac_core::model::submit::SubmissionService;
@@ -8,7 +7,7 @@ use crate::handler::{BasicHandler, HttpError, ResultHandler, HandlerError};
 use crate::utils::perm::UserAuthCotext;
 use rmjac_core::model::vjudge::VjudgeAccount;
 use rmjac_core::utils::get_redis_connection;
-use macro_handler::{generate_handler, handler, from_path, export, perm, route};
+use macro_handler::{generate_handler, handler, perm, route};
 
 #[derive(Deserialize)]
 pub struct SubmitReq {
@@ -73,7 +72,7 @@ mod submit {
                 judge_option,
                 context,
                 data.public_view,
-            ).await.map_err(|e| HttpError::CoreError(e))?;
+            ).await.map_err(HttpError::CoreError)?;
 
             Ok(Json! {
                 "code": 0,
@@ -101,7 +100,7 @@ mod options {
             let mut redis = get_redis_connection();
             let store = (&self.basic.db, &mut redis);
             let options = SubmissionService::allowed_methods(&store, platform).await
-                .map_err(|e| HttpError::CoreError(e))?;
+                .map_err(HttpError::CoreError)?;
 
             Ok(Json! {
                 "code": 0,

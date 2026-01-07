@@ -86,7 +86,7 @@ fn generate_route_handler(
     
     // 确保所有路径变量都在path_params中（即使handler不直接使用它们）
     for path_var in &path_vars {
-        if !param_analysis.path_params.iter().any(|(n, _)| n.to_string() == *path_var) {
+        if !param_analysis.path_params.iter().any(|(n, _)| n == path_var) {
             // 添加缺失的路径参数（类型默认为String）
             let ident = syn::Ident::new(path_var, proc_macro2::Span::call_site());
             let ty: Type = syn::parse_quote!(String);
@@ -148,7 +148,7 @@ fn analyze_parameters(
     // 收集所有before函数的导出
     let mut available_exports: HashMap<String, String> = HashMap::new();
     for before_name in execution_order {
-        if let Some(before) = before_funcs.iter().find(|b| b.name.to_string() == *before_name) {
+        if let Some(before) = before_funcs.iter().find(|b| b.name == before_name) {
             for export in &before.exports {
                 available_exports.insert(export.to_string(), before_name.clone());
             }
@@ -412,26 +412,14 @@ fn generate_before_calls(
 ) -> Result<TokenStream, String> {
     let mut calls = Vec::new();
     let mut available_vars: HashMap<String, Ident> = HashMap::new();
-    
-    // 调试：检查path_vars
-    if path_vars.is_empty() {
-        eprintln!("WARNING: path_vars is empty!");
-    } else {
-        eprintln!("DEBUG: path_vars = {:?}", path_vars);
-    }
-    
     // 首先添加所有路径变量（这些变量在路径提取后就可用了）
     for path_var in path_vars {
         let ident = syn::Ident::new(path_var, proc_macro2::Span::call_site());
         available_vars.insert(path_var.clone(), ident);
-        eprintln!("DEBUG: Added path_var '{}' to available_vars", path_var);
     }
-    
-    eprintln!("DEBUG: available_vars after adding path_vars: {:?}", available_vars.keys().collect::<Vec<_>>());
-    
     for before_name in execution_order {
         let before = before_funcs.iter()
-            .find(|b| b.name.to_string() == *before_name)
+            .find(|b| b.name == before_name)
             .ok_or_else(|| format!("Before function '{}' not found", before_name))?;
         
         let before_ident = &before.name;

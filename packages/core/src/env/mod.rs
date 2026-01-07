@@ -14,11 +14,15 @@ use crate::service::iden::ac_automaton::AcMachine;
 /// 结构：
 /// - 外层 HashMap: edge_type (String) -> 该类型边的邻接表
 /// - 内层 HashMap: 源节点ID (i64) -> Vec<(目标节点ID, 边ID, 权限值)>
+///
+/// 边邻接表类型：源节点ID -> Vec<(目标节点ID, 边ID, 权限值)>
+pub type EdgeAdjacencyMap = HashMap<i64, Vec<(i64, i64, i64)>>;
+
 #[derive(Debug, Clone, Default)]
 pub struct PermGraph {
     /// 存储所有权限边的邻接表
     /// edge_type -> (source_node -> Vec<(target_node, edge_id, perm)>)
-    pub adjacency: HashMap<String, HashMap<i64, Vec<(i64, i64, i64)>>>,
+    pub adjacency: HashMap<String, EdgeAdjacencyMap>,
 }
 
 impl PermGraph {
@@ -49,10 +53,9 @@ impl PermGraph {
 
     /// 删除指定 u -> v 的所有边
     pub fn remove_edge(&mut self, edge_type: &str, u: i64, v: i64) {
-        if let Some(type_map) = self.adjacency.get_mut(edge_type) {
-            if let Some(edges) = type_map.get_mut(&u) {
-                edges.retain(|(target, _, _)| *target != v);
-            }
+        if let Some(type_map) = self.adjacency.get_mut(edge_type)
+            && let Some(edges) = type_map.get_mut(&u) {
+            edges.retain(|(target, _, _)| *target != v);
         }
     }
 

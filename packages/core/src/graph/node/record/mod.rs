@@ -252,7 +252,6 @@ impl From<String> for RecordStatus {
             "OnlyArchived" => RecordStatus::OnlyArchived,
             "Skipped" => RecordStatus::Skipped,
             "Idleness Limit Exceeded" => RecordStatus::IdlenessLimitExceeded,
-            "Dangerous Code" => RecordStatus::DangerousCode,
             "Judging" => RecordStatus::Judging,
             _ => RecordStatus::UnknownError,
         }

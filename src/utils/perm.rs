@@ -56,7 +56,7 @@ where
                 && let Ok(uid) = uid.value().parse::<i64>()
             {
                 let auth = UserAuthService::check_token(uid, token.value()).await;
-                if auth == true {
+                if auth {
                     user_id = uid;
                     is_real = true;
                 }
@@ -66,7 +66,7 @@ where
                 user_id,
                 is_real
             });
-            Ok(service.call(req).await?)
+            service.call(req).await
         })
     }
 }

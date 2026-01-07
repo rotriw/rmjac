@@ -28,10 +28,13 @@ pub fn parse_handler_struct(item: &ItemStruct) -> Result<HandlerStruct, syn::Err
     })
 }
 
+/// 解析结果类型
+pub type ParseResult = (Vec<BeforeFunction>, Vec<PermFunction>, Vec<HandlerFunction>);
+
 /// 解析impl块中的所有函数
 pub fn parse_impl_block(
     impl_block: &ItemImpl,
-) -> Result<(Vec<BeforeFunction>, Vec<PermFunction>, Vec<HandlerFunction>), syn::Error> {
+) -> Result<ParseResult, syn::Error> {
     let mut before_funcs = Vec::new();
     let mut perm_funcs = Vec::new();
     let mut handler_funcs = Vec::new();

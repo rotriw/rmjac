@@ -58,7 +58,7 @@ impl JudgeService for CodeforcesJudgeService {
     fn convert_to_json(&self, value: ChoiceOption<Box<dyn Language>>, vjudge_node: VjudgeNode, context: SubmitContext) -> String {
         let data = self.compile.export_data(ChoiceOption {
             option_choices: value.option_choices,
-            language: value.language.as_any().downcast_ref::<CodeforcesLanguage>().unwrap().clone(),
+            language: *value.language.as_any().downcast_ref::<CodeforcesLanguage>().unwrap(),
         });
         json!({
             "operation": "submit",
@@ -107,7 +107,7 @@ pub struct ContestID;
 pub struct ProblemID;
 
 impl CompileOption for ContestID {
-    fn valid(&self, value: &Box<dyn CompileOptionValue>) -> bool {
+    fn valid(&self, value: &dyn CompileOptionValue) -> bool {
         let value = value.value();
         value.len() <= 7 && value.chars().all(|c| c.is_ascii_digit())
     }
@@ -134,7 +134,7 @@ impl CompileOption for ContestID {
 }
 
 impl CompileOption for ProblemID {
-    fn valid(&self, value: &Box<dyn CompileOptionValue>) -> bool {
+    fn valid(&self, value: &dyn CompileOptionValue) -> bool {
         let value = value.value();
         value.len() <= 3 && value.chars().all(|c| c.is_ascii_digit() || c.is_ascii_uppercase())
     }

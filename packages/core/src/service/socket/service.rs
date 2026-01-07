@@ -6,12 +6,8 @@ use serde::{Deserialize, Serialize};
 use socketioxide::extract::{SocketRef, Data};
 use socketioxide::SocketIo;
 use serde_json::Value;
-use macro_socket_auth::auth_socket_connect;
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use crate::model::vjudge::{VjudgeAccount, VjudgeService, UserSubmissionProp};
-use crate::model::problem::CreateProblemProps;
-use crate::service::socket::calc::handle_score;
-use crate::utils::get_redis_connection;
+use crate::model::vjudge::VjudgeAccount;
 use crate::service::socket::vjudge_service::user::{handle_submit_done, handle_verified_result};
 use crate::env;
 use crate::env::db::get_connect;
@@ -170,19 +166,15 @@ pub async fn handle_vjudge_verified(socket: SocketRef, Data(data): Data<VJudgeVe
     // But wait, get_connect() returns Result<DatabaseConnection>.
     // The previous code had `if let Ok(db) = db`.
     
-    if let Ok(db) = Ok::<_, ()>(db) { // Hack to keep flow or just use db
-        let user_id = {
-            let data = env::USER_WEBSOCKET_CONNECTIONS_ACCOUNT.lock().unwrap();
-            data.get(&socket.id.to_string()).cloned()
-        };
-        if let Some(user_id) = user_id {
-            if VjudgeAccount::new(data.node_id).verify(&db, &socket.id.to_string()).await {
-                let _ = socket.emit("check_alive_success", &data.node_id);
-            } else {
-                let _ = socket.emit("check_alive_failed", &data.node_id);
-            }
+    let _user_id = {
+        let data = env::USER_WEBSOCKET_CONNECTIONS_ACCOUNT.lock().unwrap();
+        data.get(&socket.id.to_string()).cloned()
+    };
+    {
+        if VjudgeAccount::new(data.node_id).verify(&db, &socket.id.to_string()).await {
+            let _ = socket.emit("check_alive_success", &data.node_id);
         } else {
-            log::warn!("No user id found for socket {}.", socket.id);
+            let _ = socket.emit("check_alive_failed", &data.node_id);
         }
     }
 }

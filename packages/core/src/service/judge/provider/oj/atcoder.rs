@@ -10,7 +10,7 @@ pub struct ContestID;
 pub struct ProblemID;
 
 impl CompileOption for ContestID {
-    fn valid(&self, value: &Box<dyn CompileOptionValue>) -> bool {
+    fn valid(&self, value: &dyn CompileOptionValue) -> bool {
         let value = value.value();
         value.len() <= 10 && value.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
     }
@@ -37,7 +37,7 @@ impl CompileOption for ContestID {
 }
 
 impl CompileOption for ProblemID {
-    fn valid(&self, value: &Box<dyn CompileOptionValue>) -> bool {
+    fn valid(&self, value: &dyn CompileOptionValue) -> bool {
         let value = value.value();
         value.len() <= 10 && value.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
     }
@@ -203,7 +203,7 @@ impl JudgeService for AtcoderJudgeService {
     fn convert_to_json(&self, value: ChoiceOption<Box<dyn Language>>, vjudge_node: VjudgeNode, context: SubmitContext) -> String {
         let data = self.compile.export_data(ChoiceOption {
             option_choices: value.option_choices,
-            language: value.language.as_any().downcast_ref::<AtCoderLanguage>().unwrap().clone(),
+            language: *value.language.as_any().downcast_ref::<AtCoderLanguage>().unwrap(),
         });
         json!({
             "operation": "submit",

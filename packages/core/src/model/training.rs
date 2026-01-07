@@ -175,7 +175,7 @@ impl TrainingRepo {
         let _training_problem_edge = TrainingProblemEdgeRaw {
             u: list_id,
             v: training_problem_node.node_id,
-            order: max_order as i64 + 1,
+            order: max_order + 1,
             problem_type: TrainingProblemType::Default
         }.save(db).await?;
         Ok(training_problem_node)
@@ -327,7 +327,7 @@ impl TrainingRepo {
         Ok(problem_list)
     }
 
-    pub async fn add_by_iden(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64, problem_iden: &String) -> Result<Vec<(i64, i64)>> {
+    pub async fn add_by_iden(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64, problem_iden: &str) -> Result<Vec<(i64, i64)>> {
         let (problem_node_id, statement_node_id) = {
             let mut store = (db, &mut *redis);
             ProblemRepository::resolve(&mut store, problem_iden).await?
@@ -522,10 +522,9 @@ impl TrainingRepo {
                 return Ok(true);
             } else {
                 let node_type = get_node_type(db, node_id).await?;
-                if node_type == "training_problem" {
-                    if Self::has_list(db, redis, node_id, list_node_id).await? {
-                        return Ok(true);
-                    }
+                if node_type == "training_problem"
+                    && Self::has_list(db, redis, node_id, list_node_id).await? {
+                    return Ok(true);
                 }
             }
         }
@@ -684,7 +683,7 @@ impl Training {
     pub async fn add_by_iden(
         store: &mut impl ModelStore,
         node_id: i64,
-        problem_iden: &String,
+        problem_iden: &str,
     ) -> Result<Vec<(i64, i64)>> {
         let db = store.get_db().clone();
         let redis = store.get_redis();

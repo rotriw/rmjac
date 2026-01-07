@@ -18,7 +18,6 @@ use tokio::sync::Mutex as AsyncMutex;
 use crate::utils::get_redis_connection;
 use crate::graph::node::vjudge_task::{VjudgeTaskNode, VjudgeTaskNodeRaw, VjudgeTaskNodePublicRaw, VjudgeTaskNodePrivateRaw};
 use crate::graph::edge::misc::MiscEdgeRaw;
-use serde_json::json;
 use crate::graph::edge::perm_system::SystemPerm;
 use crate::model::perm::check_system_perm;
 use enum_const::EnumConst;
@@ -231,14 +230,14 @@ impl VjudgeAccount {
         if vjudge_node.public.remote_mode == RemoteMode::PublicAccount {
             return Err(CoreError::VjudgeError("Public account cannot sync submission.".to_string()));
         }
-        if vjudge_node.public.verified == false {
+        if !vjudge_node.public.verified {
             return Err(CoreError::VjudgeError("Vjudge account is not verified.".to_string()));
         }
         use crate::db::entity::edge::user_remote::Column::VNodeId;
         let user_remote_edges = UserRemoteEdgeQuery::get_v_filter_extend_content(user_id, vec![
             VNodeId.eq(self.node_id),
         ], db, None, None).await?;
-        if user_remote_edges.len() == 0 {
+        if user_remote_edges.is_empty() {
             return Err(CoreError::VjudgeError("User is not related to vjudge account.".to_string()));
         }
 
@@ -531,7 +530,7 @@ impl VjudgeService {
         let mut handles = vec![];
         let ws_id = data.ws_id;
         let ws_notify = if let Some(id) = ws_id {
-            Some(env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().get(&id).cloned()).unwrap_or(None)
+            env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().get(&id).cloned()
         } else {
             log::debug!("No websocket id provided for submission update.");
             None
@@ -577,13 +576,12 @@ impl VjudgeService {
             log_data += &data.unwrap_or("Failed to join submission processing task.\n".to_string());
         }
         // update task log if present
-        if let Some(task_id) = data.task_id {
-            if let Ok(task_node) = VjudgeTaskNode::from_db(db, task_id).await {
-                use crate::db::entity::node::vjudge_task::Column;
-                let _ = task_node.modify(db, Column::Log, log_data).await;
-                let _ = task_node.modify(db, Column::Status, "completed".to_string()).await;
-                let _ = task_node.modify(db, Column::UpdatedAt, chrono::Utc::now().naive_utc()).await;
-            }
+        if let Some(task_id) = data.task_id
+            && let Ok(task_node) = VjudgeTaskNode::from_db(db, task_id).await {
+            use crate::db::entity::node::vjudge_task::Column;
+            let _ = task_node.modify(db, Column::Log, log_data).await;
+            let _ = task_node.modify(db, Column::Status, "completed".to_string()).await;
+            let _ = task_node.modify(db, Column::UpdatedAt, chrono::Utc::now().naive_utc()).await;
         }
         Ok(())
     }
@@ -607,8 +605,7 @@ impl VjudgeService {
 
         if !problem_exists {
             // 如果题目不存在，就以 System 用户的名义创建一个占位题目
-            if let Ok((pid, sid)) = Self::create_placeholder_problem(&db, &remote_problem_id, &submission.remote_problem_id).await {
-                // problem_node_id = pid; // unused
+            if let Ok((_pid, sid)) = Self::create_placeholder_problem(&db, &remote_problem_id, &submission.remote_problem_id).await {
                 statement_node_id = sid;
             } else {
                      return Ok(())

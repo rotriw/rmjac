@@ -1,5 +1,4 @@
-use actix_web::{web, HttpRequest, Scope, HttpMessage};
-use sea_orm::DatabaseConnection;
+use actix_web::{web, Scope, HttpMessage};
 use rmjac_core::error::CoreError;
 use crate::handler::{BasicHandler, ResultHandler, HttpError, HandlerError};
 use crate::utils::perm::UserAuthCotext;
@@ -173,10 +172,9 @@ mod list_by_ids {
             
             let mut results = vec![];
             for id in &data.ids {
-                if is_admin || VjudgeAccount::new(*id).owned_by(&self.basic.db, uc.user_id).await.unwrap_or(false) {
-                    if let Ok(node) = VjudgeAccount::get(&self.basic.db, *id).await {
-                        results.push(node);
-                    }
+                if (is_admin || VjudgeAccount::new(*id).owned_by(&self.basic.db, uc.user_id).await.unwrap_or(false))
+                    && let Ok(node) = VjudgeAccount::get(&self.basic.db, *id).await {
+                    results.push(node);
                 }
             }
             Ok(Json! {

@@ -1,5 +1,5 @@
-use actix_web::{HttpMessage, HttpRequest, Scope, web};
-use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
+use actix_web::{HttpMessage, Scope, web};
+use sea_orm::{EntityTrait, QueryFilter, QueryOrder, QuerySelect};
 use serde::Deserialize;
 use rmjac_core::model::record::{RecordNewProp, Record, RecordRepository};
 use rmjac_core::model::problem::ProblemRepository;
@@ -7,10 +7,8 @@ use rmjac_core::graph::node::record::{RecordStatus, RecordNode};
 use rmjac_core::model::perm::check_system_perm;
 use rmjac_core::graph::edge::perm_system::SystemPerm;
 use rmjac_core::graph::node::Node;
-
-use rmjac_core::error::QueryNotFound;
 use rmjac_core::utils::get_redis_connection;
-use crate::handler::{BasicHandler, HttpError, ResultHandler, HandlerError};
+use crate::handler::{BasicHandler, HttpError, ResultHandler};
 use crate::utils::perm::UserAuthCotext;
 use enum_const::EnumConst;
 use macro_handler::{generate_handler, handler, from_path, export, perm, route};

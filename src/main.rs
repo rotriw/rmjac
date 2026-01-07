@@ -1,4 +1,5 @@
 #![feature(super_let)]
+#![allow(dead_code)]
 
 use command_tool::generate_commands;
 

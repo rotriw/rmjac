@@ -18,17 +18,14 @@ pub fn get_tool(platform: &str) -> Result<Box<DJudgeService>> {
 
 use std::collections::HashMap;
 use std::any::Any;
-use std::hash::Hash;
 use serde::{Deserialize, Serialize};
 use regex::Regex;
 use serde_json::json;
 use crate::Result;
 use crate::error::CoreError::NotFound;
 use crate::graph::node::user::remote_account::VjudgeNode;
-use crate::model::vjudge::Platform;
 use crate::service::judge::provider::oj::atcoder::AtcoderJudgeService;
 use crate::service::judge::provider::oj::codeforces::CodeforcesJudgeService;
-use crate::service::socket::service::add_task;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubmitContext {
@@ -66,7 +63,7 @@ impl CompileOptionValue for StringOption {
 
 
 pub trait CompileOption {
-    fn valid(&self, _value: &Box<dyn CompileOptionValue>) -> bool {
+    fn valid(&self, _value: &dyn CompileOptionValue) -> bool {
         true
     }
     fn export_compile_name(&self) -> &str; // --std(gcc choose version)
@@ -96,10 +93,9 @@ pub trait Language: Any + Send + Sync {
         let mut option_choices = Vec::new();
         for option in allowed_options {
             let compile_name = option.export_compile_name();
-            if let Some(value) = options.remove(compile_name) {
-                if option.valid(&value) {
-                    option_choices.push((option, value));
-                }
+            if let Some(value) = options.remove(compile_name)
+                && option.valid(value.as_ref()) {
+                option_choices.push((option, value));
             }
         }
         option_choices

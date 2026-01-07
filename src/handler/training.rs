@@ -1,8 +1,7 @@
-use actix_web::{HttpMessage, HttpRequest, Scope, web};
+use actix_web::{HttpMessage, Scope, web};
 use chrono::NaiveDateTime;
 use enum_const::EnumConst;
 use redis::TypedCommands;
-use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use rmjac_core::graph::edge::Edge;
 use rmjac_core::graph::edge::perm_pages::PagesPerm;
@@ -263,7 +262,7 @@ mod manage {
             let mut store = (&self.basic.db, &mut redis);
             let p_id = Training::root_id(&mut store, node_id).await?;
             
-            if Training::has_list(&mut store, p_id, data.list_node_id).await? == false {
+            if !Training::has_list(&mut store, p_id, data.list_node_id).await? {
                 return Ok(Json! {
                     "status": "error",
                     "message": "problem list not in training",
@@ -294,7 +293,7 @@ mod manage {
             let mut store = (&self.basic.db, &mut redis);
             let p_id = Training::root_id(&mut store, node_id).await?;
             
-            if Training::has_list(&mut store, p_id, data.list_node_id).await? == false {
+            if !Training::has_list(&mut store, p_id, data.list_node_id).await? {
                 return Ok(Json! {
                     "status": "error",
                     "message": "problem list not in training",
@@ -315,7 +314,7 @@ mod manage {
             let mut store = (&self.basic.db, &mut redis);
             let p_id = Training::root_id(&mut store, node_id).await?;
             
-            if Training::has_list(&mut store, p_id, data.list_node_id).await? == false {
+            if !Training::has_list(&mut store, p_id, data.list_node_id).await? {
                 return Ok(Json! {
                     "status": "error",
                     "message": "problem list not in training",
@@ -339,7 +338,7 @@ mod manage {
                     "message": "mismatched list node id and edge",
                 });
             }
-            let _ = edge.delete(&self.basic.db).await?;
+            edge.delete(&self.basic.db).await?;
             let _ = redis.del::<_>(format!("training_{node_id}"));
             Ok(Json! {
                 "message": "successful",
@@ -353,7 +352,7 @@ mod manage {
             let mut store = (&self.basic.db, &mut redis);
             let p_id = Training::root_id(&mut store, node_id).await?;
             
-            if Training::has_list(&mut store, p_id, data.list_node_id).await? == false {
+            if !Training::has_list(&mut store, p_id, data.list_node_id).await? {
                 return Ok(Json! {
                     "status": "error",
                     "message": "problem list not in training",

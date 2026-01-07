@@ -1,4 +1,5 @@
 #![feature(super_let)]
+#![allow(clippy::too_many_arguments)]
 pub type Result<T, E = error::CoreError> = std::result::Result<T, E>;
 
 pub mod env;

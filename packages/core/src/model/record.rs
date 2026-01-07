@@ -484,11 +484,11 @@ impl Record {
         let mut q = queue::Queue::new();
         let _ = q.queue(get_rt);
         log::debug!("Processing queue length: {get_rt}");
-        while q.len() > 0 {
+        while !q.is_empty() {
             let t = q.dequeue().unwrap();
             // check redis have node_{t} data.
             let data = redis.get(format!("graph_edge_testcase_{t}_v"))?;
-            let edges = if let Some(data) = data && data.len() > 0 && !force_refresh {
+            let edges = if let Some(data) = data && !data.is_empty() && !force_refresh {
                 data.split(".").map(|v| v.parse::<i64>().unwrap_or(0)).collect::<Vec<i64>>()
             } else {
                 let data = TestcaseEdgeQuery::get_order_asc(t, &db).await?;
@@ -497,7 +497,7 @@ impl Record {
             };
             if !redis.exists(format!("graph_node_{t}"))? || force_refresh {
                 log::trace!("Caching testcase node {t}");
-                if edges.len() > 0 {
+                if !edges.is_empty() {
                     log::trace!("Caching subtask node {t}");
                     redis.set(format!("graph_node_{t}"), serde_json::to_string(&SubtaskNode::from_db(&db, t).await?).unwrap())?;
                 }
@@ -520,7 +520,7 @@ impl Record {
                 record_id: self.node_id,
                 time: res.time,
                 memory: res.memory,
-                status: res.status.clone(),
+                status: res.status,
                 score: res.score,
             }).await?;
         }
@@ -591,7 +591,6 @@ impl Record {
                     status: Set(nv.status.to_string()),
                     time: new_time,
                     memory: new_memory,
-                    ..Default::default()
                 }.update(&db).await?;
                 continue;
             }
@@ -676,8 +675,8 @@ impl Record {
             }
         }
     
-        if now_result.len() == 0 {
-            log::debug!("No cached value found, fetching from redis directly for testcase {}.", format!("graph_node_{subtask_root_id}_{record_id}"));
+        if now_result.is_empty() {
+            log::debug!("No cached value found, fetching from redis directly for testcase graph_node_{}_{}", subtask_root_id, record_id);
             let result = redis.get(format!("graph_node_{subtask_root_id}_{record_id}"))?.unwrap_or("".to_string());
             let result = serde_json::from_str::<SubtaskUserRecord>(&result);
             log::trace!("Result for testcase {}: {:?}", subtask_root_id, result);
@@ -714,7 +713,7 @@ impl Record {
     
         let raw_data = now_result.clone();
         let now_result = now_result.iter().map(|v| {
-            (v.score as f64, v.time, v.memory, v.status.clone())
+            (v.score as f64, v.time, v.memory, v.status)
         }).collect();
         let judge_node = judge_node.unwrap();
         if let Ok((score, time, memory, status)) = handle_score(

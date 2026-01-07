@@ -29,7 +29,7 @@ use redis::Commands;
 use sea_orm::{ColumnTrait, DatabaseConnection};
 use serde::{Deserialize, Serialize};
 use crate::graph::edge::misc::{MiscEdgeQuery, MiscEdgeRaw};
-use crate::graph::edge::testcase::{TestcaseEdge, TestcaseEdgeRaw};
+use crate::graph::edge::testcase::TestcaseEdgeRaw;
 use crate::graph::node::record::subtask::{SubtaskCalcMethod, SubtaskNodePrivateRaw, SubtaskNodePublicRaw, SubtaskNodeRaw};
 use crate::model::user::SimplyUser;
 use crate::service::iden::{create_iden, get_node_id_iden, get_node_ids_from_iden, remove_iden_to_specific_node};
@@ -313,7 +313,7 @@ impl ProblemRepository {
 
     async fn detach_limits(
         db: &DatabaseConnection,
-        redis: &mut redis::Connection,
+        _redis: &mut redis::Connection,
         stmt_id: i64,
     ) -> Result<()> {
         let limit_ids = ProblemLimitEdgeQuery::get_v(stmt_id, db).await?;
@@ -508,8 +508,8 @@ impl ProblemStatement {
 
     fn find_iden(idens: Vec<String>) -> Result<String> {
         for iden in idens {
-            if iden.starts_with("problem") {
-                return Ok(iden["problem".len()..].to_string());
+            if let Some(stripped) = iden.strip_prefix("problem") {
+                return Ok(stripped.to_string());
             }
         }
         Err(CoreError::NotFound("Cannot find problem iden".to_string()))

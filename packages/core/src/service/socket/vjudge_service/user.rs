@@ -57,7 +57,7 @@ async fn handle_submit_done(socket: SocketRef, Data(data): Data<SubmitResultProp
     log::debug!("Handling submit done from socket {}.", socket.id);
     let ws_id = data.ws_id;
     let ws_notify = if let Some(id) = ws_id {
-        Some(env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().get(&id).cloned()).unwrap_or(None)
+        env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap().get(&id).cloned()
     } else {
         log::debug!("No websocket id provided for submission update.");
         None

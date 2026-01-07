@@ -6,7 +6,7 @@ use crate::{
     utils::challenge::{self, gen_captcha, gen_verify_captcha},
     utils::perm::UserAuthCotext,
 };
-use actix_web::{HttpRequest, Scope, get, post, services, web, HttpMessage};
+use actix_web::{HttpRequest, Scope, get, services, web, HttpMessage};
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use tap::Conv;
@@ -213,10 +213,9 @@ mod manage {
 
         #[perm]
         async fn check_manage_perm(&self, user_id: &i64) -> bool {
-            if let Some(uc) = &self.basic.user_context {
-                if uc.is_real && uc.user_id == *user_id {
-                    return true;
-                }
+            if let Some(uc) = &self.basic.user_context
+                && uc.is_real && uc.user_id == *user_id {
+                return true;
             }
             false
         }
@@ -241,8 +240,8 @@ mod manage {
             };
             let user = User::new(user_id);
             let common_res = user.update_config(&self.basic.db, update_form).await?;
-            let password_res = if data.new_password.is_some() {
-                user.change_password(&self.basic.db, data.new_password.unwrap()).await.ok()
+            let password_res = if let Some(new_password) = data.new_password {
+                user.change_password(&self.basic.db, new_password).await.ok()
             } else {
                 None
             };

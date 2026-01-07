@@ -39,7 +39,7 @@ pub fn build_dependency_graph(
                     continue;
                 }
                 
-                if other_before.exports.iter().any(|e| e.to_string() == param_name) {
+                if other_before.exports.iter().any(|e| *e == param_name) {
                     depends_on.insert(other_before.name.to_string());
                 }
             }
@@ -93,7 +93,7 @@ pub fn topological_sort(
             for dep in &node.depends_on {
                 if required_befores.contains(dep) {
                     adj_list.entry(dep.clone())
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push(before_name.clone());
                     *in_degree.entry(before_name.clone()).or_insert(0) += 1;
                 }
@@ -162,7 +162,7 @@ pub fn analyze_handler_requirements(
         
         // 查找提供此导出的before函数
         for before in before_funcs {
-            if before.exports.iter().any(|e| e.to_string() == param_name) {
+            if before.exports.iter().any(|e| *e == param_name) {
                 required.insert(param_name.clone());
                 break;
             }
@@ -201,7 +201,7 @@ pub fn analyze_perm_requirements(
         }
         
         for before in before_funcs {
-            if before.exports.iter().any(|e| e.to_string() == param_name) {
+            if before.exports.iter().any(|e| *e == param_name) {
                 required.insert(param_name.clone());
                 break;
             }

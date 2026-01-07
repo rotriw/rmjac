@@ -127,7 +127,7 @@ impl User {
     }
 
     pub async fn identifier_exists(db: &DatabaseConnection, iden: &str) -> Result<bool> {
-        entity::node::user::check_iden_exists(db, iden).await.map_err(Into::into)
+        entity::node::user::check_iden_exists(db, iden).await
     }
 
     pub async fn update_config(

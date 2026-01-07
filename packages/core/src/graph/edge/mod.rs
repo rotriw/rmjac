@@ -1,10 +1,9 @@
-use sea_orm::ColumnTrait;
 use std::fmt::Debug;
 use crate::Result;
 use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo, edge::create_edge};
 use crate::error::CoreError::NotFound;
 use sea_orm::sea_query::IntoCondition;
-use sea_orm::{ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect};
+use sea_orm::{ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel, QuerySelect};
 use std::str::FromStr;
 use tap::Conv;
 
