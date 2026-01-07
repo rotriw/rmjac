@@ -11,18 +11,7 @@ import { useRouter } from "next/navigation";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { RecordRightSidebar } from "./rightbar";
 import { TitleCard } from "@/components/card/card";
-
-interface RecordEdge {
-    id: number;
-    u: number;
-    v: number;
-    record_node_id: number;
-    record_status: RecordStatus;
-    code_length: number;
-    score: number;
-    submit_time: string;
-    platform: string;
-}
+import { RecordEdge } from "@rmjac/api-declare";
 
 interface RecordItem {
     edge: RecordEdge;

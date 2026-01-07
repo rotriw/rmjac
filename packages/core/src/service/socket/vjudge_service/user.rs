@@ -5,8 +5,8 @@ use macro_socket_auth::auth_socket_connect;
 use crate::env;
 use crate::env::db::get_connect;
 use crate::graph::node::record::RecordStatus;
-use crate::model::record::{update_record_message, update_record_remote_url, update_record_root_status, UpdateRecordRootStatusData};
-use crate::model::vjudge::verified_account;
+use crate::model::record::{Record, UpdateRecordRootStatusData};
+use crate::model::vjudge::VjudgeAccount;
 use crate::service::socket::service::VerifiedResultProp;
 use crate::utils::get_redis_connection;
 
@@ -27,7 +27,7 @@ async fn handle_verified_result(socket: SocketRef, Data(result): Data<VerifiedRe
             return;
         }
         let db = db.unwrap();
-        let x = verified_account(&db, result.node_id).await;
+        let x = VjudgeAccount::new(result.node_id).set_verified(&db).await;
         if let Err(err) = x
             && let Some(user_socket) = &user_socket
         {
@@ -72,38 +72,40 @@ async fn handle_submit_done(socket: SocketRef, Data(data): Data<SubmitResultProp
     if !data.success {
         if let Some(notify_ref) = ws_notify {
             let msg = format!("0Submission failed: {}", data.message.clone().unwrap_or("Unknown error".to_string()));
-            let _ = notify_ref.emit("vjudge_submission_result", &Json! {
+            let _ = notify_ref.emit("vjudge_submission_result", &serde_json::json!({
                 "i": data.record_id,
                 "m": msg,
                 "s": "failed"
-            });
+            }));
         }
-        let _ = update_record_root_status(&db, &mut redis, UpdateRecordRootStatusData {
+        let mut store = (&db, &mut redis);
+        let _ = Record::new(data.record_id).update_root_status(&mut store, UpdateRecordRootStatusData {
            record_id: data.record_id,
             status: RecordStatus::RemoteServiceUnknownError,
             time: -1,
             memory: -1,
             score: -1,
         }).await;
-        let _ = update_record_message(&db, data.record_id, data.message).await;
+        let _ = Record::new(data.record_id).set_message(&db, data.message).await;
         return ;
     }
 
     let remote_url = data.remote_url.unwrap_or("".to_string());
 
-    let _ = update_record_root_status(&db, &mut redis, UpdateRecordRootStatusData {
+    let mut store = (&db, &mut redis);
+    let _ = Record::new(data.record_id).update_root_status(&mut store, UpdateRecordRootStatusData {
         record_id: data.record_id,
         status: RecordStatus::Judging,
         time: -1,
         memory: -1,
         score: 0,
     }).await;
-    let _ = update_record_remote_url(&db, data.record_id, &remote_url).await;
+    let _ = Record::new(data.record_id).set_url(&db, &remote_url).await;
     if let Some(notify_ref) = ws_notify {
-        let _ = notify_ref.emit("vjudge_submission_result", &Json! {
+        let _ = notify_ref.emit("vjudge_submission_result", &serde_json::json!({
             "i": data.record_id,
             "s": "success",
             "r": remote_url,
-        });
+        }));
     }
 }

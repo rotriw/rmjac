@@ -4,12 +4,11 @@ use actix_web::{get, post, web, Scope, services, HttpRequest, HttpMessage};
 use sea_orm::DatabaseConnection;
 use sea_orm::sea_query::SimpleExpr;
 use tap::Conv;
-use rmjac_core::model::problem::{CreateProblemProps, ProblemListQuery, ProblemStatementProp, add_editor, add_owner, add_problem_statement_for_problem, add_viewer, delete_editor, delete_owner, delete_problem_connections, delete_problem_statement_for_problem, delete_viewer, generate_problem_statement_schema, get_problem_with_node_id, modify_problem_statement, modify_problem_statement_source};
+use rmjac_core::model::problem::{CreateProblemProps, ProblemListQuery, ProblemStatementProp, ProblemFactory, ProblemRepository, ProblemPermissionService, Problem, ProblemStatement};
 use rmjac_core::model::perm::{check_problem_perm, check_system_perm};
-use rmjac_core::model::problem::get_problem_node_and_statement;
-use rmjac_core::model::record::{get_specific_node_records, get_user_with_statement_records};
+use rmjac_core::model::record::RecordRepository;
 use rmjac_core::error::CoreError;
-use rmjac_core::graph::edge::{EdgeQuery};
+use rmjac_core::graph::edge::{EdgeQuery, problem_statement::ProblemStatementEdgeQuery};
 use rmjac_core::graph::edge::perm_problem::{PermProblemEdgeQuery, ProblemPerm, ProblemPermRaw};
 use rmjac_core::graph::edge::perm_problem::ProblemPerm::ReadProblem;
 use rmjac_core::db::entity::edge::record::Column as RecordEdgeColumn;
@@ -45,7 +44,10 @@ impl View {
     pub async fn before(self, iden: String) -> ResultHandler<Self> {
         // 展开题面
         let mut redis = get_redis_connection();
-        let data = get_problem_node_and_statement(&self.basic.db, &mut redis, &iden).await?;
+        let data = {
+            let mut store = (&self.basic.db, &mut redis);
+            ProblemRepository::resolve(&mut store, &iden).await?
+        };
         let mut _res = self;
         _res.problem_node_id = Some(data.0);
         _res.problem_statement_node_id = Some(data.1);
@@ -80,15 +82,18 @@ impl View {
         let mut redis = get_redis_connection();
         let problem_node_id = &self.problem_node_id.unwrap();
         let problem_statement_node_id = &self.problem_statement_node_id.unwrap();
-        let model = get_problem_with_node_id(&self.basic.db, &mut redis, *problem_node_id).await?;
+        let model = {
+            let mut store = (&self.basic.db, &mut redis);
+            ProblemRepository::model(&mut store, *problem_node_id).await?
+        };
         let get_user_submit_data = if let Some(uc) = &self.basic.user_context && uc.is_real {
-            let data = get_user_with_statement_records(&self.basic.db, uc.user_id, self.problem_statement_node_id.unwrap(), 100, 1).await;
+            let data = RecordRepository::by_user_statement(&self.basic.db, uc.user_id, self.problem_statement_node_id.unwrap(), 100, 1).await;
             data.ok()
         } else {
             None
         };
         let get_user_accepted_data = if let Some(uc) = &self.basic.user_context && uc.is_real {
-            Some(get_specific_node_records(&self.basic.db, uc.user_id, 1, 1, vec![
+            Some(RecordRepository::by_node(&self.basic.db, uc.user_id, 1, 1, vec![
                 RecordEdgeColumn::RecordStatus.eq(RecordStatus::Accepted.get_const_isize().unwrap_or(100) as i32)
             ]).await?)
         } else {
@@ -133,7 +138,10 @@ impl Create {
 
     pub async fn exec(self) -> ResultHandler<String> {
         let mut redis = get_redis_connection();
-        let data = rmjac_core::model::problem::create_problem_with_user(&self.basic.db, &mut redis, &self.problem, true).await?;
+        let data = {
+            let mut store = (&self.basic.db, &mut redis);
+            ProblemFactory::create_with_user(&mut store, &self.problem, true).await?
+        };
         Ok(Json! {
             "data": data,
         })
@@ -151,7 +159,10 @@ pub struct Manage {
 impl Manage {
     pub async fn entry_from_iden(req: HttpRequest, db: DatabaseConnection, problem_iden: &str, require_sudo: bool) -> ResultHandler<Self> {
         let mut redis = get_redis_connection();
-        let (problem_node_id, statement_node_id) = get_problem_node_and_statement(&db, &mut redis, problem_iden).await?;
+        let (problem_node_id, statement_node_id) = {
+            let mut store = (&db, &mut redis);
+            ProblemRepository::resolve(&mut store, problem_iden).await?
+        };
         Ok(Self {
             basic: BasicHandler {
                 db,
@@ -185,10 +196,11 @@ impl Manage {
     pub async fn delete(self) -> ResultHandler<String> {
         let mut redis = get_redis_connection();
         if self.statement_node_id != -1 {
-            delete_problem_statement_for_problem(&self.basic.db, self.problem_node_id, self.statement_node_id).await?;
+            ProblemStatementEdgeQuery::delete(&self.basic.db, self.problem_node_id, self.statement_node_id).await?;
             // delete iden.
         } else {
-            delete_problem_connections(&self.basic.db, &mut redis, self.problem_node_id).await?;
+            let mut store = (&self.basic.db, &mut redis);
+            ProblemRepository::purge(&mut store, self.problem_node_id).await?;
         }
          Ok(Json! {
             "message": format!("delete problem {}", self.problem_node_id),
@@ -197,7 +209,10 @@ impl Manage {
 
     pub async fn add_statement(self, statement: ProblemStatementProp) -> ResultHandler<String> {
         let mut redis = get_redis_connection();
-        let result = add_problem_statement_for_problem(&self.basic.db, &mut redis, self.problem_node_id, generate_problem_statement_schema(statement)).await?;
+        let result = {
+            let mut store = (&self.basic.db, &mut redis);
+            ProblemFactory::add_statement(&mut store, self.problem_node_id, ProblemFactory::generate_statement_schema(statement)).await?
+        };
         Ok(Json! {
             "message": "success",
             "result": result,
@@ -206,7 +221,11 @@ impl Manage {
 
     pub async fn update_statement_content(self, data: Vec<ContentType>) -> ResultHandler<String> {
         let mut redis = get_redis_connection();
-        let result = modify_problem_statement(&self.basic.db, &mut redis, self.statement_node_id, data).await?;
+        let result = {
+            let mut store = (&self.basic.db, &mut redis);
+            let stmt = ProblemStatement::new(self.statement_node_id);
+            stmt.set_content(&mut store, data).await?
+        };
         Ok(Json! {
             "message": "success",
             "result": result,
@@ -215,7 +234,11 @@ impl Manage {
 
     pub async fn update_statement_source(self, new_source: &str) -> ResultHandler<String> {
         let mut redis = get_redis_connection();
-        let result = modify_problem_statement_source(&self.basic.db, &mut redis, self.statement_node_id, new_source).await?;
+        let result = {
+            let mut store = (&self.basic.db, &mut redis);
+            let stmt = ProblemStatement::new(self.statement_node_id);
+            stmt.set_source(&mut store, new_source).await?
+        };
         Ok(Json! {
             "message": "success",
             "result": result,
@@ -230,7 +253,9 @@ impl Manage {
     }
 
     pub async fn add_new_editor(self, user_id: i64) -> ResultHandler<String> {
-        add_editor(&self.basic.db, user_id, self.problem_node_id).await?;
+        let mut redis = get_redis_connection();
+        let store = (&self.basic.db, &mut redis);
+        ProblemPermissionService::add_editor(&store, user_id, self.problem_node_id).await?;
         Ok(Json! {
             "message": "successful",
         })
@@ -243,14 +268,18 @@ impl Manage {
         })
     }
     pub async fn remove_editor(self, manager: i64) -> ResultHandler<String> {
-        delete_editor(&self.basic.db, manager, self.problem_node_id).await?;
+        let mut redis = get_redis_connection();
+        let store = (&self.basic.db, &mut redis);
+        ProblemPermissionService::remove_editor(&store, manager, self.problem_node_id).await?;
         Ok(Json! {
             "message": "successful",
         })
     }
 
     pub async fn add_visitor(self, user_id: i64) -> ResultHandler<String> {
-        add_viewer(&self.basic.db, user_id, self.problem_node_id).await?;
+        let mut redis = get_redis_connection();
+        let store = (&self.basic.db, &mut redis);
+        ProblemPermissionService::add_viewer(&store, user_id, self.problem_node_id).await?;
         Ok(Json! {
             "message": "successful",
         })
@@ -263,7 +292,9 @@ impl Manage {
     }
 
     pub async fn remove_visitor(self, user_id: i64) -> ResultHandler<String> {
-        delete_viewer(&self.basic.db, user_id, self.problem_node_id).await?;
+        let mut redis = get_redis_connection();
+        let store = (&self.basic.db, &mut redis);
+        ProblemPermissionService::remove_viewer(&store, user_id, self.problem_node_id).await?;
         Ok(Json! {
             "message": "successful",
         })
@@ -273,9 +304,13 @@ impl Manage {
         let old_owner_id = self.basic.user_context.unwrap().user_id;
         let old_owners = PermProblemEdgeQuery::get_u_filter(self.problem_node_id, Column::UNodeId.eq(old_owner_id),  &self.basic.db).await?;
         if old_owners.contains(&old_owner_id) {
-            delete_owner(&self.basic.db, old_owner_id, self.problem_node_id).await?;
+            let mut redis = get_redis_connection();
+            let store = (&self.basic.db, &mut redis);
+            ProblemPermissionService::remove_owner(&store, old_owner_id, self.problem_node_id).await?;
         }
-        add_owner(&self.basic.db, new_owner, self.problem_node_id).await?;
+        let mut redis = get_redis_connection();
+        let store = (&self.basic.db, &mut redis);
+        ProblemPermissionService::add_owner(&store, new_owner, self.problem_node_id).await?;
         Ok(Json! {
             "message": "successful",
         })
@@ -361,7 +396,10 @@ impl List {
 
         let mut result_list = vec![];
         for p in problems {
-            let model = get_problem_with_node_id(&self.basic.db, &mut redis, p.node_id).await?;
+            let model = {
+                let mut store = (&self.basic.db, &mut redis);
+                ProblemRepository::model(&mut store, p.node_id).await?
+            };
             let idens = rmjac_core::service::iden::get_node_id_iden(&self.basic.db, &mut redis, p.node_id).await.unwrap_or_default();
             let iden = idens.first().cloned().unwrap_or_else(|| "unknown".to_string());
 

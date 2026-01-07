@@ -59,9 +59,9 @@ export function AddAccountForm({ onSuccess }: AddAccountFormProps) {
           throw new Error(res.msg || "绑定失败")
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       setStatus('error')
-      setMessage(error.message || "发生未知错误")
+      setMessage(error instanceof Error ? error.message : "发生未知错误")
     } finally {
       setLoading(false)
     }

@@ -24,15 +24,27 @@ function downloadBytes(bytes: Uint8Array, filename: string, mime?: string) {
   setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
-function findExportPayload(obj: unknown, depth = 0): any {
+interface ExportPayloadItem {
+  data: string;
+  page?: number;
+  [key: string]: unknown; // Allow other properties
+}
+
+interface ExportPayload {
+  data?: string; // For single export
+  items?: ExportPayloadItem[]; // For multi-page export
+  [key: string]: unknown; // Allow other properties
+}
+
+function findExportPayload(obj: unknown, depth = 0): ExportPayload | null {
   if (!obj || depth > 6) return null
   if (typeof obj !== "object") return null
 
   const rec = obj as Record<string, unknown>
-  if (typeof rec.data === "string") return rec
+  if (typeof rec.data === "string") return rec as ExportPayload
   if (Array.isArray(rec.items)) {
-    const first = rec.items.find((x) => x && typeof x === "object" && typeof (x as any).data === "string")
-    if (first) return rec
+    const first = rec.items.find((x) => x && typeof x === "object" && typeof (x as ExportPayloadItem).data === "string")
+    if (first) return rec as ExportPayload
   }
 
   for (const k of Object.keys(rec)) {

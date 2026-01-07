@@ -1,58 +1,29 @@
-import { API_BASE_URL } from './config'
+import { get, post } from '@/lib/http'
+import { VjudgeNode, AssignTaskReq, VjudgeTaskNode } from '@rmjac/api-declare'
 
-export interface VJudgeAccount {
-  node_id: number;
-  public: {
-    platform: string;
-    verified: boolean;
-    iden: string;
-    verified_code: string;
-    creation_time: string;
-    updated_at: string;
-    remote_mode: string;
-  };
-  private: {
-    auth?: {
-      Password?: string;
-      Token?: string;
-    } | null;
-  };
-}
+export type VJudgeAccount = VjudgeNode;
 
 export async function getMyVJudgeAccounts(): Promise<VJudgeAccount[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/vjudge/my_accounts`, {
-        credentials: 'include',
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    const response = await get<VJudgeAccount[]>('/api/vjudge/my_accounts')
+    if (response.code !== 0) {
+      throw new Error(response.msg || "Failed to fetch vjudge accounts")
     }
-
-    const data = await response.json()
-    return data.data || []
+    return response.data || []
   } catch (error) {
     console.error('Failed to fetch vjudge accounts:', error)
     return []
   }
 }
 
-export async function assignVJudgeTask(data: {
-  vjudge_node_id: number,
-  range: string,
-  ws_id?: string
-}): Promise<any> {
+export async function assignVJudgeTask(data: AssignTaskReq): Promise<{ code: number, msg: string, data: VjudgeTaskNode }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/vjudge/assign_task`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-      credentials: 'include',
-    })
-
-    return await response.json()
+    const response = await post<AssignTaskReq, VjudgeTaskNode>('/api/vjudge/assign_task', data)
+    return {
+        code: response.code,
+        msg: response.msg || "Success",
+        data: response.data!
+    }
   } catch (error) {
     console.error('Failed to assign vjudge task:', error)
     throw error

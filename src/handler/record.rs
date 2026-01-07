@@ -1,8 +1,8 @@
 use actix_web::{get, post, web, Scope, services, HttpRequest, HttpMessage};
 use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
 use serde::Deserialize;
-use rmjac_core::model::record::{RecordNewProp, create_record_only_archived, update_record_status, get_problem_user_status, get_record_status_with_record_id};
-use rmjac_core::model::problem::get_problem_node_and_statement;
+use rmjac_core::model::record::{RecordNewProp, Record, RecordRepository};
+use rmjac_core::model::problem::{ProblemRepository};
 use rmjac_core::graph::node::record::{RecordStatus, RecordNode};
 use rmjac_core::model::perm::check_system_perm;
 use rmjac_core::graph::edge::perm_system::SystemPerm;
@@ -61,7 +61,10 @@ impl View {
 
         let mut redis = get_redis_connection();
         let record = RecordNode::from_db(&self.basic.db, record_node_id).await?;
-        let judge_data = get_record_status_with_record_id(&self.basic.db, &mut redis, record_node_id).await?;
+        let judge_data = {
+            let mut store = (&self.basic.db, &mut redis);
+            Record::new(record_node_id).status_by_id(&mut store).await?
+        };
         Ok(Json! {
             "record": record,
             "judge_data": judge_data
@@ -105,7 +108,10 @@ impl Create {
 
     pub async fn before(self, problem_iden: &str) -> ResultHandler<Self> {
         let mut redis = get_redis_connection();
-        let (_problem_node_id, statement_node_id) = get_problem_node_and_statement(&self.basic.db, &mut redis, problem_iden).await?;
+        let (_problem_node_id, statement_node_id) = {
+            let mut store = (&self.basic.db, &mut redis);
+            ProblemRepository::resolve(&mut store, problem_iden).await?
+        };
         
         let mut _res = self;
         _res.record_props.statement_node_id = statement_node_id;
@@ -131,11 +137,14 @@ impl Create {
 
     pub async fn exec(self, problem_iden: &str) -> ResultHandler<String> {
         let mut redis = get_redis_connection();
-        let (problem_node_id, _) = get_problem_node_and_statement(&self.basic.db, &mut redis, problem_iden).await?;
+        let (problem_node_id, _) = {
+            let mut store = (&self.basic.db, &mut redis);
+            ProblemRepository::resolve(&mut store, problem_iden).await?
+        };
         
         let user_id = self.basic.user_context.unwrap().user_id;
         
-        let record = create_record_only_archived(
+        let record = Record::create_archived(
             &self.basic.db,
             self.record_props,
             user_id,
@@ -187,7 +196,7 @@ impl Manage {
     pub async fn update_status(self, new_status: RecordStatus) -> ResultHandler<String> {
         let record_node_id = self.record_node_id.unwrap();
         
-        let updated_record = update_record_status(&self.basic.db, record_node_id, new_status).await?;
+        let updated_record = Record::new(record_node_id).set_status(&self.basic.db, new_status).await?;
         
         Ok(Json! {
             "message": "Record status updated successfully",
@@ -198,7 +207,7 @@ impl Manage {
     pub async fn delete(self) -> ResultHandler<String> {
         let record_node_id = self.record_node_id.unwrap();
         
-        let deleted_record = update_record_status(&self.basic.db, record_node_id, RecordStatus::Deleted).await?;
+        let deleted_record = Record::new(record_node_id).delete(&self.basic.db).await?;
         
         Ok(Json! {
             "message": "Record deleted successfully",
@@ -268,7 +277,10 @@ impl List {
 
         if let Some(problem_search) = query.problem {
             // Try iden first
-            if let Ok((problem_node_id, _)) = get_problem_node_and_statement(&self.basic.db, &mut redis, &problem_search).await {
+            if let Ok((problem_node_id, _)) = {
+                let mut store = (&self.basic.db, &mut redis);
+                ProblemRepository::resolve(&mut store, &problem_search).await
+            } {
                 db_query = db_query.filter(Column::VNodeId.eq(problem_node_id));
             } else if let Ok(problem_id) = problem_search.parse::<i64>() {
                 // Then try ID
@@ -380,9 +392,12 @@ impl Status {
     pub async fn exec(self, problem_iden: &str) -> ResultHandler<String> {
         let user_id = self.basic.user_context.unwrap().user_id;
         let mut redis = get_redis_connection();
-        let (problem_node_id, _) = get_problem_node_and_statement(&self.basic.db, &mut redis, problem_iden).await?;
+        let (problem_node_id, _) = {
+            let mut store = (&self.basic.db, &mut redis);
+            ProblemRepository::resolve(&mut store, problem_iden).await?
+        };
         
-        let status = get_problem_user_status(&self.basic.db, user_id, problem_node_id).await?;
+        let status = RecordRepository::user_status(&self.basic.db, user_id, problem_node_id).await?;
         
         Ok(Json! {
             "user_id": user_id,

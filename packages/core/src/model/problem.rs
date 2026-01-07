@@ -1,7 +1,7 @@
 use crate::db::entity::node::problem_statement::ContentType;
 use crate::error::{CoreError, QueryExists};
 use crate::graph::action::get_node_type;
-use crate::graph::edge::perm_problem::{PermProblemEdgeQuery};
+use crate::graph::edge::perm_problem::{PermProblemEdgeQuery, ProblemPermRaw};
 use crate::graph::edge::problem_limit::{ProblemLimitEdgeQuery, ProblemLimitEdgeRaw};
 use crate::graph::edge::problem_statement::{ProblemStatementEdgeQuery, ProblemStatementEdgeRaw};
 use crate::graph::edge::problem_tag::{ProblemTagEdgeQuery, ProblemTagEdgeRaw};
@@ -34,145 +34,18 @@ use crate::graph::node::record::subtask::{SubtaskCalcMethod, SubtaskNodePrivateR
 use crate::model::user::SimplyUser;
 use crate::service::iden::{create_iden, get_node_id_iden, get_node_ids_from_iden, remove_iden_to_specific_node};
 
+use crate::model::ModelStore;
 
 type ProblemIdenString = String;
 
-pub async fn create_problem_schema(
-    db: &DatabaseConnection,
-    redis: &mut redis::Connection,
-    problem_statement: Vec<(
-        ProblemStatementNodeRaw,
-        ProblemLimitNodeRaw,
-        Option<ProblemIdenString>,
-    )>,
-    tag_node_id: Vec<i64>,
-    problem_name: &str,
-) -> Result<ProblemNode> {
-    log::debug!("Starting to create problem schema");
-    let problem_node = ProblemNodeRaw {
-        public: ProblemNodePublicRaw {
-            name: problem_name.to_string(),
-            creation_time: Utc::now().naive_utc(),
-        },
-        private: ProblemNodePrivateRaw {},
-    }
-    .save(db)
-    .await?;
-    let problem_node_id = problem_node.node_id;
-    for data in problem_statement {
-        add_problem_statement_for_problem(db, redis, problem_node_id, data).await?;
-    }
-    for tag_node in tag_node_id {
-        ProblemTagEdgeRaw {
-            u: problem_node.node_id,
-            v: tag_node,
-        }
-        .save(db)
-        .await?;
-    }
-    log::debug!(
-        "Problem schema created. Problem node ID: {}",
-        problem_node.node_id
-    );
-    Ok(problem_node)
-}
-
-pub async fn add_problem_statement_for_problem(
-    db: &DatabaseConnection,
-    redis: &mut redis::Connection,
-    problem_node_id: i64,
-    problem_statement: (
-        ProblemStatementNodeRaw,
-        ProblemLimitNodeRaw,
-        Option<ProblemIdenString>,
-    ),
-) -> Result<ProblemStatementNode> {
-    log::debug!("Creating problem statement node and limit node");
-    let (
-        problem_statement_node_raw,
-        problem_limit_node_raw,
-        iden
-    ) = problem_statement;
-    let problem_statement_node = problem_statement_node_raw.save(db).await?;
-    let problem_limit_node = problem_limit_node_raw.save(db).await?;
-    // problem -statement-> statement
-    log::debug!("Creating problem statement edge");
-    ProblemStatementEdgeRaw {
-        u: problem_node_id,
-        v: problem_statement_node.node_id,
-        copyright_risk: 0, // default
-    }
-        .save(db)
-        .await?;
-    if let Some(iden) = iden {
-        create_iden(db, redis, &format!("problem/{}", iden), vec![problem_statement_node.node_id, problem_node_id]).await?;
-    }
-    // 暂时允许访问题目 = 访问所有题面
-    // statement -limit-> limit
-    log::debug!("Add problem limit edge");
-    ProblemLimitEdgeRaw {
-        u: problem_statement_node.node_id,
-        v: problem_limit_node.node_id,
-    }
-    .save(db)
-    .await?;
-    let subtask_node = SubtaskNodeRaw {
-        public: SubtaskNodePublicRaw {
-            subtask_id: 0,
-            time_limit: problem_limit_node.public.time_limit,
-            memory_limit: problem_limit_node.public.memory_limit,
-            subtask_calc_method: SubtaskCalcMethod::Sum,
-            is_root: true,
-        },
-        private: SubtaskNodePrivateRaw { subtask_calc_function: None },
-    }.save(db).await?;
-    TestcaseEdgeRaw {
-        u: problem_statement_node.node_id,
-        v: subtask_node.node_id,
-        order: 0,
-    }.save(db).await?;
-    Ok(problem_statement_node)
-}
-
-pub fn generate_problem_statement_schema(statement: ProblemStatementProp) -> (ProblemStatementNodeRaw, ProblemLimitNodeRaw, Option<ProblemIdenString>) {
-    (ProblemStatementNodeRaw {
-        public: ProblemStatementNodePublicRaw {
-            statements: statement.problem_statements.clone(),
-            source: statement.statement_source.clone(),
-            creation_time: Utc::now().naive_utc(),
-            iden: statement.iden.clone(),
-            sample_group_in: statement.sample_group.iter().map(|(a, _)| a.clone()).collect(),
-            sample_group_out: statement.sample_group.iter().map(|(_, b)| b.clone()).collect(),
-            show_order: statement.show_order.clone(),
-            page_source: statement.page_source.clone(),
-            page_rendered: statement.page_rendered.clone(),
-            problem_difficulty: statement.problem_difficulty,
-        },
-        private: ProblemStatementNodePrivateRaw {},
-    }, ProblemLimitNodeRaw {
-        public: ProblemLimitNodePublicRaw {
-            time_limit: statement.time_limit,
-            memory_limit: statement.memory_limit,
-        },
-        private: ProblemLimitNodePrivateRaw {},
-    }, Some(statement.iden))
-}
-
-pub async fn delete_problem_statement_for_problem(
-    db: &DatabaseConnection,
-    problem_node_id: i64,
-    problem_statement_node_id: i64,
-) -> Result<()> {
-    log::debug!("Deleting problem statement node and limit node");
-    ProblemStatementEdgeQuery::delete(db, problem_node_id, problem_statement_node_id).await?;
-    log::debug!("Problem statement edge have been deleted");
-    Ok(())
+pub trait CacheKey {
+    fn cache_key(node_id: i64) -> String;
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemStatementProp {
-    pub statement_source: String,       // used to statement description
-    pub iden: String,   // used to create problem_iden node
+    pub statement_source: String,
+    pub iden: String,
     pub problem_statements: Vec<ContentType>,
     pub time_limit: i64,
     pub memory_limit: i64,
@@ -193,99 +66,6 @@ pub struct CreateProblemProps {
     pub tags: Vec<String>,
 }
 
-pub async fn create_problem_with_user(
-    db: &DatabaseConnection,
-    redis: &mut redis::Connection,
-    problem: &CreateProblemProps,
-    public_view: bool,
-) -> Result<ProblemNode> {
-    log::debug!("Creating new problem: {}", &problem.problem_name);
-    // check iden existence
-    let existing_ids = get_node_ids_from_iden(db, redis, format!("problem/{}", problem.problem_iden).as_str()).await;
-    log::info!("Checking existence for problem iden: {}", &problem.problem_iden);
-    if existing_ids.is_ok() {
-        return Err(CoreError::QueryExists(QueryExists::ProblemExist));
-    }
-    let problem_node_raw = ProblemNodeRaw {
-        public: ProblemNodePublicRaw {
-            name: problem.problem_name.clone(),
-            creation_time: problem.creation_time.unwrap_or(Utc::now().naive_utc()),
-        },
-        private: ProblemNodePrivateRaw {},
-    };
-    log::trace!("Problem Node Raw: {problem_node_raw:?}");
-    let mut problem_statement_node_raw = vec![];
-    for statement in &problem.problem_statement {
-        problem_statement_node_raw.push(generate_problem_statement_schema(statement.clone()));
-    }
-    log::trace!("Problem Statements Raw: {problem_statement_node_raw:?}");
-    let mut tag_ids = vec![];
-    for i in &problem.tags {
-        use db::entity::node::problem_tag::Column as ProblemTagColumn;
-        log::trace!("Finding tag {i} in database");
-        let id = ProblemTagNode::from_db_filter(db, ProblemTagColumn::TagName.eq(i)).await?;
-        tag_ids.push(if id.is_empty() {
-            log::trace!("Tag {i} not found, creating new.");
-            ProblemTagNodeRaw {
-                public: ProblemTagNodePublicRaw {
-                    tag_name: i.clone(),
-                    tag_description: "".to_string(),
-                },
-                private: ProblemTagNodePrivateRaw {},
-            }
-            .save(db)
-            .await?
-            .node_id
-        } else {
-            id[0].node_id
-        });
-    }
-    log::trace!("Final problem tags ID list: {:?}", tag_ids);
-    log::trace!("Data collected");
-    let result = create_problem_schema(
-        db,
-        redis,
-        problem_statement_node_raw,
-        tag_ids,
-        &problem.problem_name,
-    )
-    .await?;
-    log::debug!("Creating problem_source for problem");
-    create_iden(
-        db,
-        redis,
-        &format!("problem/{}", problem.problem_iden),
-        vec![result.node_id],
-    ).await?;
-    log::info!("Problem created: {}", &problem.problem_name);
-    grant_problem_creator_permissions(db, problem.user_id, result.node_id).await?;
-    MiscEdgeRaw {
-        u: problem.user_id,
-        v: result.node_id,
-        misc_type: "author".to_string(),
-    }.save(db).await?;
-    if public_view { // give default public view permission
-        let u = crate::env::DEFAULT_NODES.lock().unwrap().guest_user_node;
-        PermProblemEdgeRaw {
-            u,
-            v: result.node_id,
-            perms: crate::graph::edge::perm_problem::ProblemPermRaw::Perms(vec![
-                ProblemPerm::ReadProblem,
-            ]),
-        }.save(db).await?;
-    }
-    Ok(result)
-}
-
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct ProblemModel {
-    pub problem_node: ProblemNode,
-    pub problem_statement_node: Vec<(ProblemStatementNode, ProblemLimitNode)>,
-    pub tag: Vec<ProblemTagNode>,
-    pub author: Option<SimplyUser>,
-}
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProblemListQuery {
     pub page: Option<u64>,
@@ -296,423 +76,777 @@ pub struct ProblemListQuery {
     pub difficulty: Option<i32>,
 }
 
-pub async fn get_problem_iden(
-    db: &DatabaseConnection,
-    redis: &mut redis::Connection,
-    problem_node_id: i64,
-) -> Result<String> {
-    let iden_list = get_node_id_iden(db, redis, problem_node_id).await?;
-    for iden in iden_list {
-        if iden.starts_with("problem") {
-            return Ok(iden["problem".len()..].to_string());
-        }
-    }
-    Err(CoreError::NotFound("Cannot find problem iden for this problem".to_string()))
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct ProblemModel {
+    pub problem_node: ProblemNode,
+    pub problem_statement_node: Vec<(ProblemStatementNode, ProblemLimitNode)>,
+    pub tag: Vec<ProblemTagNode>,
+    pub author: Option<SimplyUser>,
 }
 
-pub async fn get_problem_node_and_statement(
-    db: &DatabaseConnection,
-    redis: &mut redis::Connection,
-    iden: &str,
-) -> Result<(i64, i64)> {
-    let node_ids = get_node_ids_from_iden(db, redis, format!("problem/{iden}").as_str()).await?;
-    if node_ids.is_empty() {
-        return Err(CoreError::NotFound("Cannot find problem with this iden".to_string()));
+pub struct ProblemDraft<'a> {
+    pub author_node_id: i64,
+    pub iden_slug: &'a str,
+    pub display_name: &'a str,
+    pub statements: &'a [ProblemStatementProp],
+    pub created_at: Option<chrono::NaiveDateTime>,
+    pub tag_names: &'a [String],
+    pub public_view_enabled: bool,
+}
+
+pub struct ProblemRepository;
+
+impl CacheKey for ProblemRepository {
+    fn cache_key(node_id: i64) -> String {
+        format!("p_{node_id}")
     }
-    if node_ids.len() == 1 {
-        Ok((node_ids[0], node_ids[0]))
-    } else {
-        let mut problem_node = -1;
-        let mut statement_node = -1;
-        for node_id in node_ids {
-            let node_type = get_node_type(db, node_id).await?;
-            if node_type == "problem" {
-                problem_node = node_id;
-            } else if node_type == "problem_statement" {
-                statement_node = node_id;
+}
+
+impl ProblemRepository {
+    pub async fn iden(store: &mut impl ModelStore, id: i64) -> Result<String> {
+        Self::extract_problem_iden(store, id).await
+    }
+
+    async fn extract_problem_iden(store: &mut impl ModelStore, problem_id: i64) -> Result<String> {
+        let db = store.get_db().clone();
+        let idens = get_node_id_iden(&db, store.get_redis(), problem_id).await?;
+        Self::find_problem_iden(idens)
+    }
+
+    fn find_problem_iden(idens: Vec<String>) -> Result<String> {
+        idens
+            .into_iter()
+            .find(|iden| iden.starts_with("problem"))
+            .map(|iden| iden["problem".len()..].to_string())
+            .ok_or_else(|| CoreError::NotFound("Cannot find problem iden".to_string()))
+    }
+
+    pub async fn resolve(store: &mut impl ModelStore, iden: &str) -> Result<(i64, i64)> {
+        let db = store.get_db().clone();
+        let ids = get_node_ids_from_iden(&db, store.get_redis(), &Self::iden_path(iden)).await?;
+        Self::classify_ids(store, ids, iden).await
+    }
+
+    fn iden_path(iden: &str) -> String {
+        format!("problem/{iden}")
+    }
+
+    async fn classify_ids(
+        store: &mut impl ModelStore,
+        candidate_ids: Vec<i64>,
+        iden: &str,
+    ) -> Result<(i64, i64)> {
+        if candidate_ids.is_empty() {
+            return Err(CoreError::NotFound("Cannot find problem".to_string()));
+        }
+        if candidate_ids.len() == 1 {
+            return Ok((candidate_ids[0], candidate_ids[0]));
+        }
+
+        let (prob_id, stmt_id) = Self::find_node_types(store, candidate_ids).await?;
+        Self::validate_ids(prob_id, stmt_id, iden)?;
+        Ok((prob_id, stmt_id))
+    }
+
+    async fn find_node_types(store: &mut impl ModelStore, ids: Vec<i64>) -> Result<(i64, i64)> {
+        let mut problem_id = -1;
+        let mut statement_id = -1;
+
+        for id in ids {
+            let node_type = get_node_type(store.get_db(), id).await?;
+            match node_type.as_str() {
+                "problem" => problem_id = id,
+                "problem_statement" => statement_id = id,
+                _ => {}
             }
         }
-        if problem_node == -1 {
-            return Err(CoreError::NotFound("Cannot find problem with this iden".to_string()));
+        Ok((problem_id, statement_id))
+    }
+
+    fn validate_ids(problem_id: i64, statement_id: i64, iden: &str) -> Result<()> {
+        if problem_id == -1 {
+            return Err(CoreError::NotFound("Cannot find problem".to_string()));
         }
-        if statement_node == -1 {
-            log::warn!("{iden}: Multiple nodes found for this iden, but cannot find a statement node!");
+        if statement_id == -1 {
+            log::warn!("{iden}: Multiple nodes found but no statement node");
         }
-        Ok((problem_node, statement_node))
+        Ok(())
+    }
+
+    pub async fn model(store: &mut impl ModelStore, id: i64) -> Result<ProblemModel> {
+        if let Some(cached) = Self::get_cached(store, id).await {
+            return Ok(cached);
+        }
+        let model = Self::load_full(store, id).await?;
+        Self::cache(&model, store, id).await?;
+        Ok(model)
+    }
+
+    async fn get_cached(store: &mut impl ModelStore, id: i64) -> Option<ProblemModel> {
+        store
+            .get_redis()
+            .get::<_, String>(Self::cache_key(id))
+            .ok()
+            .and_then(|s| serde_json::from_str::<ProblemModel>(&s).ok())
+    }
+
+    async fn load_full(store: &mut impl ModelStore, id: i64) -> Result<ProblemModel> {
+        let core = ProblemNode::from_db(store.get_db(), id).await?;
+        let statements = Self::load_statements(store, id).await?;
+        let tags = Self::load_tags(store, id).await?;
+        let author = Self::load_author(store, id).await?;
+
+        Ok(ProblemModel {
+            problem_node: core,
+            problem_statement_node: statements,
+            tag: tags,
+            author,
+        })
+    }
+
+    async fn load_statements(
+        store: &mut impl ModelStore,
+        id: i64,
+    ) -> Result<Vec<(ProblemStatementNode, ProblemLimitNode)>> {
+        let stmt_ids = ProblemStatementEdgeQuery::get_v(id, store.get_db()).await?;
+        let mut stmts = Vec::with_capacity(stmt_ids.len());
+
+        for stmt_id in stmt_ids {
+            let stmt = ProblemStatementNode::from_db(store.get_db(), stmt_id).await?;
+            if let Some(limit) = Self::load_limit(store, stmt_id).await? {
+                stmts.push((stmt, limit));
+            }
+        }
+        Ok(stmts)
+    }
+
+    async fn load_limit(
+        store: &mut impl ModelStore,
+        stmt_id: i64,
+    ) -> Result<Option<ProblemLimitNode>> {
+        let limit_ids = ProblemLimitEdgeQuery::get_v(stmt_id, store.get_db()).await?;
+        match limit_ids.first() {
+            Some(&id) => Ok(Some(ProblemLimitNode::from_db(store.get_db(), id).await?)),
+            None => Ok(None),
+        }
+    }
+
+    async fn load_tags(store: &mut impl ModelStore, id: i64) -> Result<Vec<ProblemTagNode>> {
+        let tag_ids = ProblemTagEdgeQuery::get_v(id, store.get_db()).await?;
+        let mut tags = Vec::with_capacity(tag_ids.len());
+        for tag_id in tag_ids {
+            tags.push(ProblemTagNode::from_db(store.get_db(), tag_id).await?);
+        }
+        Ok(tags)
+    }
+
+    async fn load_author(store: &mut impl ModelStore, id: i64) -> Result<Option<SimplyUser>> {
+        let author_ids =
+            MiscEdgeQuery::get_u_filter(id, MiscColumn::MiscType.eq("author"), store.get_db()).await?;
+        match author_ids.first() {
+            Some(&author_id) => {
+                let user = crate::model::user::SimplyUser::load(store.get_db(), author_id)
+                    .await
+                    .unwrap_or(SimplyUser {
+                        node_id: author_id,
+                        name: "unknown".to_string(),
+                        iden: "unknown".to_string(),
+                        avatar: "default".to_string(),
+                    });
+                Ok(Some(user))
+            }
+            None => Ok(None),
+        }
+    }
+
+    async fn cache(model: &ProblemModel, store: &mut impl ModelStore, id: i64) -> Result<()> {
+        let key = Self::cache_key(id);
+        let serialized = serde_json::to_string(model)?;
+        store.get_redis().set::<_, _, ()>(&key, serialized)?;
+        store.get_redis().expire::<_, ()>(&key, 3600)?;
+        Ok(())
+    }
+
+    pub async fn clear(store: &mut impl ModelStore, id: i64) -> Result<()> {
+        store.get_redis().del::<_, ()>(Self::cache_key(id))?;
+        Ok(())
+    }
+
+    pub async fn purge(store: &mut impl ModelStore, id: i64) -> Result<()> {
+        Self::detach_all_statements(store, id).await?;
+        Self::detach_all_tags(store, id).await?;
+        Self::clear(store, id).await
+    }
+
+    async fn detach_all_statements(store: &mut impl ModelStore, id: i64) -> Result<()> {
+        let stmt_ids = ProblemStatementEdgeQuery::get_v(id, store.get_db()).await?;
+        for stmt_id in stmt_ids {
+            Self::detach_statement(store, id, stmt_id).await?;
+        }
+        Ok(())
+    }
+
+    async fn detach_all_tags(store: &mut impl ModelStore, id: i64) -> Result<()> {
+        let tag_ids = ProblemTagEdgeQuery::get_v(id, store.get_db()).await?;
+        for tag_id in tag_ids {
+            ProblemTagEdgeQuery::delete(store.get_db(), id, tag_id).await?;
+        }
+        Ok(())
+    }
+    pub async fn detach_statement(
+        store: &mut impl ModelStore,
+        problem_id: i64,
+        stmt_id: i64,
+    ) -> Result<()> {
+        let db = store.get_db().clone();
+        {
+            let redis = store.get_redis();
+            Self::detach_limits(&db, redis, stmt_id).await?;
+        }
+        {
+            let redis = store.get_redis();
+            Self::remove_idens(&db, redis, stmt_id).await?;
+        }
+        ProblemStatementEdgeQuery::delete(&db, problem_id, stmt_id).await?;
+        Self::clear(store, problem_id).await
+    }
+
+    async fn detach_limits(
+        db: &DatabaseConnection,
+        redis: &mut redis::Connection,
+        stmt_id: i64,
+    ) -> Result<()> {
+        let limit_ids = ProblemLimitEdgeQuery::get_v(stmt_id, db).await?;
+        for limit_id in limit_ids {
+            ProblemLimitEdgeQuery::delete(db, stmt_id, limit_id).await?;
+        }
+        Ok(())
+    }
+
+    async fn remove_idens(
+        db: &DatabaseConnection,
+        redis: &mut redis::Connection,
+        node_id: i64,
+    ) -> Result<()> {
+        let idens = get_node_id_iden(db, redis, node_id).await?;
+        for iden in idens {
+            remove_iden_to_specific_node(db, &iden, node_id).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn detach_tag(
+        store: &mut impl ModelStore,
+        problem_id: i64,
+        tag_id: i64,
+    ) -> Result<()> {
+        ProblemTagEdgeQuery::delete(store.get_db(), problem_id, tag_id).await?;
+        Self::clear(store, problem_id).await
     }
 }
 
-pub async fn get_problem(
-    db: &DatabaseConnection,
-    redis: &mut redis::Connection,
-    iden: &str,
-) -> Result<(ProblemModel, i64)> {
-    let (problem_node, statement_node) = get_problem_node_and_statement(db, redis, iden).await?;
-    Ok((get_problem_model(db, redis, problem_node).await?, statement_node))
-}
-
-pub async fn get_problem_with_node_id(
-    db: &DatabaseConnection,
-    redis: &mut redis::Connection,
-    node_id: i64,
-) -> Result<ProblemModel> {
-    get_problem_model(db, redis, node_id).await
-}
-
-pub async fn get_problem_model(
-    db: &DatabaseConnection,
-    redis: &mut redis::Connection,
-    problem_node_id: i64,
-) -> Result<ProblemModel> {
-    if let Ok(value) = redis.get::<_, String>(format!("p_{problem_node_id}"))
-        && let Ok(problem_model) = serde_json::from_str::<ProblemModel>(value.as_str()) {
-            return Ok(problem_model);
+impl<'a> ProblemDraft<'a> {
+    pub async fn commit(
+        &self,
+        store: &mut impl ModelStore,
+    ) -> Result<ProblemNode> {
+        let db = store.get_db().clone();
+        if get_node_ids_from_iden(&db, store.get_redis(), format!("problem/{}", self.iden_slug).as_str()).await.is_ok() {
+            return Err(CoreError::QueryExists(QueryExists::ProblemExist));
         }
-    let problem_node = ProblemNode::from_db(db, problem_node_id).await?;
 
-    // 使用库函数获取题目相关的statement节点
-    let problem_statement_node_id = ProblemStatementEdgeQuery::get_v(problem_node.node_id, db).await?;
-    let mut problem_statement_node = vec![];
-    for node_id in problem_statement_node_id {
-        let statement_node = ProblemStatementNode::from_db(db, node_id).await?;
-        let limit_node_ids = ProblemLimitEdgeQuery::get_v(node_id, db).await?;
-        if let Some(&limit_node_id) = limit_node_ids.first() {
-            let problem_limit_node = ProblemLimitNode::from_db(db, limit_node_id).await?;
-            problem_statement_node.push((statement_node, problem_limit_node));
+        let statement_blueprints: Vec<_> = self
+            .statements
+            .iter()
+            .cloned()
+            .map(ProblemFactory::generate_statement_schema)
+            .collect();
+
+        let mut tag_node_ids = Vec::with_capacity(self.tag_names.len());
+        for tag_name in self.tag_names {
+            use db::entity::node::problem_tag::Column as ProblemTagColumn;
+            let existing = ProblemTagNode::from_db_filter(store.get_db(), ProblemTagColumn::TagName.eq(tag_name)).await?;
+            let tag_id = if existing.is_empty() {
+                ProblemTagNodeRaw {
+                    public: ProblemTagNodePublicRaw {
+                        tag_name: tag_name.clone(),
+                        tag_description: String::new(),
+                    },
+                    private: ProblemTagNodePrivateRaw {},
+                }
+                .save(store.get_db())
+                .await?
+                .node_id
+            } else {
+                existing[0].node_id
+            };
+            tag_node_ids.push(tag_id);
         }
-    }
 
-    // 使用库函数获取题目相关的tag节点
-    let tag_node_ids = ProblemTagEdgeQuery::get_v(problem_node.node_id, db).await?;
-    let mut tag = vec![];
-    for tag_node_id in tag_node_ids {
-        let tag_node = ProblemTagNode::from_db(db, tag_node_id).await?;
-        tag.push(tag_node);
-    }
-    let author_node_id = MiscEdgeQuery::get_u_filter(problem_node.node_id, MiscColumn::MiscType.eq("author"), db).await?;
-    let author = if !author_node_id.is_empty() {
-        let author_node = crate::model::user::SimplyUser::from_db(db, author_node_id[0]).await.unwrap_or(SimplyUser { node_id:  author_node_id[0], name: "unknown".to_string(), iden: "unknown".to_string(), avatar: "default".to_string() });
-        Some(author_node)
-    } else {
-        None
-    };
-    let problem_model = ProblemModel {
-        problem_node,
-        problem_statement_node,
-        tag,
-        author,
-    };
-    let serialized = serde_json::to_string(&problem_model)?;
-    redis.set::<_, _, ()>(format!("p_{problem_node_id}"), serialized)?;
-    redis.expire::<_, ()>(format!("p_{problem_node_id}"), 3600)?;
-    Ok(problem_model)
-}
-
-pub async fn refresh_problem_node_cache(redis: &mut redis::Connection, node_id: i64) -> Result<()> {
-    redis.del::<_, ()>(format!("p_{node_id}"))?;
-    Ok(())
-}
-pub async fn modify_problem_statement(
-    db: &DatabaseConnection,
-    redis: &mut redis::Connection,
-    node_id: i64,
-    new_content: Vec<ContentType>,
-) -> Result<ProblemStatementNode> {
-    use db::entity::node::problem_statement::Column::Content;
-    let result = ProblemStatementNode::from_db(db, node_id)
-        .await?
-        .modify(db, Content, new_content)
+        let problem_node = ProblemFactory::create_schema(
+            store,
+            statement_blueprints,
+            tag_node_ids,
+            self.display_name,
+            self.created_at.unwrap_or(Utc::now().naive_utc()),
+        )
         .await?;
-    let problem_node_id = ProblemStatementEdgeQuery::get_u_one(node_id, db).await;
-    if let Ok(problem_node_id) = problem_node_id {
-        refresh_problem_node_cache(redis, problem_node_id).await?;
-    }
-    Ok(result)
-}
 
-pub async fn modify_problem_statement_source(
-    db: &DatabaseConnection,
-    redis: &mut redis::Connection,
-    node_id: i64,
-    new_source: &str,
-) -> Result<ProblemStatementNode> {
-    use db::entity::node::problem_statement::Column::Source;
-    let result = ProblemStatementNode::from_db(db, node_id)
-        .await?
-        .modify(db, Source, new_source)
+        let redis = store.get_redis();
+        create_iden(&db, redis, &format!("problem/{}", self.iden_slug), vec![problem_node.node_id]).await?;
+
+        ProblemPermissionService::grant_creator(store, self.author_node_id, problem_node.node_id).await?;
+
+        MiscEdgeRaw {
+            u: self.author_node_id,
+            v: problem_node.node_id,
+            misc_type: "author".to_string(),
+        }
+        .save(store.get_db())
         .await?;
-    let problem_node_id = ProblemStatementEdgeQuery::get_u_one(node_id, db).await;
-    if let Ok(problem_node_id) = problem_node_id {
-        refresh_problem_node_cache(redis, problem_node_id).await?;
-    }
-    Ok(result)
-}
 
-/// Delete all connections for a problem (edges only)
-/// This function removes all edges connected to a problem while keeping the nodes intact
-pub async fn delete_problem_connections(
-    db: &DatabaseConnection,
-    redis: &mut redis::Connection,
-    problem_node_id: i64,
-) -> Result<()> {
-
-
-    log::debug!("Found problem node ID: {}", problem_node_id);
-
-    // Get all statement nodes connected to this problem using EdgeQuery
-    let statement_node_ids = ProblemStatementEdgeQuery::get_v(problem_node_id, db).await?;
-    log::debug!("Found {} statement nodes", statement_node_ids.len());
-
-    // For each statement node, delete its limit edges and then the statement edge
-    for statement_node_id in statement_node_ids {
-        // Delete problem-limit edges using EdgeQuery
-        let limit_node_ids = ProblemLimitEdgeQuery::get_v(statement_node_id, db).await?;
-        for limit_node_id in limit_node_ids {
-            ProblemLimitEdgeQuery::delete(db, statement_node_id, limit_node_id).await?;
-            log::debug!("Deleted problem-limit edge: {} -> {}", statement_node_id, limit_node_id);
+        if self.public_view_enabled {
+            let guest_node = crate::env::DEFAULT_NODES.lock().unwrap().guest_user_node;
+            PermProblemEdgeRaw {
+                u: guest_node,
+                v: problem_node.node_id,
+                perms: ProblemPermRaw::Perms(vec![ProblemPerm::ReadProblem]),
+            }
+            .save(store.get_db())
+            .await?;
         }
 
-        // Delete problem-statement edge using EdgeQuery
-        ProblemStatementEdgeQuery::delete(db, problem_node_id, statement_node_id).await?;
-        log::debug!("Deleted problem-statement edge: {} -> {}", problem_node_id, statement_node_id);
+        Ok(problem_node)
     }
-
-    // Delete all problem-tag edges using EdgeQuery
-    let tag_node_ids = ProblemTagEdgeQuery::get_v(problem_node_id, db).await?;
-    for tag_node_id in tag_node_ids {
-        ProblemTagEdgeQuery::delete(db, problem_node_id, tag_node_id).await?;
-        log::debug!("Deleted problem-tag edge: {} -> {}", problem_node_id, tag_node_id);
-    }
-
-    // Clear cache
-    refresh_problem_node_cache(redis, problem_node_id).await?;
-
-    Ok(())
 }
 
-/// Remove a specific statement from a problem (delete edges only)
-pub async fn remove_statement_from_problem(
-    db: &DatabaseConnection,
-    redis: &mut redis::Connection,
-    problem_node_id: i64,
-    statement_node_id: i64,
-) -> Result<()> {
-    log::debug!("Removing statement {} from problem {}", statement_node_id, problem_node_id);
+pub struct Problem {
+    pub node_id: i64,
+}
 
-    // Delete problem-limit edges using EdgeQuery
-    let limit_node_ids = ProblemLimitEdgeQuery::get_v(statement_node_id, db).await?;
-    for limit_node_id in limit_node_ids {
-        ProblemLimitEdgeQuery::delete(db, statement_node_id, limit_node_id).await?;
-        log::debug!("Deleted problem-limit edge: {} -> {}", statement_node_id, limit_node_id);
+impl Problem {
+    pub fn new(node_id: i64) -> Self {
+        Self { node_id }
     }
 
-
-    // check iden for statement id
-
-    let iden = get_node_id_iden(db, redis, statement_node_id).await?;
-
-    // delete all iden.
-    for i in iden {
-        remove_iden_to_specific_node(db, &i, statement_node_id).await?;
+    pub async fn load(store: &impl ModelStore, node_id: i64) -> Result<ProblemNode> {
+        ProblemNode::from_db(store.get_db(), node_id).await
     }
 
-
-    // Delete problem-statement edge using EdgeQuery
-    ProblemStatementEdgeQuery::delete(db, problem_node_id, statement_node_id).await?;
-
-    // Refresh problem cache
-    refresh_problem_node_cache(redis, problem_node_id).await?;
-
-    log::debug!("Successfully removed statement {} from problem {}", statement_node_id, problem_node_id);
-    Ok(())
-}
-
-/// Remove a tag from a problem (delete edge only)
-pub async fn remove_tag_from_problem(
-    db: &DatabaseConnection,
-    redis: &mut redis::Connection,
-    problem_node_id: i64,
-    tag_node_id: i64,
-) -> Result<()> {
-    log::debug!("Removing tag {} from problem {}", tag_node_id, problem_node_id);
-
-    // Delete the problem-tag edge using EdgeQuery
-    ProblemTagEdgeQuery::delete(db, problem_node_id, tag_node_id).await?;
-
-    // Refresh problem cache
-    refresh_problem_node_cache(redis, problem_node_id).await?;
-
-    log::debug!("Successfully removed tag {} from problem {}", tag_node_id, problem_node_id);
-    Ok(())
-}
-
-pub async fn grant_problem_creator_permissions(
-    db: &DatabaseConnection,
-    user_node_id: i64,
-    problem_node_id: i64,
-) -> Result<()> {
-    log::debug!("Granting problem creator permissions: user {} -> problem {}", user_node_id, problem_node_id);
-
-    // 授予题目权限
-    PermProblemEdgeRaw {
-        u: user_node_id,
-        v: problem_node_id,
-        perms: crate::graph::edge::perm_problem::ProblemPermRaw::Perms(vec![
-            ProblemPerm::ReadProblem,
-            ProblemPerm::EditProblem,
-            ProblemPerm::DeleteProblem,
-            ProblemPerm::OwnProblem,
-        ]),
-    }
-    .save(db)
-    .await?;
-
-    // 授予页面权限
-    PermPagesEdgeRaw {
-        u: user_node_id,
-        v: problem_node_id,
-        perms: crate::graph::edge::perm_pages::PagesPermRaw::Perms(vec![
-            PagesPerm::ReadPages,
-            PagesPerm::EditPages,
-            PagesPerm::PublishPages,
-        ]),
-    }
-    .save(db)
-    .await?;
-
-    log::debug!("Successfully granted problem creator permissions: user {} -> problem {}", user_node_id, problem_node_id);
-    Ok(())
-}
-pub async fn grant_problem_access(
-    db: &DatabaseConnection,
-    user_node_id: i64,
-    problem_node_id: i64,
-    can_view_private: bool,
-) -> Result<()> {
-    log::debug!("Granting problem access: user {} -> problem {}, private: {}", user_node_id, problem_node_id, can_view_private);
-
-    let mut problem_perms = vec![ProblemPerm::ReadProblem];
-    if can_view_private {
-        problem_perms.push(ProblemPerm::EditProblem);
+    pub async fn get(
+        &self,
+        store: &mut impl ModelStore,
+    ) -> Result<ProblemModel> {
+        ProblemRepository::model(store, self.node_id).await
     }
 
-    // 授予题目权限
-    PermProblemEdgeRaw {
-        u: user_node_id,
-        v: problem_node_id,
-        perms: crate::graph::edge::perm_problem::ProblemPermRaw::Perms(problem_perms),
+    pub async fn refresh(&self, store: &mut impl ModelStore) -> Result<()> {
+        ProblemRepository::clear(store, self.node_id).await
     }
-    .save(db)
-    .await?;
 
-    log::debug!("Successfully granted problem access: user {} -> problem {}", user_node_id, problem_node_id);
-    Ok(())
-}
-
-pub async fn add_owner(
-    db: &DatabaseConnection,
-    user_node_id: i64,
-    problem_node_id: i64,
-) -> Result<()> {
-    log::debug!("Adding owner: user {} -> problem {}", user_node_id, problem_node_id);
-
-    // 授予用户题目所有权限
-    PermProblemEdgeRaw {
-        u: user_node_id,
-        v: problem_node_id,
-        perms: crate::graph::edge::perm_problem::ProblemPermRaw::Perms(vec![
-            ProblemPerm::OwnProblem,
-        ]),
+    pub async fn rm_all(
+        &self,
+        store: &mut impl ModelStore,
+    ) -> Result<()> {
+        ProblemRepository::purge(store, self.node_id).await
     }
-    .save(db)
-    .await?;
 
-    log::debug!("Successfully added owner: user {} -> problem {}", user_node_id, problem_node_id);
-    Ok(())
-}
-
-pub async fn delete_owner(
-    db: &DatabaseConnection,
-    user_node_id: i64,
-    problem_node_id: i64,
-) -> Result<()> {
-    log::debug!("Deleting owner: user {} -> problem {}", user_node_id, problem_node_id);
-
-    // 删除用户题目所有权限
-    PermProblemEdgeQuery::delete(db, user_node_id, problem_node_id).await?;
-
-    log::debug!("Successfully deleted owner: user {} -> problem {}", user_node_id, problem_node_id);
-    Ok(())
-}
-
-pub async fn add_editor(
-    db: &DatabaseConnection,
-    user_node_id: i64,
-    problem_node_id: i64,
-) -> Result<()> {
-    log::debug!("Adding editor: user {} -> problem {}", user_node_id, problem_node_id);
-
-    // 授予用户题目编辑权限
-    PermProblemEdgeRaw {
-        u: user_node_id,
-        v: problem_node_id,
-        perms: crate::graph::edge::perm_problem::ProblemPermRaw::Perms(vec![
-            ProblemPerm::EditProblem,
-        ]),
+    pub async fn rm_stmt(
+        &self,
+        store: &mut impl ModelStore,
+        stmt_id: i64,
+    ) -> Result<()> {
+        ProblemRepository::detach_statement(store, self.node_id, stmt_id).await
     }
-    .save(db)
-    .await?;
 
-    log::debug!("Successfully added editor: user {} -> problem {}", user_node_id, problem_node_id);
-    Ok(())
-}
-
-pub async fn delete_editor(
-    db: &DatabaseConnection,
-    user_node_id: i64,
-    problem_node_id: i64,
-) -> Result<()> {
-    log::debug!("Deleting editor: user {} -> problem {}", user_node_id, problem_node_id);
-
-    // 删除用户题目编辑权限
-    PermProblemEdgeQuery::delete(db, user_node_id, problem_node_id).await?;
-
-    log::debug!("Successfully deleted editor: user {} -> problem {}", user_node_id, problem_node_id);
-    Ok(())
-}
-
-pub async fn add_viewer(
-    db: &DatabaseConnection,
-    user_node_id: i64,
-    problem_node_id: i64,
-) -> Result<()> {
-    log::debug!("Adding viewer: user {} -> problem {}", user_node_id, problem_node_id);
-
-    // 授予用户题目查看权限
-    PermProblemEdgeRaw {
-        u: user_node_id,
-        v: problem_node_id,
-        perms: crate::graph::edge::perm_problem::ProblemPermRaw::Perms(vec![
-            ProblemPerm::ReadProblem,
-        ]),
+    pub async fn rm_tag(
+        &self,
+        store: &mut impl ModelStore,
+        tag_id: i64,
+    ) -> Result<()> {
+        ProblemRepository::detach_tag(store, self.node_id, tag_id).await
     }
-    .save(db)
-    .await?;
 
-    log::debug!("Successfully added viewer: user {} -> problem {}", user_node_id, problem_node_id);
-    Ok(())
+    pub async fn set_creator(&self, store: &impl ModelStore, user_id: i64) -> Result<()> {
+        ProblemPermissionService::grant_creator(store, user_id, self.node_id).await
+    }
+
+    pub async fn set_author(&self, store: &impl ModelStore, user_id: i64) -> Result<()> {
+        MiscEdgeRaw {
+            u: user_id,
+            v: self.node_id,
+            misc_type: "author".to_string(),
+        }
+        .save(store.get_db())
+        .await?;
+        Ok(())
+    }
 }
 
-pub async fn delete_viewer(
-    db: &DatabaseConnection,
-    user_node_id: i64,
-    problem_node_id: i64,
-) -> Result<()> {
-    log::debug!("Deleting viewer: user {} -> problem {}", user_node_id, problem_node_id);
-
-    // 删除用户题目查看权限
-    PermProblemEdgeQuery::delete(db, user_node_id, problem_node_id).await?;
-
-    log::debug!("Successfully deleted viewer: user {} -> problem {}", user_node_id, problem_node_id);
-    Ok(())
+pub struct ProblemStatement {
+    pub node_id: i64,
 }
+
+impl ProblemStatement {
+    pub fn new(node_id: i64) -> Self {
+        Self { node_id }
+    }
+
+    pub async fn load(store: &impl ModelStore, node_id: i64) -> Result<ProblemStatementNode> {
+        ProblemStatementNode::from_db(store.get_db(), node_id).await
+    }
+
+    pub async fn iden(&self, store: &mut impl ModelStore) -> Result<String> {
+        Self::extract_iden(store, self.node_id).await
+    }
+
+    async fn extract_iden(store: &mut impl ModelStore, id: i64) -> Result<String> {
+        let db = store.get_db().clone();
+        let iden_list = get_node_id_iden(&db, store.get_redis(), id).await?;
+        Self::find_iden(iden_list)
+    }
+
+    fn find_iden(idens: Vec<String>) -> Result<String> {
+        for iden in idens {
+            if iden.starts_with("problem") {
+                return Ok(iden["problem".len()..].to_string());
+            }
+        }
+        Err(CoreError::NotFound("Cannot find problem iden".to_string()))
+    }
+
+    pub async fn set_content(
+        &self,
+        store: &mut impl ModelStore,
+        content: Vec<ContentType>,
+    ) -> Result<ProblemStatementNode> {
+        use db::entity::node::problem_statement::Column::Content;
+        let node = ProblemStatementNode::from_db(store.get_db(), self.node_id).await?;
+        let result = node.modify(store.get_db(), Content, content).await?;
+        self.flush_parent(store).await?;
+        Ok(result)
+    }
+
+    pub async fn set_source(
+        &self,
+        store: &mut impl ModelStore,
+        source: &str,
+    ) -> Result<ProblemStatementNode> {
+        use db::entity::node::problem_statement::Column::Source;
+        let node = ProblemStatementNode::from_db(store.get_db(), self.node_id).await?;
+        let result = node.modify(store.get_db(), Source, source).await?;
+        self.flush_parent(store).await?;
+        Ok(result)
+    }
+
+    async fn flush_parent(&self, store: &mut impl ModelStore) -> Result<()> {
+        if let Ok(parent_id) = ProblemStatementEdgeQuery::get_u_one(self.node_id, store.get_db()).await {
+            let key = ProblemRepository::cache_key(parent_id);
+            let _ = store.get_redis().del::<_, ()>(&key);
+        }
+        Ok(())
+    }
+}
+
+pub struct ProblemPermissionService;
+
+#[derive(Clone, Debug)]
+pub enum Role {
+    Owner,
+    Editor,
+    Viewer,
+}
+
+impl Role {
+    fn perms(&self) -> Vec<ProblemPerm> {
+        match self {
+            Role::Owner => vec![ProblemPerm::OwnProblem],
+            Role::Editor => vec![ProblemPerm::EditProblem],
+            Role::Viewer => vec![ProblemPerm::ReadProblem],
+        }
+    }
+}
+
+impl ProblemPermissionService {
+    pub async fn grant_creator(
+        store: &impl ModelStore,
+        user_id: i64,
+        problem_id: i64,
+    ) -> Result<()> {
+        PermProblemEdgeRaw {
+            u: user_id,
+            v: problem_id,
+            perms: ProblemPermRaw::Perms(vec![
+                ProblemPerm::ReadProblem,
+                ProblemPerm::EditProblem,
+                ProblemPerm::DeleteProblem,
+                ProblemPerm::OwnProblem,
+            ]),
+        }
+        .save(store.get_db())
+        .await?;
+
+        PermPagesEdgeRaw {
+            u: user_id,
+            v: problem_id,
+            perms: crate::graph::edge::perm_pages::PagesPermRaw::Perms(vec![
+                PagesPerm::ReadPages,
+                PagesPerm::EditPages,
+                PagesPerm::PublishPages,
+            ]),
+        }
+        .save(store.get_db())
+        .await?;
+        Ok(())
+    }
+
+    pub async fn grant_access(
+        store: &impl ModelStore,
+        user_id: i64,
+        problem_id: i64,
+        can_edit: bool,
+    ) -> Result<()> {
+        let mut perms = vec![ProblemPerm::ReadProblem];
+        if can_edit {
+            perms.push(ProblemPerm::EditProblem);
+        }
+        PermProblemEdgeRaw {
+            u: user_id,
+            v: problem_id,
+            perms: ProblemPermRaw::Perms(perms),
+        }
+        .save(store.get_db())
+        .await?;
+        Ok(())
+    }
+
+    /// Generic function to grant permission by role (Owner/Editor/Viewer)
+    pub async fn grant_role(
+        store: &impl ModelStore,
+        user_id: i64,
+        problem_id: i64,
+        role: Role,
+    ) -> Result<()> {
+        PermProblemEdgeRaw {
+            u: user_id,
+            v: problem_id,
+            perms: ProblemPermRaw::Perms(role.perms()),
+        }
+        .save(store.get_db())
+        .await?;
+        Ok(())
+    }
+
+    /// Generic function to revoke permission (for any role)
+    pub async fn revoke_permission(
+        store: &impl ModelStore,
+        user_id: i64,
+        problem_id: i64,
+    ) -> Result<()> {
+        PermProblemEdgeQuery::delete(store.get_db(), user_id, problem_id).await?;
+        Ok(())
+    }
+
+    // Convenience methods for backward compatibility
+    pub async fn add_owner(
+        store: &impl ModelStore,
+        user_id: i64,
+        problem_id: i64,
+    ) -> Result<()> {
+        Self::grant_role(store, user_id, problem_id, Role::Owner).await
+    }
+
+    pub async fn remove_owner(
+        store: &impl ModelStore,
+        user_id: i64,
+        problem_id: i64,
+    ) -> Result<()> {
+        Self::revoke_permission(store, user_id, problem_id).await
+    }
+
+    pub async fn add_editor(
+        store: &impl ModelStore,
+        user_id: i64,
+        problem_id: i64,
+    ) -> Result<()> {
+        Self::grant_role(store, user_id, problem_id, Role::Editor).await
+    }
+
+    pub async fn remove_editor(
+        store: &impl ModelStore,
+        user_id: i64,
+        problem_id: i64,
+    ) -> Result<()> {
+        Self::revoke_permission(store, user_id, problem_id).await
+    }
+
+    pub async fn add_viewer(
+        store: &impl ModelStore,
+        user_id: i64,
+        problem_id: i64,
+    ) -> Result<()> {
+        Self::grant_role(store, user_id, problem_id, Role::Viewer).await
+    }
+
+    pub async fn remove_viewer(
+        store: &impl ModelStore,
+        user_id: i64,
+        problem_id: i64,
+    ) -> Result<()> {
+        Self::revoke_permission(store, user_id, problem_id).await
+    }
+}
+
+// Backward compat alias
+pub use ProblemPermissionService as Perm;
+
+pub struct ProblemFactory;
+
+impl ProblemFactory {
+    // Generate statement schema without DB access
+    pub fn generate_statement_schema(
+        statement: ProblemStatementProp,
+    ) -> (ProblemStatementNodeRaw, ProblemLimitNodeRaw, Option<ProblemIdenString>) {
+        (
+            ProblemStatementNodeRaw {
+                public: ProblemStatementNodePublicRaw {
+                    statements: statement.problem_statements.clone(),
+                    source: statement.statement_source.clone(),
+                    creation_time: Utc::now().naive_utc(),
+                    iden: statement.iden.clone(),
+                    sample_group_in: statement.sample_group.iter().map(|(a, _)| a.clone()).collect(),
+                    sample_group_out: statement.sample_group.iter().map(|(_, b)| b.clone()).collect(),
+                    show_order: statement.show_order.clone(),
+                    page_source: statement.page_source.clone(),
+                    page_rendered: statement.page_rendered.clone(),
+                    problem_difficulty: statement.problem_difficulty,
+                },
+                private: ProblemStatementNodePrivateRaw {},
+            },
+            ProblemLimitNodeRaw {
+                public: ProblemLimitNodePublicRaw {
+                    time_limit: statement.time_limit,
+                    memory_limit: statement.memory_limit,
+                },
+                private: ProblemLimitNodePrivateRaw {},
+            },
+            Some(statement.iden),
+        )
+    }
+
+    pub async fn create_schema(
+        store: &mut impl ModelStore,
+        problem_statement: Vec<(
+            ProblemStatementNodeRaw,
+            ProblemLimitNodeRaw,
+            Option<ProblemIdenString>,
+        )>,
+        tag_node_id: Vec<i64>,
+        problem_name: &str,
+        created_at: chrono::NaiveDateTime,
+    ) -> Result<ProblemNode> {
+        let problem_node = ProblemNodeRaw {
+            public: ProblemNodePublicRaw {
+                name: problem_name.to_string(),
+                creation_time: created_at,
+            },
+            private: ProblemNodePrivateRaw {},
+        }
+        .save(store.get_db())
+        .await?;
+
+        for data in problem_statement {
+            Self::add_statement(store, problem_node.node_id, data).await?;
+        }
+        for tag_node in tag_node_id {
+            ProblemTagEdgeRaw {
+                u: problem_node.node_id,
+                v: tag_node,
+            }
+            .save(store.get_db())
+            .await?;
+        }
+        Ok(problem_node)
+    }
+
+    pub async fn add_statement(
+        store: &mut impl ModelStore,
+        problem_node_id: i64,
+        problem_statement: (
+            ProblemStatementNodeRaw,
+            ProblemLimitNodeRaw,
+            Option<ProblemIdenString>,
+        ),
+    ) -> Result<ProblemStatementNode> {
+        let (problem_statement_node_raw, problem_limit_node_raw, iden) = problem_statement;
+        let db = store.get_db().clone();
+        let problem_statement_node = problem_statement_node_raw.save(&db).await?;
+        let problem_limit_node = problem_limit_node_raw.save(&db).await?;
+
+        ProblemStatementEdgeRaw {
+            u: problem_node_id,
+            v: problem_statement_node.node_id,
+            copyright_risk: 0,
+        }
+        .save(&db)
+        .await?;
+
+        if let Some(iden) = iden {
+            let redis = store.get_redis();
+            create_iden(&db, redis, &format!("problem/{}", iden), vec![problem_statement_node.node_id, problem_node_id])
+                .await?;
+        }
+
+        ProblemLimitEdgeRaw {
+            u: problem_statement_node.node_id,
+            v: problem_limit_node.node_id,
+        }
+        .save(&db)
+        .await?;
+
+        let subtask_node = SubtaskNodeRaw {
+            public: SubtaskNodePublicRaw {
+                subtask_id: 0,
+                time_limit: problem_limit_node.public.time_limit,
+                memory_limit: problem_limit_node.public.memory_limit,
+                subtask_calc_method: SubtaskCalcMethod::Sum,
+                is_root: true,
+            },
+            private: SubtaskNodePrivateRaw {
+                subtask_calc_function: None,
+            },
+        }
+        .save(store.get_db())
+        .await?;
+
+        TestcaseEdgeRaw {
+            u: problem_statement_node.node_id,
+            v: subtask_node.node_id,
+            order: 0,
+        }
+        .save(store.get_db())
+        .await?;
+
+        Ok(problem_statement_node)
+    }
+
+    pub async fn create_with_user(
+        store: &mut impl ModelStore,
+        problem: &CreateProblemProps,
+        public_view: bool,
+    ) -> Result<ProblemNode> {
+        ProblemDraft {
+            author_node_id: problem.user_id,
+            iden_slug: &problem.problem_iden,
+            display_name: &problem.problem_name,
+            statements: &problem.problem_statement,
+            created_at: problem.creation_time,
+            tag_names: &problem.tags,
+            public_view_enabled: public_view,
+        }
+        .commit(store)
+        .await
+    }
+}
+
+

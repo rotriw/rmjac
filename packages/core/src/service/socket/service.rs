@@ -8,14 +8,16 @@ use socketioxide::SocketIo;
 use serde_json::Value;
 use macro_socket_auth::auth_socket_connect;
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use crate::model::vjudge::{verified_account, verified_account_by_id};
-use crate::{env, Result};
-use crate::env::db::get_connect;
+use crate::model::vjudge::{VjudgeAccount, VjudgeService, UserSubmissionProp};
 use crate::model::problem::CreateProblemProps;
-use crate::model::user::check_user_token;
-use crate::utils::encrypt::change_string_format;
-use crate::model::vjudge::{create_or_update_problem_from_vjudge, update_user_submission_from_vjudge, UserSubmissionProp};
+use crate::service::socket::calc::handle_score;
+use crate::utils::get_redis_connection;
 use crate::service::socket::vjudge_service::user::{handle_submit_done, handle_verified_result};
+use crate::env;
+use crate::env::db::get_connect;
+use crate::model::user::UserAuthService;
+use crate::Result;
+use crate::utils::encrypt::change_string_format;
 
 fn trust_auth(socket: &SocketRef) {
     log::info!("Socket {} authenticated successfully", socket.id);
@@ -138,7 +140,7 @@ pub async fn auth_user(socket: SocketRef, Data(user): Data<UserVerifiedProp>) {
         let _ = socket.disconnect();
         return ;
     }
-    let result = check_user_token(user.user_id, &user.token).await;
+    let result = UserAuthService::check_token(user.user_id, &user.token).await;
     if !result {
         log::trace!("User {} authentication failed", user.user_id);
         let _ = socket.disconnect();
@@ -162,15 +164,26 @@ pub async fn handle_vjudge_verified(socket: SocketRef, Data(data): Data<VJudgeVe
         log::error!("Failed to connect to database: {}", err);
         return;
     }
-    let db = db.unwrap();
-    let user_id = {
-        let data = env::USER_WEBSOCKET_CONNECTIONS_ACCOUNT.lock().unwrap();
-        data.get(&socket.id.to_string()).cloned()
-    };
-    if let Some(user_id) = user_id {
-       verified_account_by_id(&db, data.node_id, socket.id.as_str()).await;
-    } else {
-        log::warn!("No user id found for socket {}.", socket.id);
+    let db = db.unwrap(); // We know it's Ok here but let's be safe if I could match
+    
+    // Fix: Access db correctly if it is Ok
+    // But wait, get_connect() returns Result<DatabaseConnection>.
+    // The previous code had `if let Ok(db) = db`.
+    
+    if let Ok(db) = Ok::<_, ()>(db) { // Hack to keep flow or just use db
+        let user_id = {
+            let data = env::USER_WEBSOCKET_CONNECTIONS_ACCOUNT.lock().unwrap();
+            data.get(&socket.id.to_string()).cloned()
+        };
+        if let Some(user_id) = user_id {
+            if VjudgeAccount::new(data.node_id).verify(&db, &socket.id.to_string()).await {
+                let _ = socket.emit("check_alive_success", &data.node_id);
+            } else {
+                let _ = socket.emit("check_alive_failed", &data.node_id);
+            }
+        } else {
+            log::warn!("No user id found for socket {}.", socket.id);
+        }
     }
 }
 

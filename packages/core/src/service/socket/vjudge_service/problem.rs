@@ -3,7 +3,8 @@ use socketioxide::extract::{Data, SocketRef};
 use macro_socket_auth::auth_socket_connect;
 use crate::env::db::get_connect;
 use crate::model::problem::CreateProblemProps;
-use crate::model::vjudge::create_or_update_problem_from_vjudge;
+use crate::model::vjudge::VjudgeService;
+use crate::utils::get_redis_connection;
 
 #[auth_socket_connect]
 async fn handle_problem_create(socket: SocketRef, Data(problem): Data<CreateProblemProps>) {
@@ -14,8 +15,10 @@ async fn handle_problem_create(socket: SocketRef, Data(problem): Data<CreateProb
         return;
     }
     let db = db.unwrap();
+    let mut redis = get_redis_connection();
+    let mut store = (&db, &mut redis);
 
-    if let Err(err) = create_or_update_problem_from_vjudge(&db, &problem).await {
+    if let Err(err) = VjudgeService::import_problem(&mut store, &problem).await {
         log::error!("Failed to create/update problem: {}", err);
     }
 }

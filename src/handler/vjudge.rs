@@ -4,21 +4,16 @@ use rmjac_core::error::CoreError;
 use crate::handler::{ResultHandler, HttpError, HandlerError};
 use crate::utils::perm::UserAuthCotext;
 use rmjac_core::model::vjudge::{
-    add_unverified_account_for_user,
-    add_vjudge_task,
-    view_vjudge_task,
-    check_vjudge_account_owner,
-    get_vjudge_accounts_by_user_id,
-    get_vjudge_account_by_id,
-    delete_vjudge_account_node,
-    update_vjudge_account_node,
-    check_system_manage_vjudge_perm,
+    VjudgeAccount,
+    VjudgeTask,
     Platform,
     AddErrorResult
 };
 use rmjac_core::graph::node::user::remote_account::{
     RemoteMode, VjudgeAuth
 };
+use rmjac_core::graph::node::vjudge_task::VjudgeTaskNode;
+use rmjac_core::graph::node::Node;
 use serde::{Deserialize};
 use serde_json::json;
 
@@ -96,11 +91,10 @@ impl BindAccount {
             _ => return Err(HttpError::HandlerError(HandlerError::InvalidInput("Invalid method for platform".to_string()))),
         };
 
-        let result = add_unverified_account_for_user(
+        let result = VjudgeAccount::create(
             &self.db,
             self.user_id.unwrap(),
             self.data.iden,
-            platform,
             self.data.platform.clone(),
             remote_mode,
             self.data.auth.clone(),
@@ -158,7 +152,7 @@ impl MyAccounts {
     }
 
     pub async fn exec(self) -> ResultHandler<String> {
-        let accounts = get_vjudge_accounts_by_user_id(&self.db, self.user_id.unwrap()).await?;
+        let accounts = VjudgeAccount::list(&self.db, self.user_id.unwrap()).await?;
         Ok(json!({
             "code": 0,
             "data": accounts
@@ -197,7 +191,7 @@ impl AccountList {
         let user_context = req.extensions().get::<UserAuthCotext>().cloned();
         if let Some(uc) = user_context && uc.is_real {
             self.user_id = Some(uc.user_id);
-            self.is_admin = check_system_manage_vjudge_perm(uc.user_id);
+            self.is_admin = VjudgeAccount::can_manage(uc.user_id);
             Ok(self)
         } else {
             Err(HttpError::HandlerError(HandlerError::PermissionDenied))
@@ -208,8 +202,8 @@ impl AccountList {
         let mut results = vec![];
         let uid = self.user_id.unwrap();
         for id in &self.data.ids {
-            if self.is_admin || check_vjudge_account_owner(&self.db, uid, *id).await.unwrap_or(false) {
-                if let Ok(node) = get_vjudge_account_by_id(&self.db, *id).await {
+            if self.is_admin || VjudgeAccount::new(*id).owned_by(&self.db, uid).await.unwrap_or(false) {
+                if let Ok(node) = VjudgeAccount::get(&self.db, *id).await {
                     results.push(node);
                 }
             }
@@ -272,7 +266,7 @@ impl AccountManage {
         let user_context = req.extensions().get::<UserAuthCotext>().cloned();
         if let Some(uc) = user_context && uc.is_real {
             self.user_id = Some(uc.user_id);
-            if check_system_manage_vjudge_perm(uc.user_id) || check_vjudge_account_owner(&self.db, uc.user_id, self.node_id).await.unwrap_or(false) {
+            if VjudgeAccount::can_manage(uc.user_id) || VjudgeAccount::new(self.node_id).owned_by(&self.db, uc.user_id).await.unwrap_or(false) {
                 Ok(self)
             } else {
                 Err(HttpError::HandlerError(HandlerError::PermissionDenied))
@@ -283,7 +277,7 @@ impl AccountManage {
     }
 
     pub async fn exec_delete(self) -> ResultHandler<String> {
-        delete_vjudge_account_node(&self.db, self.node_id).await?;
+        VjudgeAccount::new(self.node_id).rm(&self.db).await?;
         Ok(json!({
             "code": 0,
             "msg": "Deleted"
@@ -291,17 +285,15 @@ impl AccountManage {
     }
 
     pub async fn exec_update(self) -> ResultHandler<String> {
-        // Implement update logic here
-        // Currently returning stub success as per previous step
-        update_vjudge_account_node(&self.db, self.node_id, self.update_data.unwrap().auth).await?;
+        VjudgeAccount::new(self.node_id).set_auth(&self.db, self.update_data.unwrap().auth).await?;
          Ok(json!({
             "code": 0,
-            "msg": "Update success (stub)"
+            "msg": "Update success"
         }).to_string())
     }
 
     pub async fn exec_detail(self) -> ResultHandler<String> {
-        let node = get_vjudge_account_by_id(&self.db, self.node_id).await?;
+        let node = VjudgeAccount::get(&self.db, self.node_id).await?;
         Ok(json!({
             "code": 0,
             "data": node
@@ -369,7 +361,7 @@ impl TaskManage {
         let user_context = req.extensions().get::<UserAuthCotext>().cloned();
         if let Some(uc) = user_context && uc.is_real {
             self.user_id = Some(uc.user_id);
-            if check_system_manage_vjudge_perm(uc.user_id) || check_vjudge_account_owner(&self.db, uc.user_id, self.node_id).await.unwrap_or(false) {
+            if VjudgeAccount::can_manage(uc.user_id) || VjudgeAccount::new(self.node_id).owned_by(&self.db, uc.user_id).await.unwrap_or(false) {
                 Ok(self)
             } else {
                 Err(HttpError::HandlerError(HandlerError::PermissionDenied))
@@ -382,28 +374,30 @@ impl TaskManage {
     pub async fn exec_assign(self) -> ResultHandler<String> {
         let data = self.assign_data.unwrap();
         // Check verified
-        let node = get_vjudge_account_by_id(&self.db, self.node_id).await?;
+        let node = VjudgeAccount::get(&self.db, self.node_id).await?;
         if !node.public.verified {
              return Err(HttpError::CoreError(CoreError::VjudgeError("Account not verified".to_string())));
         }
 
-        let task = add_vjudge_task(
+        let task = VjudgeAccount::new(self.node_id).add_task(
             &self.db,
             self.user_id.unwrap(),
-            self.node_id,
             data.range.clone(),
             data.ws_id.clone()
         ).await?;
+        
+        // Fetch task node to return
+        let task_node = VjudgeTaskNode::from_db(&self.db, task.node_id).await?;
 
         Ok(json!({
             "code": 0,
             "msg": "Task assigned",
-            "data": task
+            "data": task_node
         }).to_string())
     }
 
     pub async fn exec_list(self) -> ResultHandler<String> {
-        let tasks = view_vjudge_task(&self.db, self.node_id).await?;
+        let tasks = VjudgeTask::list(&self.db, self.node_id).await?;
          Ok(json!({
             "code": 0,
             "data": tasks

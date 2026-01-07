@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { darken } from 'colorizr';
 import { RecordStatus, SubtaskUserRecord, RECORD_STATUS_COLOR_MAP, RECORD_STATUS_COLOR_MAP_INTER } from "./shared";
 
-function ShowOneStatus({status, show_id, score, time, memory, index, total, first, body, isSubtask, depth, expanded, onToggle}: {status: RecordStatus, score: number, time: number, memory: number, index: number, total: number, body: any, first: boolean, isSubtask: boolean, depth?: number, show_id: string, expanded: boolean, onToggle: () => void}) {
+function ShowOneStatus({status, show_id, score, time, memory, index, total, first, body, isSubtask, depth, expanded, onToggle}: {status: RecordStatus, score: number, time: number, memory: number, index: number, total: number, body: React.ReactNode, first: boolean, isSubtask: boolean, depth?: number, show_id: string, expanded: boolean, onToggle: () => void}) {
 
   const handleBadgeClick = () => {
     if (isSubtask) {

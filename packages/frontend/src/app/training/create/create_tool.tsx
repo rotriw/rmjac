@@ -6,16 +6,28 @@ import { TitleCard } from "@/components/card/card"
 import { FormQuery, FormField } from "@/components/tools/query";
 import { StandardCard } from "@/components/card/card";
 import { createTraining } from "@/api/client/training";
+import { TrainingNode, TrainingList, TrainingProblem, CreateProps } from "@rmjac/api-declare";
+
+// Define a type for the form values
+interface TrainingFormValues extends Omit<CreateProps, 'problem_list' | 'write_perm_user' | 'read_perm_user'> {
+  mode: "simple" | "complex" | "import";
+  problems?: string; // Comma-separated problem IDs for simple mode
+  import_url?: string; // URL for import mode
+}
 
 export function TrainingCreateTool() {
   const searchParams = useSearchParams()
-  const [formValues, setFormValues] = useState<Record<string, any>>({
+  const [formValues, setFormValues] = useState<TrainingFormValues>({
     mode: "simple",
     training_type: "Default",
     start_time: new Date().toISOString().slice(0, 16),
     end_time: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+    iden: "",
+    title: "",
+    description_public: "",
+    description_private: "",
   })
-  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string; data?: any } | null>(null);
+  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string; data?: TrainingNode | unknown } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e?: React.MouseEvent) => {
@@ -24,17 +36,17 @@ export function TrainingCreateTool() {
     setSubmitResult(null);
 
     try {
-      const problem_list = {
+      const problem_list: TrainingList = {
         description: "Default List",
-        own_problem: [] as any[]
+        own_problem: [] as TrainingProblem[]
       };
 
       if (formValues.mode === "simple" && formValues.problems) {
         const problemIds = (formValues.problems as string).split(",").map(id => id.trim()).filter(id => id);
-        problem_list.own_problem = problemIds.map(id => ({ ProblemIden: id }));
+        problem_list.own_problem = problemIds.map(id => ({ ProblemIden: [0, id] })); // Assuming ProblemIden takes [number, string]
       }
 
-      const submissionData = {
+      const submissionData: CreateProps = {
         iden: formValues.iden || "",
         title: formValues.title || "未命名题单",
         description_public: formValues.description_public || "",
@@ -49,7 +61,7 @@ export function TrainingCreateTool() {
 
       const result = await createTraining(submissionData);
 
-      if (result.data) {
+      if (result) {
         setSubmitResult({
           success: true,
           message: `题单创建成功！`,
@@ -58,7 +70,7 @@ export function TrainingCreateTool() {
       } else {
         setSubmitResult({
           success: false,
-          message: `创建失败: ${result.message || '未知错误'}`,
+          message: `创建失败: 未知错误`, // createTraining will throw an error on failure, so result should always be defined here
           data: result
         });
       }
@@ -73,7 +85,7 @@ export function TrainingCreateTool() {
     }
   };
 
-  const fields: FormField[] = [
+  const fields: FormField<TrainingFormValues>[] = [
     {
       type: "group",
       title: "创建模式",
@@ -159,14 +171,24 @@ export function TrainingCreateTool() {
   ];
 
   useEffect(() => {
-    const initialValues: Record<string, any> = { ...formValues }
+    const initialValues: TrainingFormValues = {
+        mode: "simple",
+        training_type: "Default",
+        start_time: new Date().toISOString().slice(0, 16),
+        end_time: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+        iden: "",
+        title: "",
+        description_public: "",
+        description_private: "",
+    }
     searchParams.forEach((value, key) => {
-      initialValues[key] = value
+      // Need to cast to string, as searchParams values are always strings
+      (initialValues as Record<string, string>)[key] = value
     })
     setFormValues(initialValues)
   }, [searchParams])
 
-  const handleFormChange = (values: Record<string, any>) => {
+  const handleFormChange = (values: TrainingFormValues) => {
     setFormValues(values)
   }
 

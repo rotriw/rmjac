@@ -4,15 +4,13 @@ use enum_const::EnumConst;
 use redis::TypedCommands;
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use rmjac_core::graph::edge::Edge;
 use rmjac_core::graph::edge::perm_pages::PagesPerm;
 use rmjac_core::graph::edge::perm_system::SystemPerm;
 use rmjac_core::graph::edge::training_problem::TrainingProblemEdge;
 use rmjac_core::model::perm::{check_pages_perm, check_system_perm};
-use rmjac_core::model::problem::get_problem_node_and_statement;
 use crate::handler::{BasicHandler, HttpError, ResultHandler};
-use rmjac_core::model::training::{add_problem_into_training_list_from_problem_iden, check_problem_list_in_training, create_training_problem_node_for_list, get_training_node_id_by_iden, get_training_problem_id, get_training_problem_list, modify_training_description, update_training_problem_order, TrainingList};
+use rmjac_core::model::training::{Training, TrainingList};
 
 use rmjac_core::utils::get_redis_connection;
 use crate::handler::HandlerError::PermissionDenied;
@@ -23,7 +21,7 @@ pub struct Create {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
-pub struct CreateTrainingProps {
+pub struct CreateProps {
     pub iden: String,
     pub title: String,
     pub description_public: String,
@@ -38,7 +36,7 @@ pub struct CreateTrainingProps {
 
 
 impl Create {
-    pub fn entry(req: HttpRequest, db: DatabaseConnection) -> Self {
+    pub fn new(req: HttpRequest, db: DatabaseConnection) -> Self {
         Self {
             basic: BasicHandler {
                 db,
@@ -48,9 +46,8 @@ impl Create {
         }
     }
 
-    pub async fn perm(self) -> ResultHandler<Self> {
+    pub async fn check_perm(self) -> ResultHandler<Self> {
         let user = &self.basic.user_context;
-        let system_id = rmjac_core::env::DEFAULT_NODES.lock().unwrap().default_system_node;
         if let Some(user) = user
             && user.is_real{
             Ok(self)
@@ -59,10 +56,26 @@ impl Create {
         }
     }
 
-    pub async fn exec(self, data: CreateTrainingProps) -> ResultHandler<String> {
+    pub async fn run(self, data: CreateProps) -> ResultHandler<String> {
         let mut redis = get_redis_connection();
-        let user_id = self.basic.user_context.unwrap().user_id;
-        let data = rmjac_core::model::training::create_training_with_user(&self.basic.db, &mut redis, &data.title, &user_id.to_string(), &data.iden, &data.description_public, &data.description_private, data.start_time, data.end_time, &data.training_type, &data.problem_list, data.write_perm_user, data.read_perm_user, user_id).await?;
+        let mut store = (&self.basic.db, &mut redis);
+        let user_id = self.basic.user_context.as_ref().unwrap().user_id;
+        let data = Training::create_as(
+            &mut store,
+            &data.title,
+            &user_id.to_string(),
+            &data.iden,
+            &data.description_public,
+            &data.description_private,
+            data.start_time,
+            data.end_time,
+            &data.training_type,
+            &data.problem_list,
+            data.write_perm_user,
+            data.read_perm_user,
+            user_id,
+        )
+        .await?;
         Ok(Json! {
             "data": data,
         })
@@ -77,7 +90,7 @@ pub struct Manage {
 
 
 impl Manage {
-    pub fn entry(req: HttpRequest, db: DatabaseConnection) -> Self {
+    pub fn new(req: HttpRequest, db: DatabaseConnection) -> Self {
         Self {
             basic: BasicHandler {
                 db,
@@ -88,16 +101,17 @@ impl Manage {
         }
     }
 
-    pub async fn before(self, user_iden: &str, problem_iden: &str) -> ResultHandler<Self> {
+    pub async fn load(self, user_iden: &str, problem_iden: &str) -> ResultHandler<Self> {
         let mut redis = get_redis_connection();
-        let node_id = get_training_node_id_by_iden(&self.basic.db, &mut redis, user_iden, problem_iden).await?;
+        let mut store = (&self.basic.db, &mut redis);
+        let node_id = Training::node_id(&mut store, user_iden, problem_iden).await?;
         Ok(Self {
             node_id: Some(node_id),
             ..self
         })
     }
 
-    pub async fn perm(self, require_sudo: bool) -> ResultHandler<Self> {
+    pub async fn check_perm(self, require_sudo: bool) -> ResultHandler<Self> {
         let user = &self.basic.user_context;
         let node_id = self.node_id.unwrap();
         if let Some(user) = user
@@ -117,21 +131,21 @@ impl Manage {
         Err(HttpError::HandlerError(PermissionDenied))
     }
 
-    pub async fn add_problem_into_list(self, list_node_id: i64, problem: Vec<String>) -> ResultHandler<String> {
+    pub async fn add_problems(self, list_node_id: i64, problem: Vec<String>) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
         let mut redis = get_redis_connection();
-        let p_id = get_training_problem_id(&self.basic.db, &mut redis, node_id).await?;
+            let mut store = (&self.basic.db, &mut redis);
+            let p_id = Training::root_id(&mut store, node_id).await?;
         // check problem_list is in node
-        if check_problem_list_in_training(&self.basic.db, p_id, list_node_id).await? == false {
+            if Training::has_list(&mut store, p_id, list_node_id).await? == false {
             return Ok(Json! {
                 "status": "error",
                 "message": "problem list not in training",
             });
         }
-        let mut redis = &mut get_redis_connection();
         let mut result = vec![];
         for p in &problem {
-            let feedback = add_problem_into_training_list_from_problem_iden(&self.basic.db, &mut redis, list_node_id, p).await;
+                let feedback = Training::add_by_iden(&mut store, list_node_id, p).await;
             if let Err(e) = feedback {
                 return Ok(Json! {
                     "message": format!("add problem {} failed: {}", p, e),
@@ -146,42 +160,44 @@ impl Manage {
         })
     }
 
-    pub async fn add_new_problem_list_into_list(self, list_node_id: i64, new_problem_list: TrainingList) -> ResultHandler<String> {
+    pub async fn add_list(self, list_node_id: i64, new_problem_list: TrainingList) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
         let mut redis = get_redis_connection();
-        let p_id = get_training_problem_id(&self.basic.db, &mut redis, node_id).await?;
+        let mut store = (&self.basic.db, &mut redis);
+        let p_id = Training::root_id(&mut store, node_id).await?;
         // check problem_list is in node
-        if check_problem_list_in_training(&self.basic.db, p_id, list_node_id).await? == false {
+        if Training::has_list(&mut store, p_id, list_node_id).await? == false {
             return Ok(Json! {
                 "status": "error",
                 "message": "problem list not in training",
             });
         }
-        let new_node = create_training_problem_node_for_list(&self.basic.db, &mut redis, &new_problem_list, list_node_id).await?;
+        let new_node = Training::build_list(&mut store, &new_problem_list, list_node_id).await?;
         Ok(Json! {
             "message": "successful",
             "successful_data": new_node,
         })
     }
 
-    pub async fn modify_list_description(self, list_node_id: i64, new_description_public: &str, new_description_private: &str) -> ResultHandler<String> {
+    pub async fn modify_desc(self, list_node_id: i64, new_description_public: &str, new_description_private: &str) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
         let mut redis = get_redis_connection();
-        let p_id = get_training_problem_id(&self.basic.db, &mut redis, node_id).await?;
+        let mut store = (&self.basic.db, &mut redis);
+        let p_id = Training::root_id(&mut store, node_id).await?;
         // check problem_list is in node
-        if check_problem_list_in_training(&self.basic.db, p_id, list_node_id).await? == false {
+        if Training::has_list(&mut store, p_id, list_node_id).await? == false {
             return Ok(Json! {
                 "status": "error",
                 "message": "problem list not in training",
             });
         }
-        modify_training_description(&self.basic.db, list_node_id, new_description_public, new_description_private).await?;
+        Training::set_desc(&mut store, list_node_id, new_description_public, new_description_private).await?;
         Ok(Json! {
             "message": "successful",
         })
     }
 
-    pub async fn remove_problem(self, list_node_id: i64, delete_edge_id: i64) -> ResultHandler<String> {
+    pub async fn rm_problem(self, list_node_id: i64, delete_edge_id: i64) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
         let mut redis = get_redis_connection();
         let edge = TrainingProblemEdge::from_db(&self.basic.db, delete_edge_id).await?;
@@ -201,15 +217,15 @@ impl Manage {
     pub async fn update_order(self, list_node_id: i64, orders: Vec<(i64, i64)>) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
         let mut redis = get_redis_connection();
-        let p_id = get_training_problem_id(&self.basic.db, &mut redis, node_id).await?;
-        if check_problem_list_in_training(&self.basic.db, p_id, list_node_id).await? == false {
+        let mut store = (&self.basic.db, &mut redis);
+        let p_id = Training::root_id(&mut store, node_id).await?;
+        if Training::has_list(&mut store, p_id, list_node_id).await? == false {
             return Ok(Json! {
                 "status": "error",
                 "message": "problem list not in training",
             });
         }
-        let mut redis = &mut get_redis_connection();
-        update_training_problem_order(&self.basic.db, &mut redis, list_node_id, orders).await?;
+        Training::set_order(&mut store, list_node_id, orders).await?;
         Ok(Json! {
             "message": "successful",
         })
@@ -222,7 +238,7 @@ pub struct View {
 }
 
 impl View {
-    pub fn entry(req: HttpRequest, db: DatabaseConnection) -> Self {
+    pub fn new(req: HttpRequest, db: DatabaseConnection) -> Self {
         Self {
             basic: BasicHandler {
                 db,
@@ -233,16 +249,17 @@ impl View {
         }
     }
 
-    pub async fn before(self, user_iden: &str, problem_iden: &str) -> ResultHandler<Self> {
+    pub async fn load(self, user_iden: &str, problem_iden: &str) -> ResultHandler<Self> {
         let mut redis = get_redis_connection();
-        let node_id = get_training_node_id_by_iden(&self.basic.db, &mut redis, user_iden, problem_iden).await?;
+        let mut store = (&self.basic.db, &mut redis);
+        let node_id = Training::node_id(&mut store, user_iden, problem_iden).await?;
         Ok(Self {
             node_id: Some(node_id),
             ..self
         })
     }
 
-    pub async fn perm(self) -> ResultHandler<Self> {
+    pub async fn check_perm(self) -> ResultHandler<Self> {
         let user = &self.basic.user_context;
         let node_id = self.node_id.unwrap();
         if let Some(user) = user
@@ -257,10 +274,11 @@ impl View {
         Err(HttpError::HandlerError(PermissionDenied))
     }
 
-    pub async fn view_problem(self) -> ResultHandler<String> {
+    pub async fn get(self) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
-        let mut redis = &mut get_redis_connection();
-        let training = rmjac_core::model::training::get_training(&self.basic.db, &mut redis, node_id).await?;
+        let mut redis = get_redis_connection();
+        let mut store = (&self.basic.db, &mut redis);
+        let training = Training::get(&mut store, node_id).await?;
         // 对一些内容进行解析。
         Ok(Json! {
             "data": training,
@@ -268,15 +286,16 @@ impl View {
 
     }
 
-    pub async fn get_problem_accept_status(self) -> ResultHandler<String> {
+    pub async fn get_status(self) -> ResultHandler<String> {
         let node_id = self.node_id.unwrap();
-        let mut redis = &mut get_redis_connection();
+        let mut redis = get_redis_connection();
+        let mut store = (&self.basic.db, &mut redis);
         let user_id = if let Some(user) = &self.basic.user_context && user.is_real {
             user.user_id
         } else {
             return Err(HttpError::HandlerError(PermissionDenied));
         };
-        let accept_status = rmjac_core::model::training::get_user_training_status(&self.basic.db, &mut redis, user_id, node_id).await?;
+        let accept_status = Training::status(&mut store, user_id, node_id).await?;
         Ok(Json! {
             "message": "successful",
             "data": accept_status,
@@ -288,12 +307,12 @@ impl View {
 pub async fn create_training(
     req: HttpRequest,
     db: web::Data<DatabaseConnection>,
-    data: web::Json<CreateTrainingProps>
+    data: web::Json<CreateProps>
 ) -> ResultHandler<String> {
-    Create::entry(req, db.as_ref().clone())
-        .perm()
+    Create::new(req, db.as_ref().clone())
+        .check_perm()
         .await?
-        .exec(data.into_inner())
+        .run(data.into_inner())
         .await
 }
 
@@ -304,12 +323,12 @@ pub async fn view_training(
     path: web::Path<(String, String)>
 ) -> ResultHandler<String> {
     let (user_iden, training_iden) = path.into_inner();
-    View::entry(req, db.as_ref().clone())
-        .before(&user_iden, &training_iden)
+    View::new(req, db.as_ref().clone())
+        .load(&user_iden, &training_iden)
         .await?
-        .perm()
+        .check_perm()
         .await?
-        .view_problem()
+        .get()
         .await
 }
 
@@ -320,12 +339,12 @@ pub async fn post_view_training(
     path: web::Path<(String, String)>
 ) -> ResultHandler<String> {
     let (user_iden, training_iden) = path.into_inner();
-    View::entry(req, db.as_ref().clone())
-        .before(&user_iden, &training_iden)
+    View::new(req, db.as_ref().clone())
+        .load(&user_iden, &training_iden)
         .await?
-        .perm()
+        .check_perm()
         .await?
-        .view_problem()
+        .get()
         .await
 }
 
@@ -336,12 +355,12 @@ pub async fn get_training_status(
     path: web::Path<(String, String)>
 ) -> ResultHandler<String> {
     let (user_iden, training_iden) = path.into_inner();
-    View::entry(req, db.as_ref().clone())
-        .before(&user_iden, &training_iden)
+    View::new(req, db.as_ref().clone())
+        .load(&user_iden, &training_iden)
         .await?
-        .perm()
+        .check_perm()
         .await?
-        .get_problem_accept_status()
+        .get_status()
         .await
 }
 
@@ -360,12 +379,12 @@ pub async fn add_problem_to_training_list(
 ) -> ResultHandler<String> {
     let (user_iden, training_iden) = path.into_inner();
     let request = data.into_inner();
-    Manage::entry(req, db.as_ref().clone())
-        .before(&user_iden, &training_iden)
+    Manage::new(req, db.as_ref().clone())
+        .load(&user_iden, &training_iden)
         .await?
-        .perm(false)
+        .check_perm(false)
         .await?
-        .add_problem_into_list(request.list_node_id, request.problems)
+        .add_problems(request.list_node_id, request.problems)
         .await
 }
 
@@ -384,12 +403,12 @@ pub async fn add_problem_list_to_training(
 ) -> ResultHandler<String> {
     let (user_iden, training_iden) = path.into_inner();
     let request = data.into_inner();
-    Manage::entry(req, db.as_ref().clone())
-        .before(&user_iden, &training_iden)
+    Manage::new(req, db.as_ref().clone())
+        .load(&user_iden, &training_iden)
         .await?
-        .perm(false)
+        .check_perm(false)
         .await?
-        .add_new_problem_list_into_list(request.list_node_id, request.problem_list)
+        .add_list(request.list_node_id, request.problem_list)
         .await
 }
 
@@ -409,12 +428,12 @@ pub async fn modify_training_list_description(
 ) -> ResultHandler<String> {
     let (user_iden, training_iden) = path.into_inner();
     let request = data.into_inner();
-    Manage::entry(req, db.as_ref().clone())
-        .before(&user_iden, &training_iden)
+    Manage::new(req, db.as_ref().clone())
+        .load(&user_iden, &training_iden)
         .await?
-        .perm(false)
+        .check_perm(false)
         .await?
-        .modify_list_description(request.list_node_id, &request.description_public, &request.description_private)
+        .modify_desc(request.list_node_id, &request.description_public, &request.description_private)
         .await
 }
 
@@ -433,12 +452,12 @@ pub async fn remove_problem_from_training(
 ) -> ResultHandler<String> {
     let (user_iden, training_iden) = path.into_inner();
     let request = data.into_inner();
-    Manage::entry(req, db.as_ref().clone())
-        .before(&user_iden, &training_iden)
+    Manage::new(req, db.as_ref().clone())
+        .load(&user_iden, &training_iden)
         .await?
-        .perm(false)
+        .check_perm(false)
         .await?
-        .remove_problem(request.list_node_id, request.delete_node_id)
+        .rm_problem(request.list_node_id, request.delete_node_id)
         .await
 }
 
@@ -457,10 +476,10 @@ pub async fn update_training_order(
 ) -> ResultHandler<String> {
     let (user_iden, training_iden) = path.into_inner();
     let request = data.into_inner();
-    Manage::entry(req, db.as_ref().clone())
-        .before(&user_iden, &training_iden)
+    Manage::new(req, db.as_ref().clone())
+        .load(&user_iden, &training_iden)
         .await?
-        .perm(false)
+        .check_perm(false)
         .await?
         .update_order(request.list_node_id, request.orders)
         .await

@@ -1,9 +1,10 @@
 "use server"
 
 import { cookies } from "next/headers"
-import { API_BASE_URL } from './config'
+import { API_BASE_URL } from '@/lib/constants'
+import { SidebarResponse, ProfileResponse, UserInfoResponse } from "@rmjac/api-declare";
 
-export async function getSidebar(): Promise<any> {
+export async function getSidebar(): Promise<SidebarResponse> {
   try {
     const manage = await cookies();
     const response = await fetch(`${API_BASE_URL}/api/user/sidebar?path=/`, {
@@ -14,14 +15,14 @@ export async function getSidebar(): Promise<any> {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    const data = await response.json()
-    return data
+    const data: { code: number, data: SidebarResponse } = await response.json()
+    return data.data!
   } catch (error) {
     throw error
   }
 }
 
-export async function getUserProfile(iden: string): Promise<any> {
+export async function getUserProfile(iden: string): Promise<ProfileResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/user/profile/${iden}`, {
       next: { revalidate: 60 } // Cache for 60 seconds
@@ -29,14 +30,14 @@ export async function getUserProfile(iden: string): Promise<any> {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    const data = await response.json()
-    return data
+    const data: { code: number, data: ProfileResponse } = await response.json()
+    return data.data!
   } catch (error) {
     throw error
   }
 }
 
-export async function getUserInfo(): Promise<any> {
+export async function getUserInfo(): Promise<UserInfoResponse> {
   try {
     const manage = await cookies();
     const response = await fetch(`${API_BASE_URL}/api/user/info`, {
@@ -44,8 +45,8 @@ export async function getUserInfo(): Promise<any> {
         cookie: manage.toString()
       }
     });
-    const data = await response.json()
-    return data
+    const data: { code: number, data: UserInfoResponse } = await response.json()
+    return data.data!
   } catch (error) {
     throw error
   }

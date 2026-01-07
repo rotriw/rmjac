@@ -1,118 +1,41 @@
-import { API_BASE_URL } from './config'
+import { get, post } from '@/lib/http'
+import { CreateProblemProps, ContentType, ProblemViewResponse, ProblemModel, ProblemUpdateResponse } from '@rmjac/api-declare'
 
-export async function createProblem(problemData: {
-  problem_iden: string
-  problem_name: string
-  problem_statement: Array<{
-    statement_source: string
-    problem_iden?: string
-    problem_statements: any[]
-    time_limit: number
-    memory_limit: number
-  }>
-  creation_time?: string
-  tags: string[]
-}): Promise<any> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(problemData),
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error('Failed to create problem:', error)
-    throw error
+export async function createProblem(problemData: CreateProblemProps): Promise<ProblemModel> {
+  const response = await post<CreateProblemProps, { data: ProblemModel }>('/api/problem/create', problemData)
+  if (response.code !== 0) {
+    throw new Error(response.msg || "Failed to create problem.")
   }
+  return response.data!.data!
 }
 
 export async function deleteProblem(iden: string): Promise<void> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/problem/view/${iden}`, {
-      method: 'DELETE',
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-  } catch (error) {
-    console.error(`Failed to delete problem ${iden}:`, error)
-    throw error
+  const response = await post<string, void>(`/api/problem/manage/${iden}/delete`, "")
+  if (response.code !== 0) {
+    throw new Error(response.msg || `Failed to delete problem ${iden}`)
   }
 }
 
-export async function getProblemForEdit(iden: string): Promise<any> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/view/${iden}`, {
-      credentials: 'include',
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error(`Failed to fetch problem ${iden} for editing:`, error)
-    throw error
+export async function getProblemForEdit(iden: string): Promise<ProblemViewResponse> {
+  const response = await get<ProblemViewResponse>(`/api/problem/view/${iden}`)
+  if (response.code !== 0) {
+    throw new Error(response.msg || `Failed to fetch problem ${iden}`)
   }
+  return response.data!
 }
 
-export async function updateProblemStatement(iden: string, content: Array<{
-  iden: string
-  content: string
-}>): Promise<any> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/manage/${iden}/update_statement_content`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(content),
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error(`Failed to update problem statement ${iden}:`, error)
-    throw error
+export async function updateProblemStatement(iden: string, content: ContentType[]): Promise<ProblemUpdateResponse> {
+  const response = await post<ContentType[], ProblemUpdateResponse>(`/api/problem/manage/${iden}/update_statement_content`, content)
+  if (response.code !== 0) {
+    throw new Error(response.msg || `Failed to update problem statement ${iden}`)
   }
+  return response.data!
 }
 
-export async function updateProblemSource(iden: string, source: string): Promise<any> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/manage/${iden}/update_statement_source`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(source),
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error(`Failed to update problem source ${iden}:`, error)
-    throw error
+export async function updateProblemSource(iden: string, source: string): Promise<ProblemUpdateResponse> {
+  const response = await post<string, ProblemUpdateResponse>(`/api/problem/manage/${iden}/update_statement_source`, source)
+  if (response.code !== 0) {
+    throw new Error(response.msg || `Failed to update problem source ${iden}`)
   }
+  return response.data!
 }

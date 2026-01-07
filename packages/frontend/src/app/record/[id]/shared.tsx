@@ -99,7 +99,7 @@ export const RECORD_STATUS_COLOR_MAP_INTER: Record<RecordStatus, string> = {
   "Sandbox Error": oklch2hex([0.9, 0.1, 20]),
 }
 
-export const RECORD_STATUS_ICON: Record<RecordStatus, any> = {
+export const RECORD_STATUS_ICON: Record<RecordStatus, keyof typeof LUCIDE> = {
   "Accepted": "CheckIcon",
   "Wrong Answer": "XIcon",
   "Time Limit Exceeded": "ClockAlertIcon",

@@ -1,36 +1,11 @@
 "use server"
 
 import { cookies } from "next/headers"
-import { API_BASE_URL } from './config'
+import { API_BASE_URL } from '@/lib/constants'
+import { VjudgeNode, VjudgeTaskNode, BindAccountReq, UpdateAccountReq, AssignTaskReq, VjudgeResponse } from "@rmjac/api-declare";
 
-export interface VJudgeAccount {
-  node_id: number;
-  public: {
-    platform: string;
-    verified: boolean;
-    iden: string;
-    verified_code: string;
-    creation_time: string;
-    updated_at: string;
-    remote_mode: string;
-  };
-  private: {
-    auth?: {
-      Password?: string;
-      Token?: string;
-    } | null;
-  };
-}
-
-export interface VJudgeTask {
-  node_id: number;
-  public: {
-    status: string;
-    log: string;
-    created_at: string;
-    updated_at: string;
-  };
-}
+export type VJudgeAccount = VjudgeNode;
+export type VJudgeTask = VjudgeTaskNode;
 
 export async function getMyVJudgeAccounts(): Promise<VJudgeAccount[]> {
   try {
@@ -45,7 +20,7 @@ export async function getMyVJudgeAccounts(): Promise<VJudgeAccount[]> {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    const data = await response.json()
+    const data: { code: number, data: VJudgeAccount[] } = await response.json()
     return data.data || []
   } catch (error) {
     console.error('Failed to fetch vjudge accounts:', error)
@@ -53,13 +28,7 @@ export async function getMyVJudgeAccounts(): Promise<VJudgeAccount[]> {
   }
 }
 
-export async function bindVJudgeAccount(data: {
-  platform: string,
-  remote_mode: number,
-  auth?: { Password?: string, Token?: string },
-  bypass_check?: boolean,
-  ws_id?: string
-}): Promise<any> {
+export async function bindVJudgeAccount(data: BindAccountReq): Promise<VjudgeResponse<VjudgeNode>> {
   try {
     const manage = await cookies();
     const response = await fetch(`${API_BASE_URL}/api/vjudge/bind`, {
@@ -94,7 +63,7 @@ export async function listVJudgeAccountsByIds(ids: number[]): Promise<VJudgeAcco
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    const data = await response.json()
+    const data: { code: number, data: VJudgeAccount[] } = await response.json()
     return data.data || []
   } catch (error) {
     console.error('Failed to list vjudge accounts by ids:', error)
@@ -102,7 +71,7 @@ export async function listVJudgeAccountsByIds(ids: number[]): Promise<VJudgeAcco
   }
 }
 
-export async function deleteVJudgeAccount(nodeId: number): Promise<any> {
+export async function deleteVJudgeAccount(nodeId: number): Promise<VjudgeResponse<void>> {
   try {
     const manage = await cookies();
     const response = await fetch(`${API_BASE_URL}/api/vjudge/account/${nodeId}`, {
@@ -123,10 +92,7 @@ export async function deleteVJudgeAccount(nodeId: number): Promise<any> {
   }
 }
 
-export async function updateVJudgeAccount(data: {
-  node_id: number,
-  auth?: { Password?: string, Token?: string }
-}): Promise<any> {
+export async function updateVJudgeAccount(data: UpdateAccountReq): Promise<VjudgeResponse<void>> {
   try {
     const manage = await cookies();
     const response = await fetch(`${API_BASE_URL}/api/vjudge/account`, {
@@ -162,7 +128,7 @@ export async function getVJudgeAccountDetail(nodeId: number): Promise<VJudgeAcco
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    const data = await response.json()
+    const data: { code: number, data: VJudgeAccount } = await response.json()
     return data.data
   } catch (error) {
     console.error('Failed to get vjudge account detail:', error)
@@ -170,11 +136,7 @@ export async function getVJudgeAccountDetail(nodeId: number): Promise<VJudgeAcco
   }
 }
 
-export async function assignVJudgeTask(data: {
-  vjudge_node_id: number,
-  range: string,
-  ws_id?: string
-}): Promise<any> {
+export async function assignVJudgeTask(data: AssignTaskReq): Promise<VjudgeResponse<VjudgeTaskNode>> {
   try {
     const manage = await cookies();
     const response = await fetch(`${API_BASE_URL}/api/vjudge/assign_task`, {
@@ -206,7 +168,7 @@ export async function listVJudgeTasks(nodeId: number): Promise<VJudgeTask[]> {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    const data = await response.json()
+    const data: { code: number, data: VJudgeTask[] } = await response.json()
     return data.data || []
   } catch (error) {
     console.error('Failed to list vjudge tasks:', error)

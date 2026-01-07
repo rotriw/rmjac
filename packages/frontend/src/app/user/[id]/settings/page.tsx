@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import ContributionGraph from "@/components/contribution-graph"
+// import ContributionGraph from "@/components/contribution-graph"
 import React from "react"
 import { Button } from "@/components/ui/button"
 
@@ -53,7 +53,7 @@ export default function ProfilePage() {
                 </div>
         </div>
         <div className="md:col-span-5">
-            <Card className="mb-6 relative">
+            {/* <Card className="mb-6 relative">
             <CardContent className="pb-12">
                 <ContributionGraph />
                 <div className="absolute bottom-3 right-4">
@@ -62,7 +62,7 @@ export default function ProfilePage() {
                 </span>
                 </div>
             </CardContent>
-            </Card>
+            </Card> */}
             <Card className="mb-6 relative">
             <CardContent className="pb-12">
                 <div className="prose dark:prose-invert max-w-none">

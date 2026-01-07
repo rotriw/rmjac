@@ -3,13 +3,12 @@ use sea_orm::DatabaseConnection;
 use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashMap;
-use rmjac_core::model::submit::{get_allowed_method, submit_vjudge_code};
+use rmjac_core::model::submit::SubmissionService;
 use rmjac_core::service::judge::service::{StringOption, SubmitContext, CompileOptionValue};
 use crate::handler::{BasicHandler, HttpError, ResultHandler, HandlerError};
 use crate::utils::perm::UserAuthCotext;
-use rmjac_core::graph::node::user::remote_account::VjudgeNode;
-use rmjac_core::graph::node::Node;
-use rmjac_core::model::vjudge::check_vjudge_account_owner;
+use rmjac_core::model::vjudge::VjudgeAccount;
+use rmjac_core::utils::get_redis_connection;
 
 #[derive(Deserialize)]
 pub struct SubmitReq {
@@ -41,7 +40,7 @@ impl Submit {
     pub async fn perm(self) -> ResultHandler<Self> {
         if let Some(uc) = &self.basic.user_context && uc.is_real {
             // Check if user owns the vjudge account
-            if check_vjudge_account_owner(&self.basic.db, uc.user_id, self.data.vjudge_id).await.unwrap_or(false) {
+            if VjudgeAccount::new(self.data.vjudge_id).owned_by(&self.basic.db, uc.user_id).await.unwrap_or(false) {
                 Ok(self)
             } else {
                 Err(HttpError::HandlerError(HandlerError::PermissionDenied))
@@ -61,8 +60,11 @@ impl Submit {
             code: self.data.code.clone(),
         };
 
-        let record = submit_vjudge_code(
-            &self.basic.db,
+        let mut redis = get_redis_connection();
+        let mut store = (&self.basic.db, &mut redis);
+
+        let record = SubmissionService::submit(
+            &mut store,
             self.data.statement_id,
             self.basic.user_context.unwrap().user_id,
             self.data.vjudge_id,
@@ -113,7 +115,9 @@ impl GetOptions {
     }
 
     pub async fn exec(self) -> ResultHandler<String> {
-        let options = get_allowed_method(&self.basic.db, &self.platform).await
+        let mut redis = get_redis_connection();
+        let store = (&self.basic.db, &mut redis);
+        let options = SubmissionService::allowed_methods(&store, &self.platform).await
             .map_err(|e| HttpError::CoreError(e))?;
 
         Ok(json!({

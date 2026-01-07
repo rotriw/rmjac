@@ -7,11 +7,12 @@ import { StandardCard } from "@/components/card/card";
 import { ProblemData } from "./types";
 import {createProblem} from "@/api/client/problem";
 import { DetailData } from "@/components/problem/detail-data"
+import { ProblemModel } from "@rmjac/api-declare";
 
 export function ProblemTool() {
   const searchParams = useSearchParams()
   const [formValues, setFormValues] = useState<Record<string, string | ProblemData[]>>({})
-  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string; data?: any } | null>(null);
+  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string; data?: ProblemModel | unknown } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Handle form submission
@@ -68,23 +69,13 @@ export function ProblemTool() {
     };
     
     try {
-      const response = await createProblem(submissionData);
-
-      const result = await response.json();
+      const newProblem = await createProblem(submissionData);
       
-      if (response.ok) {
-        setSubmitResult({
-          success: true,
-          message: `题目创建成功！\n题目名称: ${submissionData.problem_name}\n题目标识: ${submissionData.problem_iden}`,
-          data: result
-        });
-      } else {
-        setSubmitResult({
-          success: false,
-          message: `创建失败: ${result.error || '未知错误'}`,
-          data: result
-        });
-      }
+      setSubmitResult({
+        success: true,
+        message: `题目创建成功！\n题目名称: ${submissionData.problem_name}\n题目标识: ${submissionData.problem_iden}`,
+        data: newProblem
+      });
     } catch (error) {
       setSubmitResult({
         success: false,

@@ -2,7 +2,7 @@ use std::future::{ready, Ready};
 use std::rc::Rc;
 use actix_web::{dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, Error, HttpMessage};
 use futures_util::future::LocalBoxFuture;
-use rmjac_core::model::user::check_user_token;
+use rmjac_core::model::user::UserAuthService;
 
 pub struct AuthTool;
 impl<S, B> Transform<S, ServiceRequest> for AuthTool
@@ -55,7 +55,7 @@ where
                 && let Some(token) = token
                 && let Ok(uid) = uid.value().parse::<i64>()
             {
-                let auth = check_user_token(uid, token.value()).await;
+                let auth = UserAuthService::check_token(uid, token.value()).await;
                 if auth == true {
                     user_id = uid;
                     is_real = true;

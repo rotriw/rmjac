@@ -1,56 +1,8 @@
-"use server"
-
 import { cookies } from "next/headers"
-import { API_BASE_URL } from './config'
+import { API_BASE_URL } from '@/lib/constants'
+import { Training, TrainingAddProblemResponse } from "@rmjac/api-declare";
 
-export interface TrainingNode {
-  node_id: number
-  public: {
-    name: string
-    iden: string
-    description: string
-    training_type: string
-    start_time: string
-    end_time: string
-  }
-  private: {
-    description: string
-  }
-}
-
-export interface TrainingProblem {
-  ProblemIden?: string
-  ProblemTraining?: TrainingList
-  ProblemPresetTraining?: [number, string]
-  ExistTraining?: [number, string]
-}
-
-export interface TrainingList {
-  description: string
-  own_problem: TrainingProblem[]
-}
-
-export interface TrainingModel {
-  training_node: TrainingNode
-  problem_list: TrainingList
-}
-
-export interface Training {
-  node_id: number
-  name: string
-  iden: string
-  description: string
-  training_type: string
-  start_time: string
-  end_time: string
-}
-
-export interface TrainingsResponse {
-  trainings: Training[]
-  total: number
-}
-
-export async function getAllTrainings(): Promise<TrainingsResponse> {
+export async function getAllTrainings(): Promise<{ trainings: Training[], total: number }> {
   try {
     const manage = await cookies();
     const response = await fetch(`${API_BASE_URL}/api/training/trainings`, {
@@ -63,15 +15,15 @@ export async function getAllTrainings(): Promise<TrainingsResponse> {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    const data = await response.json()
-    return data
+    const data: { code: number, data: { trainings: Training[], total: number } } = await response.json()
+    return data.data!
   } catch (error) {
     console.error('Failed to fetch trainings:', error)
     throw error
   }
 }
 
-export async function getTrainingByIden(user_iden: string, training_iden: string): Promise<TrainingModel> {
+export async function getTrainingByIden(user_iden: string, training_iden: string): Promise<Training> {
   try {
     const manage = await cookies();
     const response = await fetch(`${API_BASE_URL}/api/training/view/${user_iden}/${training_iden}`, {
@@ -85,15 +37,15 @@ export async function getTrainingByIden(user_iden: string, training_iden: string
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    const data = await response.json()
-    return data
+    const data: { code: number, data: Training } = await response.json()
+    return data.data!
   } catch (error) {
     console.error(`Failed to fetch training ${training_iden}:`, error)
     throw error
   }
 }
 
-export async function getTrainingByNodeId(node_id: number): Promise<any> {
+export async function getTrainingByNodeId(node_id: number): Promise<Training> {
   try {
     const manage = await cookies();
     const response = await fetch(`${API_BASE_URL}/api/training/training/node/${node_id}`, {
@@ -106,8 +58,8 @@ export async function getTrainingByNodeId(node_id: number): Promise<any> {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    const data = await response.json()
-    return data
+    const data: { code: number, data: Training } = await response.json()
+    return data.data!
   } catch (error) {
     console.error(`Failed to fetch training node ${node_id}:`, error)
     throw error
@@ -129,7 +81,7 @@ export async function deleteTraining(user_iden: string, training_iden: string): 
   }
 }
 
-export async function addProblemToTraining(training_node_id: number, problem_iden: string): Promise<any> {
+export async function addProblemToTraining(training_node_id: number, problem_iden: string): Promise<TrainingAddProblemResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/training/training/${training_node_id}/add_problem`, {
       method: 'POST',
@@ -151,7 +103,7 @@ export async function addProblemToTraining(training_node_id: number, problem_ide
   }
 }
 
-export async function checkTrainingPermission(training_iden: string, user_node_id: string): Promise<any> {
+export async function checkTrainingPermission(training_iden: string, user_node_id: string): Promise<unknown> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/training/training/${training_iden}/check-permission/${user_node_id}`)
 
