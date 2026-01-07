@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { TypstRenderer } from "@/components/typst-renderer"
 import { API_BASE_URL } from "@/api/client/config"
 import ProblemContainer from "./problem-container"
-import { ProblemStatementNode } from "@/api/server/problem"
+import {ProblemStatementNode, viewProblem} from "@/api/server/problem"
 
 export interface Record {
   node_id: number
@@ -61,27 +61,6 @@ interface ProblemData {
   user_last_accepted_record?: Record[]
 }
 
-async function getProblemData(iden: string): Promise<ProblemData | null> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/problem/view/${iden}`, {
-      cache: 'no-store',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      return null
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error(`Failed to fetch problem ${iden}:`, error)
-    return null
-  }
-}
-
 async function checkUserLogin(): Promise<boolean> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/user/info`, {
@@ -125,7 +104,7 @@ function renderContent(content: ContentType[]) {
 export default async function ProblemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const [problemData, isLoggedIn] = await Promise.all([
-    getProblemData(id),
+    viewProblem(id),
     checkUserLogin()
   ])
 

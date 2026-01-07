@@ -6,22 +6,40 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StandardCard } from "@/components/card/card"
-import { getAllProblems, getAcceptanceRate, difficultyColors, statusColors, statusLabels, type Problem } from "@/api/server/problem"
+import { getAllProblems, difficultyColors} from "@/api/server/problem"
+import { ProblemListItem } from "@rmjac/api-declare"
 
 export default function ProblemsPage() {
-  const [problems, setProblems] = useState<Problem[]>([])
-  const [filteredProblems, setFilteredProblems] = useState<Problem[]>([])
+  const [problems, setProblems] = useState<ProblemListItem[]>([])
+  const [filteredProblems, setFilteredProblems] = useState<ProblemListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
   const problemsPerPage = 20
+
+  // Helper functions to extract data from ProblemListItem
+  const getProblemName = (item: ProblemListItem) => item.model.problem_node.public.name
+  const getProblemTags = (item: ProblemListItem) => item.model.tag.map(t => t.public.tag_name)
+  const getTimeLimit = (item: ProblemListItem) => {
+    const statements = item.model.problem_statement_node
+    if (statements.length > 0 && statements[0][1]) {
+      return statements[0][1].public.time_limit
+    }
+    return 1000
+  }
+  const getMemoryLimit = (item: ProblemListItem) => {
+    const statements = item.model.problem_statement_node
+    if (statements.length > 0 && statements[0][1]) {
+      return statements[0][1].public.memory_limit
+    }
+    return 256
+  }
 
   useEffect(() => {
     fetchProblems()
@@ -29,7 +47,7 @@ export default function ProblemsPage() {
 
   useEffect(() => {
     filterProblems()
-  }, [problems, searchTerm, difficultyFilter, statusFilter])
+  }, [problems, searchTerm, difficultyFilter])
 
   useEffect(() => {
     setTotalPages(Math.ceil(filteredProblems.length / problemsPerPage))
@@ -51,19 +69,18 @@ export default function ProblemsPage() {
 
     if (searchTerm) {
       filtered = filtered.filter(
-        problem =>
-          problem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          problem.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          problem.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+        problem => {
+          const name = getProblemName(problem)
+          const tags = getProblemTags(problem)
+          return name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            problem.iden.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+        }
       )
     }
 
     if (difficultyFilter !== "all") {
-      filtered = filtered.filter(problem => problem.tags.includes(difficultyFilter))
-    }
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(problem => problem.status === statusFilter)
+      filtered = filtered.filter(problem => getProblemTags(problem).includes(difficultyFilter))
     }
 
     setFilteredProblems(filtered)
@@ -78,7 +95,6 @@ export default function ProblemsPage() {
   const handleReset = () => {
     setSearchTerm("")
     setDifficultyFilter("all")
-    setStatusFilter("all")
   }
 
   if (loading) {
@@ -103,29 +119,13 @@ export default function ProblemsPage() {
               className="w-full"
             />
           </div>
-          <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-            <SelectTrigger className="w-full sm:w-32">
-              <SelectValue placeholder="难度" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部难度</SelectItem>
-              <SelectItem value="入门">入门</SelectItem>
-              <SelectItem value="简单">简单</SelectItem>
-              <SelectItem value="中等">中等</SelectItem>
-              <SelectItem value="困难">困难</SelectItem>
-              <SelectItem value="极限">极限</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-32">
-              <SelectValue placeholder="状态" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部状态</SelectItem>
-              <SelectItem value="published">已发布</SelectItem>
-              <SelectItem value="draft">草稿</SelectItem>
-              <SelectItem value="archived">已归档</SelectItem>
-            </SelectContent>
+          <Select value={difficultyFilter} onValueChange={setDifficultyFilter} className="w-full sm:w-32">
+            <option value="all">全部难度</option>
+            <option value="入门">入门</option>
+            <option value="简单">简单</option>
+            <option value="中等">中等</option>
+            <option value="困难">困难</option>
+            <option value="极限">极限</option>
           </Select>
           <Button onClick={handleReset} variant="outline">
             重置
@@ -141,32 +141,33 @@ export default function ProblemsPage() {
                 <TableHead className="w-20">难度</TableHead>
                 <TableHead className="w-20">时间限制</TableHead>
                 <TableHead className="w-20">内存限制</TableHead>
-                <TableHead className="w-24">通过率</TableHead>
-                <TableHead className="w-16">状态</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedProblems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8">
                     没有找到匹配的题目
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedProblems.map((problem) => (
-                  <TableRow key={problem.id} className="hover:bg-gray-50">
+                paginatedProblems.map((problem) => {
+                  const tags = getProblemTags(problem)
+                  const name = getProblemName(problem)
+                  return (
+                  <TableRow key={problem.iden} className="hover:bg-gray-50">
                     <TableCell className="font-mono text-sm">
-                      {problem.id}
+                      {problem.iden}
                     </TableCell>
                     <TableCell>
                       <Link 
-                        href={`/problem/${problem.id}`}
+                        href={`/problem/${problem.iden}`}
                         className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
                       >
-                        {problem.name}
+                        {name}
                       </Link>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {problem.tags.slice(0, 3).map((tag) => (
+                        {tags.slice(0, 3).map((tag: string) => (
                           <Badge
                             key={tag}
                             variant="secondary"
@@ -175,15 +176,15 @@ export default function ProblemsPage() {
                             {tag}
                           </Badge>
                         ))}
-                        {problem.tags.length > 3 && (
+                        {tags.length > 3 && (
                           <Badge variant="secondary" className="text-xs">
-                            +{problem.tags.length - 3}
+                            +{tags.length - 3}
                           </Badge>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      {problem.tags.map(tag => {
+                      {tags.map((tag: string) => {
                         if (["入门", "简单", "中等", "困难", "极限"].includes(tag)) {
                           return (
                             <Badge
@@ -198,23 +199,13 @@ export default function ProblemsPage() {
                       })}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {problem.timeLimit}
+                      {getTimeLimit(problem)} ms
                     </TableCell>
                     <TableCell className="text-sm">
-                      {problem.memoryLimit}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {getAcceptanceRate(problem.acceptedCount, problem.submissionCount)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        className={statusColors[problem.status]}
-                      >
-                        {statusLabels[problem.status]}
-                      </Badge>
+                      {getMemoryLimit(problem)} MB
                     </TableCell>
                   </TableRow>
-                ))
+                )})
               )}
             </TableBody>
           </Table>

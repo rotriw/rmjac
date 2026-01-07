@@ -53,3 +53,16 @@ export function post<TRequest, TResponse>(
 ): Promise<ApiResponse<TResponse>> {
   return request<TRequest, TResponse>("POST", url, body);
 }
+
+export function put<TRequest, TResponse>(
+  url: string,
+  body: TRequest
+): Promise<ApiResponse<TResponse>> {
+  return request<TRequest, TResponse>("PUT", url, body);
+}
+
+export function del<TResponse>(
+  url: string
+): Promise<ApiResponse<TResponse>> {
+  return request<undefined, TResponse>("DELETE", url);
+}

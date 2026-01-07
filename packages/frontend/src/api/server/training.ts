@@ -1,120 +1,84 @@
+"use server"
+
 import { cookies } from "next/headers"
 import { API_BASE_URL } from '@/lib/constants'
-import { Training, TrainingAddProblemResponse } from "@rmjac/api-declare";
+import { Training, TrainingListStatus } from "@rmjac/api-declare";
 
-export async function getAllTrainings(): Promise<{ trainings: Training[], total: number }> {
+// Re-export types for convenience
+export type { Training, TrainingNode, TrainingList, TrainingProblem } from "@rmjac/api-declare";
+
+/**
+ * 获取训练详情
+ * GET /api/training/view/{user_iden}/{training_iden}
+ */
+export async function getTrainingByIden(userIden: string, trainingIden: string): Promise<Training> {
   try {
     const manage = await cookies();
-    const response = await fetch(`${API_BASE_URL}/api/training/trainings`, {
+    const response = await fetch(`${API_BASE_URL}/api/training/view/${userIden}/${trainingIden}`, {
       headers: {
         cookie: manage.toString()
       }
-    })
+    });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data: { code: number, data: { trainings: Training[], total: number } } = await response.json()
-    return data.data!
+    const data: { data: Training } = await response.json();
+    return data.data;
   } catch (error) {
-    console.error('Failed to fetch trainings:', error)
-    throw error
+    console.error(`Failed to fetch training ${trainingIden}:`, error);
+    throw error;
   }
 }
 
-export async function getTrainingByIden(user_iden: string, training_iden: string): Promise<Training> {
+/**
+ * 查看训练 (POST方法)
+ * POST /api/training/view/{user_iden}/{training_iden}
+ */
+export async function viewTraining(userIden: string, trainingIden: string): Promise<Training> {
   try {
     const manage = await cookies();
-    const response = await fetch(`${API_BASE_URL}/api/training/view/${user_iden}/${training_iden}`, {
-      headers: {
-        cookie: manage.toString()
-      }
-    })
-
-    if (!response.ok) {
-      console.log(await response.json());
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data: { code: number, data: Training } = await response.json()
-    return data.data!
-  } catch (error) {
-    console.error(`Failed to fetch training ${training_iden}:`, error)
-    throw error
-  }
-}
-
-export async function getTrainingByNodeId(node_id: number): Promise<Training> {
-  try {
-    const manage = await cookies();
-    const response = await fetch(`${API_BASE_URL}/api/training/training/node/${node_id}`, {
-      headers: {
-        cookie: manage.toString()
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data: { code: number, data: Training } = await response.json()
-    return data.data!
-  } catch (error) {
-    console.error(`Failed to fetch training node ${node_id}:`, error)
-    throw error
-  }
-}
-
-export async function deleteTraining(user_iden: string, training_iden: string): Promise<void> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/training/training/${user_iden}/${training_iden}`, {
-      method: 'DELETE',
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-  } catch (error) {
-    console.error(`Failed to delete training ${training_iden}:`, error)
-    throw error
-  }
-}
-
-export async function addProblemToTraining(training_node_id: number, problem_iden: string): Promise<TrainingAddProblemResponse> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/training/training/${training_node_id}/add_problem`, {
+    const response = await fetch(`${API_BASE_URL}/api/training/view/${userIden}/${trainingIden}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({problem_iden}),
-    })
+        cookie: manage.toString()
+      }
+    });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json()
-    return data
+    const data: { data: Training } = await response.json();
+    return data.data;
   } catch (error) {
-    console.error('Failed to add problem to training:', error)
-    throw error
+    console.error(`Failed to view training ${trainingIden}:`, error);
+    throw error;
   }
 }
 
-export async function checkTrainingPermission(training_iden: string, user_node_id: string): Promise<unknown> {
+/**
+ * 获取训练状态
+ * GET /api/training/status/{user_iden}/{training_iden}
+ */
+export async function getTrainingStatus(userIden: string, trainingIden: string): Promise<TrainingListStatus> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/training/training/${training_iden}/check-permission/${user_node_id}`)
+    const manage = await cookies();
+    const response = await fetch(`${API_BASE_URL}/api/training/status/${userIden}/${trainingIden}`, {
+      headers: {
+        cookie: manage.toString()
+      }
+    });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json()
-    return data
+    const data: { message: string; data: TrainingListStatus } = await response.json();
+    return data.data;
   } catch (error) {
-    console.error('Failed to check training permission:', error)
-    throw error
+    console.error(`Failed to fetch training status ${trainingIden}:`, error);
+    throw error;
   }
 }

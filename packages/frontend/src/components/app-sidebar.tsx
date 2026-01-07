@@ -24,6 +24,7 @@ let sb = false;
 
 export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   side_bar = await(await getSidebar());
+  console.log(side_bar);
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>

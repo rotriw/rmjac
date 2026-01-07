@@ -21,30 +21,31 @@ export function LoginForm({
       user: data.get("user"),
       password: data.get("password"),
     }));
-    const body = await fetch(`${API_BASE_URL}/api/user/login`, {
+    const body = await fetch(`${API_BASE_URL}/api/user/login/normal`, {
         method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+            "Content-Type": "application/json",
         },
         body: JSON.stringify({
           user: data.get("user"),
           password: data.get("password"),
-          // long_token: null
+          long_token: null
         })
       }
     );
+    console.log(body.status);
     const res = await body.json();
     console.log(res);
     if (res?.code == 60003) {
       redirect('/login?err=60003')
     }
-    if (res?.user_id) {
+    if (res?.code == 0) {
       console.log(123);
       // login successful
       // set cookie.
       const cookieStore = await cookies();
-      cookieStore.set('_uid', res?.user_id);
-      cookieStore.set('token', res?.token_private?.token);
+      cookieStore.set('_uid', res?.data.user_id);
+      cookieStore.set('token', res?.data.token_private?.token);
       redirect('/')
     }
   }
