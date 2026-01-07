@@ -13,6 +13,7 @@ edition = "2024"
 clap = "4.5.40"
 command_tool = { git = "https://github.com/rotriw/rust_command_tool_macro", version = "0.1.0" }
 macro_perm = { path = "packages/macro_perm" }
+macro_handler = { path = "packages/macro_handler" }
 log = "0.4.27"
 rmjac_core = { path = "packages/core" }
 fern = "0.7.1"

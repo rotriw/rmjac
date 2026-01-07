@@ -3906,6 +3906,7 @@ dependencies = [
  "futures-util",
  "lazy_static",
  "log",
+ "macro_handler",
  "macro_perm",
  "redis",
  "rmjac_core",

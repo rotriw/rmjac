@@ -20,6 +20,7 @@ pub enum HandlerError {
     Conflict(String),
 }
 
+#[derive(Clone)]
 pub struct BasicHandler {
     pub db: DatabaseConnection,
     pub user_context: Option<UserAuthCotext>,

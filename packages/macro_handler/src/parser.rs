@@ -121,7 +121,7 @@ fn parse_handler_function(method: &ImplItemFn) -> Result<HandlerFunction, syn::E
     let mut perm_func = None;
     
     for attr in &method.attrs {
-        if attr.path().is_ident("path") {
+        if attr.path().is_ident("route") {
             path_template = parse_path_from_attr(attr)?;
         } else if attr.path().is_ident("before") {
             before_funcs = Some(parse_ident_list_from_attr(attr)?);

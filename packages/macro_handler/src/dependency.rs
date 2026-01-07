@@ -16,12 +16,22 @@ pub fn build_dependency_graph(
         // 分析此before函数依赖哪些其他before的导出
         let mut depends_on = HashSet::new();
         
+        // 获取from_path参数列表
+        let from_path_params: HashSet<String> = before.from_path.iter()
+            .map(|i| i.to_string())
+            .collect();
+        
         for param in &before.params {
             if param.is_self {
                 continue;
             }
             
             let param_name = param.name.to_string();
+            
+            // 如果参数在from_path中，跳过（来自路径参数）
+            if from_path_params.contains(&param_name) {
+                continue;
+            }
             
             // 检查这个参数是否来自其他before函数的导出
             for other_before in before_funcs {
@@ -130,6 +140,14 @@ pub fn analyze_handler_requirements(
 ) -> HashSet<String> {
     let mut required = HashSet::new();
     
+    // 收集所有before函数的from_path参数
+    let mut from_path_params: HashSet<String> = HashSet::new();
+    for before in before_funcs {
+        for fp in &before.from_path {
+            from_path_params.insert(fp.to_string());
+        }
+    }
+    
     for param in &handler.params {
         if param.is_self {
             continue;
@@ -137,14 +155,16 @@ pub fn analyze_handler_requirements(
         
         let param_name = param.name.to_string();
         
-        // 如果不在路径参数中，检查是否来自before导出
-        if !path_vars.contains(&param_name) {
-            // 查找提供此导出的before函数
-            for before in before_funcs {
-                if before.exports.iter().any(|e| e.to_string() == param_name) {
-                    required.insert(param_name.clone());
-                    break;
-                }
+        // 如果在路径参数或from_path中，跳过
+        if path_vars.contains(&param_name) || from_path_params.contains(&param_name) {
+            continue;
+        }
+        
+        // 查找提供此导出的before函数
+        for before in before_funcs {
+            if before.exports.iter().any(|e| e.to_string() == param_name) {
+                required.insert(param_name.clone());
+                break;
             }
         }
     }
@@ -160,6 +180,14 @@ pub fn analyze_perm_requirements(
 ) -> HashSet<String> {
     let mut required = HashSet::new();
     
+    // 收集所有before函数的from_path参数
+    let mut from_path_params: HashSet<String> = HashSet::new();
+    for before in before_funcs {
+        for fp in &before.from_path {
+            from_path_params.insert(fp.to_string());
+        }
+    }
+    
     for param in &perm.params {
         if param.is_self {
             continue;
@@ -167,13 +195,15 @@ pub fn analyze_perm_requirements(
         
         let param_name = param.name.to_string();
         
-        // 如果不在路径参数中，检查是否来自before导出
-        if !path_vars.contains(&param_name) {
-            for before in before_funcs {
-                if before.exports.iter().any(|e| e.to_string() == param_name) {
-                    required.insert(param_name.clone());
-                    break;
-                }
+        // 如果在路径参数或from_path中，跳过
+        if path_vars.contains(&param_name) || from_path_params.contains(&param_name) {
+            continue;
+        }
+        
+        for before in before_funcs {
+            if before.exports.iter().any(|e| e.to_string() == param_name) {
+                required.insert(param_name.clone());
+                break;
             }
         }
     }
@@ -201,18 +231,36 @@ pub fn compute_execution_order(
     if let Some(ref before_list) = handler.before_funcs {
         for before_name in before_list {
             if let Some(before) = before_funcs.iter().find(|b| b.name == *before_name) {
-                for export in &before.exports {
-                    required_exports.insert(export.to_string());
+                // 检查before函数的from_path变量是否在当前handler的路径变量中可用
+                let from_path_vars: Vec<String> = before.from_path.iter()
+                    .map(|i| i.to_string())
+                    .collect();
+                let all_path_vars_available = from_path_vars.iter()
+                    .all(|v| path_vars.contains(v));
+                
+                if all_path_vars_available {
+                    for export in &before.exports {
+                        required_exports.insert(export.to_string());
+                    }
                 }
             }
         }
     } else {
-        // 如果没有指定，包含所有"before_"开头的函数
+        // 如果没有指定，包含所有"before_"开头的函数（但只包含其from_path变量可用的）
         for before in before_funcs {
             let name = before.name.to_string();
             if name.starts_with("before_") {
-                for export in &before.exports {
-                    required_exports.insert(export.to_string());
+                // 检查before函数的from_path变量是否在当前handler的路径变量中可用
+                let from_path_vars: Vec<String> = before.from_path.iter()
+                    .map(|i| i.to_string())
+                    .collect();
+                let all_path_vars_available = from_path_vars.iter()
+                    .all(|v| path_vars.contains(v));
+                
+                if all_path_vars_available {
+                    for export in &before.exports {
+                        required_exports.insert(export.to_string());
+                    }
                 }
             }
         }

@@ -41,9 +41,9 @@ use codegen::generate_handler_impl;
 ///         async fn require_sudo(self, id: &i64) -> bool {
 ///             // ...
 ///         }
-///         
+///
 ///         #[handler]
-///         #[path("{iden}")]
+///         #[route("{iden}")]
 ///         async fn post_normal(self, id: i64, iden: &str, user_name: &str) -> ResultHandler<String> {
 ///             // ...
 ///         }
@@ -184,6 +184,23 @@ pub fn export(_attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_attribute]
 pub fn perm(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    // 这个宏主要用于标记，实际解析在generate_handler中处理
+    item
+}
+
+/// 标记HTTP路由路径
+///
+/// # 示例
+///
+/// ```ignore
+/// #[handler]
+/// #[route("/users/{id}")]
+/// async fn get_user(self, id: i64) -> ResultHandler<String> {
+///     // ...
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn route(_attr: TokenStream, item: TokenStream) -> TokenStream {
     // 这个宏主要用于标记，实际解析在generate_handler中处理
     item
 }

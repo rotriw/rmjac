@@ -34,5 +34,11 @@ packages/vjudge/data/*
 *.wasm
 
 .kilocode/*
-
 docs/*
+plans/*
+
+
+.expand.*.rs
+
+packages/**/*/*.md
+!packages/**/*/README.md

@@ -2,8 +2,9 @@ use rmjac_core::now_time;
 
 use crate::{
     env::CONFIG,
-    handler::ResultHandler,
+    handler::{ResultHandler, BasicHandler, HandlerError, HttpError},
     utils::challenge::{self, gen_captcha, gen_verify_captcha},
+    utils::perm::UserAuthCotext,
 };
 use actix_web::{HttpRequest, Scope, get, post, services, web, HttpMessage};
 use sea_orm::DatabaseConnection;
@@ -11,11 +12,10 @@ use serde::{Deserialize, Serialize};
 use tap::Conv;
 use rmjac_core::db::entity::node::user::{get_user_by_email, get_user_by_iden};
 use rmjac_core::error::CoreError;
-use rmjac_core::model::user::{User, UserAuthService, UserTokenService, SimplyUser, UserRaw, UserUpdateProps};
+use rmjac_core::model::user::{User, UserAuthService, SimplyUser, UserRaw, UserUpdateProps};
 use rmjac_core::utils::get_redis_connection;
-use crate::handler::{BasicHandler, HandlerError, HttpError};
 use crate::handler::HandlerError::Conflict;
-use crate::utils::perm::UserAuthCotext;
+use macro_handler::{generate_handler, handler, from_path, export, perm, route};
 
 #[derive(Deserialize)]
 pub struct UserIden {
@@ -52,91 +52,10 @@ impl From<UserCreateUser> for UserRaw {
     }
 }
 
-pub struct Register {
-    db: DatabaseConnection,
-    data: UserCreateUser
-}
-
 #[derive(Deserialize)]
 pub struct UserBeforeCreate {
     dark_mode: bool,
     email: String,
-}
-
-impl Register {
-    /// Create a new Register handler from HTTP request
-    pub fn new(_req: HttpRequest, db: web::Data<DatabaseConnection>, data: web::Json<UserCreateUser>) -> Self {
-        Self {
-            db: db.get_ref().clone(),
-            data: data.into_inner()
-        }
-    }
-
-    /// Verify the captcha challenge
-    async fn verify_challenge(&self) -> Result<(), HttpError> {
-        let user = &self.data;
-        let now = now_time!();
-        if now.and_utc().timestamp_millis() - user.verify.challenge_time > 5 * 60 * 1000 {
-            return Err(HttpError::HandlerError(Conflict("Captcha has expired".to_string())));
-        }
-        
-        if !challenge::verify_captcha(
-            &user.verify.challenge_text,
-            user.email.as_str(),
-            user.verify.challenge_time,
-            &CONFIG.lock().unwrap().secret_challenge_code,
-            user.verify.challenge_darkmode == "dark",
-            &user.verify.challenge_code,
-        ) {
-            return Err(HttpError::HandlerError(Conflict("Captcha is invalid".to_string())));
-        }
-        
-        Ok(())
-    }
-
-    pub async fn perm(self) -> ResultHandler<Self> {
-        self.verify_challenge().await?;
-        Ok(self)
-    }
-
-    pub async fn before_register(req: HttpRequest, path: UserBeforeCreate) -> ResultHandler<String> {
-        let (challenge_text, challenge_img) = gen_captcha(path.dark_mode);
-        let time = chrono::Utc::now().naive_utc();
-        let code = CONFIG.lock().unwrap().secret_challenge_code.clone();
-        log::info!("{:?}", req.extensions().get::<UserAuthCotext>());
-        let challenge_code = gen_verify_captcha(
-            &challenge_text,
-            path.email.as_str(),
-            &time,
-            code.as_str(),
-            path.dark_mode,
-        );
-        Ok(Json! {
-            "challenge_code": challenge_img,
-            "challenge_verify": challenge_code,
-            "challenge_time": time.and_utc().timestamp_millis(),
-        })
-    }
-
-    pub async fn check_iden_exist(
-        data: web::Path<UserIden>,
-        db: web::Data<DatabaseConnection>,
-    ) -> ResultHandler<String> {
-        let iden = data.into_inner().id;
-        let exists = User::identifier_exists(&db, iden.as_str()).await?;
-        Ok(Json! {
-            "exists": exists
-        })
-    }
-
-    /// Create a new user and save to database
-    pub async fn exec(self) -> ResultHandler<String> {
-        let user = self.data.conv::<UserRaw>().save(&self.db).await?;
-        Ok(Json! {
-            "message": "User created successfully",
-            "user": user
-        })
-    }
 }
 
 #[derive(Deserialize, Clone)]
@@ -152,225 +71,11 @@ pub struct UserUpdateRequest {
     pub new_password: Option<String>,
 }
 
-pub struct Login {
-    db: DatabaseConnection,
-    req: HttpRequest,
-    user: String,
-    password: String,
-    long_token: bool,
-}
-
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct LoginProp {
     user: String,
     password: String,
     pub long_token: Option<bool>,
-}
-
-impl Login {
-    /// Create a new Login handler
-    pub fn new(req: HttpRequest, db: web::Data<DatabaseConnection>, data: web::Json<LoginProp>) -> Self {
-        Self {
-            db: db.get_ref().clone(),
-            req: req.clone(),
-            user: data.user.clone(),
-            password: data.password.clone(),
-            long_token: data.long_token.unwrap_or(false),
-        }
-    }
-
-    /// Get device identifier from User-Agent header
-    fn get_device_identifier(&self) -> &'static str {
-        match self.req.headers().get("User-Agent") {
-            Some(_) => "Known Device",
-            None => "Unknown Device",
-        }
-    }
-
-    /// Execute the login operation
-    pub async fn exec(self) -> ResultHandler<String> {
-        let token_iden = self.get_device_identifier();
-        let mut redis = get_redis_connection();
-        
-        let (user, token) = UserAuthService::login(
-            &self.db,
-            &mut redis,
-            self.user.as_str(),
-            self.password.as_str(),
-            token_iden,
-            self.long_token
-        ).await?;
-        
-        Ok(serde_json::to_string(&serde_json::json!({
-            "user_id": user.node_id,
-            "user_public": user.public,
-            "token_public": token.public,
-            "token_private": token.private,
-        })).unwrap())
-    }
-}
-
-
-pub struct Manage {
-    db: DatabaseConnection,
-    user_context: Option<UserAuthCotext>,
-    user_id: Option<i64>,
-    update: UserUpdateRequest,
-}
-
-impl Manage {
-    /// Create a new Manage handler for updating user
-    pub fn new_update(req: HttpRequest, db: web::Data<DatabaseConnection>, data: UserUpdateRequest) -> Self {
-        Self {
-            db: db.get_ref().clone(),
-            user_context: req.extensions().get::<UserAuthCotext>().cloned(),
-            user_id: None,
-            update: data,
-        }
-    }
-
-    /// Create a new Manage handler for logout
-    pub fn new_logout(req: HttpRequest, db: web::Data<DatabaseConnection>, uid: &str) -> Self {
-        Self {
-            db: db.get_ref().clone(),
-            user_context: req.extensions().get::<UserAuthCotext>().cloned(),
-            user_id: None,
-            update: UserUpdateRequest {
-                user: uid.to_string(),
-                name: None,
-                email: None,
-                avatar: None,
-                description: None,
-                bio: None,
-                user_profile_show: None,
-                old_password: None,
-                new_password: None,
-            },
-        }
-    }
-
-    /// Resolve user identifier to user ID
-    async fn resolve_user_id(&self) -> Result<i64, HttpError> {
-        if let Ok(user) = get_user_by_iden(&self.db, &self.update.user).await {
-            return Ok(user.node_id);
-        }
-        if let Ok(user) = get_user_by_email(&self.db, &self.update.user).await {
-            return Ok(user.node_id);
-        }
-        if let Ok(user_id) = self.update.user.parse::<i64>() {
-            return Ok(user_id);
-        }
-        Err(HttpError::CoreError(CoreError::UserNotFound))
-    }
-
-    pub async fn before(mut self) -> ResultHandler<Self> {
-        self.user_id = Some(self.resolve_user_id().await?);
-        Ok(self)
-    }
-
-    /// Check if the current user has permission to perform this operation
-    async fn check_permission(&self) -> Result<(), HttpError> {
-        if let Some(uc) = &self.user_context {
-            if uc.is_real {
-                if let Some(uid) = self.user_id {
-                    if uc.user_id == uid {
-                        return Ok(());
-                    }
-                }
-            }
-        }
-        Err(HttpError::HandlerError(HandlerError::PermissionDenied))
-    }
-
-    pub async fn perm(self) -> ResultHandler<Self> {
-        self.check_permission().await?;
-        Ok(self)
-    }
-
-    pub async fn update(self) -> ResultHandler<String> {
-        let update_form = UserUpdateProps {
-            name: self.update.name.clone(),
-            email: self.update.email.clone(),
-            avatar: self.update.avatar.clone(),
-            description: self.update.description.clone(),
-            bio: self.update.bio.clone(),
-            user_profile_show: self.update.user_profile_show.clone(),
-        };
-        let user = User::new(self.user_id.unwrap());
-        let common_res = user.update_config(&self.db, update_form).await?;
-        let password_res = if self.update.new_password.is_some() {
-            user.change_password(&self.db, self.update.new_password.unwrap()).await.ok()
-        } else {
-            None
-        };
-        Ok(Json! {
-            "message": "successful",
-            "user": common_res.public,
-            "password_changed": password_res
-        })
-    }
-
-    pub async fn down_all(self) -> ResultHandler<String> {
-        let user = User::new(self.user_id.unwrap());
-        user.revoke_all_tokens(&self.db).await?;
-        Ok(Json! {
-            "message": "user tokens have been revoked"
-        })
-    }
-}
-
-#[get("/check_iden/{id}")]
-pub async fn get_check_iden(
-    data: web::Path<UserIden>,
-    db: web::Data<DatabaseConnection>,
-) -> ResultHandler<String> {
-    Register::check_iden_exist(data, db).await
-}
-
-#[post("/register")]
-pub async fn post_register(
-    req: HttpRequest,
-    db: web::Data<DatabaseConnection>,
-    data: web::Json<UserCreateUser>,
-) -> ResultHandler<String> {
-    Register::new(req, db, data).perm().await?.exec().await
-}
-
-#[get("/before_create")]
-pub async fn before_create(
-    req: HttpRequest,
-    _db: web::Data<DatabaseConnection>,
-    data: web::Query<UserBeforeCreate>,
-) -> ResultHandler<String> {
-    Register::before_register(req, data.into_inner()).await
-}
-
-#[post("/login")]
-pub async fn post_login(
-    req: HttpRequest,
-    data: web::Json<LoginProp>,
-    db: web::Data<DatabaseConnection>,
-) -> ResultHandler<String> {
-    Login::new(req, db, data).exec().await
-}
-
-#[post("/logout/{user}")]
-pub async fn post_logout(
-    req: HttpRequest,
-    db: web::Data<DatabaseConnection>,
-    path: web::Path<String>,
-) -> ResultHandler<String> {
-    let user = path.into_inner();
-    Manage::new_logout(req, db, &user).before().await?.perm().await?.down_all().await
-}
-
-#[post("/manage")]
-pub async fn post_manage(
-    req: HttpRequest,
-    db: web::Data<DatabaseConnection>,
-    data: web::Json<UserUpdateRequest>,
-) -> ResultHandler<String> {
-    Manage::new_update(req, db, data.into_inner()).before().await?.perm().await?.update().await
 }
 
 #[derive(Deserialize)]
@@ -386,6 +91,273 @@ pub struct SidebarItem {
     pub reg: Option<String>,
     pub icon: String,
     pub number: Option<i64>,
+}
+
+// Register Handler
+#[generate_handler]
+mod register {
+    use super::*;
+
+    #[handler("/api/user")]
+    pub struct Register {
+        basic: BasicHandler,
+    }
+
+    impl Register {
+        /// Verify the captcha challenge
+        async fn verify_challenge(data: &UserCreateUser) -> Result<(), HttpError> {
+            let now = now_time!();
+            if now.and_utc().timestamp_millis() - data.verify.challenge_time > 5 * 60 * 1000 {
+                return Err(HttpError::HandlerError(Conflict("Captcha has expired".to_string())));
+            }
+            
+            if !challenge::verify_captcha(
+                &data.verify.challenge_text,
+                data.email.as_str(),
+                data.verify.challenge_time,
+                &CONFIG.lock().unwrap().secret_challenge_code,
+                data.verify.challenge_darkmode == "dark",
+                &data.verify.challenge_code,
+            ) {
+                return Err(HttpError::HandlerError(Conflict("Captcha is invalid".to_string())));
+            }
+            
+            Ok(())
+        }
+
+        #[perm]
+        async fn check_register_perm(&self, data: &UserCreateUser) -> bool {
+            Self::verify_challenge(data).await.is_ok()
+        }
+
+        #[handler]
+        #[route("/register")]
+        async fn post_register(&self, data: UserCreateUser) -> ResultHandler<String> {
+            let user = data.conv::<UserRaw>().save(&self.basic.db).await?;
+            Ok(Json! {
+                "message": "User created successfully",
+                "user": user
+            })
+        }
+    }
+}
+
+// Login Handler
+#[generate_handler]
+mod login {
+    use super::*;
+
+    #[handler("/api/user")]
+    pub struct Login {
+        basic: BasicHandler,
+    }
+
+    impl Login {
+        /// Get device identifier from User-Agent header
+        fn get_device_identifier(req: &HttpRequest) -> &'static str {
+            match req.headers().get("User-Agent") {
+                Some(_) => "Known Device",
+                None => "Unknown Device",
+            }
+        }
+
+        #[handler]
+        #[route("/login")]
+        async fn post_login(&self, data: LoginProp) -> ResultHandler<String> {
+            let token_iden = Self::get_device_identifier(&self.basic.req);
+            let mut redis = get_redis_connection();
+            
+            let (user, token) = UserAuthService::login(
+                &self.basic.db,
+                &mut redis,
+                data.user.as_str(),
+                data.password.as_str(),
+                token_iden,
+                data.long_token.unwrap_or(false)
+            ).await?;
+            
+            Ok(serde_json::to_string(&serde_json::json!({
+                "user_id": user.node_id,
+                "user_public": user.public,
+                "token_public": token.public,
+                "token_private": token.private,
+            })).unwrap())
+        }
+    }
+}
+
+// Manage Handler
+#[generate_handler]
+mod manage {
+    use super::*;
+
+    #[handler("/manage")]
+    pub struct Manage {
+        basic: BasicHandler,
+    }
+
+    impl Manage {
+        /// Resolve user identifier to user ID
+        async fn resolve_user_id(db: &DatabaseConnection, user_iden: &str) -> Result<i64, HttpError> {
+            if let Ok(user) = get_user_by_iden(db, user_iden).await {
+                return Ok(user.node_id);
+            }
+            if let Ok(user) = get_user_by_email(db, user_iden).await {
+                return Ok(user.node_id);
+            }
+            if let Ok(user_id) = user_iden.parse::<i64>() {
+                return Ok(user_id);
+            }
+            Err(HttpError::CoreError(CoreError::UserNotFound))
+        }
+
+        #[perm]
+        async fn check_manage_perm(&self, user_id: &i64) -> bool {
+            if let Some(uc) = &self.basic.user_context {
+                if uc.is_real && uc.user_id == *user_id {
+                    return true;
+                }
+            }
+            false
+        }
+
+        #[handler]
+        #[route("/update")]
+        async fn post_manage(&self, data: UserUpdateRequest) -> ResultHandler<String> {
+            let user_id = Self::resolve_user_id(&self.basic.db, &data.user).await?;
+            
+            // 权限检查
+            if !self.check_manage_perm(&user_id).await {
+                return Err(HttpError::HandlerError(HandlerError::PermissionDenied));
+            }
+            
+            let update_form = UserUpdateProps {
+                name: data.name.clone(),
+                email: data.email.clone(),
+                avatar: data.avatar.clone(),
+                description: data.description.clone(),
+                bio: data.bio.clone(),
+                user_profile_show: data.user_profile_show.clone(),
+            };
+            let user = User::new(user_id);
+            let common_res = user.update_config(&self.basic.db, update_form).await?;
+            let password_res = if data.new_password.is_some() {
+                user.change_password(&self.basic.db, data.new_password.unwrap()).await.ok()
+            } else {
+                None
+            };
+            Ok(Json! {
+                "message": "successful",
+                "user": common_res.public,
+                "password_changed": password_res
+            })
+        }
+
+        #[from_path(user_iden)]
+        #[export(user_id)]
+        async fn before_resolve_logout_user(&self, user_iden: &str) -> ResultHandler<i64> {
+            Self::resolve_user_id(&self.basic.db, user_iden).await
+        }
+
+        #[handler]
+        #[route("/logout/{user_iden}")]
+        async fn post_logout(&self, user_id: i64) -> ResultHandler<String> {
+            let user = User::new(user_id);
+            user.revoke_all_tokens(&self.basic.db).await?;
+            Ok(Json! {
+                "message": "user tokens have been revoked"
+            })
+        }
+    }
+}
+
+// Profile Handler
+#[generate_handler]
+mod profile {
+    use super::*;
+
+    #[handler("/api/user")]
+    pub struct Profile {
+        basic: BasicHandler,
+    }
+
+    impl Profile {
+        /// Resolve user identifier to user ID
+        async fn resolve_user_id(db: &DatabaseConnection, iden: &str) -> Result<i64, HttpError> {
+            if let Ok(user) = get_user_by_iden(db, iden).await {
+                return Ok(user.node_id);
+            }
+            if let Ok(user) = get_user_by_email(db, iden).await {
+                return Ok(user.node_id);
+            }
+            if let Ok(uid) = iden.parse::<i64>() {
+                return Ok(uid);
+            }
+            Err(HttpError::CoreError(CoreError::UserNotFound))
+        }
+
+        #[from_path(iden)]
+        #[export(user_id)]
+        async fn before_resolve_user(&self, iden: &str) -> ResultHandler<i64> {
+            Self::resolve_user_id(&self.basic.db, iden).await
+        }
+
+        #[handler]
+        #[route("/profile/{iden}")]
+        async fn get_profile(&self, user_id: i64) -> ResultHandler<String> {
+            let user = SimplyUser::load(&self.basic.db, user_id).await?;
+            Ok(Json! {
+                "user": user
+            })
+        }
+    }
+}
+
+// Static utility functions
+pub async fn before_register(_req: HttpRequest, path: UserBeforeCreate) -> ResultHandler<String> {
+    let (challenge_text, challenge_img) = gen_captcha(path.dark_mode);
+    let time = chrono::Utc::now().naive_utc();
+    let code = CONFIG.lock().unwrap().secret_challenge_code.clone();
+    let challenge_code = gen_verify_captcha(
+        &challenge_text,
+        path.email.as_str(),
+        &time,
+        code.as_str(),
+        path.dark_mode,
+    );
+    Ok(Json! {
+        "challenge_code": challenge_img,
+        "challenge_verify": challenge_code,
+        "challenge_time": time.and_utc().timestamp_millis(),
+    })
+}
+
+pub async fn check_iden_exist(
+    data: web::Path<UserIden>,
+    db: web::Data<DatabaseConnection>,
+) -> ResultHandler<String> {
+    let iden = data.into_inner().id;
+    let exists = User::identifier_exists(&db, iden.as_str()).await?;
+    Ok(Json! {
+        "exists": exists
+    })
+}
+
+#[get("/check_iden/{id}")]
+pub async fn get_check_iden(
+    data: web::Path<UserIden>,
+    db: web::Data<DatabaseConnection>,
+) -> ResultHandler<String> {
+    check_iden_exist(data, db).await
+}
+
+#[get("/before_create")]
+pub async fn before_create(
+    req: HttpRequest,
+    _db: web::Data<DatabaseConnection>,
+    data: web::Query<UserBeforeCreate>,
+) -> ResultHandler<String> {
+    before_register(req, data.into_inner()).await
 }
 
 #[get("/info")]
@@ -450,7 +422,6 @@ pub async fn get_sidebar(req: HttpRequest, db: web::Data<DatabaseConnection>, _p
         },
     ];
     if let Some(uc) = user_context && uc.is_real {
-        // require logout
         let mut log_out = basic_sidebar;
         log_out.push(SidebarItem {
                 title: "我的记录".to_string(),
@@ -498,82 +469,17 @@ pub async fn get_sidebar(req: HttpRequest, db: web::Data<DatabaseConnection>, _p
     }
 }
 
-pub struct Profile {
-    basic: BasicHandler,
-    iden: String,
-    user_id: Option<i64>,
-}
-
-impl Profile {
-    /// Create a new Profile handler
-    pub fn new(req: HttpRequest, db: web::Data<DatabaseConnection>, iden: String) -> Self {
-        let user_context = req.extensions().get::<UserAuthCotext>().cloned();
-        Self {
-            basic: BasicHandler {
-                db: db.get_ref().clone(),
-                user_context,
-                req,
-            },
-            iden,
-            user_id: None,
-        }
-    }
-
-    /// Resolve user identifier to user ID
-    async fn resolve_user_id(&self) -> Result<i64, HttpError> {
-        if let Ok(user) = get_user_by_iden(&self.basic.db, &self.iden).await {
-            return Ok(user.node_id);
-        }
-        if let Ok(user) = get_user_by_email(&self.basic.db, &self.iden).await {
-            return Ok(user.node_id);
-        }
-        if let Ok(uid) = self.iden.parse::<i64>() {
-            return Ok(uid);
-        }
-        Err(HttpError::CoreError(CoreError::UserNotFound))
-    }
-
-    pub async fn before(mut self) -> ResultHandler<Self> {
-        self.user_id = Some(self.resolve_user_id().await?);
-        Ok(self)
-    }
-
-    pub async fn perm(self) -> ResultHandler<Self> {
-        // Profile is public, no permission check needed
-        Ok(self)
-    }
-
-    /// Get user profile information
-    pub async fn exec(self) -> ResultHandler<String> {
-        let user_id = self.user_id.ok_or(HttpError::CoreError(CoreError::UserNotFound))?;
-        let user = SimplyUser::load(&self.basic.db, user_id).await?;
-        Ok(Json! {
-            "user": user
-        })
-    }
-}
-
-#[get("/profile/{iden}")]
-pub async fn get_profile(
-    req: HttpRequest,
-    db: web::Data<DatabaseConnection>,
-    path: web::Path<String>,
-) -> ResultHandler<String> {
-    let iden = path.into_inner();
-    Profile::new(req, db, iden).before().await?.perm().await?.exec().await
-}
-
 pub fn service() -> Scope {
     let service = services![
-        post_register,
-        before_create,
         get_check_iden,
-        post_login,
-        post_logout,
-        post_manage,
-        get_sidebar,
+        before_create,
         get_user_info,
-        get_profile
+        get_sidebar,
     ];
-    web::scope("/api/user").service(service)
+    web::scope("/api/user")
+        .service(service)
+        .service(register::Register::export_http_service())
+        .service(login::Login::export_http_service())
+        .service(manage::Manage::export_http_service())
+        .service(profile::Profile::export_http_service())
 }

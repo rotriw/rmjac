@@ -77,12 +77,22 @@ fn generate_route_handler(
     )?;
     
     // 分析参数来源
-    let param_analysis = analyze_parameters(
+    let mut param_analysis = analyze_parameters(
         handler,
         &path_vars,
         before_funcs,
         &execution_order,
     )?;
+    
+    // 确保所有路径变量都在path_params中（即使handler不直接使用它们）
+    for path_var in &path_vars {
+        if !param_analysis.path_params.iter().any(|(n, _)| n.to_string() == *path_var) {
+            // 添加缺失的路径参数（类型默认为String）
+            let ident = syn::Ident::new(path_var, proc_macro2::Span::call_site());
+            let ty: Type = syn::parse_quote!(String);
+            param_analysis.path_params.push((ident, ty));
+        }
+    }
     
     // 生成Props结构体（如果需要）
     let props_struct = if param_analysis.needs_props {
@@ -99,6 +109,7 @@ fn generate_route_handler(
         before_funcs,
         perm_func,
         &param_analysis,
+        &path_vars,
     )?;
     
     // 生成服务注册代码
@@ -195,8 +206,12 @@ fn generate_props_struct(
             .collect::<String>()
     );
     
+    // 生成字段，将引用类型转换为所有权类型
     let fields: Vec<_> = analysis.props_fields.iter()
-        .map(|(name, ty)| quote! { pub #name: #ty })
+        .map(|(name, ty)| {
+            let owned_ty = convert_ref_to_owned(ty);
+            quote! { pub #name: #owned_ty }
+        })
         .collect();
     
     let derive_attr = match handler.method {
@@ -224,6 +239,7 @@ fn generate_route_function(
     before_funcs: &[BeforeFunction],
     perm_func: Option<&PermFunction>,
     analysis: &ParameterAnalysis,
+    path_vars: &[String],
 ) -> Result<TokenStream, String> {
     let handler_name = &handler.name;
     let route_func_name = format_ident!("__route_{}", handler_name);
@@ -265,9 +281,10 @@ fn generate_route_function(
         execution_order,
         before_funcs,
         &analysis.path_params,
+        path_vars,
     )?;
     
-    // 生成权限检查
+    // 生成权限检查（使用 &self 引用）
     let perm_check = if let Some(perm) = perm_func {
         let perm_name = &perm.name;
         let perm_args = generate_function_args(&perm.params, analysis);
@@ -313,19 +330,29 @@ fn generate_route_function(
         (quote! {}, quote! {})
     };
     
+    // 生成路径参数定义，对于引用类型需要转换为所有权类型
     let path_param_defs: Vec<_> = analysis.path_params.iter()
-        .map(|(name, ty)| quote! { #name: actix_web::web::Path<#ty> })
+        .map(|(name, ty)| {
+            // 检查类型是否为引用类型
+            let owned_ty = convert_ref_to_owned(ty);
+            quote! { #name: actix_web::web::Path<#owned_ty> }
+        })
         .collect();
     
     Ok(quote! {
         async fn #route_func_name(
-            basic: actix_web::web::Data<crate::handler::basic::BasicHandler>,
+            __db: actix_web::web::Data<sea_orm::DatabaseConnection>,
+            __req: actix_web::HttpRequest,
             #(#path_param_defs,)*
             #route_params
             #props_param
         ) -> Result<actix_web::HttpResponse, actix_web::Error> {
             let handler_instance = #struct_name {
-                basic: basic.as_ref().clone(),
+                basic: crate::handler::BasicHandler {
+                    db: __db.get_ref().clone(),
+                    user_context: __req.extensions().get::<UserAuthCotext>().cloned(),
+                    req: __req.clone(),
+                },
             };
             
             #path_extractions
@@ -336,9 +363,31 @@ fn generate_route_function(
             let result = handler_instance.#handler_name(#(#handler_args),*).await
                 .map_err(|e| actix_web::error::ErrorInternalServerError(e))?;
             
-            Ok(actix_web::HttpResponse::Ok().json(result))
+            Ok(actix_web::HttpResponse::Ok()
+                .content_type("application/json")
+                .body(serde_json::json!({
+                    "code": 0,
+                    "data": serde_json::from_str::<serde_json::Value>(&result).unwrap_or(serde_json::Value::String(result.clone()))
+                }).to_string()))
         }
     })
+}
+
+/// 将引用类型转换为所有权类型（用于 Path 提取）
+fn convert_ref_to_owned(ty: &Type) -> TokenStream {
+    if let syn::Type::Reference(ref_ty) = ty {
+        // 检查是否是 &str
+        if let syn::Type::Path(type_path) = ref_ty.elem.as_ref() {
+            if type_path.path.is_ident("str") {
+                return quote! { String };
+            }
+        }
+        // 对于其他引用类型，使用内部类型
+        let inner = &ref_ty.elem;
+        quote! { #inner }
+    } else {
+        quote! { #ty }
+    }
 }
 
 /// 生成路径参数提取代码
@@ -358,15 +407,27 @@ fn generate_path_extractions(path_params: &[(Ident, Type)]) -> TokenStream {
 fn generate_before_calls(
     execution_order: &[String],
     before_funcs: &[BeforeFunction],
-    path_params: &[(Ident, Type)],
+    _path_params: &[(Ident, Type)],
+    path_vars: &[String],
 ) -> Result<TokenStream, String> {
     let mut calls = Vec::new();
     let mut available_vars: HashMap<String, Ident> = HashMap::new();
     
-    // 路径参数可用
-    for (name, _) in path_params {
-        available_vars.insert(name.to_string(), name.clone());
+    // 调试：检查path_vars
+    if path_vars.is_empty() {
+        eprintln!("WARNING: path_vars is empty!");
+    } else {
+        eprintln!("DEBUG: path_vars = {:?}", path_vars);
     }
+    
+    // 首先添加所有路径变量（这些变量在路径提取后就可用了）
+    for path_var in path_vars {
+        let ident = syn::Ident::new(path_var, proc_macro2::Span::call_site());
+        available_vars.insert(path_var.clone(), ident);
+        eprintln!("DEBUG: Added path_var '{}' to available_vars", path_var);
+    }
+    
+    eprintln!("DEBUG: available_vars after adding path_vars: {:?}", available_vars.keys().collect::<Vec<_>>());
     
     for before_name in execution_order {
         let before = before_funcs.iter()
@@ -414,9 +475,22 @@ fn generate_before_args(
         
         let param_name = param.name.to_string();
         let var = available_vars.get(&param_name)
-            .ok_or_else(|| format!("Variable '{}' not available for before function '{}'", param_name, before.name))?;
+            .ok_or_else(|| {
+                let available_keys: Vec<String> = available_vars.keys().cloned().collect();
+                format!(
+                    "Variable '{}' not available for before function '{}'. Available: {:?}",
+                    param_name, before.name, available_keys
+                )
+            })?;
         
-        args.push(quote! { &#var });
+        // 检查参数类型是否为引用类型
+        let is_ref_type = matches!(&param.ty, syn::Type::Reference(_));
+        
+        if is_ref_type {
+            args.push(quote! { &#var });
+        } else {
+            args.push(quote! { #var });
+        }
     }
     
     Ok(args)
@@ -437,13 +511,31 @@ fn generate_function_args(
         let param_name = &param.name;
         let param_str = param_name.to_string();
         
+        // 检查参数类型是否为引用类型
+        let is_ref_type = matches!(&param.ty, syn::Type::Reference(_));
+        
         // 检查参数来源
         if analysis.path_params.iter().any(|(n, _)| n == param_name) {
-            args.push(quote! { &#param_name });
+            // 路径参数：根据目标类型决定是传引用还是值
+            if is_ref_type {
+                args.push(quote! { &#param_name });
+            } else {
+                args.push(quote! { #param_name });
+            }
         } else if analysis.before_exports.contains_key(&param_str) {
-            args.push(quote! { &#param_name });
+            // before导出：根据目标类型决定是传引用还是值
+            if is_ref_type {
+                args.push(quote! { &#param_name });
+            } else {
+                args.push(quote! { #param_name });
+            }
         } else {
-            args.push(quote! { &props.#param_name });
+            // Props字段：如果原始类型是引用，传递引用；否则直接传递（消耗 props）
+            if is_ref_type {
+                args.push(quote! { &props.#param_name });
+            } else {
+                args.push(quote! { props.#param_name });
+            }
         }
     }
     

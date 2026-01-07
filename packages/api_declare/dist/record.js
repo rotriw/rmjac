@@ -1,0 +1,28 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.RecordStatus = void 0;
+var RecordStatus;
+(function (RecordStatus) {
+    RecordStatus["Accepted"] = "Accepted";
+    RecordStatus["PartialAccepted"] = "Partial Accepted";
+    RecordStatus["WrongAnswer"] = "Wrong Answer";
+    RecordStatus["TimeLimitExceeded"] = "Time Limit Exceeded";
+    RecordStatus["MemoryLimitExceeded"] = "Memory Limit Exceeded";
+    RecordStatus["OutputLimitExceeded"] = "Output Limit Exceeded";
+    RecordStatus["IdlenessLimitExceeded"] = "Idleness Limit Exceeded";
+    RecordStatus["RuntimeError"] = "Runtime Error";
+    RecordStatus["CompileError"] = "Compile Error";
+    RecordStatus["DangerousCode"] = "Dangerous Code";
+    RecordStatus["RemoteServiceUnknownError"] = "Remote Service Unknown Error";
+    RecordStatus["SandboxError"] = "Sandbox Error";
+    RecordStatus["RemotePlatformRefused"] = "Remote Platform Refused";
+    RecordStatus["RemotePlatformConnectionFailed"] = "Remote Platform Connection Failed";
+    RecordStatus["RemotePlatformUnknownError"] = "Remote Platform Unknown Error";
+    RecordStatus["Waiting"] = "Waiting";
+    RecordStatus["UnknownError"] = "Unknown Error";
+    RecordStatus["Deleted"] = "Deleted";
+    RecordStatus["OnlyArchived"] = "OnlyArchived";
+    RecordStatus["NotFound"] = "NotFound";
+    RecordStatus["Skipped"] = "Skipped";
+    RecordStatus["Judging"] = "Judging";
+})(RecordStatus || (exports.RecordStatus = RecordStatus = {}));
