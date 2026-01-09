@@ -7,30 +7,36 @@ use db::entity::node::perm_group::Model as PermGroupNodeModel;
 use crate::db;
 use crate::graph::node::NodeRaw;
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct PermGroupNodePublic {}
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct PermGroupNodePrivate {
     pub name: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct PermGroupNodePublicRaw {}
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct PermGroupNodePrivateRaw {
     pub name: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct PermGroupNode {
     pub node_id: i64,
     pub public: PermGroupNodePublic,
     pub private: PermGroupNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct PermGroupNodeRaw {
     pub iden: String,
     pub service: String,

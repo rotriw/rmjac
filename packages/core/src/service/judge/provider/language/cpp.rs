@@ -2,7 +2,6 @@ use crate::service::judge::service::{CompileOption, CompileOptionValue, Language
 
 pub struct Cpp;
 
-
 pub struct CppStandard {
     standard: &'static str,
 }
@@ -16,10 +15,11 @@ impl CompileOptionValue for CppStandard {
     }
 
     fn clone_box(&self) -> Box<dyn CompileOptionValue> {
-        Box::new(CppStandard { standard: self.standard })
+        Box::new(CppStandard {
+            standard: self.standard,
+        })
     }
 }
-
 
 impl CompileOption for CppStd {
     fn export_compile_name(&self) -> &'static str {

@@ -1,29 +1,35 @@
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemLimitNodePublic {
     pub time_limit: i64,   // ms
     pub memory_limit: i64, // kb
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemLimitNodePrivate {}
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemLimitNodePublicRaw {
     pub time_limit: i64,   // ms
     pub memory_limit: i64, // kb
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemLimitNodePrivateRaw {}
 
-#[derive(Deserialize, Serialize, Debug, Clone, Node)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, Node)]
+#[ts(export)]
 pub struct ProblemLimitNode {
     pub node_id: i64,
     pub public: ProblemLimitNodePublic,
     pub private: ProblemLimitNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, NodeRaw)]
+#[ts(export)]
 #[node_raw(node_type = "problem_limit")]
 pub struct ProblemLimitNodeRaw {
     pub public: ProblemLimitNodePublicRaw,

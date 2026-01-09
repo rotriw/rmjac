@@ -18,9 +18,9 @@ pub mod problem_limit;
 pub mod problem_statement;
 pub mod problem_tag;
 pub mod record;
+pub mod testcase;
 pub mod training_problem;
 pub mod user_remote;
-pub mod testcase;
 
 pub mod judge;
 
@@ -30,14 +30,10 @@ pub trait DbEdgeInfo {
 
 pub trait DbEdgeActiveModel<MODEL, EDGE>
 where
-    MODEL: Into<EDGE>
-        + From<<<Self as ActiveModelTrait>::Entity as EntityTrait>::Model>,
+    MODEL: Into<EDGE> + From<<<Self as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     Self: Sized + Send + Sync + ActiveModelTrait + ActiveModelBehavior,
 {
-    fn save_into_db(
-        &self,
-        db: &DatabaseConnection,
-    ) -> impl Future<Output = Result<MODEL>> + Send
+    fn save_into_db(&self, db: &DatabaseConnection) -> impl Future<Output = Result<MODEL>> + Send
     where
         <Self::Entity as EntityTrait>::Model: IntoActiveModel<Self>,
     {

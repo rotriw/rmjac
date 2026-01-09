@@ -1,29 +1,35 @@
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct IdenNodePublic {
     pub iden: String,
     pub weight: i64,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct IdenNodePrivate {}
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct IdenNodePublicRaw {
     pub iden: String,
     pub weight: i64,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct IdenNodePrivateRaw {}
 
-#[derive(Deserialize, Serialize, Debug, Clone, Node)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, Node)]
+#[ts(export)]
 pub struct IdenNode {
     pub node_id: i64,
     pub public: IdenNodePublic,
     pub private: IdenNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, NodeRaw)]
+#[ts(export)]
 #[node_raw(node_type = "iden")]
 pub struct IdenNodeRaw {
     pub public: IdenNodePublicRaw,
@@ -34,7 +40,10 @@ impl From<Model> for IdenNode {
     fn from(model: Model) -> Self {
         IdenNode {
             node_id: model.node_id,
-            public: IdenNodePublic { iden: model.iden, weight: model.weight },
+            public: IdenNodePublic {
+                iden: model.iden,
+                weight: model.weight,
+            },
             private: IdenNodePrivate {},
         }
     }
@@ -45,7 +54,7 @@ impl From<IdenNodeRaw> for ActiveModel {
         ActiveModel {
             node_id: NotSet,
             iden: Set(value.public.iden),
-            weight: Set(value.public.weight)
+            weight: Set(value.public.weight),
         }
     }
 }

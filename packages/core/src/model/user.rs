@@ -1,5 +1,9 @@
-use redis::TypedCommands;
+use crate::error::CoreError::QueryExists;
+use crate::error::QueryExists::{RegisterEmailExist, RegisterIDENExist};
+use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPermRaw};
+use crate::utils::get_redis_connection;
 use crate::{
+    Result,
     db::{
         self,
         entity::{
@@ -10,9 +14,7 @@ use crate::{
     env,
     error::CoreError,
     graph::{
-        edge::{
-            EdgeRaw, EdgeQuery,
-            },
+        edge::{EdgeQuery, EdgeRaw},
         node::{
             Node, NodeRaw,
             token::{TokenNode, TokenNodePrivateRaw, TokenNodePublicRaw, TokenNodeRaw},
@@ -20,16 +22,11 @@ use crate::{
         },
     },
     utils::encrypt::encode_password,
-    Result,
 };
+use redis::TypedCommands;
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use tap::Conv;
-use crate::error::CoreError::QueryExists;
-use crate::error::QueryExists::{RegisterEmailExist, RegisterIDENExist};
-use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPermRaw};
-use crate::utils::get_redis_connection;
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserRaw {
@@ -37,13 +34,25 @@ pub struct UserRaw {
     pub name: String,
     pub email: String,
     pub avatar: String,
-    pub password: String
+    pub password: String,
 }
 
 impl UserRaw {
     /// Create a new UserRaw instance
-    pub fn new(iden: String, name: String, email: String, avatar: String, password: String) -> Self {
-        Self { iden, name, email, avatar, password }
+    pub fn new(
+        iden: String,
+        name: String,
+        email: String,
+        avatar: String,
+        password: String,
+    ) -> Self {
+        Self {
+            iden,
+            name,
+            email,
+            avatar,
+            password,
+        }
     }
 
     /// Check if user already exists in the database
@@ -73,21 +82,29 @@ impl UserRaw {
             private: UserNodePrivateRaw {
                 password: encode_password(&self.password),
             },
-        }.save(db).await?;
+        }
+        .save(db)
+        .await?;
 
         self.assign_default_permissions(&user, db).await?;
         Ok(user)
     }
 
     /// Assign default strategy permissions to newly created user
-    async fn assign_default_permissions(&self, user: &UserNode, db: &DatabaseConnection) -> Result<()> {
+    async fn assign_default_permissions(
+        &self,
+        user: &UserNode,
+        db: &DatabaseConnection,
+    ) -> Result<()> {
         let default_node_id = env::DEFAULT_NODES.lock().unwrap().default_strategy_node;
         if default_node_id != -1 {
             PermProblemEdgeRaw {
                 u: user.node_id,
                 v: default_node_id,
-                perms: ProblemPermRaw::All
-            }.save(db).await?;
+                perms: ProblemPermRaw::All,
+            }
+            .save(db)
+            .await?;
         } else {
             log::warn!("Default strategy node not set, user will not have default permissions.");
         }
@@ -148,7 +165,8 @@ impl User {
     ) -> Result<UserNode> {
         use db::entity::node::user::Column::UserPassword;
         let user = UserNode::from_db(db, self.node_id).await?;
-        user.modify(db, UserPassword, encode_password(&password)).await?;
+        user.modify(db, UserPassword, encode_password(&password))
+            .await?;
         Ok(user)
     }
 
@@ -218,7 +236,7 @@ impl UserAuthService {
         long_token: bool,
     ) -> Result<(UserNode, TokenNode)> {
         let user = Self::get_user_by_iden_or_email(db, iden).await?;
-        
+
         if user.private.password != encode_password(&password.to_string()) {
             return Err(CoreError::UserNotFound);
         }
@@ -229,15 +247,12 @@ impl UserAuthService {
         Ok((user, token))
     }
 
-    async fn get_user_by_iden_or_email(
-        db: &DatabaseConnection,
-        iden: &str,
-    ) -> Result<UserNode> {
+    async fn get_user_by_iden_or_email(db: &DatabaseConnection, iden: &str) -> Result<UserNode> {
         match get_user_by_iden(db, iden).await {
             Ok(user) => Ok(user.conv::<UserNode>()),
             Err(_) => get_user_by_email(db, iden)
                 .await
-                .map(|u| u.conv::<UserNode>())
+                .map(|u| u.conv::<UserNode>()),
         }
     }
 
@@ -275,7 +290,9 @@ impl UserAuthService {
         let redis_key = format!("user_token:{}:{}", user.node_id, token.private.token);
         let redis_value = user.node_id.to_string();
         let redis_expiration = 24 * 3600;
-        redis.set_ex(redis_key, redis_value, redis_expiration).map_err(Into::into)
+        redis
+            .set_ex(redis_key, redis_value, redis_expiration)
+            .map_err(Into::into)
     }
 
     pub async fn check_token(user_id: i64, user_token: &str) -> bool {
@@ -295,48 +312,53 @@ impl UserAuthService {
 pub struct UserPermissionService;
 
 impl UserPermissionService {
-    pub async fn delete_all_connections(
-        db: &DatabaseConnection,
-        user_node_id: i64,
-    ) -> Result<()> {
-        log::info!("Deleting all permission connections for user node ID: {}", user_node_id);
+    pub async fn delete_all_connections(db: &DatabaseConnection, user_node_id: i64) -> Result<()> {
+        log::info!(
+            "Deleting all permission connections for user node ID: {}",
+            user_node_id
+        );
 
         Self::delete_all_view_edges(db, user_node_id).await?;
         Self::delete_all_manage_edges(db, user_node_id).await?;
 
-        log::info!("Successfully deleted all connections for user node ID: {}", user_node_id);
+        log::info!(
+            "Successfully deleted all connections for user node ID: {}",
+            user_node_id
+        );
         Ok(())
     }
 
-    async fn delete_all_view_edges(
-        db: &DatabaseConnection,
-        user_node_id: i64,
-    ) -> Result<()> {
-        let targets = crate::graph::edge::perm_view::PermViewEdgeQuery::get_v(user_node_id, db).await?;
+    async fn delete_all_view_edges(db: &DatabaseConnection, user_node_id: i64) -> Result<()> {
+        let targets =
+            crate::graph::edge::perm_view::PermViewEdgeQuery::get_v(user_node_id, db).await?;
         for target in targets {
-            crate::graph::edge::perm_view::PermViewEdgeQuery::delete(db, user_node_id, target).await?;
+            crate::graph::edge::perm_view::PermViewEdgeQuery::delete(db, user_node_id, target)
+                .await?;
         }
 
-        let sources = crate::graph::edge::perm_view::PermViewEdgeQuery::get_u(user_node_id, db).await?;
+        let sources =
+            crate::graph::edge::perm_view::PermViewEdgeQuery::get_u(user_node_id, db).await?;
         for source in sources {
-            crate::graph::edge::perm_view::PermViewEdgeQuery::delete(db, source, user_node_id).await?;
+            crate::graph::edge::perm_view::PermViewEdgeQuery::delete(db, source, user_node_id)
+                .await?;
         }
 
         Ok(())
     }
 
-    async fn delete_all_manage_edges(
-        db: &DatabaseConnection,
-        user_node_id: i64,
-    ) -> Result<()> {
-        let targets = crate::graph::edge::perm_manage::PermManageEdgeQuery::get_v(user_node_id, db).await?;
+    async fn delete_all_manage_edges(db: &DatabaseConnection, user_node_id: i64) -> Result<()> {
+        let targets =
+            crate::graph::edge::perm_manage::PermManageEdgeQuery::get_v(user_node_id, db).await?;
         for target in targets {
-            crate::graph::edge::perm_manage::PermManageEdgeQuery::delete(db, user_node_id, target).await?;
+            crate::graph::edge::perm_manage::PermManageEdgeQuery::delete(db, user_node_id, target)
+                .await?;
         }
 
-        let sources = crate::graph::edge::perm_manage::PermManageEdgeQuery::get_u(user_node_id, db).await?;
+        let sources =
+            crate::graph::edge::perm_manage::PermManageEdgeQuery::get_u(user_node_id, db).await?;
         for source in sources {
-            crate::graph::edge::perm_manage::PermManageEdgeQuery::delete(db, source, user_node_id).await?;
+            crate::graph::edge::perm_manage::PermManageEdgeQuery::delete(db, source, user_node_id)
+                .await?;
         }
 
         Ok(())
@@ -347,8 +369,17 @@ impl UserPermissionService {
         user_node_id: i64,
         resource_node_id: i64,
     ) -> Result<()> {
-        log::info!("Removing view permission from user {} to resource {}", user_node_id, resource_node_id);
-        crate::graph::edge::perm_view::PermViewEdgeQuery::delete(db, user_node_id, resource_node_id).await?;
+        log::info!(
+            "Removing view permission from user {} to resource {}",
+            user_node_id,
+            resource_node_id
+        );
+        crate::graph::edge::perm_view::PermViewEdgeQuery::delete(
+            db,
+            user_node_id,
+            resource_node_id,
+        )
+        .await?;
         Ok(())
     }
 
@@ -357,8 +388,17 @@ impl UserPermissionService {
         user_node_id: i64,
         resource_node_id: i64,
     ) -> Result<()> {
-        log::info!("Removing manage permission from user {} to resource {}", user_node_id, resource_node_id);
-        crate::graph::edge::perm_manage::PermManageEdgeQuery::delete(db, user_node_id, resource_node_id).await?;
+        log::info!(
+            "Removing manage permission from user {} to resource {}",
+            user_node_id,
+            resource_node_id
+        );
+        crate::graph::edge::perm_manage::PermManageEdgeQuery::delete(
+            db,
+            user_node_id,
+            resource_node_id,
+        )
+        .await?;
         Ok(())
     }
 }
@@ -366,14 +406,13 @@ impl UserPermissionService {
 pub struct UserTokenService;
 
 impl UserTokenService {
-    pub async fn revoke_all(
-        db: &DatabaseConnection,
-        user_node_id: i64,
-    ) -> Result<()> {
+    pub async fn revoke_all(db: &DatabaseConnection, user_node_id: i64) -> Result<()> {
         log::info!("Revoking all tokens for user node ID: {}", user_node_id);
 
-        let token_sources_view = crate::graph::edge::perm_view::PermViewEdgeQuery::get_u(user_node_id, db).await?;
-        let token_sources_manage = crate::graph::edge::perm_manage::PermManageEdgeQuery::get_u(user_node_id, db).await?;
+        let token_sources_view =
+            crate::graph::edge::perm_view::PermViewEdgeQuery::get_u(user_node_id, db).await?;
+        let token_sources_manage =
+            crate::graph::edge::perm_manage::PermManageEdgeQuery::get_u(user_node_id, db).await?;
 
         let mut token_node_ids = token_sources_view.clone();
         token_node_ids.extend(token_sources_manage.clone());
@@ -382,19 +421,33 @@ impl UserTokenService {
 
         for token_node_id in token_node_ids {
             if token_sources_view.contains(&token_node_id) {
-                crate::graph::edge::perm_view::PermViewEdgeQuery::delete(db, token_node_id, user_node_id).await?;
+                crate::graph::edge::perm_view::PermViewEdgeQuery::delete(
+                    db,
+                    token_node_id,
+                    user_node_id,
+                )
+                .await?;
             }
             if token_sources_manage.contains(&token_node_id) {
-                crate::graph::edge::perm_manage::PermManageEdgeQuery::delete(db, token_node_id, user_node_id).await?;
+                crate::graph::edge::perm_manage::PermManageEdgeQuery::delete(
+                    db,
+                    token_node_id,
+                    user_node_id,
+                )
+                .await?;
             }
         }
 
-        log::info!("Successfully revoked all tokens for user node ID: {}", user_node_id);
+        log::info!(
+            "Successfully revoked all tokens for user node ID: {}",
+            user_node_id
+        );
         Ok(())
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS, Default)]
+#[ts(export)]
 pub struct UserUpdateProps {
     pub name: Option<String>,
     pub email: Option<String>,
@@ -425,15 +478,25 @@ impl From<UserUpdateProps> for db::entity::node::user::ActiveModel {
     }
 }
 
-
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct SimplyUser {
     pub node_id: i64,
     pub avatar: String,
     pub name: String,
     pub iden: String,
 }
+
+
+#[derive(Deserialize, Clone, Serialize, ts_rs::TS)]
+#[ts(export)]
+pub struct UserCreaterUserVerify {
+    pub challenge_text: String,
+    pub challenge_darkmode: String,
+    pub challenge_code: String,
+    pub challenge_time: i64,
+}
+
 
 impl SimplyUser {
     pub fn new(node_id: i64, avatar: String, name: String, iden: String) -> Self {

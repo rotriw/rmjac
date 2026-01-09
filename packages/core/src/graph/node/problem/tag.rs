@@ -1,29 +1,33 @@
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemTagNodePublic {
     pub tag_name: String,
     pub tag_description: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemTagNodePrivate {}
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemTagNodePublicRaw {
     pub tag_name: String,
     pub tag_description: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemTagNodePrivateRaw {}
 
-#[derive(Deserialize, Serialize, Debug, Clone, Node)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, Node)]
 pub struct ProblemTagNode {
     pub node_id: i64,
     pub public: ProblemTagNodePublic,
     pub private: ProblemTagNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, NodeRaw)]
 #[node_raw(node_type = "problem_tag")]
 pub struct ProblemTagNodeRaw {
     pub public: ProblemTagNodePublicRaw,

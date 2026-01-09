@@ -1,9 +1,8 @@
 #[enum_dispatch::enum_dispatch(JudgeService)]
 pub enum Tool {
     Codeforces(CodeforcesJudgeService),
-    Atcoder(AtcoderJudgeService)
+    Atcoder(AtcoderJudgeService),
 }
-
 
 type DJudgeService = dyn JudgeService;
 
@@ -12,24 +11,27 @@ pub fn get_tool(platform: &str) -> Result<Box<DJudgeService>> {
     match platform {
         "codeforces" => Ok(Box::new(codeforces::default_judge_service())),
         "atcoder" => Ok(Box::new(atcoder::default_judge_service())),
-        _ => Err(NotFound(format!("Judge service for platform {} not found.", platform))),
+        _ => Err(NotFound(format!(
+            "Judge service for platform {} not found.",
+            platform
+        ))),
     }
 }
 
-use std::collections::HashMap;
-use std::any::Any;
-use serde::{Deserialize, Serialize};
-use regex::Regex;
-use serde_json::json;
 use crate::Result;
 use crate::error::CoreError::NotFound;
 use crate::graph::node::user::remote_account::VjudgeNode;
 use crate::service::judge::provider::oj::atcoder::AtcoderJudgeService;
 use crate::service::judge::provider::oj::codeforces::CodeforcesJudgeService;
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::any::Any;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubmitContext {
-    pub code: String
+    pub code: String,
 }
 
 pub trait CompileOptionValue {
@@ -61,7 +63,6 @@ impl CompileOptionValue for StringOption {
     }
 }
 
-
 pub trait CompileOption {
     fn valid(&self, _value: &dyn CompileOptionValue) -> bool {
         true
@@ -72,14 +73,16 @@ pub trait CompileOption {
     }
     fn export_allowed_option(&self) -> Vec<Box<dyn CompileOptionValue>>; // allowed value.
 
-
-    fn is_compile(&self) -> bool { true }
+    fn is_compile(&self) -> bool {
+        true
+    }
     fn is_router(&self) -> bool {
         !self.is_compile()
     }
-    fn is_input(&self) -> bool { false }
+    fn is_input(&self) -> bool {
+        false
+    }
 }
-
 
 pub trait Language: Any + Send + Sync {
     fn as_any(&self) -> &dyn Any;
@@ -88,13 +91,17 @@ pub trait Language: Any + Send + Sync {
 
     fn export_compile_name(&self) -> &str;
 
-    fn parse_option(&self, mut options: HashMap<String, Box<dyn CompileOptionValue>>) -> Vec<(Box<dyn CompileOption>, Box<dyn CompileOptionValue>)> {
+    fn parse_option(
+        &self,
+        mut options: HashMap<String, Box<dyn CompileOptionValue>>,
+    ) -> Vec<(Box<dyn CompileOption>, Box<dyn CompileOptionValue>)> {
         let allowed_options = self.export_allow_compile_options();
         let mut option_choices = Vec::new();
         for option in allowed_options {
             let compile_name = option.export_compile_name();
             if let Some(value) = options.remove(compile_name)
-                && option.valid(value.as_ref()) {
+                && option.valid(value.as_ref())
+            {
                 option_choices.push((option, value));
             }
         }
@@ -106,7 +113,7 @@ pub trait Language: Any + Send + Sync {
 pub struct LanguageChoiceOptionsInformation {
     pub name: String,
     pub is_compile: bool,
-    pub is_input: bool, // 是否允许键入值。
+    pub is_input: bool,              // 是否允许键入值。
     pub allowed_option: Vec<String>, // value.
 }
 
@@ -116,12 +123,10 @@ pub struct LanguageChoiceInformation {
     pub allow_option: Vec<LanguageChoiceOptionsInformation>,
 }
 
-
 pub struct ChoiceOption<L> {
     pub option_choices: Vec<(Box<dyn CompileOption>, Box<dyn CompileOptionValue>)>,
     pub language: L,
 }
-
 
 pub trait CompileOptionService {
     fn get_registered_language(&self) -> Vec<Box<dyn Language>>;
@@ -134,7 +139,10 @@ pub trait CompileOptionService {
             let mut option_info = Vec::new();
             for option in allowed_options {
                 let allowed_values = option.export_allowed_option();
-                let allowed_value_str = allowed_values.iter().map(|v| v.value().to_string()).collect();
+                let allowed_value_str = allowed_values
+                    .iter()
+                    .map(|v| v.value().to_string())
+                    .collect();
                 option_info.push(LanguageChoiceOptionsInformation {
                     name: option.export_compile_name().to_string(),
                     allowed_option: allowed_value_str,
@@ -152,10 +160,14 @@ pub trait CompileOptionService {
 }
 
 pub trait JudgeService {
-
     fn platform_name(&self) -> &str;
 
-    fn convert_to_json(&self, value: ChoiceOption<Box<dyn Language>>, vjudge_node: VjudgeNode, context: SubmitContext) -> String {
+    fn convert_to_json(
+        &self,
+        value: ChoiceOption<Box<dyn Language>>,
+        vjudge_node: VjudgeNode,
+        context: SubmitContext,
+    ) -> String {
         Json! {
             "operation": "submit",
             "platform": self.platform_name(),
@@ -179,13 +191,17 @@ pub trait JudgeService {
         }
         Box::new(UnknownLanguage)
     }
-    
-    fn get_option(&self, language: &str, options: HashMap<String, Box<dyn CompileOptionValue>>) -> ChoiceOption<Box<dyn Language>> {
+
+    fn get_option(
+        &self,
+        language: &str,
+        options: HashMap<String, Box<dyn CompileOptionValue>>,
+    ) -> ChoiceOption<Box<dyn Language>> {
         let lang = self.get_language(language);
         let option_choices = lang.parse_option(options);
         ChoiceOption {
             option_choices,
-            language: lang
+            language: lang,
         }
     }
 
@@ -200,7 +216,8 @@ pub trait JudgeService {
         json!({
             "language": language_name,
             "options": parsed_options
-        }).to_string()
+        })
+        .to_string()
     }
     fn get_compile_option(&self) -> Box<dyn CompileOptionService>;
 }
@@ -221,5 +238,4 @@ impl Language for UnknownLanguage {
     fn export_name(&self) -> &str {
         "unknown"
     }
-
 }

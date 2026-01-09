@@ -1,8 +1,9 @@
 use crate::graph::node::record::RecordStatus;
-use sea_orm::{QueryFilter, QueryOrder};
 use sea_orm::ColumnTrait;
+use sea_orm::{QueryFilter, QueryOrder};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct RecordEdge {
     pub id: i64,
     pub u: i64,
@@ -11,11 +12,13 @@ pub struct RecordEdge {
     pub record_status: RecordStatus,
     pub code_length: i64,
     pub score: i64,
+    #[ts(type = "string")]
     pub submit_time: chrono::NaiveDateTime,
     pub platform: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct RecordEdgeRaw {
     pub u: i64,
     pub v: i64,
@@ -23,6 +26,7 @@ pub struct RecordEdgeRaw {
     pub record_status: RecordStatus,
     pub code_length: i64,
     pub score: i64,
+    #[ts(type = "string")]
     pub submit_time: chrono::NaiveDateTime,
     pub platform: String,
 }
@@ -37,11 +41,11 @@ impl EdgeRaw<RecordEdge, Model, ActiveModel> for RecordEdgeRaw {
     ) -> <<ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
         Column::EdgeId
     }
-    
+
     fn get_u_node_id(&self) -> i64 {
         self.u
     }
-    
+
     fn get_v_node_id(&self) -> i64 {
         self.v
     }
@@ -66,7 +70,6 @@ impl From<RecordEdgeRaw> for ActiveModel {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RecordEdgeQuery;
-
 
 impl Edge<ActiveModel, Model, Entity> for RecordEdge {
     fn get_edge_id(&self) -> i64 {
@@ -229,7 +232,7 @@ impl RecordEdgeQuery {
 }
 
 use crate::Result;
-use sea_orm::{DatabaseConnection, EntityTrait, PaginatorTrait};
-use serde::{Deserialize, Serialize};
 use crate::db::entity::edge::record::{ActiveModel, Column, Entity, Model};
 use crate::graph::edge::{Edge, EdgeQuery, EdgeRaw};
+use sea_orm::{DatabaseConnection, EntityTrait, PaginatorTrait};
+use serde::{Deserialize, Serialize};

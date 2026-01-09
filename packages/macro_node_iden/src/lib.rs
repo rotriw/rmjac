@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Attribute, DeriveInput, Expr, Lit, Meta};
+use syn::{Attribute, DeriveInput, Expr, Lit, Meta, parse_macro_input};
 
 mod option_service;
 
@@ -66,8 +66,9 @@ fn extract_node_type(attrs: &[Attribute], default_name: &str) -> String {
                         && let Expr::Path(path) = &*assign.left
                         && path.path.is_ident("node_type")
                         && let Expr::Lit(expr_lit) = &*assign.right
-                        && let Lit::Str(lit_str) = &expr_lit.lit {
-                            return lit_str.value();
+                        && let Lit::Str(lit_str) = &expr_lit.lit
+                    {
+                        return lit_str.value();
                     }
                 }
                 _ => {}

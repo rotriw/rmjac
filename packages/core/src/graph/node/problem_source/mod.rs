@@ -1,29 +1,35 @@
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemSourceNodePublic {
     pub name: String,
     pub iden: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemSourceNodePrivate {}
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemSourceNodePublicRaw {
     pub name: String,
     pub iden: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemSourceNodePrivateRaw {}
 
-#[derive(Deserialize, Serialize, Debug, Clone, Node)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, Node)]
+#[ts(export)]
 pub struct ProblemSourceNode {
     pub node_id: i64,
     pub public: ProblemSourceNodePublic,
     pub private: ProblemSourceNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, NodeRaw)]
+#[ts(export)]
 #[node_raw(node_type = "problem_source")]
 pub struct ProblemSourceNodeRaw {
     pub public: ProblemSourceNodePublicRaw,

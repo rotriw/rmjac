@@ -1,5 +1,5 @@
-
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct IdenEdge {
     pub id: i64,
     pub u: i64,
@@ -8,7 +8,8 @@ pub struct IdenEdge {
     pub weight: i64,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct IdenEdgeRaw {
     pub u: i64,
     pub v: i64,
@@ -26,11 +27,11 @@ impl EdgeRaw<IdenEdge, Model, ActiveModel> for IdenEdgeRaw {
     ) -> <<ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
         Column::EdgeId
     }
-    
+
     fn get_u_node_id(&self) -> i64 {
         self.u
     }
-    
+
     fn get_v_node_id(&self) -> i64 {
         self.v
     }
@@ -71,7 +72,7 @@ impl EdgeQuery<ActiveModel, Model, Entity, IdenEdge> for IdenEdgeQuery {
 }
 
 impl IdenEdgeQuery {
-    pub async fn get_u_for_all(v:i64, db: &DatabaseConnection) -> Result<Vec<IdenEdge>> {
+    pub async fn get_u_for_all(v: i64, db: &DatabaseConnection) -> Result<Vec<IdenEdge>> {
         Ok(Entity::find()
             .filter(Column::VNodeId.eq(v))
             .all(db)
@@ -82,10 +83,10 @@ impl IdenEdgeQuery {
     }
 }
 
-
-use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter};
-use sea_orm::ColumnTrait;
 use crate::Result;
 use crate::db::entity::edge::iden::{ActiveModel, Column, Entity, Model};
 use crate::graph::edge::Edge;
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
+use sea_orm::ColumnTrait;
+use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter};
+use serde::{Deserialize, Serialize};

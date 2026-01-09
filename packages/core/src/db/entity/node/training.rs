@@ -1,6 +1,6 @@
-use chrono::NaiveDateTime;
 use crate::db::entity::node::{DbNodeActiveModel, DbNodeInfo};
 use crate::graph::node::training::TrainingNode;
+use chrono::NaiveDateTime;
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter, FromJsonQueryResult};
 use serde::{Deserialize, Serialize};

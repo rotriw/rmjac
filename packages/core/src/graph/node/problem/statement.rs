@@ -1,9 +1,13 @@
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemStatementNodePublic {
+
     pub statements: Vec<ContentType>,
     pub source: String,
     pub iden: String,
+    #[ts(type = "string")]
     pub creation_time: NaiveDateTime,
+    #[ts(type = "string")]
     pub update_time: NaiveDateTime,
     pub sample_group: Vec<(String, String)>,
     pub show_order: Vec<String>,
@@ -12,14 +16,17 @@ pub struct ProblemStatementNodePublic {
     pub problem_difficulty: Option<i32>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemStatementNodePrivate {}
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemStatementNodePublicRaw {
     pub statements: Vec<ContentType>,
     pub source: String,
     pub iden: String,
+    #[ts(type = "string")]
     pub creation_time: NaiveDateTime,
     pub sample_group_in: Vec<String>,
     pub sample_group_out: Vec<String>,
@@ -29,17 +36,20 @@ pub struct ProblemStatementNodePublicRaw {
     pub show_order: Vec<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemStatementNodePrivateRaw {}
 
-#[derive(Deserialize, Serialize, Debug, Clone, Node)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, Node)]
+#[ts(export)]
 pub struct ProblemStatementNode {
     pub node_id: i64,
     pub public: ProblemStatementNodePublic,
     pub private: ProblemStatementNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, NodeRaw)]
+#[ts(export)]
 #[node_raw(node_type = "problem_statement")]
 pub struct ProblemStatementNodeRaw {
     pub public: ProblemStatementNodePublicRaw,
@@ -59,7 +69,11 @@ impl From<Model> for ProblemStatementNode {
                 page_source: model.page_source,
                 page_rendered: model.page_rendered,
                 problem_difficulty: model.problem_difficulty,
-                sample_group: model.sample_group_in.into_iter().zip(model.sample_group_out).collect(),
+                sample_group: model
+                    .sample_group_in
+                    .into_iter()
+                    .zip(model.sample_group_out)
+                    .collect(),
                 show_order: model.show_order,
             },
             private: ProblemStatementNodePrivate {},

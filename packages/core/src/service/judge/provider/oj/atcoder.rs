@@ -1,8 +1,11 @@
-use std::collections::HashMap;
-use crate::service::judge::service::{ChoiceOption, CompileOption, CompileOptionService, CompileOptionValue, Language, JudgeService, SubmitContext};
-use macro_node_iden::option_service;
 use crate::graph::node::user::remote_account::VjudgeNode;
+use crate::service::judge::service::{
+    ChoiceOption, CompileOption, CompileOptionService, CompileOptionValue, JudgeService, Language,
+    SubmitContext,
+};
+use macro_node_iden::option_service;
 use serde_json::json;
+use std::collections::HashMap;
 
 #[derive(PartialOrd, PartialEq)]
 pub struct ContestID;
@@ -53,7 +56,6 @@ impl CompileOption for ProblemID {
     fn export_allowed_option(&self) -> Vec<Box<dyn CompileOptionValue>> {
         vec![]
     }
-
 
     fn is_input(&self) -> bool {
         true
@@ -191,7 +193,6 @@ option_service! {
     export_data: convert
 }
 
-
 pub struct AtcoderJudgeService {
     compile: AtCoderCompileService,
 }
@@ -200,10 +201,19 @@ impl JudgeService for AtcoderJudgeService {
         "atcoder"
     }
 
-    fn convert_to_json(&self, value: ChoiceOption<Box<dyn Language>>, vjudge_node: VjudgeNode, context: SubmitContext) -> String {
+    fn convert_to_json(
+        &self,
+        value: ChoiceOption<Box<dyn Language>>,
+        vjudge_node: VjudgeNode,
+        context: SubmitContext,
+    ) -> String {
         let data = self.compile.export_data(ChoiceOption {
             option_choices: value.option_choices,
-            language: *value.language.as_any().downcast_ref::<AtCoderLanguage>().unwrap(),
+            language: *value
+                .language
+                .as_any()
+                .downcast_ref::<AtCoderLanguage>()
+                .unwrap(),
         });
         json!({
             "operation": "submit",
@@ -212,7 +222,8 @@ impl JudgeService for AtcoderJudgeService {
             "url": data.url,
             "context": context,
             "language_id": data.select_id,
-        }).to_string()
+        })
+        .to_string()
     }
 
     fn get_compile_option(&self) -> Box<dyn CompileOptionService> {
@@ -222,11 +233,8 @@ impl JudgeService for AtcoderJudgeService {
 
 pub fn default_judge_service() -> impl JudgeService {
     let compile = default_compile_service();
-    AtcoderJudgeService {
-        compile
-    }
+    AtcoderJudgeService { compile }
 }
-
 
 pub fn convert(option: ChoiceOption<AtCoderLanguage>) -> AtCoderJudgeData {
     let mut url = "https://atcoder.jp".to_string();
@@ -240,7 +248,8 @@ pub fn convert(option: ChoiceOption<AtCoderLanguage>) -> AtCoderJudgeData {
         }
     }
     if !contest_id.is_empty() && !problem_id.is_empty() {
-        url = format!("{url}/contests/{contest_id}/submit/?taskScreenName={contest_id}_{problem_id}");
+        url =
+            format!("{url}/contests/{contest_id}/submit/?taskScreenName={contest_id}_{problem_id}");
     }
     AtCoderJudgeData {
         url,

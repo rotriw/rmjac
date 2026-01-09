@@ -15,4 +15,3 @@ pub enum VjudgeTask {
     #[sea_orm(iden = "updated_at")]
     UpdatedAt,
 }
-

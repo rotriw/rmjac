@@ -1,11 +1,13 @@
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemTagEdge {
     pub id: i64,
     pub u: i64,
     pub v: i64,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemTagEdgeRaw {
     pub u: i64,
     pub v: i64,
@@ -19,11 +21,11 @@ impl EdgeRaw<ProblemTagEdge, problem_tag::Model, problem_tag::ActiveModel> for P
     fn get_edge_id_column(&self) -> <<problem_tag::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
         problem_tag::Column::EdgeId
     }
-    
+
     fn get_u_node_id(&self) -> i64 {
         self.u
     }
-    
+
     fn get_v_node_id(&self) -> i64 {
         self.v
     }
@@ -55,7 +57,9 @@ impl Edge<problem_tag::ActiveModel, problem_tag::Model, problem_tag::Entity> for
     }
 }
 
-impl EdgeQuery<problem_tag::ActiveModel, problem_tag::Model, problem_tag::Entity, ProblemTagEdge> for ProblemTagEdgeQuery {
+impl EdgeQuery<problem_tag::ActiveModel, problem_tag::Model, problem_tag::Entity, ProblemTagEdge>
+    for ProblemTagEdgeQuery
+{
     fn get_edge_type() -> &'static str {
         "problem_tag"
     }
@@ -63,3 +67,4 @@ impl EdgeQuery<problem_tag::ActiveModel, problem_tag::Model, problem_tag::Entity
 
 use crate::db::entity::edge::problem_tag;
 use crate::graph::edge::{Edge, EdgeQuery, EdgeRaw};
+use serde::{Deserialize, Serialize};

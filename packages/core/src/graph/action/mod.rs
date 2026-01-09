@@ -3,7 +3,8 @@ pub mod topo;
 use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo};
 use crate::db::entity::node::node;
 use crate::env::{
-    PATH_VIS, PERM_GRAPH, SAVED_NODE_CIRCLE_ID, SAVED_NODE_PATH, SAVED_NODE_PATH_LIST, SAVED_NODE_PATH_REV,
+    PATH_VIS, PERM_GRAPH, SAVED_NODE_CIRCLE_ID, SAVED_NODE_PATH, SAVED_NODE_PATH_LIST,
+    SAVED_NODE_PATH_REV,
 };
 use crate::error::CoreError;
 use crate::graph::action::topo::TopoGraph;
@@ -17,11 +18,11 @@ use sea_orm::{ActiveModelBehavior, ActiveModelTrait, IntoActiveModel, QueryFilte
 use serde::{Deserialize, Serialize};
 
 pub async fn load_perm_graph(db: &DatabaseConnection) -> Result<()> {
-    use crate::graph::edge::perm_view::PermViewEdgeQuery;
     use crate::graph::edge::perm_manage::PermManageEdgeQuery;
     use crate::graph::edge::perm_pages::PermPagesEdgeQuery;
     use crate::graph::edge::perm_problem::PermProblemEdgeQuery;
     use crate::graph::edge::perm_system::PermSystemEdgeQuery;
+    use crate::graph::edge::perm_view::PermViewEdgeQuery;
 
     log::info!("Loading permission graph from database...");
 
@@ -80,7 +81,13 @@ pub async fn load_perm_graph(db: &DatabaseConnection) -> Result<()> {
 pub fn add_perm_edge(edge_type: &str, u: i64, v: i64, edge_id: i64, perm: i64) {
     let mut graph = PERM_GRAPH.write().unwrap();
     graph.add_edge(edge_type, u, v, edge_id, perm);
-    log::debug!("Added perm edge: {} {} -> {} (perm: {})", edge_type, u, v, perm);
+    log::debug!(
+        "Added perm edge: {} {} -> {} (perm: {})",
+        edge_type,
+        u,
+        v,
+        perm
+    );
 }
 
 /// 从权限图中删除一条边（通过边ID）
@@ -163,8 +170,7 @@ where
         + ActiveModelTrait
         + ActiveModelBehavior
         + DbEdgeInfo,
-    DbModel: Into<EdgeA>
-        + From<<<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
+    DbModel: Into<EdgeA> + From<<<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
     <DbEntity as EntityTrait>::Model: Into<DbModel>,
     EdgeA: Edge<DbActive, DbModel, DbEntity>,
@@ -255,8 +261,7 @@ where
         + ActiveModelTrait
         + ActiveModelBehavior
         + DbEdgeInfo,
-    DbModel: Into<EdgeA>
-        + From<<<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
+    DbModel: Into<EdgeA> + From<<<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
     <DbEntity as EntityTrait>::Model: Into<DbModel>,
     EdgeA: Edge<DbActive, DbModel, DbEntity>,
@@ -286,8 +291,7 @@ where
         + ActiveModelTrait
         + ActiveModelBehavior
         + DbEdgeInfo,
-    DbModel: Into<EdgeA>
-        + From<<<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
+    DbModel: Into<EdgeA> + From<<<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
     <DbEntity as EntityTrait>::Model: Into<DbModel>,
     EdgeA: Edge<DbActive, DbModel, DbEntity>,
@@ -361,7 +365,7 @@ pub struct DefaultNodes {
     pub guest_user_node: i64,
     pub default_strategy_node: i64,
     pub default_iden_node: i64,
-    pub default_system_node: i64
+    pub default_system_node: i64,
 }
 
 pub async fn get_default_node(db: &DatabaseConnection) -> Result<DefaultNodes> {
@@ -369,14 +373,21 @@ pub async fn get_default_node(db: &DatabaseConnection) -> Result<DefaultNodes> {
         guest_user_node: -1,
         default_strategy_node: -1,
         default_iden_node: -1,
-        default_system_node: -1
+        default_system_node: -1,
     };
 
-    result.guest_user_node = db::entity::node::user::get_guest_user_node(db).await.unwrap_or(-1);
-    result.default_strategy_node =
-        db::entity::node::perm_group::get_default_strategy_node(db).await.unwrap_or(-1);
-    result.default_iden_node = db::entity::node::iden::default_iden_node(db).await.unwrap_or(-1);
-    result.default_system_node = db::entity::node::pages::default_system_node(db).await.unwrap_or(-1);
+    result.guest_user_node = db::entity::node::user::get_guest_user_node(db)
+        .await
+        .unwrap_or(-1);
+    result.default_strategy_node = db::entity::node::perm_group::get_default_strategy_node(db)
+        .await
+        .unwrap_or(-1);
+    result.default_iden_node = db::entity::node::iden::default_iden_node(db)
+        .await
+        .unwrap_or(-1);
+    result.default_system_node = db::entity::node::pages::default_system_node(db)
+        .await
+        .unwrap_or(-1);
     if result.guest_user_node == -1 {
         log::warn!("no guest user node found in database");
     }

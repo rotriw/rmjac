@@ -11,4 +11,3 @@ pub enum UserRemote {
     #[sea_orm(iden = "v_node_id")]
     VNodeId,
 }
-

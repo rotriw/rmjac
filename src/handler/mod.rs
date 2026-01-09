@@ -1,9 +1,19 @@
 use crate::utils::perm::{AuthTool, UserAuthCotext};
 use rmjac_core::error::CoreError;
 
+macro_rules! default_node {
+    ($field:ident) => {
+        rmjac_core::env::DEFAULT_NODES.lock().unwrap().$field
+    };
+}
+
 use actix_cors::Cors;
-use actix_web::{App, HttpResponse, HttpServer, error, http::{StatusCode, header::ContentType}, web, HttpRequest};
 use actix_web::http::header;
+use actix_web::{
+    App, HttpRequest, HttpResponse, HttpServer, error,
+    http::{StatusCode, header::ContentType},
+    web,
+};
 use derive_more::derive::Display;
 use log::LevelFilter;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
@@ -24,9 +34,8 @@ pub enum HandlerError {
 pub struct BasicHandler {
     pub db: DatabaseConnection,
     pub user_context: Option<UserAuthCotext>,
-    pub req: HttpRequest
+    pub req: HttpRequest,
 }
-
 
 #[derive(Debug, Display)]
 pub enum HttpError {
@@ -68,9 +77,10 @@ impl error::ResponseError for HttpError {
     fn status_code(&self) -> StatusCode {
         match *self {
             HttpError::HandlerError(HandlerError::PermissionDenied) => StatusCode::FORBIDDEN,
-            HttpError::CoreError(_) | HttpError::IOError | HttpError::ActixError | HttpError::HandlerError(_) => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
+            HttpError::CoreError(_)
+            | HttpError::IOError
+            | HttpError::ActixError
+            | HttpError::HandlerError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -89,9 +99,13 @@ impl From<CoreError> for HttpError {
 
 pub type ResultHandler<T> = Result<T, HttpError>;
 
-
 #[actix_web::main]
-pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) -> std::io::Result<()> {
+pub async fn main(
+    host: &str,
+    port: u16,
+    vjudge_port: u16,
+    vjudge_auth: &str,
+) -> std::io::Result<()> {
     let database_url = crate::env::CONFIG
         .lock()
         .unwrap()
@@ -109,7 +123,14 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
         .to_owned();
     let conn = Database::connect(connection_options).await.unwrap();
     log::info!("Connected to database");
-    let data = rmjac_core::service::service_start(&conn, database_url.as_str(), "public", vjudge_port, vjudge_auth).await;
+    let data = rmjac_core::service::service_start(
+        &conn,
+        database_url.as_str(),
+        "public",
+        vjudge_port,
+        vjudge_auth,
+    )
+    .await;
     if data.is_err() {
         log::error!("Failed to start service: {:?}", data.err());
     }
@@ -127,9 +148,9 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
             .service(user::service())
             .service(problem::service())
             .service(record::service())
-            .service(training::service())
-            .service(vjudge::service())
-            .service(submit::service())
+            // .service(training::service())
+            // .service(vjudge::service())
+            // .service(submit::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {
                 error::InternalError::from_response(
                     "",
@@ -151,7 +172,7 @@ pub async fn main(host: &str, port: u16, vjudge_port: u16, vjudge_auth: &str) ->
 pub mod user;
 pub mod problem;
 pub mod record;
-pub mod training;
+// pub mod training;
 
-pub mod vjudge;
-pub mod submit;
+// pub mod vjudge;
+// pub mod submit;

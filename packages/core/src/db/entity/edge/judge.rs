@@ -3,7 +3,6 @@ use crate::graph::edge::judge::JudgeEdge;
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter};
 
-
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "edge_judge")]
 pub struct Model {

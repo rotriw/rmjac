@@ -1,38 +1,46 @@
-use crate::db::entity::node::vjudge_task::{ActiveModel, Model, Entity, Column};
+use crate::db::entity::node::vjudge_task::{ActiveModel, Column, Entity, Model};
 use crate::graph::node::{Node, NodeRaw};
 use chrono::NaiveDateTime;
-use sea_orm::EntityTrait;
 use macro_node_iden::{Node, NodeRaw};
+use sea_orm::EntityTrait;
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct VjudgeTaskNodePublic {
     pub status: String,
     pub log: String,
+    #[ts(type = "string")]
     pub created_at: NaiveDateTime,
+    #[ts(type = "string")]
     pub updated_at: NaiveDateTime,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct VjudgeTaskNodePrivate {}
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct VjudgeTaskNodePublicRaw {
     pub status: String,
     pub log: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct VjudgeTaskNodePrivateRaw {}
 
-#[derive(Deserialize, Serialize, Debug, Clone, Node)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, Node)]
+#[ts(export)]
 pub struct VjudgeTaskNode {
     pub node_id: i64,
     pub public: VjudgeTaskNodePublic,
     pub private: VjudgeTaskNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, NodeRaw)]
+#[ts(export)]
 #[node_raw(node_type = "vjudge_task")]
 pub struct VjudgeTaskNodeRaw {
     pub public: VjudgeTaskNodePublicRaw,
@@ -66,4 +74,3 @@ impl From<Model> for VjudgeTaskNode {
         }
     }
 }
-

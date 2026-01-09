@@ -1,4 +1,5 @@
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct PermViewEdge {
     pub id: i64,
     pub u: i64,
@@ -6,20 +7,23 @@ pub struct PermViewEdge {
     pub perms: Vec<ViewPerm>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct PermViewEdgeRaw {
     pub u: i64,
     pub v: i64,
     pub perms: ViewPermRaw,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub enum ViewPermRaw {
     All,
     Perms(Vec<ViewPerm>),
 }
 
-#[derive(EnumConst, Copy, Clone, Debug, PartialEq, EnumIter)]
+#[derive(EnumConst, Copy, Clone, Debug, PartialEq, EnumIter, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub enum ViewPerm {
     All = -1,
     ReadProblem = 1,
@@ -68,7 +72,7 @@ impl EdgeRaw<PermViewEdge, Model, ActiveModel> for PermViewEdgeRaw {
     fn get_v_node_id(&self) -> i64 {
         self.v
     }
-    
+
     fn get_perm_value(&self) -> Option<i64> {
         use tap::Conv;
         Some(self.perms.clone().conv::<i32>() as i64)
@@ -200,5 +204,6 @@ use crate::graph::edge::{Edge, EdgeQueryPerm};
 use crate::utils::perm::Perm;
 use enum_const::EnumConst;
 use sea_orm::DatabaseConnection;
+use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;

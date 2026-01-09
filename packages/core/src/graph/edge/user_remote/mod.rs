@@ -1,11 +1,13 @@
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct UserRemoteEdge {
     pub id: i64,
     pub u: i64,
     pub v: i64,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct UserRemoteEdgeRaw {
     pub u: i64,
     pub v: i64,
@@ -20,11 +22,11 @@ impl EdgeRaw<UserRemoteEdge, Model, ActiveModel> for UserRemoteEdgeRaw {
     ) -> <<ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
         Column::EdgeId
     }
-    
+
     fn get_u_node_id(&self) -> i64 {
         self.u
     }
-    
+
     fn get_v_node_id(&self) -> i64 {
         self.v
     }
@@ -52,7 +54,6 @@ impl Edge<ActiveModel, Model, Entity> for UserRemoteEdge {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct UserRemoteEdgeQuery;
 
@@ -62,5 +63,9 @@ impl EdgeQuery<ActiveModel, Model, Entity, UserRemoteEdge> for UserRemoteEdgeQue
     }
 }
 
+use crate::{
+    db::entity::edge::user_remote::{ActiveModel, Column, Entity, Model},
+    graph::edge::{Edge, EdgeQuery, EdgeRaw},
+};
 use sea_orm::ActiveValue::{NotSet, Set};
-use crate::{db::entity::edge::user_remote::{ActiveModel, Column, Entity, Model}, graph::edge::{Edge, EdgeQuery, EdgeRaw}};
+use serde::{Deserialize, Serialize};

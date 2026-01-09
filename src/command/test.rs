@@ -107,12 +107,14 @@
 //     let _ = dbg!(handle_score(SubtaskCalcMethod::Function, None, test_detail));
 // }
 
-pub fn run(_log_level: Option<String>) -> Option<()> {
-        // let log_level: LevelFilter = log_level
-        //     .unwrap_or_else(|| "info".to_string())
-        //     .parse()
-        //     .unwrap_or(LevelFilter::Info);
-        // let _ = utils::logger::setup_logger_with_stdout(log_level);
+use rmjac_core::model::problem::ProblemModel;
+
+pub fn run() -> Option<()> {
+    // let log_level: LevelFilter = log_level
+    //     .unwrap_or_else(|| "info".to_string())
+    //     .parse()
+    //     .unwrap_or(LevelFilter::Info);
+    // let _ = utils::logger::setup_logger_with_stdout(log_level);
 
     // let config = config.unwrap_or_else(|| "config.json".to_string());
     /*  let log_level: LevelFilter = log_level

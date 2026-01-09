@@ -1,41 +1,51 @@
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct TrainingNodePublic {
-    pub name: String,               // 题单名称
-    pub iden: String,               // 题单标识
-    pub description: String,        // 题单描述
-    pub start_time: NaiveDateTime,  // 题单开始时间
-    pub end_time: NaiveDateTime,    // 题单结束时间
-    pub training_type: String,      // 题单
+    pub name: String,              // 题单名称
+    pub iden: String,              // 题单标识
+    pub description: String,       // 题单描述
+    #[ts(type = "string")]
+    pub start_time: NaiveDateTime, // 题单开始时间
+    #[ts(type = "string")]
+    pub end_time: NaiveDateTime,   // 题单结束时间
+    pub training_type: String,     // 题单
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct TrainingNodePrivate {
-    pub description: String,        // 题单备注
+    pub description: String, // 题单备注
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct TrainingNodePublicRaw {
     pub name: String,
     pub iden: String,
     pub description: String,
+    #[ts(type = "string")]
     pub start_time: NaiveDateTime,
+    #[ts(type = "string")]
     pub end_time: NaiveDateTime,
     pub training_type: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct TrainingNodePrivateRaw {
     pub description: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Node)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, Node)]
+#[ts(export)]
 pub struct TrainingNode {
     pub node_id: i64,
     pub public: TrainingNodePublic,
     pub private: TrainingNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, NodeRaw)]
+#[ts(export)]
 #[node_raw(node_type = "training")]
 pub struct TrainingNodeRaw {
     pub public: TrainingNodePublicRaw,

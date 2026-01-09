@@ -92,7 +92,7 @@ impl From<&CoreError> for i64 {
                 } else {
                     99999
                 }
-            },
+            }
         }
     }
 }

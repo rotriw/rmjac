@@ -1,11 +1,13 @@
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemLimitEdge {
     pub id: i64,
     pub u: i64,
     pub v: i64,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemLimitEdgeRaw {
     pub u: i64,
     pub v: i64,
@@ -21,11 +23,11 @@ impl EdgeRaw<ProblemLimitEdge, Model, ActiveModel> for ProblemLimitEdgeRaw {
     ) -> <<ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
         Column::EdgeId
     }
-    
+
     fn get_u_node_id(&self) -> i64 {
         self.u
     }
-    
+
     fn get_v_node_id(&self) -> i64 {
         self.v
     }
@@ -74,3 +76,4 @@ impl EdgeQuery<ActiveModel, Model, Entity, ProblemLimitEdge> for ProblemLimitEdg
 
 use crate::db::entity::edge::problem_limit::{ActiveModel, Column, Entity, Model};
 use crate::graph::edge::{Edge, EdgeQuery, EdgeRaw};
+use serde::{Deserialize, Serialize};

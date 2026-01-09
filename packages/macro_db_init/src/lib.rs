@@ -1,9 +1,9 @@
 use proc_macro::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::{
-    braced,
+    Ident, Path, Token, braced,
     parse::{Parse, ParseStream, Result},
-    parse_macro_input, Ident, Path, Token,
+    parse_macro_input,
 };
 
 struct TableDef {
@@ -107,7 +107,6 @@ pub fn table_create(input: TokenStream) -> TokenStream {
     expanded.into()
 }
 
-
 #[proc_macro]
 pub fn table_create_with(input: TokenStream) -> TokenStream {
     let input: TableDef = parse_macro_input!(input as TableDef);
@@ -127,4 +126,3 @@ pub fn table_create_with(input: TokenStream) -> TokenStream {
 
     expanded.into()
 }
-

@@ -42,3 +42,6 @@ plans/*
 
 packages/**/*/*.md
 !packages/**/*/README.md
+packages/api_declare/src/interface/*
+packages/frontend/src/api/client/*
+packages/frontend/src/api/server/*

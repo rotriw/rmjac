@@ -1,9 +1,9 @@
 use crate::db::entity::node::{DbNodeActiveModel, DbNodeInfo};
+use crate::error::CoreError;
 use crate::graph::node::iden::IdenNode;
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter, FromJsonQueryResult};
 use serde::{Deserialize, Serialize};
-use crate::error::CoreError;
 
 #[derive(
     Clone, Debug, PartialEq, DeriveEntityModel, Deserialize, Serialize, FromJsonQueryResult,

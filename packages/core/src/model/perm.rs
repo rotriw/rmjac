@@ -1,6 +1,8 @@
 use crate::Result;
 use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeInfo};
-use crate::graph::action::{check_perm_sync, add_perm_edge, remove_perm_edge, remove_perm_edge_by_id};
+use crate::graph::action::{
+    add_perm_edge, check_perm_sync, remove_perm_edge, remove_perm_edge_by_id,
+};
 use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryPerm};
 use sea_orm::{
     ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
@@ -23,12 +25,7 @@ use sea_orm::{
 /// * `1` - 有权限
 /// * `0` - 无权限
 /// * `-1` - 超过最大搜索步数
-pub fn check_perm_by_type<K: Into<i64>>(
-    edge_type: &str,
-    u: i64,
-    v: i64,
-    perm: K,
-) -> i8 {
+pub fn check_perm_by_type<K: Into<i64>>(edge_type: &str, u: i64, v: i64, perm: K) -> i8 {
     check_perm_sync(edge_type, u, v, perm.into())
 }
 
@@ -91,8 +88,7 @@ where
         + ActiveModelTrait
         + ActiveModelBehavior
         + DbEdgeInfo,
-    DbModel: Into<EdgeA>
-        + From<<<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
+    DbModel: Into<EdgeA> + From<<<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
     <DbEntity as EntityTrait>::Model: Into<DbModel>,
     EdgeA: Edge<DbActive, DbModel, DbEntity>,
@@ -101,4 +97,3 @@ where
 {
     Ok(check_perm_sync(T::get_edge_type(), u, v, perm.into()))
 }
-

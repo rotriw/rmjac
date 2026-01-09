@@ -21,7 +21,10 @@ pub fn run(
     log_level: Option<String>,
 ) -> Option<()> {
     let port = port.unwrap_or("1824".to_string()).parse::<u16>().unwrap();
-    let vjudge_port = vjudge_port.unwrap_or("1825".to_string()).parse::<u16>().unwrap();
+    let vjudge_port = vjudge_port
+        .unwrap_or("1825".to_string())
+        .parse::<u16>()
+        .unwrap();
     let host = host.unwrap_or("127.0.0.1".to_string());
     let config = config.unwrap_or_else(|| "config.json".to_string());
     rmjac_core::service::iden::create_words(vec!["LG", "CF", "AT", "lg", "cf", "at"]);

@@ -14,15 +14,14 @@ pub mod problem_source;
 pub mod problem_statement;
 pub mod problem_tag;
 pub mod record;
+pub mod testcase;
 pub mod testcase_subtask;
 pub mod token;
-pub mod user;
 pub mod training;
 pub mod training_problem;
+pub mod user;
 pub mod user_remote;
-pub mod testcase;
 pub mod vjudge_task;
-
 
 use crate::Result;
 
@@ -32,14 +31,10 @@ pub trait DbNodeInfo {
 
 pub trait DbNodeActiveModel<MODEL, NODE>
 where
-    MODEL: Into<NODE>
-        + From<<<Self as ActiveModelTrait>::Entity as EntityTrait>::Model>,
+    MODEL: Into<NODE> + From<<<Self as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     Self: Sized + Send + Sync + ActiveModelTrait + ActiveModelBehavior + DbNodeInfo,
 {
-    fn save_into_db(
-        &self,
-        db: &DatabaseConnection,
-    ) -> impl Future<Output = Result<MODEL>> + Send
+    fn save_into_db(&self, db: &DatabaseConnection) -> impl Future<Output = Result<MODEL>> + Send
     where
         <Self::Entity as EntityTrait>::Model: IntoActiveModel<Self>,
     {

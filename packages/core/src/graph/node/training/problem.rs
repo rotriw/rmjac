@@ -1,29 +1,33 @@
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct TrainingProblemNodePublic {
     pub description: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct TrainingProblemNodePrivate {
-}
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
+pub struct TrainingProblemNodePrivate {}
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct TrainingProblemNodePublicRaw {
     pub description: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct TrainingProblemNodePrivateRaw {
-}
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
+pub struct TrainingProblemNodePrivateRaw {}
 
-#[derive(Deserialize, Serialize, Debug, Clone, Node)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, Node)]
+#[ts(export)]
 pub struct TrainingProblemNode {
     pub node_id: i64,
     pub public: TrainingProblemNodePublic,
     pub private: TrainingProblemNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, NodeRaw)]
+#[ts(export)]
 #[node_raw(node_type = "training_problem")]
 pub struct TrainingProblemNodeRaw {
     pub public: TrainingProblemNodePublicRaw,
@@ -37,8 +41,7 @@ impl From<Model> for TrainingProblemNode {
             public: TrainingProblemNodePublic {
                 description: model.description,
             },
-            private: TrainingProblemNodePrivate {
-            },
+            private: TrainingProblemNodePrivate {},
         }
     }
 }

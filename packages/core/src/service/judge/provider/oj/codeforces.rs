@@ -48,17 +48,26 @@ option_service! {
 }
 
 pub struct CodeforcesJudgeService {
-    pub compile: CodeforcesCompileService
+    pub compile: CodeforcesCompileService,
 }
 impl JudgeService for CodeforcesJudgeService {
     fn platform_name(&self) -> &str {
         "codeforces"
     }
 
-    fn convert_to_json(&self, value: ChoiceOption<Box<dyn Language>>, vjudge_node: VjudgeNode, context: SubmitContext) -> String {
+    fn convert_to_json(
+        &self,
+        value: ChoiceOption<Box<dyn Language>>,
+        vjudge_node: VjudgeNode,
+        context: SubmitContext,
+    ) -> String {
         let data = self.compile.export_data(ChoiceOption {
             option_choices: value.option_choices,
-            language: *value.language.as_any().downcast_ref::<CodeforcesLanguage>().unwrap(),
+            language: *value
+                .language
+                .as_any()
+                .downcast_ref::<CodeforcesLanguage>()
+                .unwrap(),
         });
         json!({
             "operation": "submit",
@@ -67,14 +76,14 @@ impl JudgeService for CodeforcesJudgeService {
             "url": data.url,
             "context": context,
             "language_id": data.select_id,
-        }).to_string()
+        })
+        .to_string()
     }
 
     fn get_compile_option(&self) -> Box<dyn CompileOptionService> {
         Box::new(self.compile.clone())
     }
 }
-
 
 pub fn convert(option: ChoiceOption<CodeforcesLanguage>) -> CodeforcesJudgeData {
     let mut url = "https://codeforces.com".to_string();
@@ -99,7 +108,6 @@ pub fn convert(option: ChoiceOption<CodeforcesLanguage>) -> CodeforcesJudgeData 
         select_id: option.language.language_id,
     }
 }
-
 
 #[derive(PartialOrd, PartialEq)]
 pub struct ContestID;
@@ -136,7 +144,10 @@ impl CompileOption for ContestID {
 impl CompileOption for ProblemID {
     fn valid(&self, value: &dyn CompileOptionValue) -> bool {
         let value = value.value();
-        value.len() <= 3 && value.chars().all(|c| c.is_ascii_digit() || c.is_ascii_uppercase())
+        value.len() <= 3
+            && value
+                .chars()
+                .all(|c| c.is_ascii_digit() || c.is_ascii_uppercase())
     }
 
     fn export_compile_name(&self) -> &'static str {
@@ -158,13 +169,14 @@ impl CompileOption for ProblemID {
 
 pub fn default_judge_service() -> impl JudgeService {
     let compile = default_compile_service();
-    CodeforcesJudgeService {
-        compile
-    }
+    CodeforcesJudgeService { compile }
 }
 
-use std::collections::HashMap;
-use crate::service::judge::service::{ChoiceOption, CompileOption, CompileOptionService, CompileOptionValue, Language, JudgeService, SubmitContext};
-use macro_node_iden::option_service;
 use crate::graph::node::user::remote_account::VjudgeNode;
+use crate::service::judge::service::{
+    ChoiceOption, CompileOption, CompileOptionService, CompileOptionValue, JudgeService, Language,
+    SubmitContext,
+};
+use macro_node_iden::option_service;
 use serde_json::json;
+use std::collections::HashMap;

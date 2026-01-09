@@ -20,5 +20,4 @@ pub enum Training {
     EndTime,
     #[sea_orm(iden = "training_type")]
     TrainingType,
-
 }

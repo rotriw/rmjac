@@ -6,8 +6,8 @@ pub mod problem;
 pub mod problem_source;
 pub mod record;
 pub mod token;
-pub mod user;
 pub mod training;
+pub mod user;
 pub mod vjudge_task;
 
 use crate::{
@@ -53,8 +53,7 @@ where
         + ActiveModelTrait
         + ActiveModelBehavior
         + DbNodeInfo,
-    DbModel: Into<Self>
-        + From<<<DbNodeActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
+    DbModel: Into<Self> + From<<<DbNodeActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     <DbNodeActive::Entity as EntityTrait>::Model: IntoActiveModel<DbNodeActive>,
     Self: Sized + Send + Sync + Clone,
     DbEntity: EntityTrait,
@@ -70,10 +69,7 @@ where
             .unwrap()
     }
 
-    fn from_db(
-        db: &DatabaseConnection,
-        node_id: i64,
-    ) -> impl Future<Output = Result<Self>>
+    fn from_db(db: &DatabaseConnection, node_id: i64) -> impl Future<Output = Result<Self>>
     where
         Self: Sized,
     {
@@ -87,7 +83,12 @@ where
                 .filter(node_id_column.eq(node_id))
                 .one(db)
                 .await?
-                .ok_or_else(|| CoreError::NotFound(format!("Node({}) with id {node_id} not found", Self::get_node_type())))?;
+                .ok_or_else(|| {
+                    CoreError::NotFound(format!(
+                        "Node({}) with id {node_id} not found",
+                        Self::get_node_type()
+                    ))
+                })?;
             Ok(model.conv::<DbModel>().into())
         }
     }
@@ -133,7 +134,7 @@ where
             Ok(data.into())
         }
     }
-    
+
     fn modify_from_active_model(
         &self,
         db: &DatabaseConnection,
@@ -169,8 +170,7 @@ where
 pub trait NodeRaw<Node, DbModel, DbNodeActive>
 where
     Self: Into<DbNodeActive> + Clone + Debug,
-    DbModel: Into<Node>
-        + From<<<DbNodeActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
+    DbModel: Into<Node> + From<<<DbNodeActive as ActiveModelTrait>::Entity as EntityTrait>::Model>,
     DbNodeActive: DbNodeActiveModel<DbModel, Node>
         + Sized
         + Send
@@ -197,4 +197,3 @@ where
         }
     }
 }
-

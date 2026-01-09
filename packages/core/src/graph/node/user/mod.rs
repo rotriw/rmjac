@@ -1,10 +1,13 @@
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct UserNodePublic {
     pub name: String,
     pub email: String,
     pub iden: String,
+    #[ts(type = "string")]
     pub creation_time: NaiveDateTime,
     pub creation_order: i64,
+    #[ts(type = "string")]
     pub last_login_time: NaiveDateTime,
     pub avatar: String,
     pub description: String,
@@ -12,27 +15,33 @@ pub struct UserNodePublic {
     pub profile_show: Vec<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct UserNodePrivate {
     pub password: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct UserNodePublicRaw {
     pub name: String,
     pub email: String,
     pub iden: String,
+    #[ts(type = "string")]
     pub creation_time: NaiveDateTime,
+    #[ts(type = "string")]
     pub last_login_time: NaiveDateTime,
     pub avatar: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct UserNodePrivateRaw {
     pub password: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Node)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, Node)]
+#[ts(export)]
 pub struct UserNode {
     pub node_id: i64,
     pub node_iden: String,
@@ -40,7 +49,8 @@ pub struct UserNode {
     pub private: UserNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, NodeRaw)]
+#[ts(export)]
 #[node_raw(node_type = "user")]
 pub struct UserNodeRaw {
     pub public: UserNodePublicRaw,

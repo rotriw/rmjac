@@ -27,4 +27,3 @@ impl DbNodeInfo for ActiveModel {
 }
 
 impl DbNodeActiveModel<Model, VjudgeTaskNode> for ActiveModel {}
-

@@ -11,8 +11,8 @@ pub mod problem_limit;
 pub mod problem_statement;
 pub mod problem_tag;
 pub mod record;
-pub mod training_problem;
 pub mod testcase;
+pub mod training_problem;
 pub mod user_remote;
 
 pub mod judge;

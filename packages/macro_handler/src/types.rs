@@ -1,7 +1,7 @@
 //! 核心数据类型定义
 
-use syn::{Ident, Type, FnArg, ReturnType, Attribute};
 use std::collections::{HashMap, HashSet};
+use syn::{Attribute, FnArg, Ident, ReturnType, Type};
 
 /// HTTP方法类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -30,7 +30,7 @@ impl HttpMethod {
             None
         }
     }
-    
+
     /// 获取actix-web宏名称
     pub fn as_actix_macro(&self) -> &str {
         match self {
@@ -59,6 +59,7 @@ pub struct BeforeFunction {
     #[allow(dead_code)]
     pub from_path: Vec<Ident>,
     pub exports: Vec<Ident>,
+    pub require_login: bool,
     pub params: Vec<Parameter>,
     #[allow(dead_code)]
     pub return_type: ReturnType,
@@ -70,6 +71,7 @@ pub struct BeforeFunction {
 #[derive(Debug, Clone)]
 pub struct PermFunction {
     pub name: Ident,
+    pub require_login: bool,
     pub params: Vec<Parameter>,
     #[allow(dead_code)]
     pub attrs: Vec<Attribute>,
@@ -81,6 +83,7 @@ pub struct HandlerFunction {
     pub name: Ident,
     pub method: HttpMethod,
     pub path_template: String,
+    pub require_login: bool,
     pub before_funcs: Option<Vec<Ident>>,
     pub perm_func: Option<Ident>,
     pub params: Vec<Parameter>,
@@ -127,22 +130,16 @@ impl Parameter {
 #[allow(dead_code)]
 pub enum ParameterSource {
     /// 来自路径参数
-    Path {
-        var_name: String,
-    },
+    Path { var_name: String },
     /// 来自Before函数导出
     BeforeExport {
         before_func: Ident,
         export_name: Ident,
     },
     /// 来自请求体
-    RequestBody {
-        field_name: Ident,
-    },
+    RequestBody { field_name: Ident },
     /// 来自查询参数
-    QueryParam {
-        param_name: String,
-    },
+    QueryParam { param_name: String },
 }
 
 /// 参数信息（包含来源和类型转换）
@@ -191,12 +188,18 @@ impl DependencyGraph {
             nodes: HashMap::new(),
         }
     }
-    
+
     /// 添加节点
     pub fn add_node(&mut self, name: String, exports: Vec<Ident>, depends_on: HashSet<String>) {
-        self.nodes.insert(name, DependencyNode { exports, depends_on });
+        self.nodes.insert(
+            name,
+            DependencyNode {
+                exports,
+                depends_on,
+            },
+        );
     }
-    
+
     /// 查找提供指定导出的before函数
     pub fn find_provider(&self, export_name: &str) -> Option<&str> {
         for (before_name, node) in &self.nodes {

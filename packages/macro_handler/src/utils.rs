@@ -1,8 +1,8 @@
 //! 工具函数
 
-use syn::{Type, Ident};
-use quote::quote;
 use proc_macro2::TokenStream;
+use quote::quote;
+use syn::{Ident, Type};
 
 /// 判断类型是否为引用
 #[allow(dead_code)]
@@ -68,7 +68,7 @@ pub fn generate_type_conversion(
     if is_string_type(from_type) && is_str_ref_type(to_type) {
         return Some(quote! { #var_name.as_str() });
     }
-    
+
     // String -> i64
     if is_string_type(from_type) && is_i64_type(to_type) {
         return Some(quote! {
@@ -76,7 +76,7 @@ pub fn generate_type_conversion(
                 .map_err(|_| format!("Invalid i64 value: {}", #var_name))?
         });
     }
-    
+
     // &String -> &str
     if is_reference_type(from_type) {
         if let Type::Reference(from_ref) = from_type {
@@ -85,12 +85,12 @@ pub fn generate_type_conversion(
             }
         }
     }
-    
+
     // 值类型转引用
     if !is_reference_type(from_type) && is_reference_type(to_type) {
         return Some(quote! { &#var_name });
     }
-    
+
     None
 }
 
@@ -99,11 +99,12 @@ pub fn generate_type_conversion(
 pub fn get_base_type_name(ty: &Type) -> String {
     match ty {
         Type::Reference(type_ref) => get_base_type_name(&type_ref.elem),
-        Type::Path(type_path) => {
-            type_path.path.segments.last()
-                .map(|s| s.ident.to_string())
-                .unwrap_or_default()
-        }
+        Type::Path(type_path) => type_path
+            .path
+            .segments
+            .last()
+            .map(|s| s.ident.to_string())
+            .unwrap_or_default(),
         _ => String::new(),
     }
 }

@@ -1,7 +1,8 @@
-use sea_orm::{QueryFilter, QueryOrder};
 use sea_orm::ColumnTrait;
+use sea_orm::{QueryFilter, QueryOrder};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct TestcaseEdge {
     pub id: i64,
     pub u: i64,
@@ -9,7 +10,8 @@ pub struct TestcaseEdge {
     pub order: i64,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct TestcaseEdgeRaw {
     pub u: i64,
     pub v: i64,
@@ -26,11 +28,11 @@ impl EdgeRaw<TestcaseEdge, Model, ActiveModel> for TestcaseEdgeRaw {
     ) -> <<ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
         Column::EdgeId
     }
-    
+
     fn get_u_node_id(&self) -> i64 {
         self.u
     }
-    
+
     fn get_v_node_id(&self) -> i64 {
         self.v
     }
@@ -89,7 +91,9 @@ impl EdgeQueryOrder<ActiveModel, Model, Entity, TestcaseEdge> for TestcaseEdgeQu
         if let Some(val) = val {
             Ok(val.v_node_id)
         } else {
-            Err(CoreError::NotFound("Cannot found specific order.".to_string()))
+            Err(CoreError::NotFound(
+                "Cannot found specific order.".to_string(),
+            ))
         }
     }
 
@@ -99,7 +103,9 @@ impl EdgeQueryOrder<ActiveModel, Model, Entity, TestcaseEdge> for TestcaseEdgeQu
             .order_by_asc(Column::Order)
             .all(db)
             .await?
-            .into_iter().map(|m| m.v_node_id).collect())
+            .into_iter()
+            .map(|m| m.v_node_id)
+            .collect())
     }
 
     async fn get_order_asc_extend(u: i64, db: &DatabaseConnection) -> Result<Vec<TestcaseEdge>> {
@@ -117,7 +123,9 @@ impl EdgeQueryOrder<ActiveModel, Model, Entity, TestcaseEdge> for TestcaseEdgeQu
             .order_by_desc(Column::Order)
             .all(db)
             .await?
-            .into_iter().map(|m| m.v_node_id).collect())
+            .into_iter()
+            .map(|m| m.v_node_id)
+            .collect())
     }
 
     async fn get_order_desc_extend(u: i64, db: &DatabaseConnection) -> Result<Vec<TestcaseEdge>> {
@@ -131,7 +139,8 @@ impl EdgeQueryOrder<ActiveModel, Model, Entity, TestcaseEdge> for TestcaseEdgeQu
 }
 
 use crate::Result;
-use sea_orm::{DatabaseConnection, EntityTrait};
 use crate::db::entity::edge::testcase::{ActiveModel, Column, Entity, Model};
 use crate::error::CoreError;
 use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryOrder, EdgeRaw};
+use sea_orm::{DatabaseConnection, EntityTrait};
+use serde::{Deserialize, Serialize};

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct GroupNode {
     pub node_id: i64,
     pub node_iden: String,
@@ -8,7 +9,8 @@ pub struct GroupNode {
     pub private: GroupNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct GroupNodePublic {
     pub name: String,
     pub description: String,
@@ -17,7 +19,8 @@ pub struct GroupNodePublic {
     pub avatar: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct GroupNodePrivate {
     pub info: Vec<String>,
 }

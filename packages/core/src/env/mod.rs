@@ -1,11 +1,11 @@
-use lazy_static::lazy_static;
-use std::{collections::HashMap, sync::Mutex};
-use std::sync::Arc;
-use std::sync::RwLock;
-use sea_orm::DatabaseConnection;
-use socketioxide::extract::SocketRef;
 use crate::graph::action::DefaultNodes;
 use crate::service::iden::ac_automaton::AcMachine;
+use lazy_static::lazy_static;
+use sea_orm::DatabaseConnection;
+use socketioxide::extract::SocketRef;
+use std::sync::Arc;
+use std::sync::RwLock;
+use std::{collections::HashMap, sync::Mutex};
 
 /// PermGraph 存储权限图的邻接表
 /// 对于每个节点 i64，存储一个 Vec<(i64, i64, i64)>
@@ -54,7 +54,8 @@ impl PermGraph {
     /// 删除指定 u -> v 的所有边
     pub fn remove_edge(&mut self, edge_type: &str, u: i64, v: i64) {
         if let Some(type_map) = self.adjacency.get_mut(edge_type)
-            && let Some(edges) = type_map.get_mut(&u) {
+            && let Some(edges) = type_map.get_mut(&u)
+        {
             edges.retain(|(target, _, _)| *target != v);
         }
     }
@@ -91,7 +92,7 @@ impl PermGraph {
         if u == v {
             return 1;
         }
-        
+
         let mut visited = std::collections::HashSet::new();
         self.dfs_helper(edge_type, u, v, required_perm, 0, max_steps, &mut visited)
     }
@@ -159,7 +160,7 @@ impl PermGraph {
         if u == v {
             return 1;
         }
-        
+
         let mut perm = required_perm;
         while perm > 0 {
             let lowbit = perm & (-perm);

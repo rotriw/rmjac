@@ -7,14 +7,14 @@ use sea_orm::{self, ConnectOptions, Database};
 use sea_orm_migration::prelude::*;
 
 // use crate::graph::edge::perm_pages::PagesPermRaw;
+use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPermRaw};
 use crate::graph::edge::perm_system::{PermSystemEdgeRaw, SystemPerm, SystemPermRaw};
+use crate::graph::node::iden::{IdenNodePrivateRaw, IdenNodePublicRaw, IdenNodeRaw};
 use crate::{
     db::iden,
     error::CoreError,
     graph::{
-        edge::{
-            EdgeRaw,
-        },
+        edge::EdgeRaw,
         node::{
             NodeRaw,
             pages::{PagesNodePrivateRaw, PagesNodePublicRaw, PagesNodeRaw},
@@ -23,8 +23,6 @@ use crate::{
         },
     },
 };
-use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPermRaw};
-use crate::graph::node::iden::{IdenNodePrivateRaw, IdenNodePublicRaw, IdenNodeRaw};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -80,13 +78,16 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             ProblemDifficulty: integer,
         })
         .col(
-            ColumnDef::new(iden::node::problem_statement::ProblemStatement::SampleGroupIn).array(ColumnType::Text)
+            ColumnDef::new(iden::node::problem_statement::ProblemStatement::SampleGroupIn)
+                .array(ColumnType::Text),
         )
         .col(
-            ColumnDef::new(iden::node::problem_statement::ProblemStatement::SampleGroupOut).array(ColumnType::Text)
+            ColumnDef::new(iden::node::problem_statement::ProblemStatement::SampleGroupOut)
+                .array(ColumnType::Text),
         )
         .col(
-            ColumnDef::new(iden::node::problem_statement::ProblemStatement::ShowOrder).array(ColumnType::Text)
+            ColumnDef::new(iden::node::problem_statement::ProblemStatement::ShowOrder)
+                .array(ColumnType::Text),
         )
         .to_owned(),
     );
@@ -197,7 +198,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             UseMode: integer not_null,
             CreationTime: date_time not_null,
             UpdatedAt: date_time not_null,
-        })
+        }),
     );
     tables.insert(
         "node_testcase_subtask".to_string(),
@@ -209,7 +210,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             SubtaskCalcMethod: integer not_null,
             SubtaskCalcFunction: text,
             IsRoot: boolean not_null,
-        })
+        }),
     );
     tables.insert(
         "node_testcase".to_string(),
@@ -222,7 +223,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             IoMethod: text not_null,
             DiffMethod: text not_null,
             TestcaseName: text not_null,
-        })
+        }),
     );
     tables.insert(
         "node_vjudge_task".to_string(),
@@ -304,7 +305,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             VNodeId: big_integer not_null,
             Order: big_integer not_null,
             ProblemType: text not_null,
-        })
+        }),
     );
     tables.insert(
         "edge_record".to_string(),
@@ -318,7 +319,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             Score: big_integer not_null,
             SubmitTime: date_time not_null,
             Platform: text,
-        })
+        }),
     );
     tables.insert(
         "edge_misc".to_string(),
@@ -327,7 +328,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
             MiscType: text not_null,
-        })
+        }),
     );
     tables.insert(
         "edge_perm_system".to_string(),
@@ -336,7 +337,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
             Perm: big_integer not_null,
-        })
+        }),
     );
     tables.insert(
         "edge_testcase".to_string(),
@@ -345,7 +346,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
             Order: big_integer not_null,
-        })
+        }),
     );
     tables.insert(
         "edge_judge".to_string(),
@@ -357,7 +358,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             Score: big_integer not_null,
             Time: big_integer not_null,
             Memory: big_integer not_null,
-        })
+        }),
     );
     tables.insert(
         "edge_perm_manage".to_string(),
@@ -366,7 +367,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
             Perm: big_integer not_null,
-        })
+        }),
     );
     tables.insert(
         "edge_perm_view".to_string(),
@@ -375,7 +376,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
             Perm: big_integer not_null,
-        })
+        }),
     );
     tables.insert(
         "edge_user_remote".to_string(),
@@ -383,7 +384,7 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             EdgeId: big_integer not_null primary_key,
             UNodeId: big_integer not_null,
             VNodeId: big_integer not_null,
-        })
+        }),
     );
     tables
 }
@@ -517,7 +518,6 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
             .to_owned(),
     );
 
-
     tables.insert(
         "edge".to_string(),
         Table::drop()
@@ -572,63 +572,63 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         Table::drop()
             .table(iden::edge::training_problem::TrainingProblem::Table)
             .if_exists()
-            .to_owned()
+            .to_owned(),
     );
     tables.insert(
         "edge_record".to_string(),
         Table::drop()
             .table(iden::edge::record::Record::Table)
             .if_exists()
-            .to_owned()
+            .to_owned(),
     );
     tables.insert(
         "edge_misc".to_string(),
         Table::drop()
             .table(iden::edge::misc::Misc::Table)
             .if_exists()
-            .to_owned()
+            .to_owned(),
     );
     tables.insert(
         "edge_perm_system".to_string(),
         Table::drop()
             .table(iden::edge::perm_system::PermSystem::Table)
             .if_exists()
-            .to_owned()
+            .to_owned(),
     );
     tables.insert(
         "edge_testcase".to_string(),
         Table::drop()
             .table(iden::edge::testcase::Testcase::Table)
             .if_exists()
-            .to_owned()
+            .to_owned(),
     );
     tables.insert(
         "edge_judge".to_string(),
         Table::drop()
             .table(iden::edge::judge::Judge::Table)
             .if_exists()
-            .to_owned()
+            .to_owned(),
     );
     tables.insert(
         "edge_perm_manage".to_string(),
         Table::drop()
             .table(iden::edge::perm_manage::PermManage::Table)
             .if_exists()
-            .to_owned()
+            .to_owned(),
     );
     tables.insert(
         "edge_perm_view".to_string(),
         Table::drop()
             .table(iden::edge::perm_view::PermView::Table)
             .if_exists()
-            .to_owned()
+            .to_owned(),
     );
     tables.insert(
         "edge_user_remote".to_string(),
         Table::drop()
             .table(iden::edge::user_remote::UserRemote::Table)
             .if_exists()
-            .to_owned()
+            .to_owned(),
     );
     tables
 }
@@ -765,22 +765,24 @@ pub async fn init(
                 name: "default strategy".to_string(),
             },
         }
-            .save(&db)
-            .await?;
+        .save(&db)
+        .await?;
         log::info!("Perm group -> default system");
         PermSystemEdgeRaw {
             u: default_strategy.node_id,
             v: system_id,
             perms: SystemPermRaw::Perms(vec![SystemPerm::ViewSite]),
         }
-            .save(&db)
-            .await?;
+        .save(&db)
+        .await?;
         log::info!("default user -> guest user");
         PermProblemEdgeRaw {
             u: default_strategy.node_id,
             v: guest_user_id,
             perms: ProblemPermRaw::All,
-        }.save(&db).await?;
+        }
+        .save(&db)
+        .await?;
     } else {
         log::warn!("Skipping default perm group creation, This may lead to unexpected behavior.");
     }
@@ -830,7 +832,9 @@ pub async fn init(
                 weight: -191919,
             },
             private: IdenNodePrivateRaw {},
-        }.save(&db).await?;
+        }
+        .save(&db)
+        .await?;
     }
     log::info!("Database migrated");
     Ok(())

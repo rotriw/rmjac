@@ -1,4 +1,5 @@
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct MiscEdge {
     pub id: i64,
     pub u: i64,
@@ -6,7 +7,8 @@ pub struct MiscEdge {
     pub misc_type: String,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct MiscEdgeRaw {
     pub u: i64,
     pub v: i64,
@@ -18,14 +20,17 @@ impl EdgeRaw<MiscEdge, misc::Model, misc::ActiveModel> for MiscEdgeRaw {
         "misc"
     }
 
-    fn get_edge_id_column(&self) -> <<misc::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column{
+    fn get_edge_id_column(
+        &self,
+    ) -> <<misc::ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column
+    {
         misc::Column::EdgeId
     }
-    
+
     fn get_u_node_id(&self) -> i64 {
         self.u
     }
-    
+
     fn get_v_node_id(&self) -> i64 {
         self.v
     }
@@ -66,3 +71,4 @@ impl EdgeQuery<misc::ActiveModel, misc::Model, misc::Entity, MiscEdge> for MiscE
 
 use crate::db::entity::edge::misc;
 use crate::graph::edge::{Edge, EdgeQuery, EdgeRaw};
+use serde::{Deserialize, Serialize};

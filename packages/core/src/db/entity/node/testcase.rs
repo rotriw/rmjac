@@ -1,7 +1,7 @@
 use crate::db::entity::node::{DbNodeActiveModel, DbNodeInfo};
+use crate::graph::node::record::testcase::TestcaseNode;
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter};
-use crate::graph::node::record::testcase::TestcaseNode;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "node_testcase")]

@@ -9,7 +9,6 @@ pub struct Opts {
     value: &'static str,
 }
 
-
 impl CompileOptionValue for Opts {
     fn value(&self) -> &'static str {
         self.value

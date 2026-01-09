@@ -1,6 +1,10 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse::{Parse, ParseStream}, parse_macro_input, Ident, LitInt, LitStr, Result, Token, Type, braced, bracketed};
+use syn::{
+    Ident, LitInt, LitStr, Result, Token, Type, braced, bracketed,
+    parse::{Parse, ParseStream},
+    parse_macro_input,
+};
 
 struct OptionServiceInput {
     platform: LitStr,
@@ -81,7 +85,10 @@ impl Parse for OptionServiceInput {
                         content.parse::<Token![:]>()?;
                         let field_ty: Type = content.parse()?;
                         content.parse::<Token![,]>()?;
-                        fields.push(ExportField { name: field_name, ty: field_ty });
+                        fields.push(ExportField {
+                            name: field_name,
+                            ty: field_ty,
+                        });
                     }
                     export = Some(ExportStruct { name, fields });
                 }
@@ -90,7 +97,7 @@ impl Parse for OptionServiceInput {
                     input.parse::<Token![!]>()?;
                     let content;
                     braced!(content in input);
-                    
+
                     let show_name: Ident = content.parse()?;
                     let language_id_field: Ident = content.parse()?;
                     content.parse::<Token![,]>()?;
@@ -102,10 +109,16 @@ impl Parse for OptionServiceInput {
                         content.parse::<Token![,]>()?;
                         languages.push(LanguageEntry { name, id });
                     }
-                    default_language = Some(DefaultLanguage { show_name, language_id: language_id_field, languages });
+                    default_language = Some(DefaultLanguage {
+                        show_name,
+                        language_id: language_id_field,
+                        languages,
+                    });
                 }
                 "export_data" => {
-                    export_data = Some(ExportDataFn { func_name: input.parse()? });
+                    export_data = Some(ExportDataFn {
+                        func_name: input.parse()?,
+                    });
                 }
                 _ => return Err(syn::Error::new(key.span(), "Unknown key")),
             }
@@ -119,10 +132,13 @@ impl Parse for OptionServiceInput {
             platform: platform.ok_or_else(|| syn::Error::new(input.span(), "Missing platform"))?,
             options,
             service: service.ok_or_else(|| syn::Error::new(input.span(), "Missing service"))?,
-            language_id: language_id.ok_or_else(|| syn::Error::new(input.span(), "Missing language_id"))?,
+            language_id: language_id
+                .ok_or_else(|| syn::Error::new(input.span(), "Missing language_id"))?,
             export: export.ok_or_else(|| syn::Error::new(input.span(), "Missing export"))?,
-            default_language: default_language.ok_or_else(|| syn::Error::new(input.span(), "Missing default_language"))?,
-            export_data: export_data.ok_or_else(|| syn::Error::new(input.span(), "Missing export_data"))?,
+            default_language: default_language
+                .ok_or_else(|| syn::Error::new(input.span(), "Missing default_language"))?,
+            export_data: export_data
+                .ok_or_else(|| syn::Error::new(input.span(), "Missing export_data"))?,
         })
     }
 }
@@ -184,11 +200,11 @@ pub fn option_service_impl(input: TokenStream) -> TokenStream {
                     #(Box::new(#options),)*
                 ]
             }
-        
+
             fn export_name(&self) -> &'static str {
                 self.#default_language_show_name
             }
-        
+
             fn export_compile_name(&self) -> &'static str {
                 "not require"
             }

@@ -1,42 +1,47 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use redis::TypedCommands;
-use sea_orm::{ColumnTrait, DatabaseConnection};
-use sea_orm::sea_query::SimpleExpr;
+use crate::Result;
 use crate::env::{DEFAULT_NODES, SLICE_WORD_ACMAC, SLICE_WORD_LIST};
 use crate::error::QueryNotFound;
-use crate::graph::edge::{EdgeQuery, EdgeRaw};
 use crate::graph::edge::iden::{IdenEdgeQuery, IdenEdgeRaw};
-use crate::graph::node::iden::{IdenNodePrivateRaw, IdenNodePublicRaw, IdenNodeRaw};
+use crate::graph::edge::{EdgeQuery, EdgeRaw};
 use crate::graph::node::NodeRaw;
-use crate::Result;
+use crate::graph::node::iden::{IdenNodePrivateRaw, IdenNodePublicRaw, IdenNodeRaw};
+use redis::TypedCommands;
+use sea_orm::sea_query::SimpleExpr;
+use sea_orm::{ColumnTrait, DatabaseConnection};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use tokio::sync::Mutex as AsyncMutex;
 
 pub mod ac_automaton;
 
-
 // 为多个 node_id 创建一个 iden。
-pub async fn create_iden(db: &DatabaseConnection, redis: &mut redis::Connection, iden: &str, node_ids: Vec<i64>) -> Result<()> {
+pub async fn create_iden(
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    iden: &str,
+    node_ids: Vec<i64>,
+) -> Result<()> {
     create_iden_with_slice(db, auto_slice_iden(iden), node_ids).await?;
     redis.del(format!("iden_to_id_{}", iden))?;
     Ok(())
 }
-
 
 pub async fn check_exist(db: &DatabaseConnection, iden: &str) -> Result<bool> {
     let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
     use crate::db::entity::edge::iden::Column;
     let iden_slice = auto_slice_iden(iden);
     for (i, iden_part) in iden_slice.iter().enumerate() {
-        let val =  IdenEdgeQuery::get_v_filter(now_id, Column::Iden.eq(*iden_part), db).await?;
+        let val = IdenEdgeQuery::get_v_filter(now_id, Column::Iden.eq(*iden_part), db).await?;
         if i == iden_slice.len() - 1 {
-            return Ok(!val.is_empty())
+            return Ok(!val.is_empty());
         }
         if val.is_empty() {
             return Ok(false);
         }
         if val.len() > 1 {
-            log::error!("iden service have same error(iden_edge_many): {now_id} (fallback: choose first.)");
+            log::error!(
+                "iden service have same error(iden_edge_many): {now_id} (fallback: choose first.)"
+            );
         }
         now_id = val[0];
     }
@@ -44,20 +49,33 @@ pub async fn check_exist(db: &DatabaseConnection, iden: &str) -> Result<bool> {
     Ok(false)
 }
 
-pub async fn remove_iden_to_specific_node(db: &DatabaseConnection, iden: &str, node_id: i64) -> Result<()> {
+pub async fn remove_iden_to_specific_node(
+    db: &DatabaseConnection,
+    iden: &str,
+    node_id: i64,
+) -> Result<()> {
     let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
     use crate::db::entity::edge::iden::Column;
     let iden_slice = auto_slice_iden(iden);
     for (i, iden_part) in iden_slice.iter().enumerate() {
-        let val =  IdenEdgeQuery::get_v_filter(now_id, Column::Iden.eq(*iden_part), db).await?;
+        let val = IdenEdgeQuery::get_v_filter(now_id, Column::Iden.eq(*iden_part), db).await?;
         if val.is_empty() {
             return Err(QueryNotFound::IdenNotFound.into());
         }
         if val.len() > 1 {
-            log::error!("iden service have same error(iden_edge_many): {now_id} (fallback: choose first.)");
+            log::error!(
+                "iden service have same error(iden_edge_many): {now_id} (fallback: choose first.)"
+            );
         }
         if i == iden_slice.len() - 1 {
-            let more_data = IdenEdgeQuery::get_v_filter_extend_content::<SimpleExpr>(now_id, vec![], db, None, None).await?;
+            let more_data = IdenEdgeQuery::get_v_filter_extend_content::<SimpleExpr>(
+                now_id,
+                vec![],
+                db,
+                None,
+                None,
+            )
+            .await?;
             for cur_edge in more_data {
                 if cur_edge.v == node_id {
                     IdenEdgeQuery::delete_from_id(db, cur_edge.id).await?;
@@ -75,15 +93,24 @@ pub async fn remove_iden(db: &DatabaseConnection, iden: &str) -> Result<()> {
     use crate::db::entity::edge::iden::Column;
     let iden_slice = auto_slice_iden(iden);
     for (i, iden_part) in iden_slice.iter().enumerate() {
-        let val =  IdenEdgeQuery::get_v_filter(now_id, Column::Iden.eq(*iden_part), db).await?;
+        let val = IdenEdgeQuery::get_v_filter(now_id, Column::Iden.eq(*iden_part), db).await?;
         if val.is_empty() {
             return Err(QueryNotFound::IdenNotFound.into());
         }
         if val.len() > 1 {
-            log::error!("iden service have same error(iden_edge_many): {now_id} (fallback: choose first.)");
+            log::error!(
+                "iden service have same error(iden_edge_many): {now_id} (fallback: choose first.)"
+            );
         }
         if i == iden_slice.len() - 1 {
-            let more_data = IdenEdgeQuery::get_v_filter_extend_content::<SimpleExpr>(now_id, vec![], db, None, None).await?;
+            let more_data = IdenEdgeQuery::get_v_filter_extend_content::<SimpleExpr>(
+                now_id,
+                vec![],
+                db,
+                None,
+                None,
+            )
+            .await?;
             for cur_edge in more_data {
                 IdenEdgeQuery::delete_from_id(db, cur_edge.id).await?;
             }
@@ -94,26 +121,27 @@ pub async fn remove_iden(db: &DatabaseConnection, iden: &str) -> Result<()> {
     Ok(())
 }
 
-
-
 lazy_static::lazy_static! {
     static ref IDEN_CREATE_LOCK: Mutex<HashMap<i64, Arc<AsyncMutex<()>>>> = Mutex::new(HashMap::new());
 }
 
-pub async fn create_iden_with_slice(db: &DatabaseConnection, iden_slice: Vec<&str>, node_ids: Vec<i64>) -> Result<()> {
+pub async fn create_iden_with_slice(
+    db: &DatabaseConnection,
+    iden_slice: Vec<&str>,
+    node_ids: Vec<i64>,
+) -> Result<()> {
     let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
     use crate::db::entity::edge::iden::Column;
     for (i, iden_part) in iden_slice.iter().enumerate() {
         let mut _guard = {
             let mut lock_map = IDEN_CREATE_LOCK.lock().unwrap();
-            lock_map.entry(now_id)
+            lock_map
+                .entry(now_id)
                 .or_insert_with(|| Arc::new(AsyncMutex::new(())))
                 .clone()
         };
         let _lock = _guard.lock().await;
-        let val = {
-            IdenEdgeQuery::get_v_filter(now_id, Column::Iden.eq(*iden_part), db).await?
-        };
+        let val = { IdenEdgeQuery::get_v_filter(now_id, Column::Iden.eq(*iden_part), db).await? };
         if (i != iden_slice.len() - 1) && !val.is_empty() {
             now_id = val[0];
         } else {
@@ -124,7 +152,9 @@ pub async fn create_iden_with_slice(db: &DatabaseConnection, iden_slice: Vec<&st
                         v: *node_id,
                         iden: iden_part.to_string(),
                         weight: 1,
-                    }.save(db).await?;
+                    }
+                    .save(db)
+                    .await?;
                 }
             } else {
                 let new_node = IdenNodeRaw {
@@ -133,20 +163,23 @@ pub async fn create_iden_with_slice(db: &DatabaseConnection, iden_slice: Vec<&st
                         weight: 1,
                     },
                     private: IdenNodePrivateRaw {},
-                }.save(db).await?;
+                }
+                .save(db)
+                .await?;
                 IdenEdgeRaw {
                     u: now_id,
                     v: new_node.node_id,
                     iden: iden_part.to_string(),
                     weight: 1,
-                }.save(db).await?;
+                }
+                .save(db)
+                .await?;
                 now_id = new_node.node_id;
             }
         }
     }
     Ok(())
 }
-
 
 /*
 * 分词规则：
@@ -168,8 +201,8 @@ pub fn auto_slice_iden(iden: &str) -> Vec<&str> {
     let mut now_p = 0;
     for (i, c) in iden.char_indices() {
         fn ck_group(a: char, b: char) -> bool {
-            (a.is_ascii_alphabetic() && b.is_ascii_alphabetic()) ||
-                (a.is_ascii_digit() && b.is_ascii_digit())
+            (a.is_ascii_alphabetic() && b.is_ascii_alphabetic())
+                || (a.is_ascii_digit() && b.is_ascii_digit())
         }
         match c {
             '/' => {
@@ -181,14 +214,18 @@ pub fn auto_slice_iden(iden: &str) -> Vec<&str> {
             }
 
             '0'..='9' | 'a'..='z' | 'A'..='Z' => {
-                if !ck_group(c, iden.chars().nth(last_v).unwrap()) { // new word.
+                if !ck_group(c, iden.chars().nth(last_v).unwrap()) {
+                    // new word.
                     if i > last_v {
                         result.push(&iden[last_v..i]);
                     }
                     last_v = i;
                     now_p = 0;
                 } else {
-                    let (_res, pp) = SLICE_WORD_ACMAC.lock().unwrap().query_from_p(iden.chars().nth(i).unwrap(), now_p);
+                    let (_res, pp) = SLICE_WORD_ACMAC
+                        .lock()
+                        .unwrap()
+                        .query_from_p(iden.chars().nth(i).unwrap(), now_p);
                     if _res {
                         result.push(&iden[last_v..=i]);
                         last_v = i + 1;
@@ -207,28 +244,46 @@ pub fn auto_slice_iden(iden: &str) -> Vec<&str> {
     result
 }
 
-pub async fn get_node_ids_from_iden(db: &DatabaseConnection, redis: &mut redis::Connection, iden: &str) -> Result<Vec<i64>> {
+pub async fn get_node_ids_from_iden(
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    iden: &str,
+) -> Result<Vec<i64>> {
     if let Ok(value) = redis.get(format!("iden_to_id_{}", iden))
-        && let Some(value) = value && !value.is_empty() {
-            let value: Vec<i64> = serde_json::from_str(&value)?;
-            return Ok(value);
-
+        && let Some(value) = value
+        && !value.is_empty()
+    {
+        let value: Vec<i64> = serde_json::from_str(&value)?;
+        return Ok(value);
     }
     let iden_slice = auto_slice_iden(iden);
 
     let now_id = get_node_ids_from_iden_slice(db, iden_slice).await?;
-    redis.set(format!("iden_to_id_{}", iden), serde_json::to_string(&now_id)?)?;
+    redis.set(
+        format!("iden_to_id_{}", iden),
+        serde_json::to_string(&now_id)?,
+    )?;
     log::debug!("auto iden: {} to {:?}", iden, now_id);
     Ok(now_id)
 }
 
-pub async fn get_node_ids_from_iden_slice(db: &DatabaseConnection, iden_slice: Vec<&str>) -> Result<Vec<i64>> {
+pub async fn get_node_ids_from_iden_slice(
+    db: &DatabaseConnection,
+    iden_slice: Vec<&str>,
+) -> Result<Vec<i64>> {
     let mut now_id = DEFAULT_NODES.lock().unwrap().default_iden_node;
     let mut id_list = vec![];
     for iden_part in iden_slice {
-        let val = IdenEdgeQuery::get_v_filter(now_id, crate::db::entity::edge::iden::Column::Iden.eq(iden_part), db).await?;
+        let val = IdenEdgeQuery::get_v_filter(
+            now_id,
+            crate::db::entity::edge::iden::Column::Iden.eq(iden_part),
+            db,
+        )
+        .await?;
         if val.is_empty() {
-            return Err(crate::error::CoreError::NotFound("Cannot found specific iden.".to_string()));
+            return Err(crate::error::CoreError::NotFound(
+                "Cannot found specific iden.".to_string(),
+            ));
         }
         now_id = val[0];
         id_list = val;
@@ -237,28 +292,47 @@ pub async fn get_node_ids_from_iden_slice(db: &DatabaseConnection, iden_slice: V
     Ok(id_list)
 }
 
-pub async fn get_node_id_iden(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64) -> Result<Vec<String>> {
+pub async fn get_node_id_iden(
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    node_id: i64,
+) -> Result<Vec<String>> {
     if let Ok(value) = redis.get(format!("iden_node_{}", node_id))
-        && let Some(value) = value && !value.is_empty() {
-            let value: Vec<String> = serde_json::from_str(&value)?;
-            return Ok(value);
-
+        && let Some(value) = value
+        && !value.is_empty()
+    {
+        let value: Vec<String> = serde_json::from_str(&value)?;
+        return Ok(value);
     }
     let result = get_node_id_iden_pref(db, redis, node_id, "").await?;
-    redis.set(format!("iden_node_{}", node_id), serde_json::to_string(&result)?)?;
+    redis.set(
+        format!("iden_node_{}", node_id),
+        serde_json::to_string(&result)?,
+    )?;
     Ok(result)
 }
 
-pub async fn get_node_id_iden_pref(db: &DatabaseConnection, redis: &mut redis::Connection, node_id: i64, pref: &str) -> Result<Vec<String>> {
-    if !pref.is_empty() && let Ok(value) = redis.get(format!("iden_node_{}_pref_{}", node_id, pref))
-            && let Some(value) = value && !value.is_empty() {
-            let value: Vec<String> = serde_json::from_str(&value)?;
-            return Ok(value);
+pub async fn get_node_id_iden_pref(
+    db: &DatabaseConnection,
+    redis: &mut redis::Connection,
+    node_id: i64,
+    pref: &str,
+) -> Result<Vec<String>> {
+    if !pref.is_empty()
+        && let Ok(value) = redis.get(format!("iden_node_{}_pref_{}", node_id, pref))
+        && let Some(value) = value
+        && !value.is_empty()
+    {
+        let value: Vec<String> = serde_json::from_str(&value)?;
+        return Ok(value);
     }
     let result = get_node_id_iden_all(db, node_id, pref).await?;
     let iden_list: Vec<String> = result.into_iter().map(|(_, iden)| iden).collect();
     if !pref.is_empty() {
-        redis.set(format!("iden_node_{}_pref_{}", node_id, pref), serde_json::to_string(&iden_list)?)?;
+        redis.set(
+            format!("iden_node_{}_pref_{}", node_id, pref),
+            serde_json::to_string(&iden_list)?,
+        )?;
     }
     Ok(iden_list)
 }
@@ -267,7 +341,11 @@ pub async fn get_node_id_iden_pref(db: &DatabaseConnection, redis: &mut redis::C
 * 在给定的node_id下，匹配所有存在pref的iden。若 pref 为空字符串，则匹配所有。
 * 本函数不应当直接从外部调用，应当通过 get_node_id_iden_pref 调用。
 */
-async fn get_node_id_iden_all(db: &DatabaseConnection, node_id: i64, pref: &str) -> Result<Vec<(i64, String)>> {
+async fn get_node_id_iden_all(
+    db: &DatabaseConnection,
+    node_id: i64,
+    pref: &str,
+) -> Result<Vec<(i64, String)>> {
     use priority_queue::PriorityQueue;
     let mut q = PriorityQueue::new();
     q.push((node_id, "".to_string(), pref.is_empty()), 0);

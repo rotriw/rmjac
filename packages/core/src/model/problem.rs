@@ -1,14 +1,15 @@
 use crate::db::entity::node::problem_statement::ContentType;
 use crate::error::{CoreError, QueryExists};
 use crate::graph::action::get_node_type;
+use crate::graph::edge::misc::{MiscEdgeQuery, MiscEdgeRaw};
+use crate::graph::edge::perm_pages::{PagesPerm, PermPagesEdgeRaw};
 use crate::graph::edge::perm_problem::{PermProblemEdgeQuery, ProblemPermRaw};
+use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPerm};
 use crate::graph::edge::problem_limit::{ProblemLimitEdgeQuery, ProblemLimitEdgeRaw};
 use crate::graph::edge::problem_statement::{ProblemStatementEdgeQuery, ProblemStatementEdgeRaw};
 use crate::graph::edge::problem_tag::{ProblemTagEdgeQuery, ProblemTagEdgeRaw};
+use crate::graph::edge::testcase::TestcaseEdgeRaw;
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
-use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPerm};
-use crate::graph::edge::perm_pages::{PermPagesEdgeRaw, PagesPerm};
-use db::entity::edge::misc::Column as MiscColumn;
 use crate::graph::node::problem::limit::{
     ProblemLimitNode, ProblemLimitNodePrivateRaw, ProblemLimitNodePublicRaw, ProblemLimitNodeRaw,
 };
@@ -22,17 +23,20 @@ use crate::graph::node::problem::tag::{
 use crate::graph::node::problem::{
     ProblemNode, ProblemNodePrivateRaw, ProblemNodePublicRaw, ProblemNodeRaw,
 };
+use crate::graph::node::record::subtask::{
+    SubtaskCalcMethod, SubtaskNodePrivateRaw, SubtaskNodePublicRaw, SubtaskNodeRaw,
+};
 use crate::graph::node::{Node, NodeRaw};
+use crate::model::user::SimplyUser;
+use crate::service::iden::{
+    create_iden, get_node_id_iden, get_node_ids_from_iden, remove_iden_to_specific_node,
+};
 use crate::{Result, db};
 use chrono::Utc;
+use db::entity::edge::misc::Column as MiscColumn;
 use redis::Commands;
 use sea_orm::{ColumnTrait, DatabaseConnection};
 use serde::{Deserialize, Serialize};
-use crate::graph::edge::misc::{MiscEdgeQuery, MiscEdgeRaw};
-use crate::graph::edge::testcase::TestcaseEdgeRaw;
-use crate::graph::node::record::subtask::{SubtaskCalcMethod, SubtaskNodePrivateRaw, SubtaskNodePublicRaw, SubtaskNodeRaw};
-use crate::model::user::SimplyUser;
-use crate::service::iden::{create_iden, get_node_id_iden, get_node_ids_from_iden, remove_iden_to_specific_node};
 
 use crate::model::ModelStore;
 
@@ -42,7 +46,8 @@ pub trait CacheKey {
     fn cache_key(node_id: i64) -> String;
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemStatementProp {
     pub statement_source: String,
     pub iden: String,
@@ -56,17 +61,21 @@ pub struct ProblemStatementProp {
     pub problem_difficulty: Option<i32>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct CreateProblemProps {
     pub user_id: i64,
     pub problem_iden: String,
     pub problem_name: String,
     pub problem_statement: Vec<ProblemStatementProp>,
+
+    #[ts(type = "string")]
     pub creation_time: Option<chrono::NaiveDateTime>,
     pub tags: Vec<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemListQuery {
     pub page: Option<u64>,
     pub per_page: Option<u64>,
@@ -76,7 +85,8 @@ pub struct ProblemListQuery {
     pub difficulty: Option<i32>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemModel {
     pub problem_node: ProblemNode,
     pub problem_statement_node: Vec<(ProblemStatementNode, ProblemLimitNode)>,
@@ -242,7 +252,8 @@ impl ProblemRepository {
 
     async fn load_author(store: &mut impl ModelStore, id: i64) -> Result<Option<SimplyUser>> {
         let author_ids =
-            MiscEdgeQuery::get_u_filter(id, MiscColumn::MiscType.eq("author"), store.get_db()).await?;
+            MiscEdgeQuery::get_u_filter(id, MiscColumn::MiscType.eq("author"), store.get_db())
+                .await?;
         match author_ids.first() {
             Some(&author_id) => {
                 let user = crate::model::user::SimplyUser::load(store.get_db(), author_id)
@@ -346,12 +357,16 @@ impl ProblemRepository {
 }
 
 impl<'a> ProblemDraft<'a> {
-    pub async fn commit(
-        &self,
-        store: &mut impl ModelStore,
-    ) -> Result<ProblemNode> {
+    pub async fn commit(&self, store: &mut impl ModelStore) -> Result<ProblemNode> {
         let db = store.get_db().clone();
-        if get_node_ids_from_iden(&db, store.get_redis(), format!("problem/{}", self.iden_slug).as_str()).await.is_ok() {
+        if get_node_ids_from_iden(
+            &db,
+            store.get_redis(),
+            format!("problem/{}", self.iden_slug).as_str(),
+        )
+        .await
+        .is_ok()
+        {
             return Err(CoreError::QueryExists(QueryExists::ProblemExist));
         }
 
@@ -365,7 +380,11 @@ impl<'a> ProblemDraft<'a> {
         let mut tag_node_ids = Vec::with_capacity(self.tag_names.len());
         for tag_name in self.tag_names {
             use db::entity::node::problem_tag::Column as ProblemTagColumn;
-            let existing = ProblemTagNode::from_db_filter(store.get_db(), ProblemTagColumn::TagName.eq(tag_name)).await?;
+            let existing = ProblemTagNode::from_db_filter(
+                store.get_db(),
+                ProblemTagColumn::TagName.eq(tag_name),
+            )
+            .await?;
             let tag_id = if existing.is_empty() {
                 ProblemTagNodeRaw {
                     public: ProblemTagNodePublicRaw {
@@ -393,9 +412,16 @@ impl<'a> ProblemDraft<'a> {
         .await?;
 
         let redis = store.get_redis();
-        create_iden(&db, redis, &format!("problem/{}", self.iden_slug), vec![problem_node.node_id]).await?;
+        create_iden(
+            &db,
+            redis,
+            &format!("problem/{}", self.iden_slug),
+            vec![problem_node.node_id],
+        )
+        .await?;
 
-        ProblemPermissionService::grant_creator(store, self.author_node_id, problem_node.node_id).await?;
+        ProblemPermissionService::grant_creator(store, self.author_node_id, problem_node.node_id)
+            .await?;
 
         MiscEdgeRaw {
             u: self.author_node_id,
@@ -433,10 +459,7 @@ impl Problem {
         ProblemNode::from_db(store.get_db(), node_id).await
     }
 
-    pub async fn get(
-        &self,
-        store: &mut impl ModelStore,
-    ) -> Result<ProblemModel> {
+    pub async fn get(&self, store: &mut impl ModelStore) -> Result<ProblemModel> {
         ProblemRepository::model(store, self.node_id).await
     }
 
@@ -444,26 +467,15 @@ impl Problem {
         ProblemRepository::clear(store, self.node_id).await
     }
 
-    pub async fn rm_all(
-        &self,
-        store: &mut impl ModelStore,
-    ) -> Result<()> {
+    pub async fn rm_all(&self, store: &mut impl ModelStore) -> Result<()> {
         ProblemRepository::purge(store, self.node_id).await
     }
 
-    pub async fn rm_stmt(
-        &self,
-        store: &mut impl ModelStore,
-        stmt_id: i64,
-    ) -> Result<()> {
+    pub async fn rm_stmt(&self, store: &mut impl ModelStore, stmt_id: i64) -> Result<()> {
         ProblemRepository::detach_statement(store, self.node_id, stmt_id).await
     }
 
-    pub async fn rm_tag(
-        &self,
-        store: &mut impl ModelStore,
-        tag_id: i64,
-    ) -> Result<()> {
+    pub async fn rm_tag(&self, store: &mut impl ModelStore, tag_id: i64) -> Result<()> {
         ProblemRepository::detach_tag(store, self.node_id, tag_id).await
     }
 
@@ -540,7 +552,9 @@ impl ProblemStatement {
     }
 
     async fn flush_parent(&self, store: &mut impl ModelStore) -> Result<()> {
-        if let Ok(parent_id) = ProblemStatementEdgeQuery::get_u_one(self.node_id, store.get_db()).await {
+        if let Ok(parent_id) =
+            ProblemStatementEdgeQuery::get_u_one(self.node_id, store.get_db()).await
+        {
             let key = ProblemRepository::cache_key(parent_id);
             let _ = store.get_redis().del::<_, ()>(&key);
         }
@@ -648,11 +662,7 @@ impl ProblemPermissionService {
     }
 
     // Convenience methods for backward compatibility
-    pub async fn add_owner(
-        store: &impl ModelStore,
-        user_id: i64,
-        problem_id: i64,
-    ) -> Result<()> {
+    pub async fn add_owner(store: &impl ModelStore, user_id: i64, problem_id: i64) -> Result<()> {
         Self::grant_role(store, user_id, problem_id, Role::Owner).await
     }
 
@@ -664,11 +674,7 @@ impl ProblemPermissionService {
         Self::revoke_permission(store, user_id, problem_id).await
     }
 
-    pub async fn add_editor(
-        store: &impl ModelStore,
-        user_id: i64,
-        problem_id: i64,
-    ) -> Result<()> {
+    pub async fn add_editor(store: &impl ModelStore, user_id: i64, problem_id: i64) -> Result<()> {
         Self::grant_role(store, user_id, problem_id, Role::Editor).await
     }
 
@@ -680,11 +686,7 @@ impl ProblemPermissionService {
         Self::revoke_permission(store, user_id, problem_id).await
     }
 
-    pub async fn add_viewer(
-        store: &impl ModelStore,
-        user_id: i64,
-        problem_id: i64,
-    ) -> Result<()> {
+    pub async fn add_viewer(store: &impl ModelStore, user_id: i64, problem_id: i64) -> Result<()> {
         Self::grant_role(store, user_id, problem_id, Role::Viewer).await
     }
 
@@ -706,7 +708,11 @@ impl ProblemFactory {
     // Generate statement schema without DB access
     pub fn generate_statement_schema(
         statement: ProblemStatementProp,
-    ) -> (ProblemStatementNodeRaw, ProblemLimitNodeRaw, Option<ProblemIdenString>) {
+    ) -> (
+        ProblemStatementNodeRaw,
+        ProblemLimitNodeRaw,
+        Option<ProblemIdenString>,
+    ) {
         (
             ProblemStatementNodeRaw {
                 public: ProblemStatementNodePublicRaw {
@@ -714,8 +720,16 @@ impl ProblemFactory {
                     source: statement.statement_source.clone(),
                     creation_time: Utc::now().naive_utc(),
                     iden: statement.iden.clone(),
-                    sample_group_in: statement.sample_group.iter().map(|(a, _)| a.clone()).collect(),
-                    sample_group_out: statement.sample_group.iter().map(|(_, b)| b.clone()).collect(),
+                    sample_group_in: statement
+                        .sample_group
+                        .iter()
+                        .map(|(a, _)| a.clone())
+                        .collect(),
+                    sample_group_out: statement
+                        .sample_group
+                        .iter()
+                        .map(|(_, b)| b.clone())
+                        .collect(),
                     show_order: statement.show_order.clone(),
                     page_source: statement.page_source.clone(),
                     page_rendered: statement.page_rendered.clone(),
@@ -793,8 +807,13 @@ impl ProblemFactory {
 
         if let Some(iden) = iden {
             let redis = store.get_redis();
-            create_iden(&db, redis, &format!("problem/{}", iden), vec![problem_statement_node.node_id, problem_node_id])
-                .await?;
+            create_iden(
+                &db,
+                redis,
+                &format!("problem/{}", iden),
+                vec![problem_statement_node.node_id, problem_node_id],
+            )
+            .await?;
         }
 
         ProblemLimitEdgeRaw {
@@ -848,5 +867,3 @@ impl ProblemFactory {
         .await
     }
 }
-
-

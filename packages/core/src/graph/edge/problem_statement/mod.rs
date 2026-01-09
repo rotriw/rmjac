@@ -1,4 +1,5 @@
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemStatementEdge {
     pub id: i64,
     pub u: i64,
@@ -6,7 +7,8 @@ pub struct ProblemStatementEdge {
     pub copyright_risk: i64,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct ProblemStatementEdgeRaw {
     pub u: i64,
     pub v: i64,
@@ -23,11 +25,11 @@ impl EdgeRaw<ProblemStatementEdge, Model, ActiveModel> for ProblemStatementEdgeR
     ) -> <<ActiveModel as sea_orm::ActiveModelTrait>::Entity as sea_orm::EntityTrait>::Column {
         Column::EdgeId
     }
-    
+
     fn get_u_node_id(&self) -> i64 {
         self.u
     }
-    
+
     fn get_v_node_id(&self) -> i64 {
         self.v
     }
@@ -78,3 +80,4 @@ impl EdgeQuery<ActiveModel, Model, Entity, ProblemStatementEdge> for ProblemStat
 
 use crate::db::entity::edge::problem_statement::{ActiveModel, Column, Entity, Model};
 use crate::graph::edge::{Edge, EdgeQuery, EdgeRaw};
+use serde::{Deserialize, Serialize};

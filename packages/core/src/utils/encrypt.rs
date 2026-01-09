@@ -1,8 +1,8 @@
-use sha2::{Digest, Sha512};
 use crate::Result;
-use pgp::composed::{Deserializable, CleartextSignedMessage, SignedPublicKey};
-use rand::distr::Alphanumeric;
+use pgp::composed::{CleartextSignedMessage, Deserializable, SignedPublicKey};
 use rand::Rng;
+use rand::distr::Alphanumeric;
+use sha2::{Digest, Sha512};
 
 pub fn encode_password(data: &String) -> String {
     base16ct::lower::encode_string(&Sha512::digest(data.as_bytes()))
@@ -20,7 +20,6 @@ pub fn verify(pub_key: String, msg_un: String, socket_id: String) -> Result<bool
     }
 }
 
-
 pub fn gen_random_string(len: usize) -> String {
     let rand_string: String = rand::rng()
         .sample_iter(&Alphanumeric)
@@ -32,7 +31,16 @@ pub fn gen_random_string(len: usize) -> String {
 
 pub fn change_string_format(data: String) -> String {
     data.replace("  ", "\n")
-        .replace("-----BEGIN\nPGP\nSIGNED\nMESSAGE-----", "-----BEGIN PGP SIGNED MESSAGE-----")
-        .replace("-----END\nPGP\nSIGNED\nMESSAGE-----", "-----END PGP SIGNED MESSAGE-----")
-        .replace("-----BEGIN\nPGP\nSIGNED\nSIGNATURE-----", "-----BEGIN PGP SIGNED SIGNATURE-----")
+        .replace(
+            "-----BEGIN\nPGP\nSIGNED\nMESSAGE-----",
+            "-----BEGIN PGP SIGNED MESSAGE-----",
+        )
+        .replace(
+            "-----END\nPGP\nSIGNED\nMESSAGE-----",
+            "-----END PGP SIGNED MESSAGE-----",
+        )
+        .replace(
+            "-----BEGIN\nPGP\nSIGNED\nSIGNATURE-----",
+            "-----BEGIN PGP SIGNED SIGNATURE-----",
+        )
 }

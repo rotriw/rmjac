@@ -1,7 +1,6 @@
-use sea_orm::{ConnectOptions, Database, DatabaseConnection};
-use crate::env::{CONNECTION_POOL, DB_SCHEMA, DB_URL};
 use crate::Result;
-
+use crate::env::{CONNECTION_POOL, DB_SCHEMA, DB_URL};
+use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 
 #[allow(clippy::await_holding_lock)]
 pub async fn get_connect() -> Result<DatabaseConnection> {
@@ -22,6 +21,7 @@ pub async fn get_connect() -> Result<DatabaseConnection> {
 
 pub fn refresh_redis() -> Result<()> {
     crate::env::REDIS_CLIENT.clear_poison();
-   *crate::env::REDIS_CLIENT.lock().unwrap() = redis::Client::open(crate::env::REDIS_URL.lock().unwrap().clone())?;
+    *crate::env::REDIS_CLIENT.lock().unwrap() =
+        redis::Client::open(crate::env::REDIS_URL.lock().unwrap().clone())?;
     Ok(())
 }

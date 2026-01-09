@@ -100,7 +100,7 @@ impl AcMachine {
                     res.p[t][i] = res.p[res.fail[t]][i];
                 } else {
                     res.fail[ver] = res.p[res.fail[t]][i];
-                    let _ =que.queue(ver);
+                    let _ = que.queue(ver);
                 }
             }
         }

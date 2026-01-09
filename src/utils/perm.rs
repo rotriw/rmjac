@@ -1,8 +1,11 @@
-use std::future::{ready, Ready};
-use std::rc::Rc;
-use actix_web::{dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, Error, HttpMessage};
+use actix_web::{
+    Error, HttpMessage,
+    dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
+};
 use futures_util::future::LocalBoxFuture;
 use rmjac_core::model::user::UserAuthService;
+use std::future::{Ready, ready};
+use std::rc::Rc;
 
 pub struct AuthTool;
 impl<S, B> Transform<S, ServiceRequest> for AuthTool
@@ -18,7 +21,9 @@ where
     type Future = Ready<Result<Self::Transform, Self::InitError>>;
 
     fn new_transform(&self, service: S) -> Self::Future {
-        ready(Ok(AuthMiddleware { service: Rc::new(service) }))
+        ready(Ok(AuthMiddleware {
+            service: Rc::new(service),
+        }))
     }
 }
 
@@ -62,10 +67,8 @@ where
                 }
             }
             log::debug!("Auth Middleware: user_id={}, is_real={}", user_id, is_real);
-            req.extensions_mut().insert(UserAuthCotext {
-                user_id,
-                is_real
-            });
+            req.extensions_mut()
+                .insert(UserAuthCotext { user_id, is_real });
             service.call(req).await
         })
     }

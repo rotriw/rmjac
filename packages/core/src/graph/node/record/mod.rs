@@ -1,4 +1,5 @@
-#[derive(EnumConst, Copy, Clone, Debug, PartialEq, EnumIter, Deserialize, Serialize)]
+#[derive(EnumConst, Copy, Clone, Debug, PartialEq, EnumIter, Deserialize, Serialize, ts_rs::TS)]
+#[ts(export)]
 pub enum RecordStatus {
     #[serde(rename = "Accepted")]
     Accepted = 100,
@@ -44,52 +45,61 @@ pub enum RecordStatus {
     #[serde(rename = "Judging")]
     Judging = 1100,
 }
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct RecordNodePublic {
     pub record_order: i64,
     pub record_score: i64,
     pub record_platform: String,
     pub record_status: RecordStatus,
     pub record_message: String,
+    #[ts(type = "string")]
     pub record_time: NaiveDateTime,
+    #[ts(type = "string")]
     pub record_update_time: NaiveDateTime,
     pub code: Option<String>,
     pub code_language: Option<String>,
     pub record_url: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct RecordNodePrivate {
     pub code: String,
     pub code_language: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct RecordNodePublicRaw {
     pub record_score: i64,
     pub record_platform: String,
     pub record_url: Option<String>,
     pub record_status: RecordStatus,
     pub record_message: Option<String>,
+    #[ts(type = "string")]
     pub record_time: NaiveDateTime,
     pub statement_id: i64,
     pub public_status: bool,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct RecordNodePrivateRaw {
     pub code: String,
     pub code_language: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Node)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, Node)]
+#[ts(export)]
 pub struct RecordNode {
     pub node_id: i64,
     pub public: RecordNodePublic,
     pub private: RecordNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, NodeRaw)]
+#[ts(export)]
 #[node_raw(node_type = "record")]
 pub struct RecordNodeRaw {
     pub public: RecordNodePublicRaw,
@@ -158,8 +168,8 @@ use enum_const::EnumConst;
 use macro_node_iden::{Node, NodeRaw};
 use sea_orm::EntityTrait;
 use serde::{Deserialize, Serialize};
-use strum_macros::EnumIter;
 use std::fmt;
+use strum_macros::EnumIter;
 
 pub mod subtask;
 pub mod testcase;
@@ -216,7 +226,9 @@ impl fmt::Display for RecordStatus {
             RecordStatus::RemoteServiceUnknownError => write!(f, "Remote Service Unknown Error"),
             RecordStatus::SandboxError => write!(f, "Sandbox Error"),
             RecordStatus::RemotePlatformRefused => write!(f, "Remote Platform Refused"),
-            RecordStatus::RemotePlatformConnectionFailed => write!(f, "Remote Platform Connection Failed"),
+            RecordStatus::RemotePlatformConnectionFailed => {
+                write!(f, "Remote Platform Connection Failed")
+            }
             RecordStatus::RemotePlatformUnknownError => write!(f, "Remote Platform Unknown Error"),
             RecordStatus::Waiting => write!(f, "Waiting"),
             RecordStatus::UnknownError => write!(f, "Unknown Error"),

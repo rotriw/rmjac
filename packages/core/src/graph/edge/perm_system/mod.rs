@@ -1,4 +1,5 @@
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct PermSystemEdge {
     pub id: i64,
     pub u: i64,
@@ -6,20 +7,23 @@ pub struct PermSystemEdge {
     pub perms: Vec<SystemPerm>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct PermSystemEdgeRaw {
     pub u: i64,
     pub v: i64,
     pub perms: SystemPermRaw,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub enum SystemPermRaw {
     All,
     Perms(Vec<SystemPerm>),
 }
 
-#[derive(EnumConst, Copy, Clone, Debug, PartialEq, EnumIter)]
+#[derive(EnumConst, Copy, Clone, Debug, PartialEq, EnumIter, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub enum SystemPerm {
     All = -1,
     CreateProblem = 1,
@@ -31,6 +35,7 @@ pub enum SystemPerm {
     ManageAllTraining = 64,
     CreateRecord = 128,
     ManageVjudge = 256,
+    ManageAllUser = 512,
 }
 
 impl From<SystemPermRaw> for i32 {
@@ -74,7 +79,7 @@ impl EdgeRaw<PermSystemEdge, Model, ActiveModel> for PermSystemEdgeRaw {
     fn get_v_node_id(&self) -> i64 {
         self.v
     }
-    
+
     fn get_perm_value(&self) -> Option<i64> {
         use tap::Conv;
         Some(self.perms.clone().conv::<i32>() as i64)
@@ -206,5 +211,6 @@ use crate::graph::edge::{Edge, EdgeQueryPerm};
 use crate::utils::perm::Perm;
 use enum_const::EnumConst;
 use sea_orm::DatabaseConnection;
+use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;

@@ -1,19 +1,25 @@
-use std::fs;
-use sea_orm::DatabaseConnection;
 use crate::env::{DB_SCHEMA, DB_URL, EDGE_AUTH_PUBLICKEY};
 use crate::error::CoreError;
 use crate::graph::action::load_perm_graph;
+use sea_orm::DatabaseConnection;
+use std::fs;
 
-pub mod socket;
-pub mod track;
 pub mod iden;
 pub mod judge;
+pub mod socket;
+pub mod track;
 
-pub async fn service_start(db: &DatabaseConnection, db_url: &str, db_schema: &str, vjudge_port: u16, vjudge_secret_path: &str) -> Result<(), CoreError> {
+pub async fn service_start(
+    db: &DatabaseConnection,
+    db_url: &str,
+    db_schema: &str,
+    vjudge_port: u16,
+    vjudge_secret_path: &str,
+) -> Result<(), CoreError> {
     log::info!("Initializing default nodes");
     let default_nodes = crate::graph::action::get_default_node(db).await?;
     log::info!("Default nodes initialized: {:?}", default_nodes);
-    
+
     // 加载权限图到内存
     log::info!("Loading permission graph into memory...");
     load_perm_graph(db).await?;

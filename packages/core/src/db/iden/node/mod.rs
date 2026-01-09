@@ -9,9 +9,9 @@ pub mod problem_source;
 pub mod problem_statement;
 pub mod problem_tag;
 pub mod token;
-pub mod user;
 pub mod training;
 pub mod training_problem;
+pub mod user;
 
 pub mod record;
 

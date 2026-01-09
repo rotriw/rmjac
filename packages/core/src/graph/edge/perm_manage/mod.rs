@@ -1,4 +1,5 @@
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct PermManageEdge {
     pub id: i64,
     pub u: i64,
@@ -6,14 +7,16 @@ pub struct PermManageEdge {
     pub perms: Vec<ManagePerm>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct PermManageEdgeRaw {
     pub u: i64,
     pub v: i64,
     pub perms: ManagePermRaw,
 }
 
-#[derive(EnumConst, Copy, Clone, Debug, PartialEq, EnumIter)]
+#[derive(EnumConst, Copy, Clone, Debug, PartialEq, EnumIter, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub enum ManagePerm {
     ManageStatement = 1,
     ManageEdge = 2,
@@ -21,7 +24,8 @@ pub enum ManagePerm {
     ManagePrivateDescription = 8,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub enum ManagePermRaw {
     All,
     Perms(Vec<ManagePerm>),
@@ -66,7 +70,7 @@ impl EdgeRaw<PermManageEdge, Model, ActiveModel> for PermManageEdgeRaw {
     fn get_v_node_id(&self) -> i64 {
         self.v
     }
-    
+
     fn get_perm_value(&self) -> Option<i64> {
         Some(self.perms.clone().conv::<i32>() as i64)
     }
@@ -180,6 +184,7 @@ use crate::db::entity::edge::perm_manage::{ActiveModel, Column, Entity, Model};
 use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryPerm, EdgeRaw};
 use enum_const::EnumConst;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use tap::Conv;

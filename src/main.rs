@@ -1,4 +1,5 @@
 #![feature(super_let)]
+#![feature(proc_macro_hygiene)]
 #![allow(dead_code)]
 
 use command_tool::generate_commands;

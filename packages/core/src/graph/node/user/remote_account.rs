@@ -1,4 +1,5 @@
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub enum VjudgeAuth {
     Password(String),
     Token(String),
@@ -22,47 +23,58 @@ impl From<i32> for RemoteMode {
     }
 }
 
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct VjudgeNodePublic {
     pub platform: String,
     pub verified_code: String,
     pub verified: bool,
     pub iden: String,
+    #[ts(type = "string")]
     pub creation_time: NaiveDateTime,
+    #[ts(type = "string")]
     pub updated_at: NaiveDateTime,
+    #[ts(type = "string")]
     pub remote_mode: RemoteMode,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct VjudgeNodePrivate {
     pub auth: Option<VjudgeAuth>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct VjudgeNodePublicRaw {
     pub platform: String,
     pub verified_code: String,
     pub verified: bool,
     pub iden: String,
+    #[ts(type = "string")]
     pub creation_time: NaiveDateTime,
+    #[ts(type = "string")]
     pub updated_at: NaiveDateTime,
+    #[ts(type = "string")]
     pub remote_mode: RemoteMode,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct VjudgeNodePrivateRaw {
     pub auth: Option<VjudgeAuth>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Node)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, Node)]
+#[ts(export)]
 pub struct VjudgeNode {
     pub node_id: i64,
     pub public: VjudgeNodePublic,
     pub private: VjudgeNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, NodeRaw)]
+#[ts(export)]
 #[node_raw(node_type = "user_remote_account")]
 pub struct VjudgeNodeRaw {
     pub public: VjudgeNodePublicRaw,
@@ -111,9 +123,7 @@ impl From<Model> for VjudgeNode {
                     Some(a) if a.starts_with("p_") => {
                         Some(VjudgeAuth::Password(a[2..].to_string()))
                     }
-                    Some(a) if a.starts_with("t_") => {
-                        Some(VjudgeAuth::Token(a[2..].to_string()))
-                    }
+                    Some(a) if a.starts_with("t_") => Some(VjudgeAuth::Token(a[2..].to_string())),
                     _ => None,
                 },
             },

@@ -1,4 +1,5 @@
-#[derive(Deserialize, Serialize, Debug, Clone, EnumConst, EnumIter)]
+#[derive(Deserialize, Serialize, Debug, Clone, EnumConst, EnumIter, ts_rs::TS)]
+#[ts(export)]
 pub enum SubtaskCalcMethod {
     Sum = 0,
     Max = 1,
@@ -49,7 +50,8 @@ impl From<i32> for SubtaskCalcMethod {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct SubtaskNodePublic {
     pub subtask_id: i32,
     pub time_limit: i64,
@@ -58,12 +60,14 @@ pub struct SubtaskNodePublic {
     pub is_root: bool,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct SubtaskNodePrivate {
     pub subtask_calc_function: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct SubtaskNodePublicRaw {
     pub subtask_id: i32,
     pub time_limit: i64,
@@ -72,19 +76,22 @@ pub struct SubtaskNodePublicRaw {
     pub is_root: bool,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct SubtaskNodePrivateRaw {
     pub subtask_calc_function: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Node)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, Node)]
+#[ts(export)]
 pub struct SubtaskNode {
     pub node_id: i64,
     pub public: SubtaskNodePublic,
     pub private: SubtaskNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, NodeRaw)]
+#[ts(export)]
 #[node_raw(node_type = "testcase_subtask")]
 pub struct SubtaskNodeRaw {
     pub public: SubtaskNodePublicRaw,

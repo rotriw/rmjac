@@ -4,7 +4,8 @@ use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter, FromJsonQueryResult};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromJsonQueryResult)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromJsonQueryResult, ts_rs::TS)]
+#[ts(export)]
 pub struct ContentType {
     pub iden: String,
     pub content: String,

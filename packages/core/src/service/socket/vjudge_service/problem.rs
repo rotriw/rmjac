@@ -1,10 +1,10 @@
-use crate::service::socket::service::check_auth;
-use socketioxide::extract::{Data, SocketRef};
-use macro_socket_auth::auth_socket_connect;
 use crate::env::db::get_connect;
 use crate::model::problem::CreateProblemProps;
 use crate::model::vjudge::VjudgeService;
+use crate::service::socket::service::check_auth;
 use crate::utils::get_redis_connection;
+use macro_socket_auth::auth_socket_connect;
+use socketioxide::extract::{Data, SocketRef};
 
 #[auth_socket_connect]
 async fn handle_problem_create(socket: SocketRef, Data(problem): Data<CreateProblemProps>) {

@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::graph::node::record::RecordStatus;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UniversalSubmission {
@@ -15,4 +15,3 @@ pub struct UniversalSubmission {
     pub url: String,
     pub problem_iden: String,
 }
-

@@ -1,10 +1,12 @@
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct FileIOMethod {
     pub in_file: String,
     pub out_file: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub enum JudgeIOMethod {
     Std,
     FileIO(FileIOMethod),
@@ -15,7 +17,9 @@ impl From<JudgeIOMethod> for String {
     fn from(method: JudgeIOMethod) -> Self {
         match method {
             JudgeIOMethod::Std => "std".to_string(),
-            JudgeIOMethod::FileIO(file_io) => format!("file_io:in={},out={}", file_io.in_file, file_io.out_file),
+            JudgeIOMethod::FileIO(file_io) => {
+                format!("file_io:in={},out={}", file_io.in_file, file_io.out_file)
+            }
             JudgeIOMethod::RemoteJudge => "remote_judge".to_string(),
         }
     }
@@ -38,7 +42,8 @@ impl From<String> for JudgeIOMethod {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub enum JudgeDiffMethod {
     IgnoreSpace,
     Strict,
@@ -74,7 +79,8 @@ impl From<String> for JudgeDiffMethod {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct TestcaseNodePublic {
     pub time_limit: i64,
     pub memory_limit: i64,
@@ -83,13 +89,15 @@ pub struct TestcaseNodePublic {
     pub testcase_name: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct TestcaseNodePrivate {
     pub io_method: JudgeIOMethod,
-    pub diff_method: JudgeDiffMethod
+    pub diff_method: JudgeDiffMethod,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct TestcaseNodePublicRaw {
     pub time_limit: i64,
     pub memory_limit: i64,
@@ -98,20 +106,23 @@ pub struct TestcaseNodePublicRaw {
     pub testcase_name: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct TestcaseNodePrivateRaw {
     pub io_method: JudgeIOMethod,
-    pub diff_method: JudgeDiffMethod
+    pub diff_method: JudgeDiffMethod,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Node)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, Node)]
+#[ts(export)]
 pub struct TestcaseNode {
     pub node_id: i64,
     pub public: TestcaseNodePublic,
     pub private: TestcaseNodePrivate,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, NodeRaw)]
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS, NodeRaw)]
+#[ts(export)]
 #[node_raw(node_type = "testcase")]
 pub struct TestcaseNodeRaw {
     pub public: TestcaseNodePublicRaw,

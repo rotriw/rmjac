@@ -18,7 +18,12 @@ pub fn handle_score(
     calc_function: Option<String>,
     task_detail: Vec<TaskDetail>,
 ) -> Result<TaskDetail> {
-    log::trace!("Calculating score using method: {:?} {:?} {:?}", method, calc_function, task_detail);
+    log::trace!(
+        "Calculating score using method: {:?} {:?} {:?}",
+        method,
+        calc_function,
+        task_detail
+    );
     use crate::graph::node::record::RecordStatus::*;
     use SubtaskCalcMethod::*;
     match method {
@@ -57,11 +62,7 @@ pub fn handle_score(
                 }
             }
             Ok((
-                if score as i32 == -1 {
-                    0f64
-                } else {
-                    score
-                },
+                if score as i32 == -1 { 0f64 } else { score },
                 if time == -1 { 0 } else { time },
                 if memory == -1 { 0 } else { memory },
                 if time == -1 { UnknownError } else { status },
@@ -113,20 +114,24 @@ pub fn handle_score(
             } calculateScore(detail);"#;
             let result = eval(
                 &mut runtime,
-                format!(r#"
+                format!(
+                    r#"
                 let detail = {};
                 let now_time = {};
                 {}
             "#,
                     json!(
-                        task_detail.iter().map(|(s, t, m, r)| {
-                            TaskDetailObject {
-                                score: *s,
-                                time: *t,
-                                memory: *m,
-                                status: r.to_string(),
-                            }
-                        }).collect::<Vec<_>>()
+                        task_detail
+                            .iter()
+                            .map(|(s, t, m, r)| {
+                                TaskDetailObject {
+                                    score: *s,
+                                    time: *t,
+                                    memory: *m,
+                                    status: r.to_string(),
+                                }
+                            })
+                            .collect::<Vec<_>>()
                     ),
                     now_time!().and_utc().timestamp(),
                     calc_function.unwrap_or(default_code.to_string())
@@ -150,7 +155,6 @@ pub fn handle_score(
                 ))
             }
         }
-
     }
 }
 

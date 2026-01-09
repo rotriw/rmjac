@@ -1,8 +1,8 @@
-use chrono::NaiveDateTime;
 use crate::db::entity::node::{DbNodeActiveModel, DbNodeInfo};
+use crate::graph::node::user::remote_account::VjudgeNode;
+use chrono::NaiveDateTime;
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter};
-use crate::graph::node::user::remote_account::VjudgeNode;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "node_user_remote")]

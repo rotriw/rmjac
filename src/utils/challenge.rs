@@ -40,8 +40,6 @@ pub fn verify_captcha(
     dark_mode: bool,
     verify_code: &str,
 ) -> bool {
-    let expected_code = encode_password(&format!(
-        "{captcha}@{email}@{time}@{code}@{dark_mode}"
-    ));
+    let expected_code = encode_password(&format!("{captcha}@{email}@{time}@{code}@{dark_mode}"));
     expected_code == verify_code
 }

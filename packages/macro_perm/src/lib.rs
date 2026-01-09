@@ -1,7 +1,6 @@
 use proc_macro::TokenStream;
-use quote::{quote, ToTokens};
-use syn::{parse_macro_input, ItemFn};
-
+use quote::{ToTokens, quote};
+use syn::{ItemFn, parse_macro_input};
 
 #[proc_macro_attribute]
 pub fn perm(attr: TokenStream, item: TokenStream) -> TokenStream {
