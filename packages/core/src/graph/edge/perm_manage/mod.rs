@@ -1,55 +1,56 @@
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
-#[ts(export)]
+use crate::db::entity::edge::perm_manage::{ActiveModel, Column, Entity, Model};
+use crate::graph::edge::{Edge, EdgeQuery, EdgeRaw, FromTwoTuple};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use serde::{Deserialize, Serialize};
+impl From<(i64, i64, i64)> for PermManageEdgeRaw {
+    fn from(tuple: (i64, i64, i64)) -> Self {
+        PermManageEdgeRaw {
+            u: tuple.0,
+            v: tuple.1,
+            perms: tuple.2,
+        }
+    }
+}
+impl FromTwoTuple for PermManageEdge {
+    async fn from_tuple(tuple: (i64, i64), db: &DatabaseConnection) -> Self {
+        let (u, v) = tuple;
+        let model = Entity::find()
+            .filter(Column::UNodeId.eq(u))
+            .filter(Column::VNodeId.eq(v))
+            .one(db)
+            .await
+            .unwrap();
+        match model {
+            Some(m) => PermManageEdge::from(m),
+            None => PermManageEdge {
+                id: 0,
+                u,
+                v,
+                perms: 0,
+            },
+        }
+    }
+}
+
+impl Into<(i64, i64, i64)> for PermManageEdge {
+    fn into(self) -> (i64, i64, i64) {
+        (self.u, self.v, self.perms)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PermManageEdge {
     pub id: i64,
     pub u: i64,
     pub v: i64,
-    pub perms: Vec<ManagePerm>,
+    pub perms: i64,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
-#[ts(export)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PermManageEdgeRaw {
     pub u: i64,
     pub v: i64,
-    pub perms: ManagePermRaw,
-}
-
-#[derive(EnumConst, Copy, Clone, Debug, PartialEq, EnumIter, Serialize, Deserialize, ts_rs::TS)]
-#[ts(export)]
-pub enum ManagePerm {
-    ManageStatement = 1,
-    ManageEdge = 2,
-    ManagePublicDescription = 4,
-    ManagePrivateDescription = 8,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
-#[ts(export)]
-pub enum ManagePermRaw {
-    All,
-    Perms(Vec<ManagePerm>),
-}
-
-impl From<ManagePermRaw> for i32 {
-    fn from(perms: ManagePermRaw) -> i32 {
-        match perms {
-            ManagePermRaw::All => {
-                let mut res = 0;
-                for i in ManagePerm::iter() {
-                    res |= i.get_const_isize().unwrap() as i32;
-                }
-                res
-            }
-            ManagePermRaw::Perms(perms) => {
-                let mut res = 0;
-                for perm in perms {
-                    res |= perm.get_const_isize().unwrap() as i32;
-                }
-                res
-            }
-        }
-    }
+    pub perms: i64,
 }
 
 impl EdgeRaw<PermManageEdge, Model, ActiveModel> for PermManageEdgeRaw {
@@ -70,10 +71,6 @@ impl EdgeRaw<PermManageEdge, Model, ActiveModel> for PermManageEdgeRaw {
     fn get_v_node_id(&self) -> i64 {
         self.v
     }
-
-    fn get_perm_value(&self) -> Option<i64> {
-        Some(self.perms.clone().conv::<i32>() as i64)
-    }
 }
 
 impl From<PermManageEdgeRaw> for ActiveModel {
@@ -83,56 +80,19 @@ impl From<PermManageEdgeRaw> for ActiveModel {
             edge_id: NotSet,
             u_node_id: Set(raw.u),
             v_node_id: Set(raw.v),
-            perm: Set(raw.perms.conv::<i32>() as i64),
+            perm: Set(raw.perms),
         }
     }
 }
 
 impl From<Model> for PermManageEdge {
     fn from(model: Model) -> Self {
-        let perms: Perms = model.perm.into();
         PermManageEdge {
             id: model.edge_id,
             u: model.u_node_id,
             v: model.v_node_id,
-            perms: perms.0,
+            perms: model.perm,
         }
-    }
-}
-
-impl From<i64> for Perms {
-    fn from(perm: i64) -> Self {
-        let mut perms = Vec::new();
-        for p in ManagePerm::iter() {
-            if perm & p.get_const_isize().unwrap() as i64 != 0 {
-                perms.push(p);
-            }
-        }
-        Perms(perms)
-    }
-}
-
-pub struct Perms(Vec<ManagePerm>);
-
-impl From<Perms> for i64 {
-    fn from(perms: Perms) -> i64 {
-        let mut res = 0;
-        for perm in perms.0 {
-            res |= perm.get_const_isize().unwrap();
-        }
-        res as i64
-    }
-}
-
-impl From<Vec<ManagePerm>> for Perms {
-    fn from(perms: Vec<ManagePerm>) -> Self {
-        Perms(perms)
-    }
-}
-
-impl From<&[ManagePerm]> for Perms {
-    fn from(perms: &[ManagePerm]) -> Self {
-        Perms(perms.to_vec())
     }
 }
 
@@ -156,35 +116,3 @@ impl EdgeQuery<ActiveModel, Model, Entity, PermManageEdge> for PermManageEdgeQue
         "perm_manage"
     }
 }
-
-impl EdgeQueryPerm for PermManageEdgeQuery {
-    async fn get_perm_v(u: i64, db: &DatabaseConnection) -> Result<Vec<(i64, i64)>> {
-        let edges = Entity::find().filter(Column::UNodeId.eq(u)).all(db).await?;
-        Ok(edges
-            .into_iter()
-            .map(|edge| (edge.v_node_id, edge.perm))
-            .collect())
-    }
-
-    fn get_perm_iter() -> impl Iterator<Item = i64> {
-        ManagePerm::iter().map(|perm| perm.get_const_isize().unwrap() as i64)
-    }
-
-    async fn get_all(db: &DatabaseConnection) -> Result<Vec<(i64, i64, i64)>> {
-        let edges = Entity::find().all(db).await?;
-        Ok(edges
-            .into_iter()
-            .map(|edge| (edge.u_node_id, edge.v_node_id, edge.perm))
-            .collect())
-    }
-}
-
-use crate::Result;
-use crate::db::entity::edge::perm_manage::{ActiveModel, Column, Entity, Model};
-use crate::graph::edge::{Edge, EdgeQuery, EdgeQueryPerm, EdgeRaw};
-use enum_const::EnumConst;
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
-use serde::{Deserialize, Serialize};
-use strum::IntoEnumIterator;
-use strum_macros::EnumIter;
-use tap::Conv;

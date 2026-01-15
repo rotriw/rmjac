@@ -4,7 +4,6 @@ use crate::declare::UniversalSubmission;
 use crate::env;
 use crate::error::CoreError;
 use crate::graph::edge::misc::MiscEdgeRaw;
-use crate::graph::edge::perm_system::SystemPerm;
 use crate::graph::edge::user_remote::{UserRemoteEdgeQuery, UserRemoteEdgeRaw};
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
 use crate::graph::node::problem::ProblemNode;
@@ -20,16 +19,15 @@ use crate::graph::node::vjudge_task::{
 };
 use crate::graph::node::{Node, NodeRaw};
 use crate::model::ModelStore;
-use crate::model::perm::check_system_perm;
 use crate::model::problem::{
     CreateProblemProps, ProblemFactory, ProblemRepository, ProblemStatementProp,
 };
 use crate::model::record::{Record, RecordNewProp, RecordRepository, SubtaskUserRecord};
 use crate::service::iden::get_node_ids_from_iden;
+use crate::service::perm::provider::{Manage, ManagePermService, System, SystemPermService};
 use crate::service::socket::service::add_task;
 use crate::utils::encrypt::gen_random_string;
 use crate::utils::get_redis_connection;
-use enum_const::EnumConst;
 use sea_orm::{ColumnTrait, DatabaseConnection};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -113,9 +111,7 @@ impl VjudgeAccount {
             log::warn!("System node not found when checking manage vjudge perm");
             return false;
         }
-        let perm_val = SystemPerm::ManageVjudge.get_const_isize().unwrap() as i64;
-        let res = check_system_perm(user_id, system_node, perm_val);
-        res == 1
+        SystemPermService.verify(user_id, system_node, System::ManageVjudge)
     }
 
     pub async fn create(

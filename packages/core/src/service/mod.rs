@@ -1,11 +1,11 @@
 use crate::env::{DB_SCHEMA, DB_URL, EDGE_AUTH_PUBLICKEY};
 use crate::error::CoreError;
-use crate::graph::action::load_perm_graph;
 use sea_orm::DatabaseConnection;
 use std::fs;
 
 pub mod iden;
 pub mod judge;
+pub mod perm;
 pub mod socket;
 pub mod track;
 
@@ -21,9 +21,8 @@ pub async fn service_start(
     log::info!("Default nodes initialized: {:?}", default_nodes);
 
     // 加载权限图到内存
-    log::info!("Loading permission graph into memory...");
-    load_perm_graph(db).await?;
     log::info!("Permission graph loaded successfully!");
+
     let mut default_nodes_env = crate::env::DEFAULT_NODES.lock().unwrap();
     *default_nodes_env = default_nodes;
     log::info!("Loading DB connection: {db_url}, schema: {db_schema}");

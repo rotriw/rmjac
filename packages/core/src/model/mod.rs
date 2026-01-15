@@ -1,4 +1,3 @@
-pub mod perm;
 pub mod problem;
 pub mod record;
 pub mod training;
