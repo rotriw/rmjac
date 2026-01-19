@@ -1,14 +1,15 @@
-use std::marker::PhantomData;
-use sea_orm::DatabaseConnection;
 use crate::graph::edge::FromTwoTuple;
 use crate::service::perm::typed::SaveService;
+use sea_orm::DatabaseConnection;
+use std::marker::PhantomData;
 
 pub trait PermEdgeTrait {
     fn into_tuple(self) -> (i64, i64, i64); // u, v, w.
 }
 
 // this only for save, plz use perm service to get perm.
-pub struct PermEdge<DA, DM, DE, E, R> where
+pub struct PermEdge<DA, DM, DE, E, R>
+where
     (DA, DM, DE, E, R): EdgeRequire<DA, DM, DE, E, R>,
 {
     // pub u: i64,
@@ -22,7 +23,8 @@ pub struct PermEdge<DA, DM, DE, E, R> where
     pub _r: PhantomData<R>,
 }
 
-impl<DA, DM, DE, E, R> PermEdge<DA, DM, DE, E, R> where
+impl<DA, DM, DE, E, R> PermEdge<DA, DM, DE, E, R>
+where
     (DA, DM, DE, E, R): EdgeRequire<DA, DM, DE, E, R>,
 {
     pub fn new() -> Self {
@@ -42,18 +44,17 @@ use super::EdgeRequire;
 use sea_orm::EntityTrait;
 use tap::Conv;
 
-
 impl<DA, DM, DE, E, R> SaveService for (&PermEdge<DA, DM, DE, E, R>, &DatabaseConnection)
 where
     (DA, DM, DE, E, R): EdgeRequire<DA, DM, DE, E, R>,
     E: Into<(i64, i64, i64)> + FromTwoTuple,
-    R: From<(i64, i64, i64)>
+    R: From<(i64, i64, i64)>,
 {
     async fn del_path(&mut self, u: i64, v: i64, _perm: i64) -> () {
         E::from_tuple((u, v), self.1).await.delete(self.1).await;
     }
 
-    async fn save_path(&mut self, u: i64, v: i64, perm: i64) -> ()  {
+    async fn save_path(&mut self, u: i64, v: i64, perm: i64) -> () {
         R::from((u, v, perm)).save(&self.1).await;
     }
 

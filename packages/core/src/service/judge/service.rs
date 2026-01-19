@@ -109,7 +109,8 @@ pub trait Language: Any + Send + Sync {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct LanguageChoiceOptionsInformation {
     pub name: String,
     pub is_compile: bool,
@@ -117,7 +118,8 @@ pub struct LanguageChoiceOptionsInformation {
     pub allowed_option: Vec<String>, // value.
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct LanguageChoiceInformation {
     pub name: String,
     pub allow_option: Vec<LanguageChoiceOptionsInformation>,

@@ -1,4 +1,4 @@
-use crate::utils::perm::{AuthTool, UserAuthCotext};
+pub use crate::utils::perm::{AuthTool, UserAuthCotext};
 use rmjac_core::error::CoreError;
 
 macro_rules! default_node {
@@ -148,9 +148,9 @@ pub async fn main(
             .service(user::service())
             .service(problem::service())
             .service(record::service())
-            // .service(training::service())
-            // .service(vjudge::service())
-            // .service(submit::service())
+            .service(training::service())
+            .service(vjudge::service())
+            .service(submit::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {
                 error::InternalError::from_response(
                     "",
@@ -169,10 +169,10 @@ pub async fn main(
     .await
 }
 
-pub mod user;
 pub mod problem;
 pub mod record;
-// pub mod training;
+pub mod training;
+pub mod user;
 
-// pub mod vjudge;
-// pub mod submit;
+pub mod submit;
+pub mod vjudge;

@@ -46,6 +46,15 @@ pub trait CacheKey {
     fn cache_key(node_id: i64) -> String;
 }
 
+
+
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
+pub struct ProblemListItem {
+    pub model: ProblemModel,
+    pub iden: String,
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
 #[ts(export)]
 pub struct ProblemStatementProp {
@@ -571,13 +580,14 @@ pub enum Role {
 }
 
 impl ProblemPermissionService {
-    pub async fn get_perm(p: i64, r: Role) -> Vec<i64> { // return node id list.
+    pub async fn get_perm(p: i64, r: Role) -> Vec<i64> {
+        // return node id list.
         let perms: i64 = match r {
             Role::Edit => Pages::Edit.into(),
             Role::Viewer => Pages::View.into(),
             Role::Owner => Pages::Edit + Pages::Delete,
         };
-        
+
         PagesPermService::get_allow_u(p, perms)
     }
 
@@ -597,7 +607,7 @@ impl ProblemPermissionService {
         PagesPermService::del(u, p, Pages::All, store.get_db()).await;
         Ok(())
     }
-    
+
     pub async fn grant_creator(store: &impl ModelStore, u: i64, p: i64) -> Result<()> {
         Self::set_perm(p, Role::Owner, u, store).await
     }

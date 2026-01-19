@@ -18,7 +18,7 @@ pub enum Problem {
 }
 
 impl ProblemPermService {
-     pub async fn grant_creator(db: &sea_orm::DatabaseConnection, u: i64, v: i64) {
-         Self::add(u, v, Problem::All, db).await;
+    pub async fn grant_creator(db: &sea_orm::DatabaseConnection, u: i64, v: i64) {
+        Self::add(u, v, Problem::All, db).await;
     }
 }

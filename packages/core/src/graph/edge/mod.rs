@@ -11,18 +11,15 @@ use std::marker::PhantomData;
 use std::str::FromStr;
 use tap::Conv;
 
-
 pub trait DBMetaWithEdge<DA, DM, DE, E> = where
     DA: DbEdgeActiveModel<DM, E>
-    + Sized
-    + Send
-    + Sync
-    + ActiveModelTrait
-    + ActiveModelBehavior
-    + DbEdgeInfo,
-    DM: Into<E> + From<<<DA as ActiveModelTrait>::Entity as EntityTrait>::Model>
-    + Send
-    + Sync,
+        + Sized
+        + Send
+        + Sync
+        + ActiveModelTrait
+        + ActiveModelBehavior
+        + DbEdgeInfo,
+    DM: Into<E> + From<<<DA as ActiveModelTrait>::Entity as EntityTrait>::Model> + Send + Sync,
     <DA::Entity as EntityTrait>::Model: IntoActiveModel<DA> + Send + Sync,
     E: Edge<DA, DM, DE> + Sized + Send + Sync + Clone,
     DE: EntityTrait,
@@ -30,28 +27,24 @@ pub trait DBMetaWithEdge<DA, DM, DE, E> = where
 
 pub trait DBMeta<DA, DM, DE, E, R> = where
     DA: DbEdgeActiveModel<DM, E>
-    + Sized
-    + Send
-    + Sync
-    + ActiveModelTrait
-    + ActiveModelBehavior
-    + DbEdgeInfo,
-    DM: Into<E> + From<<<DA as ActiveModelTrait>::Entity as EntityTrait>::Model>
-    + Send
-    + Sync,
+        + Sized
+        + Send
+        + Sync
+        + ActiveModelTrait
+        + ActiveModelBehavior
+        + DbEdgeInfo,
+    DM: Into<E> + From<<<DA as ActiveModelTrait>::Entity as EntityTrait>::Model> + Send + Sync,
     DE: Sized + Send + Sync,
     <DA::Entity as EntityTrait>::Model: IntoActiveModel<DA> + Send + Sync,
     E: Sized + Send + Sync + Clone,
     DE: EntityTrait,
     <DE as EntityTrait>::Model: Into<DM> + Send + Sync,
-    R: Into<DA> + Clone + Send + Sync + std::fmt::Debug
-;
+    R: Into<DA> + Clone + Send + Sync + std::fmt::Debug;
 
 pub trait EdgeRequire<DA, DM, DE, E, R> = where
     (DA, DM, DE, E, R): DBMeta<DA, DM, DE, E, R>,
     E: Edge<DA, DM, DE> + Sized + Send + Sync + Clone,
-    R: EdgeRaw<E, DM, DA> + Sized + Send + Sync + Clone,
-;
+    R: EdgeRaw<E, DM, DA> + Sized + Send + Sync + Clone;
 
 pub trait FromTwoTuple {
     fn from_tuple(tuple: (i64, i64), db: &DatabaseConnection) -> impl Future<Output = Self>
@@ -79,8 +72,8 @@ impl From<EdgeType> for &str {
 }
 
 pub mod iden;
-pub mod perm;
 pub mod misc;
+pub mod perm;
 pub mod perm_manage;
 pub mod perm_pages;
 pub mod perm_problem;
@@ -97,7 +90,8 @@ pub mod judge;
 pub mod testcase;
 
 pub trait EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>
-where (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, DbEntity, EdgeA>,
+where
+    (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, DbEntity, EdgeA>,
 {
     fn get_u_edge_id_column() -> <DbEntity as EntityTrait>::Column {
         <DbEntity as EntityTrait>::Column::from_str("u_node_id")
@@ -403,7 +397,8 @@ pub trait EdgeQueryPerm {
 
 pub trait EdgeQueryOrder<DbActive, DbModel, DbEntity, EdgeA>:
     EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>
-where (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, DbEntity, EdgeA>,
+where
+    (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, DbEntity, EdgeA>,
 {
     fn get_order_column() -> <DbEntity as EntityTrait>::Column {
         <DbEntity as EntityTrait>::Column::from_str("order")
@@ -419,7 +414,10 @@ where (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, Db
         async move {
             use sea_orm::{ColumnTrait, QueryFilter};
             let edge = DbEntity::find()
-                .filter(<Self as EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>>::get_u_edge_id_column().eq(u))
+                .filter(
+                    <Self as EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>>::get_u_edge_id_column()
+                        .eq(u),
+                )
                 .filter(Self::get_order_column().eq(order))
                 .one(db)
                 .await?;
@@ -435,7 +433,10 @@ where (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, Db
         async move {
             use sea_orm::{ColumnTrait, QueryFilter};
             let edges = DbEntity::find()
-                .filter(<Self as EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>>::get_u_edge_id_column().eq(u))
+                .filter(
+                    <Self as EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>>::get_u_edge_id_column()
+                        .eq(u),
+                )
                 .order_by_desc(Self::get_order_column())
                 .all(db)
                 .await?;
@@ -450,7 +451,10 @@ where (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, Db
         async move {
             use sea_orm::{ColumnTrait, QueryFilter};
             let edges = DbEntity::find()
-                .filter(<Self as EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>>::get_u_edge_id_column().eq(u))
+                .filter(
+                    <Self as EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>>::get_u_edge_id_column()
+                        .eq(u),
+                )
                 .order_by_asc(Self::get_order_column())
                 .all(db)
                 .await?;
@@ -468,7 +472,10 @@ where (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, Db
         async move {
             use sea_orm::{ColumnTrait, QueryFilter};
             let edges = DbEntity::find()
-                .filter(<Self as EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>>::get_u_edge_id_column().eq(u))
+                .filter(
+                    <Self as EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>>::get_u_edge_id_column()
+                        .eq(u),
+                )
                 .order_by_asc(Self::get_order_column())
                 .all(db)
                 .await?;
@@ -483,7 +490,10 @@ where (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, Db
         async move {
             use sea_orm::{ColumnTrait, QueryFilter};
             let edges = DbEntity::find()
-                .filter(<Self as EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>>::get_u_edge_id_column().eq(u))
+                .filter(
+                    <Self as EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>>::get_u_edge_id_column()
+                        .eq(u),
+                )
                 .order_by_desc(Self::get_order_column())
                 .all(db)
                 .await?;
@@ -494,13 +504,15 @@ where (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, Db
 
 #[derive(Clone, Debug)]
 pub struct EdgeQueryTool<DbActive, DbModel, DbEntity, EdgeA>
-where (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, DbEntity, EdgeA>,
+where
+    (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, DbEntity, EdgeA>,
 {
     _phantom: PhantomData<(DbActive, DbModel, DbEntity, EdgeA)>,
 }
 
 impl<DbActive, DbModel, DbEntity, EdgeA> EdgeQueryTool<DbActive, DbModel, DbEntity, EdgeA>
-where (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, DbEntity, EdgeA>,
+where
+    (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, DbEntity, EdgeA>,
 {
     fn get_u_edge_id_column() -> <DbEntity as EntityTrait>::Column {
         <DbEntity as EntityTrait>::Column::from_str("u_node_id")
@@ -829,7 +841,6 @@ pub trait EdgeTrait<EdgeRaw, Edge> {
     fn save_db(E: EdgeRaw, db: &DatabaseConnection) -> impl Future<Output = Result<Edge>>;
 }
 
-
 pub trait Edge<DbActive, DbModel, DbEntity>
 where
     DbActive: DbEdgeActiveModel<DbModel, Self>
@@ -839,9 +850,10 @@ where
         + ActiveModelTrait
         + ActiveModelBehavior
         + DbEdgeInfo,
-    DbModel: Into<Self> + From<<<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Model>
-    + Send
-    + Sync,
+    DbModel: Into<Self>
+        + From<<<DbActive as ActiveModelTrait>::Entity as EntityTrait>::Model>
+        + Send
+        + Sync,
     <DbActive::Entity as EntityTrait>::Model: IntoActiveModel<DbActive>,
     Self: Sized + Send + Sync + Clone,
     DbEntity: EntityTrait,

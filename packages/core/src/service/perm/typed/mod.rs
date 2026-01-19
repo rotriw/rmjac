@@ -2,7 +2,6 @@ use std::{future::Future, marker::PhantomData, ops::Add};
 
 use strum::IntoEnumIterator;
 
-
 pub trait PermService<T: PermVerify>: PermVerifySerivce<T> + PermActionService<T> {}
 
 pub trait PermVerifySerivce<P: PermVerify> {
@@ -34,7 +33,6 @@ pub trait SaveService {
     fn load(&mut self) -> impl Future<Output = Vec<(i64, i64, i64)>>;
 }
 
-
 pub trait PermVerify {
     fn verify(&self, perm: i64) -> bool;
     fn get_value(&self) -> i64;
@@ -48,7 +46,6 @@ pub trait HasPath {
     fn get_path(&self, u: i64, v: i64) -> Option<i64>;
     fn has_path<T: PermVerify>(&self, u: i64, v: i64, perm: &T) -> (bool, bool); // have_u->v, have_p
 }
-
 
 pub struct NextValue<T: Into<i64>> {
     pub point: i64,
@@ -74,7 +71,7 @@ pub trait GraphAction: GetV + GetU + PathAction {}
 pub struct PermSave<NT, I> {
     pub perm: i64,
     pub _nt: PhantomData<NT>,
-    pub _i: PhantomData<I>
+    pub _i: PhantomData<I>,
 }
 
 pub trait PermImport<M> {
@@ -118,7 +115,7 @@ impl<NT: Into<i64>, I> From<NT> for PermSave<NT, I> {
     }
 }
 
-impl<NT: Into<i64> + IntoEnumIterator + Clone> PermExport for PermSave<NT, NT>  {
+impl<NT: Into<i64> + IntoEnumIterator + Clone> PermExport for PermSave<NT, NT> {
     type Result = NT;
     fn export_perm(&self) -> Vec<NT> {
         let mut perms = vec![];

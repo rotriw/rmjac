@@ -17,7 +17,6 @@ pub struct PermPagesEdgeRaw {
     pub perms: i64,
 }
 
-
 impl EdgeRaw<PermPagesEdge, Model, ActiveModel> for PermPagesEdgeRaw {
     fn get_edge_type(&self) -> &str {
         "perm_pages"
@@ -36,7 +35,6 @@ impl EdgeRaw<PermPagesEdge, Model, ActiveModel> for PermPagesEdgeRaw {
     fn get_v_node_id(&self) -> i64 {
         self.v
     }
-
 }
 
 impl From<PermPagesEdgeRaw> for ActiveModel {
@@ -111,4 +109,5 @@ impl Edge<ActiveModel, Model, Entity> for PermPagesEdge {
     }
 }
 
-pub type PermPagesEdgeQuery = crate::graph::edge::EdgeQueryTool<ActiveModel, Model, Entity, PermPagesEdge>;
+pub type PermPagesEdgeQuery =
+    crate::graph::edge::EdgeQueryTool<ActiveModel, Model, Entity, PermPagesEdge>;

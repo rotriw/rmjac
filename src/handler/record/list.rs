@@ -1,14 +1,14 @@
 use crate::handler::{HttpError, ResultHandler};
 use crate::utils::perm::UserAuthCotext;
 use macro_handler::{export, generate_handler, handler, route};
+use rmjac_core::graph::edge::EdgeQuery;
 use rmjac_core::graph::edge::problem_statement::ProblemStatementEdgeQuery;
 use rmjac_core::graph::edge::record::RecordEdge;
-use rmjac_core::graph::edge::EdgeQuery;
+use rmjac_core::graph::node::Node;
 use rmjac_core::graph::node::problem::ProblemNode;
 use rmjac_core::graph::node::user::UserNode;
-use rmjac_core::graph::node::Node;
-use rmjac_core::model::problem::ProblemRepository;
 use rmjac_core::model::ModelStore;
+use rmjac_core::model::problem::ProblemRepository;
 use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect};
 use serde::Serialize;
 
@@ -59,7 +59,8 @@ pub mod handler {
 
         // Filter by problem
         if let Some(ref problem_search) = problem {
-            if let Ok((problem_node_id, _)) = ProblemRepository::resolve(store, problem_search).await
+            if let Ok((problem_node_id, _)) =
+                ProblemRepository::resolve(store, problem_search).await
             {
                 db_query = db_query.filter(Column::VNodeId.eq(problem_node_id));
             } else if let Ok(problem_id) = problem_search.parse::<i64>() {
@@ -98,10 +99,9 @@ pub mod handler {
         for edge in edges {
             let record_edge: RecordEdge = edge.into();
             let problem_node_id = record_edge.v;
-            let node_type =
-                rmjac_core::graph::action::get_node_type(&db, problem_node_id)
-                    .await
-                    .unwrap_or_default();
+            let node_type = rmjac_core::graph::action::get_node_type(&db, problem_node_id)
+                .await
+                .unwrap_or_default();
 
             let (problem_name, problem_iden) = if node_type == "problem_statement" {
                 let db_ref = store.get_db().clone();

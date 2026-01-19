@@ -20,6 +20,7 @@ use crate::model::ModelStore;
 use crate::model::problem::ProblemRepository;
 use crate::model::record::RecordRepository;
 use crate::service::iden::{create_iden, get_node_id_iden, get_node_ids_from_iden};
+use crate::service::perm::provider::{Pages, PagesPermService};
 use async_recursion::async_recursion;
 use chrono::NaiveDateTime;
 use redis::TypedCommands;
@@ -28,14 +29,16 @@ use serde::{Deserialize, Serialize};
 use std::cmp::max;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ts_rs::TS)]
+#[ts(export)]
 pub struct TrainingList {
     pub node_id: Option<i64>,
     pub description: String,
     pub own_problem: Vec<TrainingProblem>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ts_rs::TS)]
+#[ts(export)]
 pub enum TrainingProblem {
     ProblemIden((i64, String)), // edge_id, problem_iden
     ProblemTraining(TrainingList),
@@ -43,19 +46,38 @@ pub enum TrainingProblem {
     ExistTraining((i64, String)),
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, ts_rs::TS)]
+#[ts(export)]
 pub struct Training {
     pub training_node: TrainingNode,
     pub problem_list: TrainingList,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, ts_rs::TS)]
+#[ts(export)]
 pub struct TrainingListStatus {
     pub total_task: i64,
     pub completed_task: i64,
     pub tried_task: i64,
     pub total_score: f64,
     pub data: HashMap<i64, String>,
+}
+
+#[derive(Deserialize, Serialize, ts_rs::TS)]
+#[ts(export)]
+pub struct CreateTrainingReq {
+    pub iden: String,
+    pub title: String,
+    pub description_public: String,
+    pub description_private: String,
+    #[ts(type = "string")]
+    pub start_time: NaiveDateTime,
+    #[ts(type = "string")]
+    pub end_time: NaiveDateTime,
+    pub training_type: String,
+    pub problem_list: TrainingList,
+    pub write_perm_user: Vec<i64>,
+    pub read_perm_user: Vec<i64>,
 }
 
 pub struct TrainingRepo;
@@ -578,6 +600,15 @@ impl TrainingRepo {
         Ok(())
     }
 
+    pub async fn rm_problem(
+        store: &mut impl ModelStore,
+        edge_id: i64,
+    ) -> Result<()> {
+        let edge = TrainingProblemEdge::from_db(store.get_db(), edge_id).await?;
+        edge.delete(store.get_db()).await?;
+        Ok(())
+    }
+
     pub async fn set_desc(
         db: &DatabaseConnection,
         training_node_id: i64,
@@ -604,61 +635,22 @@ impl TrainingRepo {
 
     pub async fn set_creator_perm(
         db: &DatabaseConnection,
-        user_node_id: i64,
-        training_node_id: i64,
+        uid: i64,
+        tid: i64,
     ) -> Result<()> {
-        log::info!(
-            "Granting training creator permissions: user {} -> training {}",
-            user_node_id,
-            training_node_id
-        );
-
-        use crate::service::perm::provider::Pages;
-        use crate::graph::edge::perm_pages::PermPagesEdgeRaw;
-
-        PermPagesEdgeRaw {
-            u: user_node_id,
-            v: training_node_id,
-            perms: (Pages::View | Pages::Edit | Pages::Delete | Pages::Create).into(),
-        }
-        .save(db)
-        .await?;
-
-        log::info!(
-            "Successfully granted training creator permissions: user {} -> training {}",
-            user_node_id,
-            training_node_id
-        );
+        log::debug!("Granting training creator permissions: user {uid} -> training {tid}");
+        PagesPermService::add(uid, tid, Pages::View + Pages::Edit + Pages::Delete + Pages::Create, db).await;
         Ok(())
     }
 
     pub async fn grant_access(
         db: &DatabaseConnection,
-        user_node_id: i64,
-        training_node_id: i64,
+        uid: i64,
+        tid: i64,
     ) -> Result<()> {
-        log::info!(
-            "Granting training access: user {} -> training {}",
-            user_node_id,
-            training_node_id
-        );
-        
-        use crate::service::perm::provider::Pages;
-        use crate::graph::edge::perm_pages::PermPagesEdgeRaw;
-
-        PermPagesEdgeRaw {
-            u: user_node_id,
-            v: training_node_id,
-            perms: Pages::View.into(),
-        }
-        .save(db)
-        .await?;
-
-        log::info!(
-            "Successfully granted training access: user {} -> training {}",
-            user_node_id,
-            training_node_id
-        );
+        log::debug!(
+            "Granting training access permissions: user {uid} -> training {tid}");
+        PagesPermService::add(uid, tid, Pages::View, db).await;
         Ok(())
     }
 

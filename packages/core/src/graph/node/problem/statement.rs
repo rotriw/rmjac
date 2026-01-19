@@ -1,7 +1,6 @@
 #[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
 #[ts(export)]
 pub struct ProblemStatementNodePublic {
-
     pub statements: Vec<ContentType>,
     pub source: String,
     pub iden: String,

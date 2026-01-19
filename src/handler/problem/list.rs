@@ -2,19 +2,16 @@ use crate::handler::{HttpError, ResultHandler};
 use crate::utils::perm::UserAuthCotext;
 use macro_handler::{export, generate_handler, handler, route};
 use rmjac_core::graph::edge::EdgeQuery;
-use rmjac_core::model::problem::{ProblemModel, ProblemRepository};
 use rmjac_core::model::ModelStore;
+use rmjac_core::model::problem::{ProblemModel, ProblemRepository};
 use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect};
 use serde::Serialize;
 
-#[derive(Serialize, Clone)]
-pub struct ProblemListItem {
-    pub model: ProblemModel,
-    pub iden: String,
-}
 
 #[generate_handler(route = "/list", real_path = "/api/problem/list")]
 pub mod handler {
+    use rmjac_core::model::problem::ProblemListItem;
+
     use super::*;
 
     #[handler]
@@ -77,17 +74,20 @@ pub mod handler {
                     .one(&db)
                     .await
                 {
-                    let problem_ids: Vec<i64> =
-                        ProblemTagEdgeQuery::get_u(tag_node.node_id, &db)
-                            .await
-                            .unwrap_or_default();
+                    let problem_ids: Vec<i64> = ProblemTagEdgeQuery::get_u(tag_node.node_id, &db)
+                        .await
+                        .unwrap_or_default();
                     db_query = db_query.filter(Column::NodeId.is_in(problem_ids));
                 }
             }
         }
 
         // Get total count
-        let total = db_query.clone().count(&db).await.map_err(|e| HttpError::CoreError(e.into()))?;
+        let total = db_query
+            .clone()
+            .count(&db)
+            .await
+            .map_err(|e| HttpError::CoreError(e.into()))?;
 
         // Get paginated results
         let problems: Vec<rmjac_core::db::entity::node::problem::Model> = db_query
@@ -103,13 +103,10 @@ pub mod handler {
         for p in problems {
             let model = ProblemRepository::model(store, p.node_id).await?;
             let db_ref = store.get_db().clone();
-            let idens = rmjac_core::service::iden::get_node_id_iden(
-                &db_ref,
-                store.get_redis(),
-                p.node_id,
-            )
-            .await
-            .unwrap_or_default();
+            let idens =
+                rmjac_core::service::iden::get_node_id_iden(&db_ref, store.get_redis(), p.node_id)
+                    .await
+                    .unwrap_or_default();
             let iden = idens
                 .first()
                 .cloned()
@@ -181,17 +178,20 @@ pub mod handler {
                     .one(&db)
                     .await
                 {
-                    let problem_ids: Vec<i64> =
-                        ProblemTagEdgeQuery::get_u(tag_node.node_id, &db)
-                            .await
-                            .unwrap_or_default();
+                    let problem_ids: Vec<i64> = ProblemTagEdgeQuery::get_u(tag_node.node_id, &db)
+                        .await
+                        .unwrap_or_default();
                     db_query = db_query.filter(Column::NodeId.is_in(problem_ids));
                 }
             }
         }
 
         // Get total count
-        let total = db_query.clone().count(&db).await.map_err(|e| HttpError::CoreError(e.into()))?;
+        let total = db_query
+            .clone()
+            .count(&db)
+            .await
+            .map_err(|e| HttpError::CoreError(e.into()))?;
 
         // Get paginated results
         let problems: Vec<rmjac_core::db::entity::node::problem::Model> = db_query
@@ -207,13 +207,10 @@ pub mod handler {
         for p in problems {
             let model = ProblemRepository::model(store, p.node_id).await?;
             let db_ref = store.get_db().clone();
-            let idens = rmjac_core::service::iden::get_node_id_iden(
-                &db_ref,
-                store.get_redis(),
-                p.node_id,
-            )
-            .await
-            .unwrap_or_default();
+            let idens =
+                rmjac_core::service::iden::get_node_id_iden(&db_ref, store.get_redis(), p.node_id)
+                    .await
+                    .unwrap_or_default();
             let iden = idens
                 .first()
                 .cloned()

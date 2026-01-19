@@ -3,21 +3,21 @@
 //! 提供声明式的宏来简化Actix-web handler的编写，自动处理路由、参数解析、
 //! before函数链和权限检查。
 
+use darling::FromMeta;
 use darling::util::parse_attribute_to_meta_list;
 use proc_macro::TokenStream;
-use darling::FromMeta;
-use quote::{quote, TokenStreamExt};
+use quote::{TokenStreamExt, quote};
 use syn::punctuated::Punctuated;
-use syn::{parse_macro_input, parse_quote, Attribute, Expr, Item, ItemMod, Lit, Meta, Path, Token};
 use syn::spanned::Spanned;
+use syn::{Attribute, Expr, Item, ItemMod, Lit, Meta, Path, Token, parse_macro_input, parse_quote};
 
 mod codegen;
 mod dependency;
+#[cfg(feature = "export_ts_type")]
+mod export;
 mod parser;
 mod types;
 mod utils;
-#[cfg(feature = "export_ts_type")]
-mod export;
 
 #[cfg(feature = "export_ts_type")]
 #[proc_macro]
@@ -25,7 +25,7 @@ pub fn start_export_ts_type(_item: TokenStream) -> TokenStream {
     export::generate_all().into()
 }
 
-use crate::parser::{parse_func, FuncType};
+use crate::parser::{FuncType, parse_func};
 use crate::types::HandlerStruct;
 use codegen::generate_handler_impl;
 
@@ -88,8 +88,6 @@ fn generate_handler_final(attr: TokenStream, item: TokenStream) -> TokenStream {
         route_path = module.ident.to_string().clone();
     }
 
-
-
     if let Some((_, items)) = &module.content {
         let mut handler_struct = None;
         let mut other_items = Vec::new();
@@ -141,7 +139,7 @@ fn generate_handler_final(attr: TokenStream, item: TokenStream) -> TokenStream {
             Err(e) => {
                 return syn::Error::new(proc_macro2::Span::call_site(), e)
                     .to_compile_error()
-                    .into()
+                    .into();
             }
         };
 

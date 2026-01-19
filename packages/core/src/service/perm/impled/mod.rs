@@ -1,13 +1,21 @@
-use std::marker::PhantomData;
-use std::future::Future;
-use tap::Conv;
 use crate::service::perm::graph::Graph;
-use crate::service::perm::typed::{GraphAction, HasPath, PathAction, PermActionService, PermExport, PermSave, PermService, PermTrait, PermVerify, PermVerifySerivce, SaveService};
+use crate::service::perm::typed::{
+    GraphAction, HasPath, PathAction, PermActionService, PermExport, PermSave, PermService,
+    PermTrait, PermVerify, PermVerifySerivce, SaveService,
+};
+use std::future::Future;
+use std::marker::PhantomData;
+use tap::Conv;
 
 impl<T: GraphAction + HasPath> PermTrait for T {
     fn check<E: PermVerify>(&self, u: i64, v: i64, perm: &E) -> bool {
         // meet in middle.
-        log::debug!("Checking permission from {} to {} with perm {:?}", u, v, perm.get_value());
+        log::debug!(
+            "Checking permission from {} to {} with perm {:?}",
+            u,
+            v,
+            perm.get_value()
+        );
         if u == v {
             return true;
         }
@@ -19,7 +27,10 @@ impl<T: GraphAction + HasPath> PermTrait for T {
         u_next.retain(|item| perm.verify(item.perm));
         let mut v_prev = self.get_total_u(v);
         v_prev.retain(|item| perm.verify(item.perm));
-        let mut choice = u_next.iter().map(|item| (item.count, 0, item.point)).collect::<Vec<(i64, i32, i64)>>();
+        let mut choice = u_next
+            .iter()
+            .map(|item| (item.count, 0, item.point))
+            .collect::<Vec<(i64, i32, i64)>>();
         choice.extend(v_prev.iter().map(|item| (item.count, 1, item.point)));
         choice.sort_by(|a, b| a.0.cmp(&b.0));
         for (_, dir, point) in choice {
@@ -49,9 +60,11 @@ impl<P: PermVerify, T: PermTrait> PermVerifySerivce<P> for T {
     fn verify<L: Into<P> + Clone>(&self, u: i64, v: i64, perm: L) -> bool {
         self.check(u, v, &(perm.clone().conv::<P>()))
     }
-} 
+}
 
-impl<P: PermVerify, T: PermTrait + GraphAction + HasPath, S: SaveService> PermActionService<P> for (&mut T, S) {
+impl<P: PermVerify, T: PermTrait + GraphAction + HasPath, S: SaveService> PermActionService<P>
+    for (&mut T, S)
+{
     fn add_path(&mut self, u: i64, v: i64, perm: &P) -> impl Future<Output = ()> {
         async move {
             let x = (*self.0).get_path(u, v);

@@ -6,20 +6,18 @@ use macro_db_init::{table_create, table_create_with};
 use sea_orm::{self, ConnectOptions, Database};
 use sea_orm_migration::prelude::*;
 
-use crate::graph::node::iden::{IdenNodePrivateRaw, IdenNodePublicRaw, IdenNodeRaw};
+use crate::graph::edge::EdgeRaw;
 use crate::graph::edge::perm_manage::PermManageEdgeRaw;
 use crate::graph::edge::perm_system::PermSystemEdgeRaw;
-use crate::graph::edge::EdgeRaw;
+use crate::graph::node::iden::{IdenNodePrivateRaw, IdenNodePublicRaw, IdenNodeRaw};
 use crate::{
     db::iden,
     error::CoreError,
-    graph::{
-        node::{
-            NodeRaw,
-            pages::{PagesNodePrivateRaw, PagesNodePublicRaw, PagesNodeRaw},
-            perm_group::{PermGroupNodePrivateRaw, PermGroupNodePublicRaw, PermGroupNodeRaw},
-            user::{UserNodePrivateRaw, UserNodePublicRaw, UserNodeRaw},
-        },
+    graph::node::{
+        NodeRaw,
+        pages::{PagesNodePrivateRaw, PagesNodePublicRaw, PagesNodeRaw},
+        perm_group::{PermGroupNodePrivateRaw, PermGroupNodePublicRaw, PermGroupNodeRaw},
+        user::{UserNodePrivateRaw, UserNodePublicRaw, UserNodeRaw},
     },
 };
 
@@ -766,7 +764,6 @@ pub async fn init(
         }
         .save(&db)
         .await?;
-        
     } else {
         log::warn!("Skipping default perm group creation, This may lead to unexpected behavior.");
     }
@@ -780,7 +777,7 @@ pub async fn init(
         PermSystemEdgeRaw {
             u: guest_user_id,
             v: system_id,
-            perms: (System::ViewSite + System::Register).into(),
+            perms: System::ViewSite + System::Register,
         }
         .save(&db)
         .await?;

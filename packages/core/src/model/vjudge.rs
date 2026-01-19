@@ -45,6 +45,15 @@ pub enum Platform {
     Atcoder,
 }
 
+
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
+pub struct AssignTaskReq {
+    pub vjudge_node_id: i64,
+    pub range: String,
+    pub ws_id: Option<String>,
+}
+
 pub enum AddErrorResult {
     CoreError(CoreError),
     Warning(String, VjudgeNode),
@@ -71,6 +80,19 @@ pub struct SubmissionItem {
     pub url: String,
     pub passed: Vec<(String, String, i64, i64, i64)>, // (testcase_id, status, score, time, memory)
 }
+
+
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
+pub struct BindAccountReq {
+    pub platform: String,
+    pub method: String,
+    pub auth: Option<VjudgeAuth>,
+    pub bypass_check: Option<bool>,
+    pub ws_id: Option<String>,
+    pub iden: String,
+}
+
 
 #[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
 #[ts(export)]

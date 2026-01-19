@@ -17,7 +17,6 @@ pub struct PermViewEdgeRaw {
     pub perms: i64,
 }
 
-
 impl EdgeRaw<PermViewEdge, Model, ActiveModel> for PermViewEdgeRaw {
     fn get_edge_type(&self) -> &str {
         "perm_view"
@@ -36,7 +35,6 @@ impl EdgeRaw<PermViewEdge, Model, ActiveModel> for PermViewEdgeRaw {
     fn get_v_node_id(&self) -> i64 {
         self.v
     }
-
 }
 
 impl From<PermViewEdgeRaw> for ActiveModel {
@@ -111,4 +109,5 @@ impl Edge<ActiveModel, Model, Entity> for PermViewEdge {
     }
 }
 
-pub type PermViewEdgeQuery = crate::graph::edge::EdgeQueryTool<ActiveModel, Model, Entity, PermViewEdge>;
+pub type PermViewEdgeQuery =
+    crate::graph::edge::EdgeQueryTool<ActiveModel, Model, Entity, PermViewEdge>;

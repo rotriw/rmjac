@@ -43,7 +43,8 @@ impl<'a> ModelStore for (&'a DatabaseConnection, &'a mut redis::Connection) {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct RecordNewProp {
     pub platform: String,
     pub code: String,
@@ -53,7 +54,8 @@ pub struct RecordNewProp {
     pub public_status: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct SubtaskUserRecord {
     pub time: i64,
     pub memory: i64,

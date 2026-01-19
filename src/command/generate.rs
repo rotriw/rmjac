@@ -8,9 +8,7 @@ use crate::{
     handler, utils,
 };
 
-pub fn run(
-    path: Option<String>,
-) -> Option<()> {
+pub fn run(path: Option<String>) -> Option<()> {
     #[cfg(not(feature = "export_ts_type"))]
     {
         println!("export_ts_mode is not enabled, please enable export_ts_mode feature");
@@ -22,5 +20,4 @@ pub fn run(
         // generate_all!();
         return Some(());
     }
-
 }

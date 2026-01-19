@@ -112,10 +112,24 @@ impl UserRaw {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct User {
     pub node_id: i64,
     pub user_node: Option<UserNode>,
 }
+
+#[derive(Serialize, Clone, ts_rs::TS)]
+#[ts(export)]
+pub struct SidebarItem {
+    pub title: String,
+    pub url: String,
+    pub show: Option<String>,
+    pub reg: Option<String>,
+    pub icon: String,
+    pub number: Option<i64>,
+}
+
 
 pub struct Token {
     pub node_id: i64,
@@ -487,7 +501,6 @@ pub struct SimplyUser {
     pub iden: String,
 }
 
-
 #[derive(Deserialize, Clone, Serialize, ts_rs::TS)]
 #[ts(export)]
 pub struct UserCreaterUserVerify {
@@ -496,7 +509,6 @@ pub struct UserCreaterUserVerify {
     pub challenge_code: String,
     pub challenge_time: i64,
 }
-
 
 impl SimplyUser {
     pub fn new(node_id: i64, avatar: String, name: String, iden: String) -> Self {

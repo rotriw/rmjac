@@ -34,23 +34,37 @@ impl PermGraph {
     pub fn add(&mut self, u: i64, v: i64, perm: i64) {
         let current = self.has_path.get(&(u, v)).cloned().unwrap_or(0);
         let new_perm = current | perm;
-        
+
         if current == 0 {
-             self.count += 1;
-             self.node.entry(u).or_insert(Node { next: vec![], prev: vec![] }).next.push((v, new_perm));
-             self.node.entry(v).or_insert(Node { next: vec![], prev: vec![] }).prev.push((u, new_perm));
+            self.count += 1;
+            self.node
+                .entry(u)
+                .or_insert(Node {
+                    next: vec![],
+                    prev: vec![],
+                })
+                .next
+                .push((v, new_perm));
+            self.node
+                .entry(v)
+                .or_insert(Node {
+                    next: vec![],
+                    prev: vec![],
+                })
+                .prev
+                .push((u, new_perm));
         } else {
-             // Update existing
-             if let Some(node) = self.node.get_mut(&u) {
-                 if let Some(e) = node.next.iter_mut().find(|(n, _)| *n == v) {
-                     e.1 = new_perm;
-                 }
-             }
-             if let Some(node) = self.node.get_mut(&v) {
-                 if let Some(e) = node.prev.iter_mut().find(|(n, _)| *n == u) {
-                     e.1 = new_perm;
-                 }
-             }
+            // Update existing
+            if let Some(node) = self.node.get_mut(&u) {
+                if let Some(e) = node.next.iter_mut().find(|(n, _)| *n == v) {
+                    e.1 = new_perm;
+                }
+            }
+            if let Some(node) = self.node.get_mut(&v) {
+                if let Some(e) = node.prev.iter_mut().find(|(n, _)| *n == u) {
+                    e.1 = new_perm;
+                }
+            }
         }
         self.has_path.insert((u, v), new_perm);
     }
@@ -94,7 +108,13 @@ impl PermGraph {
         self.verify_recursive(u, v, perm, &mut visited)
     }
 
-    fn verify_recursive(&self, u: i64, v: i64, perm: i64, visited: &mut HashSet<(i64, i64)>) -> bool {
+    fn verify_recursive(
+        &self,
+        u: i64,
+        v: i64,
+        perm: i64,
+        visited: &mut HashSet<(i64, i64)>,
+    ) -> bool {
         if u == v {
             return true;
         }
@@ -119,17 +139,21 @@ impl PermGraph {
         };
 
         // Heuristic expansion
-        let u_next: Vec<(i64, i64)> = u_node.next.iter()
+        let u_next: Vec<(i64, i64)> = u_node
+            .next
+            .iter()
             .filter(|(_, p)| (p & perm) != 0)
             .map(|(id, _)| {
                 let count = self.node.get(id).map(|n| n.prev.len()).unwrap_or(0) as i64;
                 (count, *id)
             })
             .collect();
-            
-        let v_prev: Vec<(i64, i64)> = v_node.prev.iter()
+
+        let v_prev: Vec<(i64, i64)> = v_node
+            .prev
+            .iter()
             .filter(|(_, p)| (p & perm) != 0)
-             .map(|(id, _)| {
+            .map(|(id, _)| {
                 let count = self.node.get(id).map(|n| n.next.len()).unwrap_or(0) as i64;
                 (count, *id)
             })
@@ -137,14 +161,14 @@ impl PermGraph {
 
         let mut choice = Vec::new();
         for (c, id) in u_next {
-             choice.push((c, 0, id)); 
+            choice.push((c, 0, id));
         }
         for (c, id) in v_prev {
-            choice.push((c, 1, id)); 
+            choice.push((c, 1, id));
         }
-        
+
         choice.sort_by_key(|k| k.0);
-        
+
         for (_, dir, point) in choice {
             if dir == 0 {
                 if self.verify_recursive(point, v, perm, visited) {
@@ -156,54 +180,54 @@ impl PermGraph {
                 }
             }
         }
-        
+
         false
     }
 
     pub fn get_allow_u(&self, v: i64, perm: i64) -> Vec<i64> {
-         let mut visited = HashSet::new();
-         let mut result = Vec::new();
-         let mut queue = VecDeque::new();
-         queue.push_back(v);
-         visited.insert(v);
-         
-         while let Some(curr) = queue.pop_front() {
-             if let Some(node) = self.node.get(&curr) {
-                 for &(prev_node, p) in &node.prev {
-                     if (p & perm) != 0 {
-                         if !visited.contains(&prev_node) {
-                             visited.insert(prev_node);
-                             queue.push_back(prev_node);
-                             result.push(prev_node);
-                         }
-                     }
-                 }
-             }
-         }
-         result
+        let mut visited = HashSet::new();
+        let mut result = Vec::new();
+        let mut queue = VecDeque::new();
+        queue.push_back(v);
+        visited.insert(v);
+
+        while let Some(curr) = queue.pop_front() {
+            if let Some(node) = self.node.get(&curr) {
+                for &(prev_node, p) in &node.prev {
+                    if (p & perm) != 0 {
+                        if !visited.contains(&prev_node) {
+                            visited.insert(prev_node);
+                            queue.push_back(prev_node);
+                            result.push(prev_node);
+                        }
+                    }
+                }
+            }
+        }
+        result
     }
 
     pub fn get_allow_v(&self, u: i64, perm: i64) -> Vec<i64> {
         let mut visited = HashSet::new();
-         let mut result = Vec::new();
-         let mut queue = VecDeque::new();
-         queue.push_back(u);
-         visited.insert(u);
-         
-         while let Some(curr) = queue.pop_front() {
-             if let Some(node) = self.node.get(&curr) {
-                 for &(next_node, p) in &node.next {
-                     if (p & perm) != 0 {
-                         if !visited.contains(&next_node) {
-                             visited.insert(next_node);
-                             queue.push_back(next_node);
-                             result.push(next_node);
-                         }
-                     }
-                 }
-             }
-         }
-         result
+        let mut result = Vec::new();
+        let mut queue = VecDeque::new();
+        queue.push_back(u);
+        visited.insert(u);
+
+        while let Some(curr) = queue.pop_front() {
+            if let Some(node) = self.node.get(&curr) {
+                for &(next_node, p) in &node.next {
+                    if (p & perm) != 0 {
+                        if !visited.contains(&next_node) {
+                            visited.insert(next_node);
+                            queue.push_back(next_node);
+                            result.push(next_node);
+                        }
+                    }
+                }
+            }
+        }
+        result
     }
     pub fn get_path(&self, u: i64, v: i64) -> Option<i64> {
         self.has_path.get(&(u, v)).cloned()
@@ -219,70 +243,70 @@ mod tests {
         let mut g = PermGraph::new();
         g.add(1, 2, 1); // 1->2 (View)
         g.add(2, 3, 1); // 2->3 (View)
-        
+
         assert!(g.verify(1, 2, 1));
         assert!(g.verify(2, 3, 1));
         assert!(g.verify(1, 3, 1)); // Transitive
-        
+
         assert!(!g.verify(1, 2, 2)); // Wrong perm
     }
 
     #[test]
     fn test_meet_in_middle() {
-         let mut g = PermGraph::new();
-         // 1 -> 2 -> 3 -> 4
-         g.add(1, 2, 1);
-         g.add(2, 3, 1);
-         g.add(3, 4, 1);
-         
-         assert!(g.verify(1, 4, 1));
+        let mut g = PermGraph::new();
+        // 1 -> 2 -> 3 -> 4
+        g.add(1, 2, 1);
+        g.add(2, 3, 1);
+        g.add(3, 4, 1);
+
+        assert!(g.verify(1, 4, 1));
     }
-    
+
     #[test]
     fn test_cycle() {
         let mut g = PermGraph::new();
         g.add(1, 2, 1);
         g.add(2, 1, 1);
-        
+
         assert!(g.verify(1, 2, 1));
         assert!(g.verify(1, 1, 1));
         assert!(g.verify(2, 1, 1));
     }
-    
+
     #[test]
     fn test_permissions_bitmask() {
         let mut g = PermGraph::new();
         g.add(1, 2, 3); // 1->2 (1|2)
-        
+
         assert!(g.verify(1, 2, 1));
         assert!(g.verify(1, 2, 2));
         assert!(g.verify(1, 2, 3));
     }
-    
+
     #[test]
     fn test_get_allow() {
         let mut g = PermGraph::new();
         g.add(1, 2, 1);
         g.add(2, 3, 1);
-        
+
         let allowed_v = g.get_allow_v(1, 1);
         assert!(allowed_v.contains(&2));
         assert!(allowed_v.contains(&3));
-        
+
         let allowed_u = g.get_allow_u(3, 1);
         assert!(allowed_u.contains(&2));
         assert!(allowed_u.contains(&1));
     }
-    
+
     #[test]
     fn test_remove_perm() {
         let mut g = PermGraph::new();
         g.add(1, 2, 3); // 1|2
-        
+
         g.remove_perm(1, 2, 1);
         assert!(!g.verify(1, 2, 1));
         assert!(g.verify(1, 2, 2));
-        
+
         g.remove_perm(1, 2, 2);
         assert!(!g.verify(1, 2, 2));
         assert!(g.get_path(1, 2).is_none());

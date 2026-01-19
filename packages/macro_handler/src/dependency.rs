@@ -32,7 +32,7 @@ pub fn build_dependency_graph(
             if from_path_params.contains(&param_name) {
                 continue;
             }
-            
+
             // 如果参数名与路径变量匹配，也跳过（可以直接从路径获取）
             if path_vars.contains(&param_name) {
                 continue;

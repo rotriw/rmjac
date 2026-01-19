@@ -1,12 +1,12 @@
+use crate::handler::HttpError;
 use crate::handler::ResultHandler;
-use serde::{Deserialize, Serialize};
-use rmjac_core::model::user::{User, SimplyUser};
-use macro_handler::{generate_handler, handler, perm, route, export, from_path};
-use rmjac_core::model::ModelStore;
 use crate::utils::perm::UserAuthCotext;
+use macro_handler::{export, from_path, generate_handler, handler, perm, route};
 use rmjac_core::db::entity::node::user::{get_user_by_email, get_user_by_iden};
 use rmjac_core::error::CoreError;
-use crate::handler::HttpError;
+use rmjac_core::model::ModelStore;
+use rmjac_core::model::user::{SimplyUser, User};
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 pub struct UserIden {
@@ -18,18 +18,10 @@ pub struct SidebarQuery {
     pub path: String,
 }
 
-#[derive(Serialize, Clone)]
-pub struct SidebarItem {
-    pub title: String,
-    pub url: String,
-    pub show: Option<String>,
-    pub reg: Option<String>,
-    pub icon: String,
-    pub number: Option<i64>,
-}
-
 #[generate_handler(route = "info", real_path = "/api/user/info")]
 pub mod handler {
+    use rmjac_core::model::user::SidebarItem;
+
     use super::*;
 
     async fn resolve_user_id(store: &impl ModelStore, iden: &str) -> Result<i64, HttpError> {
@@ -63,7 +55,10 @@ pub mod handler {
     #[handler]
     #[route("/profile/{iden}")]
     #[export("user")]
-    async fn get_profile(store: &mut impl ModelStore, user_id: i64) -> ResultHandler<(SimplyUser,)> {
+    async fn get_profile(
+        store: &mut impl ModelStore,
+        user_id: i64,
+    ) -> ResultHandler<(SimplyUser,)> {
         let user = SimplyUser::load(store.get_db(), user_id).await?;
         Ok((user,))
     }
@@ -71,8 +66,13 @@ pub mod handler {
     #[handler]
     #[route("/info")]
     #[export("is_login", "user")]
-    async fn get_user_info(store: &mut impl ModelStore, user_context: Option<UserAuthCotext>) -> ResultHandler<(bool, Option<SimplyUser>)> {
-        if let Some(uc) = user_context && uc.is_real {
+    async fn get_user_info(
+        store: &mut impl ModelStore,
+        user_context: Option<UserAuthCotext>,
+    ) -> ResultHandler<(bool, Option<SimplyUser>)> {
+        if let Some(uc) = user_context
+            && uc.is_real
+        {
             let user = SimplyUser::load(store.get_db(), uc.user_id).await?;
             Ok((true, Some(user)))
         } else {
@@ -83,7 +83,11 @@ pub mod handler {
     #[handler]
     #[route("/sidebar")]
     #[export("is_login", "user", "sidebar")]
-    async fn get_sidebar(store: &mut impl ModelStore, user_context: Option<UserAuthCotext>, _query: SidebarQuery) -> ResultHandler<(bool, Option<SimplyUser>, Vec<SidebarItem>)> {
+    async fn get_sidebar(
+        store: &mut impl ModelStore,
+        user_context: Option<UserAuthCotext>,
+        _path: Option<String>,
+    ) -> ResultHandler<(bool, Option<SimplyUser>, Vec<SidebarItem>)> {
         let basic_sidebar = vec![
             SidebarItem {
                 title: "主页".to_string(),
@@ -126,16 +130,18 @@ pub mod handler {
                 number: None,
             },
         ];
-        
-        if let Some(uc) = &user_context && uc.is_real {
+
+        if let Some(uc) = &user_context
+            && uc.is_real
+        {
             let mut log_out = basic_sidebar.clone();
             log_out.push(SidebarItem {
-                    title: "我的记录".to_string(),
-                    url: "/record".to_string(),
-                    show: None,
-                    reg: None,
-                    icon: "DiscIcon".to_string(),
-                    number: None,
+                title: "我的记录".to_string(),
+                url: "/record".to_string(),
+                show: None,
+                reg: None,
+                icon: "DiscIcon".to_string(),
+                number: None,
             });
             log_out.push(SidebarItem {
                 title: "Vjudge 服务".to_string(),
@@ -153,7 +159,7 @@ pub mod handler {
                 icon: "LogOut".to_string(),
                 number: None,
             });
-             let user = SimplyUser::load(store.get_db(), uc.user_id).await?;
+            let user = SimplyUser::load(store.get_db(), uc.user_id).await?;
             Ok((true, Some(user), log_out))
         } else {
             let mut no_login_sidebar = basic_sidebar;

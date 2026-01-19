@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use syn::{Ident, Lit, Type};
 
 /// 生成完整的handler实现
-pub fn  generate_handler_impl(
+pub fn generate_handler_impl(
     handler_real_path: &str,
     handler_base_path: &str,
     before_funcs: &[BeforeFunction],
@@ -30,7 +30,6 @@ pub fn  generate_handler_impl(
 
     // 生成export_http_service函数
     let export_service = generate_export_service(handler_base_path, &service_registrations);
-
 
     #[cfg(feature = "export_ts_type")]
     let value = crate::export::export_func_generate(handler_real_path, handler_funcs);
@@ -167,7 +166,7 @@ fn analyze_parameters(
 
     // 收集所有before函数的导出，按执行顺序累积
     let mut available_exports: HashMap<String, String> = HashMap::new();
-    
+
     // 首先分析 before 函数的参数需求
     // 按执行顺序遍历，这样前面的 before 函数的导出可以被后面的使用
     for before_name in execution_order {
@@ -175,49 +174,49 @@ fn analyze_parameters(
             // 收集此 before 函数的 from_path 参数
             let from_path_params: std::collections::HashSet<String> =
                 before.from_path.iter().map(|i| i.to_string()).collect();
-            
+
             // 分析此 before 函数需要的参数
             let mut this_before_props = Vec::new();
             for param in &before.params {
                 if param.is_self {
                     continue;
                 }
-                
+
                 let param_name = param.name.to_string();
-                
+
                 // 跳过特殊参数
                 if is_special_path(&param_name) {
                     continue;
                 }
-                
+
                 // 如果参数在 from_path 中，来自路径变量
                 if from_path_params.contains(&param_name) {
                     continue;
                 }
-                
+
                 // 如果参数在路径变量中
                 if path_vars.contains(&param_name) {
                     continue;
                 }
-                
+
                 // 如果参数来自之前的 before 函数的导出
                 if available_exports.contains_key(&param_name) {
                     continue;
                 }
-                
+
                 // 否则需要从 props 获取
                 this_before_props.push((param.name.clone(), param.ty.clone()));
-                
+
                 // 同时加入到总的 props_fields 中（避免重复）
                 if !props_fields.iter().any(|(n, _)| n == &param.name) {
                     props_fields.push((param.name.clone(), param.ty.clone()));
                 }
             }
-            
+
             if !this_before_props.is_empty() {
                 before_props_params.insert(before_name.clone(), this_before_props);
             }
-            
+
             // 此 before 函数执行后，将其导出加入可用变量
             for export in &before.exports {
                 available_exports.insert(export.to_string(), before_name.clone());
@@ -473,7 +472,6 @@ fn generate_route_function(
                         });
                     }
                 }
-
             }
         }
     }
@@ -493,12 +491,10 @@ fn generate_route_function(
                             });
                         }
                     }
-
                 }
             }
         }
     }
-
 
     Ok(quote! {
         #[allow(dead_code, unused)]
@@ -592,7 +588,7 @@ fn generate_before_calls(
             .ok_or_else(|| format!("Before function '{}' not found", before_name))?;
 
         let before_ident = &before.name;
-        
+
         // 获取此 before 函数需要从 props 获取的参数
         let props_params = analysis.before_props_params.get(before_name);
         let args = generate_before_args(before, &available_vars, props_params)?;
@@ -628,7 +624,7 @@ fn generate_before_args(
     props_params: Option<&Vec<(Ident, Type)>>,
 ) -> Result<Vec<TokenStream>, String> {
     let mut args = Vec::new();
-    
+
     // 收集需要从 props 获取的参数名
     let props_param_names: std::collections::HashSet<String> = props_params
         .map(|ps| ps.iter().map(|(n, _)| n.to_string()).collect())
@@ -693,21 +689,19 @@ fn generate_function_args(params: &[Parameter], analysis: &ParameterAnalysis) ->
         let param_name = &param.name;
         let param_str = param_name.to_string();
         if is_special_path(&param_str) {
-
-            let uc_is_option  = if let syn::Type::Path(ld) = &param.ty
-                && ld.path.segments.first().unwrap().ident == "Option" {
-                    true
-                }
-            else {
+            let uc_is_option = if let syn::Type::Path(ld) = &param.ty
+                && ld.path.segments.first().unwrap().ident == "Option"
+            {
+                true
+            } else {
                 false
             };
-             let special_arg = handle_special_path(&param_str, !uc_is_option);
+            let special_arg = handle_special_path(&param_str, !uc_is_option);
             args.push(special_arg);
             continue;
         }
         // 检查参数类型是否为引用类型
         let is_ref_type = matches!(&param.ty, syn::Type::Reference(_));
-
 
         // 检查参数来源
         if analysis.path_params.iter().any(|(n, _)| n == param_name) {
@@ -746,8 +740,6 @@ fn generate_service_registration(handler: &HandlerFunction, path_template: &str)
         .route(#path_template, actix_web::web::#method_macro().to(#route_func_name))
     }
 }
-
-
 
 /// 生成export_http_service函数
 fn generate_export_service(base_path: &str, service_registrations: &[TokenStream]) -> TokenStream {

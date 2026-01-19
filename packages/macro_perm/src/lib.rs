@@ -6,7 +6,7 @@ use syn::{parse_macro_input, DeriveInput};
 pub fn derive_perm(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = input.ident;
-    
+
     // Parse attributes
     let mut edge_module = None;
     let mut edge_str = None;
@@ -15,28 +15,32 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
         if attr.path().is_ident("perm") {
             // Syn 2.0 parsing
             let _ = attr.parse_nested_meta(|meta| {
-                 if meta.path.is_ident("edge_module") {
-                     let value = meta.value()?;
-                     let s: syn::LitStr = value.parse()?;
-                     edge_module = Some(s.value());
-                     Ok(())
-                 } else if meta.path.is_ident("edge_str") {
-                     let value = meta.value()?;
-                     let s: syn::LitStr = value.parse()?;
-                     edge_str = Some(s.value());
-                     Ok(())
-                 } else {
-                     Err(meta.error("unsupported property"))
-                 }
+                if meta.path.is_ident("edge_module") {
+                    let value = meta.value()?;
+                    let s: syn::LitStr = value.parse()?;
+                    edge_module = Some(s.value());
+                    Ok(())
+                } else if meta.path.is_ident("edge_str") {
+                    let value = meta.value()?;
+                    let s: syn::LitStr = value.parse()?;
+                    edge_str = Some(s.value());
+                    Ok(())
+                } else {
+                    Err(meta.error("unsupported property"))
+                }
             });
         }
     }
-    
+
     let db_impl = if let (Some(mod_name), Some(s_name)) = (edge_module, edge_str) {
         let mod_ident = syn::Ident::new(&mod_name, proc_macro2::Span::call_site());
-        let db_struct_name = syn::Ident::new(&format!("{}DB", name), proc_macro2::Span::call_site());
-        let service_struct_name = syn::Ident::new(&format!("{}PermService", name), proc_macro2::Span::call_site());
-        
+        let db_struct_name =
+            syn::Ident::new(&format!("{}DB", name), proc_macro2::Span::call_site());
+        let service_struct_name = syn::Ident::new(
+            &format!("{}PermService", name),
+            proc_macro2::Span::call_site(),
+        );
+
         quote! {
             pub struct #db_struct_name {
                 db: sea_orm::DatabaseConnection,
@@ -52,7 +56,7 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
                 async fn save_path(&mut self, u: i64, v: i64, perm: i64) {
                     use crate::db::entity::edge::#mod_ident::{Entity, ActiveModel, Column};
                     use sea_orm::{EntityTrait, QueryFilter, ActiveModelTrait, Set, ColumnTrait, ActiveValue};
-                    
+
                     let existing = Entity::find()
                         .filter(Column::UNodeId.eq(u))
                         .filter(Column::VNodeId.eq(v))
@@ -108,7 +112,7 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
                     }
                 }
             }
-            
+
             pub struct #service_struct_name;
 
             impl #service_struct_name {
@@ -123,7 +127,7 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
                 pub async fn add(u: i64, v: i64, perm: impl Into<i64>, db: &sea_orm::DatabaseConnection) {
                     #name::add(u, v, perm, #db_struct_name::new(db.clone())).await;
                 }
-                
+
                 pub async fn del(u: i64, v: i64, perm: impl Into<i64>, db: &sea_orm::DatabaseConnection) {
                     #name::del(u, v, perm, #db_struct_name::new(db.clone())).await;
                 }
@@ -135,7 +139,7 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
                 pub fn get_allow_u(v: i64, perm: impl Into<i64>) -> Vec<i64> {
                     #name::get_allow_u(v, perm)
                 }
-                
+
                 pub fn get_allow_v(u: i64, perm: impl Into<i64>) -> Vec<i64> {
                     #name::get_allow_v(u, perm)
                 }
@@ -144,7 +148,7 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
     } else {
         quote! {}
     };
-    
+
     let expanded = quote! {
         impl perm_tool::PermCombo<#name> for #name {}
 
@@ -153,7 +157,7 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
                 val as i64
             }
         }
-        
+
         impl std::ops::Add for #name {
             type Output = i64;
             fn add(self, other: Self) -> i64 {
@@ -167,7 +171,7 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
                 (self as i64) | other
             }
         }
-        
+
         impl std::ops::Add<#name> for i64 {
              type Output = i64;
              fn add(self, other: #name) -> i64 {
@@ -188,22 +192,22 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
                 (self as i64) | other
             }
         }
-        
+
         impl std::ops::BitOr<#name> for i64 {
              type Output = i64;
              fn bitor(self, other: #name) -> i64 {
                  self | (other as i64)
              }
         }
-        
+
         impl #name {
             pub const All: i64 = -1;
-            
+
             fn get_graph() -> &'static std::sync::RwLock<perm_tool::PermGraph> {
                 static GRAPH: std::sync::OnceLock<std::sync::RwLock<perm_tool::PermGraph>> = std::sync::OnceLock::new();
                 GRAPH.get_or_init(|| std::sync::RwLock::new(perm_tool::PermGraph::new()))
             }
-            
+
             pub async fn add(u: i64, v: i64, perm: impl Into<i64>, mut s: impl perm_tool::SaveService) {
                 let p = perm.into();
                 let new_perm = {
@@ -211,9 +215,9 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
                     g.add(u, v, p);
                     g.get_path(u, v).unwrap_or(p)
                 };
-                s.save_path(u, v, new_perm).await; 
+                s.save_path(u, v, new_perm).await;
             }
-            
+
             pub async fn del(u: i64, v: i64, perm: impl Into<i64>, mut s: impl perm_tool::SaveService) {
                 let p = perm.into();
                 let new_perm = {
@@ -221,13 +225,13 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
                     g.remove_perm(u, v, p);
                     g.get_path(u, v).unwrap_or(0)
                 };
-                
+
                 s.del_path(u, v, 0).await;
                 if new_perm != 0 {
                     s.save_path(u, v, new_perm).await;
                 }
             }
-            
+
             pub async fn init(mut s: impl perm_tool::SaveService) {
                  let data = s.load().await;
                  let mut g = Self::get_graph().write().unwrap();
@@ -235,19 +239,19 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
                      g.add(u, v, perm);
                  }
             }
-            
+
             pub fn get_allow_u(v: i64, perm: impl Into<i64>) -> Vec<i64> {
                  let p = perm.into();
                  let g = Self::get_graph().read().unwrap();
                  g.get_allow_u(v, p)
             }
-            
+
             pub fn get_allow_v(u: i64, perm: impl Into<i64>) -> Vec<i64> {
                  let p = perm.into();
                  let g = Self::get_graph().read().unwrap();
                  g.get_allow_v(u, p)
             }
-            
+
             pub fn verify(u: i64, v: i64, perm: impl Into<i64>) -> bool {
                 let p = perm.into();
                 let g = Self::get_graph().read().unwrap();
@@ -259,7 +263,7 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
                 g.get_path(u, v).unwrap_or(0)
             }
         }
-        
+
         #db_impl
     };
     TokenStream::from(expanded)

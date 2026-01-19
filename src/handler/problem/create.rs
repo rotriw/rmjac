@@ -2,8 +2,8 @@ use crate::handler::ResultHandler;
 use crate::utils::perm::UserAuthCotext;
 use macro_handler::{export, generate_handler, handler, perm, require_login, route};
 use rmjac_core::graph::node::problem::ProblemNode;
-use rmjac_core::model::problem::{CreateProblemProps, ProblemFactory, ProblemStatementProp};
 use rmjac_core::model::ModelStore;
+use rmjac_core::model::problem::{CreateProblemProps, ProblemFactory, ProblemStatementProp};
 use rmjac_core::service::perm::provider::{System, SystemPermService};
 
 #[generate_handler(route = "/create", real_path = "/api/problem/create")]
@@ -12,7 +12,11 @@ pub mod handler {
     #[perm]
     #[require_login]
     async fn check_create_perm(user_context: UserAuthCotext) -> bool {
-        SystemPermService::verify(user_context.user_id, default_node!(default_system_node), System::CreateProblem)
+        SystemPermService::verify(
+            user_context.user_id,
+            default_node!(default_system_node),
+            System::CreateProblem,
+        )
     }
     #[handler]
     #[route("/")]

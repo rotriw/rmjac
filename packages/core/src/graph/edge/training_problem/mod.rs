@@ -1,4 +1,3 @@
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[ts(export)]
 pub enum TrainingProblemType {

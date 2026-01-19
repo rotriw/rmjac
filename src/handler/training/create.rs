@@ -1,10 +1,10 @@
 use crate::handler::ResultHandler;
 use crate::utils::perm::UserAuthCotext;
 use chrono::NaiveDateTime;
-use macro_handler::{export, generate_handler, handler, perm, require_login, route};
-use rmjac_core::model::training::{Training, TrainingList};
+use macro_handler::{export, generate_handler, handler, perm, route};
 use rmjac_core::model::ModelStore;
-use serde::Serialize;
+use rmjac_core::model::training::{Training, TrainingList};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
 pub struct TrainingCreateResult {
@@ -13,12 +13,19 @@ pub struct TrainingCreateResult {
 
 #[generate_handler(route = "/create", real_path = "/api/training/create")]
 pub mod handler {
+    use rmjac_core::model::training::CreateTrainingReq;
+
     use super::*;
 
     #[perm]
-    #[require_login]
-    async fn check_create_perm(_user_context: UserAuthCotext) -> bool {
-        true
+    async fn check_create_perm(user_context: Option<UserAuthCotext>) -> bool {
+        if let Some(uc) = user_context
+            && uc.is_real
+        {
+            true
+        } else {
+            false
+        }
     }
 
     #[handler]
@@ -27,32 +34,23 @@ pub mod handler {
     #[export("data")]
     async fn post_create(
         store: &mut impl ModelStore,
-        user_context: UserAuthCotext,
-        iden: String,
-        title: String,
-        description_public: String,
-        description_private: String,
-        start_time: NaiveDateTime,
-        end_time: NaiveDateTime,
-        training_type: String,
-        problem_list: TrainingList,
-        write_perm_user: Vec<i64>,
-        read_perm_user: Vec<i64>,
+        user_context: Option<UserAuthCotext>,
+        data: CreateTrainingReq,
     ) -> ResultHandler<(serde_json::Value,)> {
-        let user_id = user_context.user_id;
+        let user_id = user_context.unwrap().user_id;
         let training_data = Training::create_as(
             store,
-            &title,
+            &data.title,
             &user_id.to_string(),
-            &iden,
-            &description_public,
-            &description_private,
-            start_time,
-            end_time,
-            &training_type,
-            &problem_list,
-            write_perm_user,
-            read_perm_user,
+            &data.iden,
+            &data.description_public,
+            &data.description_private,
+            data.start_time,
+            data.end_time,
+            &data.training_type,
+            &data.problem_list,
+            data.write_perm_user,
+            data.read_perm_user,
             user_id,
         )
         .await?;

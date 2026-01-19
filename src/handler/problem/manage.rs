@@ -2,14 +2,14 @@ use crate::handler::ResultHandler;
 use crate::utils::perm::UserAuthCotext;
 use macro_handler::{export, from_path, generate_handler, handler, perm, require_login, route};
 use rmjac_core::db::entity::node::problem_statement::ContentType;
-use rmjac_core::graph::edge::problem_statement::ProblemStatementEdgeQuery;
 use rmjac_core::graph::edge::EdgeQuery;
+use rmjac_core::graph::edge::problem_statement::ProblemStatementEdgeQuery;
 use rmjac_core::graph::node::problem::statement::ProblemStatementNode;
+use rmjac_core::model::ModelStore;
 use rmjac_core::model::problem::{
     ProblemFactory, ProblemPermissionService, ProblemRepository, ProblemStatement,
     ProblemStatementProp,
 };
-use rmjac_core::model::ModelStore;
 use rmjac_core::service::perm::provider::{Problem, ProblemPermService, System, SystemPermService};
 
 #[generate_handler(route = "/manage", real_path = "/api/problem/manage")]
@@ -28,7 +28,11 @@ pub mod handler {
         if ProblemPermService::verify(user_id, pid, Problem::Edit) {
             return true;
         }
-        SystemPermService::verify(user_id, default_node!(default_system_node), System::ProblemManage)
+        SystemPermService::verify(
+            user_id,
+            default_node!(default_system_node),
+            System::ProblemManage,
+        )
     }
 
     #[perm]
@@ -38,7 +42,11 @@ pub mod handler {
         if ProblemPermService::verify(user_id, pid, Problem::Delete) {
             return true;
         }
-        SystemPermService::verify(user_id, default_node!(default_system_node), System::ProblemManage)
+        SystemPermService::verify(
+            user_id,
+            default_node!(default_system_node),
+            System::ProblemManage,
+        )
     }
 
     #[handler]

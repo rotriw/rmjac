@@ -1,14 +1,14 @@
 #[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
 #[ts(export)]
 pub struct TrainingNodePublic {
-    pub name: String,              // 题单名称
-    pub iden: String,              // 题单标识
-    pub description: String,       // 题单描述
+    pub name: String,        // 题单名称
+    pub iden: String,        // 题单标识
+    pub description: String, // 题单描述
     #[ts(type = "string")]
     pub start_time: NaiveDateTime, // 题单开始时间
     #[ts(type = "string")]
-    pub end_time: NaiveDateTime,   // 题单结束时间
-    pub training_type: String,     // 题单
+    pub end_time: NaiveDateTime, // 题单结束时间
+    pub training_type: String, // 题单
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]

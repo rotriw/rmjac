@@ -1,21 +1,20 @@
-use crate::handler::{ResultHandler, HttpError, HandlerError};
-use serde::{Deserialize};
-use rmjac_core::model::user::{User, UserUpdateProps, SimplyUser};
-use rmjac_core::graph::node::user::UserNodePublicRaw;
-use macro_handler::{generate_handler, handler, perm, route, export, from_path, require_login};
-use rmjac_core::model::ModelStore;
+use crate::handler::{HandlerError, HttpError, ResultHandler};
 use crate::utils::perm::UserAuthCotext;
+use macro_handler::{export, from_path, generate_handler, handler, perm, require_login, route};
 use rmjac_core::db::entity::node::user::{get_user_by_email, get_user_by_iden};
 use rmjac_core::error::CoreError;
-
+use rmjac_core::graph::node::user::UserNodePublicRaw;
+use rmjac_core::model::ModelStore;
+use rmjac_core::model::user::{SimplyUser, User, UserUpdateProps};
+use serde::Deserialize;
 
 #[generate_handler(route = "/manage", real_path = "/api/user/manage")]
 pub mod handler {
-    use sea_orm::DatabaseConnection;
+    use super::*;
     use rmjac_core::graph::node::Node;
     use rmjac_core::graph::node::user::{UserNode, UserNodePublic};
     use rmjac_core::service::perm::provider::{System, SystemPermService};
-    use super::*;
+    use sea_orm::DatabaseConnection;
     async fn resolve_user_id(store: &impl ModelStore, iden: &str) -> ResultHandler<i64> {
         let db = store.get_db();
         if let Ok(user) = get_user_by_iden(db, iden).await {
@@ -31,7 +30,10 @@ pub mod handler {
     }
 
     #[export(uid)]
-    async fn before_resolve_logout_user(store: &mut impl ModelStore, user_iden: &str) -> ResultHandler<i64> {
+    async fn before_resolve_logout_user(
+        store: &mut impl ModelStore,
+        user_iden: &str,
+    ) -> ResultHandler<i64> {
         resolve_user_id(store, user_iden).await
     }
 
@@ -48,7 +50,6 @@ pub mod handler {
         }
         false
     }
-
 
     #[derive(Deserialize, Clone)]
     pub struct UserUpdateRequest {
@@ -71,21 +72,39 @@ pub mod handler {
 
     #[handler]
     #[export("user")]
-    async fn post_manage_nickname(store: &mut impl ModelStore, user_model: User, new_username: &str) -> ResultHandler<UserNodePublic> {
-        let res = user_model.update_config(store.get_db(), UserUpdateProps {
-            name: Some(new_username.to_string()),
-            ..Default::default()
-        }).await?;
+    async fn post_manage_nickname(
+        store: &mut impl ModelStore,
+        user_model: User,
+        new_username: &str,
+    ) -> ResultHandler<UserNodePublic> {
+        let res = user_model
+            .update_config(
+                store.get_db(),
+                UserUpdateProps {
+                    name: Some(new_username.to_string()),
+                    ..Default::default()
+                },
+            )
+            .await?;
         Ok(res.public)
     }
 
     #[handler]
     #[export("user")]
-    async fn post_manage_description(store: &mut impl ModelStore, user_model: User, new_description: &str) -> ResultHandler<UserNodePublic> {
-        let res = user_model.update_config(store.get_db(), UserUpdateProps {
-            description: Some(new_description.to_string()),
-            ..Default::default()
-        }).await?;
+    async fn post_manage_description(
+        store: &mut impl ModelStore,
+        user_model: User,
+        new_description: &str,
+    ) -> ResultHandler<UserNodePublic> {
+        let res = user_model
+            .update_config(
+                store.get_db(),
+                UserUpdateProps {
+                    description: Some(new_description.to_string()),
+                    ..Default::default()
+                },
+            )
+            .await?;
         Ok(res.public)
     }
 

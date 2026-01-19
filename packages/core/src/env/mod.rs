@@ -12,7 +12,6 @@ lazy_static! {
         redis::Client::open(REDIS_URL.lock().unwrap().clone())
             .expect("Failed to create Redis client")
     );
-
     pub static ref PATH_VIS: Mutex<HashMap<i32, HashMap<i64, bool>>> = Mutex::new(HashMap::new());
     pub static ref SAVED_NODE_PATH: Mutex<HashMap<(i64, String), HashMap<i64, i64>>> =
         Mutex::new(HashMap::new());
@@ -27,22 +26,29 @@ lazy_static! {
         default_iden_node: -1,
         default_system_node: -1,
     });
-
     pub static ref DB_URL: Mutex<String> = Mutex::new("postgres://localhost/rmjac".to_string());
     pub static ref DB_SCHEMA: Mutex<String> = Mutex::new("public".to_string());
-    pub static ref CONNECTION_POOL: Arc<Mutex<Option<DatabaseConnection>>> = Arc::new(Mutex::new(None));
-
+    pub static ref CONNECTION_POOL: Arc<Mutex<Option<DatabaseConnection>>> =
+        Arc::new(Mutex::new(None));
     pub static ref EDGE_AUTH_PUBLICKEY: Mutex<String> = Mutex::new("".to_string());
     pub static ref EDGE_AUTH_MAP: Mutex<HashMap<String, i32>> = Mutex::new(HashMap::new());
     pub static ref EDGE_SOCKETS: Mutex<HashMap<String, SocketRef>> = Mutex::new(HashMap::new());
     pub static ref EDGE_VEC: Mutex<Vec<String>> = Mutex::new(vec![]);
     pub static ref EDGE_NUM: Mutex<i32> = Mutex::new(0);
-
     pub static ref SLICE_WORD_LIST: Mutex<Vec<String>> = Mutex::new(vec![]);
-    pub static ref SLICE_WORD_ACMAC: Mutex<AcMachine> = Mutex::new(AcMachine::build(SLICE_WORD_LIST.lock().unwrap().clone().iter().map(AsRef::as_ref).collect()));
-
-    pub static ref USER_WEBSOCKET_CONNECTIONS: Mutex<HashMap<String, SocketRef>> = Mutex::new(HashMap::new());
-    pub static ref USER_WEBSOCKET_CONNECTIONS_ACCOUNT: Mutex<HashMap<String, i64>> = Mutex::new(HashMap::new());
+    pub static ref SLICE_WORD_ACMAC: Mutex<AcMachine> = Mutex::new(AcMachine::build(
+        SLICE_WORD_LIST
+            .lock()
+            .unwrap()
+            .clone()
+            .iter()
+            .map(AsRef::as_ref)
+            .collect()
+    ));
+    pub static ref USER_WEBSOCKET_CONNECTIONS: Mutex<HashMap<String, SocketRef>> =
+        Mutex::new(HashMap::new());
+    pub static ref USER_WEBSOCKET_CONNECTIONS_ACCOUNT: Mutex<HashMap<String, i64>> =
+        Mutex::new(HashMap::new());
 }
 
 pub mod db;
