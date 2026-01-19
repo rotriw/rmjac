@@ -7,11 +7,13 @@ use sea_orm::{self, ConnectOptions, Database};
 use sea_orm_migration::prelude::*;
 
 use crate::graph::node::iden::{IdenNodePrivateRaw, IdenNodePublicRaw, IdenNodeRaw};
+use crate::graph::edge::perm_manage::PermManageEdgeRaw;
+use crate::graph::edge::perm_system::PermSystemEdgeRaw;
+use crate::graph::edge::EdgeRaw;
 use crate::{
     db::iden,
     error::CoreError,
     graph::{
-        edge::EdgeRaw,
         node::{
             NodeRaw,
             pages::{PagesNodePrivateRaw, PagesNodePublicRaw, PagesNodeRaw},
@@ -774,10 +776,11 @@ pub async fn init(
             && up.contains(&"node_pages"))
     {
         log::info!("guest user -> default system");
+        use crate::service::perm::provider::System;
         PermSystemEdgeRaw {
             u: guest_user_id,
             v: system_id,
-            perms: SystemPermRaw::Perms(vec![SystemPerm::ViewSite, SystemPerm::Register]),
+            perms: (System::ViewSite + System::Register).into(),
         }
         .save(&db)
         .await?;

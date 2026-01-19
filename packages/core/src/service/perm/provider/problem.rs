@@ -1,13 +1,11 @@
 //! Problem permission provider
-//!
-//! 使用 PermProvider derive 宏自动实现权限服务函数
-
-use macro_perm::PermProvider;
+use macro_perm::Perm;
+use perm_tool::SaveService;
 use strum_macros::{EnumCount, EnumIter};
 
 /// 题目权限类型
-#[derive(Clone, Copy, Debug, PartialEq, Eq, EnumCount, EnumIter, PermProvider)]
-#[perm_provider(edge_module = "perm_problem", edge_type = "PermProblemEdge", edge_raw_type = "PermProblemEdgeRaw")]
+#[derive(Perm, Clone, Copy, Debug, PartialEq, Eq, EnumCount, EnumIter)]
+#[perm(edge_module = "perm_problem", edge_str = "perm_problem")]
 #[repr(i64)]
 pub enum Problem {
     All = -1,
@@ -19,8 +17,8 @@ pub enum Problem {
     ViewTestcase = 32,
 }
 
-impl From<Problem> for i64 {
-    fn from(val: Problem) -> Self {
-        val as i64
+impl ProblemPermService {
+     pub async fn grant_creator(db: &sea_orm::DatabaseConnection, u: i64, v: i64) {
+         Self::add(u, v, Problem::All, db).await;
     }
 }

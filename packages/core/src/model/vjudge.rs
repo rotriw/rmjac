@@ -111,7 +111,7 @@ impl VjudgeAccount {
             log::warn!("System node not found when checking manage vjudge perm");
             return false;
         }
-        SystemPermService.verify(user_id, system_node, System::ManageVjudge)
+        SystemPermService::verify(user_id, system_node, System::ManageVjudge)
     }
 
     pub async fn create(

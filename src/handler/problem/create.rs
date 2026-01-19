@@ -12,7 +12,7 @@ pub mod handler {
     #[perm]
     #[require_login]
     async fn check_create_perm(user_context: UserAuthCotext) -> bool {
-        SystemPermService.verify(user_context.user_id, default_node!(default_system_node), System::CreateProblem)
+        SystemPermService::verify(user_context.user_id, default_node!(default_system_node), System::CreateProblem)
     }
     #[handler]
     #[route("/")]

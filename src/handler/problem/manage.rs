@@ -25,20 +25,20 @@ pub mod handler {
     #[require_login]
     async fn perm(user_context: UserAuthCotext, pid: i64) -> bool {
         let user_id = user_context.user_id;
-        if ProblemPermService.verify(user_id, pid, Problem::Edit) {
+        if ProblemPermService::verify(user_id, pid, Problem::Edit) {
             return true;
         }
-        SystemPermService.verify(user_id, default_node!(default_system_node), System::ProblemManage)
+        SystemPermService::verify(user_id, default_node!(default_system_node), System::ProblemManage)
     }
 
     #[perm]
     #[require_login]
     async fn require_sudo(user_context: UserAuthCotext, pid: i64) -> bool {
         let user_id = user_context.user_id;
-        if ProblemPermService.verify(user_id, pid, Problem::Delete) {
+        if ProblemPermService::verify(user_id, pid, Problem::Delete) {
             return true;
         }
-        SystemPermService.verify(user_id, default_node!(default_system_node), System::ProblemManage)
+        SystemPermService::verify(user_id, default_node!(default_system_node), System::ProblemManage)
     }
 
     #[handler]

@@ -110,3 +110,4 @@ impl Edge<ActiveModel, Model, Entity> for PermProblemEdge {
         self.v
     }
 }
+pub type PermProblemEdgeQuery = crate::graph::edge::EdgeQueryTool<ActiveModel, Model, Entity, PermProblemEdge>;

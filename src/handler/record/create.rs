@@ -19,7 +19,7 @@ pub mod handler {
             .lock()
             .unwrap()
             .default_system_node;
-        SystemPermService.verify(user_id, system_id, System::CreateRecord)
+        SystemPermService::verify(user_id, system_id, System::CreateRecord)
     }
 
     #[handler]

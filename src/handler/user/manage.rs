@@ -43,7 +43,7 @@ pub mod handler {
         }
         let node_id = default_node!(default_system_node);
 
-        if SystemPermService.verify(user_context.user_id, node_id, System::ManageAllUser) {
+        if SystemPermService::verify(user_context.user_id, node_id, System::ManageAllUser) {
             return true;
         }
         false

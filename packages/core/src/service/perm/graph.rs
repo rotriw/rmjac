@@ -9,6 +9,16 @@ pub struct Graph {
     pub count: i64,
 }
 
+impl Graph {
+    pub fn new() -> Self {
+        Graph {
+            node: HashMap::new(),
+            has_path: HashMap::new(),
+            count: 0,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Node {
     pub next: Vec<(i64, i64)>,

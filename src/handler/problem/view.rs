@@ -28,12 +28,16 @@ pub mod handler {
     async fn check_view_perm(user_context: Option<UserAuthCotext>, pid: i64) -> bool {
         // 如果用户已登录，检查是否有查看权限
         if let Some(uc) = user_context && uc.is_real {
-            if ProblemPermService.verify(uc.user_id, pid, Problem::View) {
+            if ProblemPermService::verify(uc.user_id, pid, Problem::View) {
                 return true;
             }
         }
-        // 检查题目是否公开可见（使用特殊的公开用户ID 0）
-        ProblemPermService.verify(default_node!(guest_user_node), pid, Problem::View)
+
+        if ProblemPermService::verify(default_node!(guest_user_node), pid, Problem::View) {
+            return true;
+        }
+        
+        false
     }
 
     #[handler]

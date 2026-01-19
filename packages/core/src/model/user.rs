@@ -1,6 +1,6 @@
 use crate::error::CoreError::QueryExists;
 use crate::error::QueryExists::{RegisterEmailExist, RegisterIDENExist};
-use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPermRaw};
+use crate::graph::edge::perm_problem::PermProblemEdgeRaw;
 use crate::utils::get_redis_connection;
 use crate::{
     Result,
@@ -98,13 +98,13 @@ impl UserRaw {
     ) -> Result<()> {
         let default_node_id = env::DEFAULT_NODES.lock().unwrap().default_strategy_node;
         if default_node_id != -1 {
-            PermProblemEdgeRaw {
+            let _ = PermProblemEdgeRaw {
                 u: user.node_id,
                 v: default_node_id,
-                perms: ProblemPermRaw::All,
+                perms: crate::service::perm::provider::Problem::All.into(),
             }
             .save(db)
-            .await?;
+            .await;
         } else {
             log::warn!("Default strategy node not set, user will not have default permissions.");
         }

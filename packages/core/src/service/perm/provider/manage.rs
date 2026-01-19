@@ -1,13 +1,11 @@
 //! Manage permission provider
-//!
-//! 使用 PermProvider derive 宏自动实现权限服务函数
-
-use macro_perm::PermProvider;
+use macro_perm::Perm;
+use perm_tool::SaveService;
 use strum_macros::{EnumCount, EnumIter};
 
 /// 管理权限类型
-#[derive(Clone, Copy, Debug, PartialEq, Eq, EnumCount, EnumIter, PermProvider)]
-#[perm_provider(edge_module = "perm_manage", edge_type = "PermManageEdge", edge_raw_type = "PermManageEdgeRaw")]
+#[derive(Perm, Clone, Copy, Debug, PartialEq, Eq, EnumCount, EnumIter)]
+#[perm(edge_module = "perm_manage", edge_str = "perm_manage")]
 #[repr(i64)]
 pub enum Manage {
     All = -1,
@@ -16,10 +14,4 @@ pub enum Manage {
     Delete = 4,
     Grant = 8,
     Revoke = 16,
-}
-
-impl From<Manage> for i64 {
-    fn from(val: Manage) -> Self {
-        val as i64
-    }
 }

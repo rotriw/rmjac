@@ -17,6 +17,7 @@ macro_db_init = { path = "../macro_db_init" }
 macro_node_iden = { path = "../macro_node_iden" }
 macro_perm = { path = "../macro_perm" }
 macro_socket_auth = { path = "../macro_socket_auth" }
+perm_tool = { path = "../perm_tool" }
 tokio = "1.45.1"
 sha2 = "0.10.9"
 base16ct = { version = "0.2.0", features = ["alloc"] }

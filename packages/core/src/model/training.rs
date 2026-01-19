@@ -2,7 +2,7 @@ use crate::Result;
 use crate::db::entity::node::user::get_user_by_iden;
 use crate::error::CoreError;
 use crate::graph::action::get_node_type;
-use crate::graph::edge::perm_pages::{PagesPerm, PermPagesEdgeRaw};
+use crate::graph::edge::perm_problem::PermProblemEdgeQuery;
 use crate::graph::edge::training_problem::{
     TrainingProblemEdge, TrainingProblemEdgeQuery, TrainingProblemEdgeRaw, TrainingProblemType,
 };
@@ -613,16 +613,13 @@ impl TrainingRepo {
             training_node_id
         );
 
+        use crate::service::perm::provider::Pages;
+        use crate::graph::edge::perm_pages::PermPagesEdgeRaw;
+
         PermPagesEdgeRaw {
             u: user_node_id,
             v: training_node_id,
-            perms: crate::graph::edge::perm_pages::PagesPermRaw::Perms(vec![
-                PagesPerm::ReadPages,
-                PagesPerm::EditPages,
-                PagesPerm::DeletePages,
-                PagesPerm::ManagePagesPermissions,
-                PagesPerm::PublishPages,
-            ]),
+            perms: (Pages::View | Pages::Edit | Pages::Delete | Pages::Create).into(),
         }
         .save(db)
         .await?;
@@ -645,11 +642,14 @@ impl TrainingRepo {
             user_node_id,
             training_node_id
         );
+        
+        use crate::service::perm::provider::Pages;
+        use crate::graph::edge::perm_pages::PermPagesEdgeRaw;
 
         PermPagesEdgeRaw {
             u: user_node_id,
             v: training_node_id,
-            perms: crate::graph::edge::perm_pages::PagesPermRaw::Perms(vec![PagesPerm::ReadPages]),
+            perms: Pages::View.into(),
         }
         .save(db)
         .await?;

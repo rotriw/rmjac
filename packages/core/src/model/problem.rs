@@ -572,32 +572,58 @@ pub enum Role {
 
 impl ProblemPermissionService {
     pub async fn get_perm(p: i64, r: Role) -> Vec<i64> { // return node id list.
-        let perms: PermEnum<Pages> = match r {
+        let perms: i64 = match r {
             Role::Edit => Pages::Edit.into(),
             Role::Viewer => Pages::View.into(),
             Role::Owner => Pages::Edit + Pages::Delete,
         };
-        use crate::service::perm::provider::pages::SERVICE as PagesService;
-        ManagePermService.verify(user_id, problem_id, Pages::Manage);
-        let list = PagesService.lock().unwrap().local.graph.get_total_u(p);
-        list.into_iter()
-            .filter(|v| perms.verify(v.perm))
-            .map(|v| v.point)
-            .collect()
+        
+        PagesPermService::get_allow_u(p, perms)
     }
 
     pub async fn set_perm(p: i64, r: Role, u: i64, store: &impl ModelStore) -> Result<()> {
-        let perms: PermEnum<Pages> = match r {
+        let perms: i64 = match r {
             Role::Edit => Pages::Edit.into(),
             Role::Viewer => Pages::View.into(),
             Role::Owner => Pages::Edit + Pages::Delete,
         };
+        // Replace permissions: delete all then add.
+        PagesPermService::del(u, p, Pages::All, store.get_db()).await;
+        PagesPermService::add(u, p, perms, store.get_db()).await;
+        Ok(())
     }
 
     pub async fn remove_perm(p: i64, u: i64, store: &impl ModelStore) -> Result<()> {
-        use crate::service::perm::provider::pages::SERVICE as PagesService;
-        // get existing perms
-        let now = PagesService.lock().unwrap().local.graph.get
+        PagesPermService::del(u, p, Pages::All, store.get_db()).await;
+        Ok(())
+    }
+    
+    pub async fn grant_creator(store: &impl ModelStore, u: i64, p: i64) -> Result<()> {
+        Self::set_perm(p, Role::Owner, u, store).await
+    }
+
+    pub async fn add_editor(store: &impl ModelStore, u: i64, p: i64) -> Result<()> {
+        Self::set_perm(p, Role::Edit, u, store).await
+    }
+
+    pub async fn remove_editor(store: &impl ModelStore, u: i64, p: i64) -> Result<()> {
+        Self::remove_perm(p, u, store).await
+    }
+
+    pub async fn add_viewer(store: &impl ModelStore, u: i64, p: i64) -> Result<()> {
+        Self::set_perm(p, Role::Viewer, u, store).await
+    }
+
+    pub async fn remove_viewer(store: &impl ModelStore, u: i64, p: i64) -> Result<()> {
+        Self::remove_perm(p, u, store).await
+    }
+
+    pub async fn add_owner(store: &impl ModelStore, u: i64, p: i64) -> Result<()> {
+        Self::set_perm(p, Role::Owner, u, store).await
+    }
+
+    pub async fn remove_owner(store: &impl ModelStore, u: i64, p: i64) -> Result<()> {
+        Self::remove_perm(p, u, store).await
     }
 }
 

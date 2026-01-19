@@ -1,13 +1,11 @@
 //! Pages permission provider
-//!
-//! 使用 PermProvider derive 宏自动实现权限服务函数
-
-use macro_perm::PermProvider;
+use macro_perm::Perm;
+use perm_tool::SaveService;
 use strum_macros::{EnumCount, EnumIter};
 
 /// 页面权限类型
-#[derive(Clone, Copy, Debug, PartialEq, Eq, EnumCount, EnumIter, PermProvider)]
-#[perm_provider(edge_module = "perm_pages", edge_type = "PermPagesEdge", edge_raw_type = "PermPagesEdgeRaw")]
+#[derive(Perm, Clone, Copy, Debug, PartialEq, Eq, EnumCount, EnumIter)]
+#[perm(edge_module = "perm_pages", edge_str = "perm_pages")]
 #[repr(i64)]
 pub enum Pages {
     All = -1,
@@ -15,10 +13,4 @@ pub enum Pages {
     Edit = 2,
     Delete = 4,
     Create = 8,
-}
-
-impl From<Pages> for i64 {
-    fn from(val: Pages) -> Self {
-        val as i64
-    }
 }
