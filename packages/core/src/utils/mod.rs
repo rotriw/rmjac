@@ -2,7 +2,6 @@ use crate::env;
 use crate::env::db::refresh_redis;
 
 pub mod encrypt;
-pub mod perm;
 
 pub fn get_redis_connection() -> redis::Connection {
     if let Ok(client) = env::REDIS_CLIENT.lock()

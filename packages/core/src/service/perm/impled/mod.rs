@@ -20,10 +20,11 @@ pub struct LocalPerm {
 impl<T: GraphAction + HasPath> PermTrait for T {
     fn check<E: PermVerify>(&self, u: i64, v: i64, perm: &E) -> bool {
         // meet in middle.
+        log::debug!("Checking permission from {} to {} with perm {:?}", u, v, perm.get_value());
         if u == v {
             return true;
         }
-        let (have_path, have_perm) = self.verify(u, v, perm);
+        let (have_path, have_perm) = self.has_path(u, v, perm);
         if have_path {
             return have_perm;
         }
@@ -93,45 +94,44 @@ impl<NT: NTRequire<NT>, P: PermVerify, I> PermVerifySerivce<P> for (&DefaultPerm
     }
 }
 
-// impl<NT: NTRequire<NT>, P: PermVerify, S: SaveService> PermActionService<P> for (&mut DefaultPermService<NT, P>, S) {
-//     fn add_path(&mut self, u: i64, v: i64, perm: &P) -> impl Future<Output = ()> {
-//         async move {
-                    
-//                 self.1.save_path(u, v, perm.get_value());
-//                 self.0.local.graph.add_perm(u, v, perm.get_value());
-//                 async {}
-//             }
-//         }
-
-//     fn del_path(&mut self, u: i64, v: i64) -> impl Future<Output = ()> {
-//         self.1.del_path(u, v, 0);
-//         self.0.local.graph.del_perm::<i64>(u, v);
-//         async {}
-//     }
-
-//     fn init(&mut self) -> impl Future<Output = ()> {
-//         let load_data = self.1.load();
-//         let local = &mut self.0.local;
-//         async move {
-//             let data = load_data.await;
-//             for (u, v, perm) in data {
-//                 local.graph.add_perm::<i64>(u, v, perm);
-//             }
-//         }
-//     }
-// }
-
 impl<NT: NTRequire<NT>, P: PermVerify, S: SaveService> PermActionService<P> for (DefaultPermService<NT, P>, S) {
     fn add_path(&mut self, u: i64, v: i64, perm: &P) -> impl Future<Output = ()> {
-        self.1.save_path(u, v, perm.get_value());
-        self.0.local.graph.add_perm(u, v, perm.get_value());
-        async {}
+        async move {
+            let x = self.0.local.graph.get_path(u, v);
+            if x.is_some() {
+                let new_perm = x.unwrap() | perm.get_value();
+                self.0.local.graph.del_perm(u, v);
+                self.0.local.graph.add_perm(u, v, new_perm);
+                self.1.del_path(u, v, perm.get_value()).await;
+                self.1.save_path(u, v, new_perm).await;
+                return ();
+            }
+            self.1.save_path(u, v, perm.get_value()).await;
+            self.0.local.graph.add_perm(u, v, perm.get_value());
+        }
     }
 
     fn del_path(&mut self, u: i64, v: i64) -> impl Future<Output = ()> {
         self.1.del_path(u, v, 0);
         self.0.local.graph.del_perm(u, v);
         async {}
+    }
+
+    fn rm_path(&mut self, u: i64, v: i64, perm: &P) -> impl Future<Output = ()> {
+        async move {
+            let x = self.0.local.graph.get_path(u, v);
+            if x.is_none() {
+                return ();
+            }
+            let current_perm = x.unwrap();
+            let new_perm = current_perm & (!perm.get_value());
+            self.0.local.graph.del_perm(u, v);
+            self.1.del_path(u, v, current_perm).await;
+            if new_perm != 0 {
+                self.0.local.graph.add_perm(u, v, new_perm);
+                self.1.save_path(u, v, new_perm).await;
+            }
+        }
     }
 
     fn init(&mut self) -> impl Future<Output = ()> {
@@ -179,6 +179,8 @@ where
             local: LocalPerm {
                 graph: Graph {
                     node: std::collections::HashMap::new(),
+                    has_path: std::collections::HashMap::new(),
+                    count: 0,
                 },
             },
             _verify: PhantomData,

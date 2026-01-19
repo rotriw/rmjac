@@ -1,25 +1,20 @@
 use crate::handler::ResultHandler;
 use crate::utils::perm::UserAuthCotext;
-use enum_const::EnumConst;
 use macro_handler::{export, from_path, generate_handler, handler, perm, require_login, route};
 use rmjac_core::db::entity::node::problem_statement::ContentType;
-use rmjac_core::graph::edge::perm_problem::ProblemPerm;
-use rmjac_core::graph::edge::perm_system::SystemPerm;
 use rmjac_core::graph::edge::problem_statement::ProblemStatementEdgeQuery;
 use rmjac_core::graph::edge::EdgeQuery;
 use rmjac_core::graph::node::problem::statement::ProblemStatementNode;
-use rmjac_core::model::perm::{check_problem_perm, check_system_perm};
 use rmjac_core::model::problem::{
     ProblemFactory, ProblemPermissionService, ProblemRepository, ProblemStatement,
     ProblemStatementProp,
 };
 use rmjac_core::model::ModelStore;
+use rmjac_core::service::perm::provider::{Problem, ProblemPermService, System, SystemPermService};
 
-// Manage Handler - 管理题目（需要更复杂的权限检查）
 #[generate_handler(route = "/manage", real_path = "/api/problem/manage")]
 pub mod handler {
     use super::*;
-
     #[from_path(iden)]
     #[export(pid, stmtid)]
     async fn before_resolve(store: &mut impl ModelStore, iden: &str) -> ResultHandler<(i64, i64)> {
@@ -30,46 +25,20 @@ pub mod handler {
     #[require_login]
     async fn perm(user_context: UserAuthCotext, pid: i64) -> bool {
         let user_id = user_context.user_id;
-        if check_problem_perm(
-            user_id,
-            pid,
-            ProblemPerm::EditProblem.get_const_isize().unwrap() as i64,
-        ) == 1
-        {
+        if ProblemPermService.verify(user_id, pid, Problem::Edit) {
             return true;
         }
-        let system_id = rmjac_core::env::DEFAULT_NODES
-            .lock()
-            .unwrap()
-            .default_system_node;
-        check_system_perm(
-            user_id,
-            system_id,
-            SystemPerm::ProblemManage.get_const_isize().unwrap() as i64,
-        ) == 1
+        SystemPermService.verify(user_id, default_node!(default_system_node), System::ProblemManage)
     }
 
     #[perm]
     #[require_login]
     async fn require_sudo(user_context: UserAuthCotext, pid: i64) -> bool {
         let user_id = user_context.user_id;
-        if check_problem_perm(
-            user_id,
-            pid,
-            ProblemPerm::OwnProblem.get_const_isize().unwrap() as i64,
-        ) == 1
-        {
+        if ProblemPermService.verify(user_id, pid, Problem::Delete) {
             return true;
         }
-        let system_id = rmjac_core::env::DEFAULT_NODES
-            .lock()
-            .unwrap()
-            .default_system_node;
-        check_system_perm(
-            user_id,
-            system_id,
-            SystemPerm::ProblemManage.get_const_isize().unwrap() as i64,
-        ) == 1
+        SystemPermService.verify(user_id, default_node!(default_system_node), System::ProblemManage)
     }
 
     #[handler]

@@ -4,7 +4,9 @@ use crate::service::perm::typed::{GetU, GetV, GraphAction, HasPath, NextValue, P
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Graph {
-    pub node: HashMap<i64, Node>
+    pub node: HashMap<i64, Node>,
+    pub has_path: HashMap<(i64, i64), i64>,
+    pub count: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -43,26 +45,45 @@ impl PathAction for Graph {
     fn add_perm<T: Into<i64>>(&mut self, u: i64, v: i64, perm: T) {
         // Implementation to add permission from u to v
         let perm = perm.into();
+        self.count += 1;
+        self.has_path.insert((u, v), perm);
         self.node.entry(u).or_insert(Node {next: vec![], prev: vec![]}).next.push((v, perm));
         self.node.entry(v).or_insert(Node {next: vec![], prev: vec![]}).prev.push((u, perm));
     }
 
     fn del_perm(&mut self, u: i64, v: i64) {
+        self.count -= 1;
+        self.has_path.remove(&(u, v));
         self.node.entry(u).or_insert(Node {next: vec![], prev: vec![]}).next.retain(|(nxt, _)| *nxt != v);
         self.node.entry(v).or_insert(Node {next: vec![], prev: vec![]}).prev.retain(|(nxt, _)| *nxt != u);
     }
 }
 
 impl HasPath for Graph {
-    fn verify<T: PermVerify>(&self, u: i64, v: i64, perm: &T) -> (bool, bool) {
-        self.node.get(&u).map_or((false, false), |node| {
-            for (nxt, p) in &node.next {
-                if *nxt == v && perm.verify(*p) {
-                    return (true, true);
-                }
+    fn has_path<T: PermVerify>(&self, u: i64, v: i64, perm: &T) -> (bool, bool) {
+        log::trace!("Checking path from {} to {}", u, v);
+        self.has_path.get(&(u, v)).map_or((false, false), |&p| {
+            log::trace!("Found path from {} to {} with perm {}", u, v, p);
+            if perm.verify(p) {
+                (true, true)
+            } else {
+                (true, false)
             }
-            (false, false)
         })
+    }
+
+    fn get_path(&self, u: i64, v: i64) -> Option<i64> {
+        self.has_path.get(&(u, v)).cloned()
     }
 }
 impl GraphAction for Graph {}
+
+impl Graph {
+    pub fn get_count(&self) -> usize {
+        self.count as usize
+    }
+
+    pub fn get(&self, u: i64, v: i64) -> Option<i64> {
+        self.has_path.get(&(u, v)).cloned()
+    }
+}

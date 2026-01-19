@@ -2,9 +2,6 @@ use crate::db::entity::node::problem_statement::ContentType;
 use crate::error::{CoreError, QueryExists};
 use crate::graph::action::get_node_type;
 use crate::graph::edge::misc::{MiscEdgeQuery, MiscEdgeRaw};
-use crate::graph::edge::perm_pages::{PagesPerm, PermPagesEdgeRaw};
-use crate::graph::edge::perm_problem::{PermProblemEdgeQuery, ProblemPermRaw};
-use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPerm};
 use crate::graph::edge::problem_limit::{ProblemLimitEdgeQuery, ProblemLimitEdgeRaw};
 use crate::graph::edge::problem_statement::{ProblemStatementEdgeQuery, ProblemStatementEdgeRaw};
 use crate::graph::edge::problem_tag::{ProblemTagEdgeQuery, ProblemTagEdgeRaw};
@@ -31,6 +28,9 @@ use crate::model::user::SimplyUser;
 use crate::service::iden::{
     create_iden, get_node_id_iden, get_node_ids_from_iden, remove_iden_to_specific_node,
 };
+use crate::service::perm::impled::PermEnum;
+use crate::service::perm::provider::{Manage, ManagePermService, Pages, PagesPermService};
+use crate::service::perm::typed::{GetU, PermVerify};
 use crate::{Result, db};
 use chrono::Utc;
 use db::entity::edge::misc::Column as MiscColumn;
@@ -433,13 +433,13 @@ impl<'a> ProblemDraft<'a> {
 
         if self.public_view_enabled {
             let guest_node = crate::env::DEFAULT_NODES.lock().unwrap().guest_user_node;
-            PermProblemEdgeRaw {
+            /* PermProblemEdgeRaw {
                 u: guest_node,
                 v: problem_node.node_id,
                 perms: ProblemPermRaw::Perms(vec![ProblemPerm::ReadProblem]),
             }
             .save(store.get_db())
-            .await?;
+            .await?; */
         }
 
         Ok(problem_node)
@@ -564,138 +564,40 @@ impl ProblemStatement {
 
 pub struct ProblemPermissionService;
 
-#[derive(Clone, Debug)]
 pub enum Role {
-    Owner,
-    Editor,
+    Edit,
     Viewer,
-}
-
-impl Role {
-    fn perms(&self) -> Vec<ProblemPerm> {
-        match self {
-            Role::Owner => vec![ProblemPerm::OwnProblem],
-            Role::Editor => vec![ProblemPerm::EditProblem],
-            Role::Viewer => vec![ProblemPerm::ReadProblem],
-        }
-    }
+    Owner,
 }
 
 impl ProblemPermissionService {
-    pub async fn grant_creator(
-        store: &impl ModelStore,
-        user_id: i64,
-        problem_id: i64,
-    ) -> Result<()> {
-        PermProblemEdgeRaw {
-            u: user_id,
-            v: problem_id,
-            perms: ProblemPermRaw::Perms(vec![
-                ProblemPerm::ReadProblem,
-                ProblemPerm::EditProblem,
-                ProblemPerm::DeleteProblem,
-                ProblemPerm::OwnProblem,
-            ]),
-        }
-        .save(store.get_db())
-        .await?;
-
-        PermPagesEdgeRaw {
-            u: user_id,
-            v: problem_id,
-            perms: crate::graph::edge::perm_pages::PagesPermRaw::Perms(vec![
-                PagesPerm::ReadPages,
-                PagesPerm::EditPages,
-                PagesPerm::PublishPages,
-            ]),
-        }
-        .save(store.get_db())
-        .await?;
-        Ok(())
+    pub async fn get_perm(p: i64, r: Role) -> Vec<i64> { // return node id list.
+        let perms: PermEnum<Pages> = match r {
+            Role::Edit => Pages::Edit.into(),
+            Role::Viewer => Pages::View.into(),
+            Role::Owner => Pages::Edit + Pages::Delete,
+        };
+        use crate::service::perm::provider::pages::SERVICE as PagesService;
+        ManagePermService.verify(user_id, problem_id, Pages::Manage);
+        let list = PagesService.lock().unwrap().local.graph.get_total_u(p);
+        list.into_iter()
+            .filter(|v| perms.verify(v.perm))
+            .map(|v| v.point)
+            .collect()
     }
 
-    pub async fn grant_access(
-        store: &impl ModelStore,
-        user_id: i64,
-        problem_id: i64,
-        can_edit: bool,
-    ) -> Result<()> {
-        let mut perms = vec![ProblemPerm::ReadProblem];
-        if can_edit {
-            perms.push(ProblemPerm::EditProblem);
-        }
-        PermProblemEdgeRaw {
-            u: user_id,
-            v: problem_id,
-            perms: ProblemPermRaw::Perms(perms),
-        }
-        .save(store.get_db())
-        .await?;
-        Ok(())
+    pub async fn set_perm(p: i64, r: Role, u: i64, store: &impl ModelStore) -> Result<()> {
+        let perms: PermEnum<Pages> = match r {
+            Role::Edit => Pages::Edit.into(),
+            Role::Viewer => Pages::View.into(),
+            Role::Owner => Pages::Edit + Pages::Delete,
+        };
     }
 
-    /// Generic function to grant permission by role (Owner/Editor/Viewer)
-    pub async fn grant_role(
-        store: &impl ModelStore,
-        user_id: i64,
-        problem_id: i64,
-        role: Role,
-    ) -> Result<()> {
-        PermProblemEdgeRaw {
-            u: user_id,
-            v: problem_id,
-            perms: ProblemPermRaw::Perms(role.perms()),
-        }
-        .save(store.get_db())
-        .await?;
-        Ok(())
-    }
-
-    /// Generic function to revoke permission (for any role)
-    pub async fn revoke_permission(
-        store: &impl ModelStore,
-        user_id: i64,
-        problem_id: i64,
-    ) -> Result<()> {
-        PermProblemEdgeQuery::delete(store.get_db(), user_id, problem_id).await?;
-        Ok(())
-    }
-
-    // Convenience methods for backward compatibility
-    pub async fn add_owner(store: &impl ModelStore, user_id: i64, problem_id: i64) -> Result<()> {
-        Self::grant_role(store, user_id, problem_id, Role::Owner).await
-    }
-
-    pub async fn remove_owner(
-        store: &impl ModelStore,
-        user_id: i64,
-        problem_id: i64,
-    ) -> Result<()> {
-        Self::revoke_permission(store, user_id, problem_id).await
-    }
-
-    pub async fn add_editor(store: &impl ModelStore, user_id: i64, problem_id: i64) -> Result<()> {
-        Self::grant_role(store, user_id, problem_id, Role::Editor).await
-    }
-
-    pub async fn remove_editor(
-        store: &impl ModelStore,
-        user_id: i64,
-        problem_id: i64,
-    ) -> Result<()> {
-        Self::revoke_permission(store, user_id, problem_id).await
-    }
-
-    pub async fn add_viewer(store: &impl ModelStore, user_id: i64, problem_id: i64) -> Result<()> {
-        Self::grant_role(store, user_id, problem_id, Role::Viewer).await
-    }
-
-    pub async fn remove_viewer(
-        store: &impl ModelStore,
-        user_id: i64,
-        problem_id: i64,
-    ) -> Result<()> {
-        Self::revoke_permission(store, user_id, problem_id).await
+    pub async fn remove_perm(p: i64, u: i64, store: &impl ModelStore) -> Result<()> {
+        use crate::service::perm::provider::pages::SERVICE as PagesService;
+        // get existing perms
+        let now = PagesService.lock().unwrap().local.graph.get
     }
 }
 

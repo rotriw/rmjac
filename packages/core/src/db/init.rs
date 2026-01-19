@@ -6,9 +6,6 @@ use macro_db_init::{table_create, table_create_with};
 use sea_orm::{self, ConnectOptions, Database};
 use sea_orm_migration::prelude::*;
 
-// use crate::graph::edge::perm_pages::PagesPermRaw;
-use crate::graph::edge::perm_problem::{PermProblemEdgeRaw, ProblemPermRaw};
-use crate::graph::edge::perm_system::{PermSystemEdgeRaw, SystemPerm, SystemPermRaw};
 use crate::graph::node::iden::{IdenNodePrivateRaw, IdenNodePublicRaw, IdenNodeRaw};
 use crate::{
     db::iden,
@@ -767,22 +764,7 @@ pub async fn init(
         }
         .save(&db)
         .await?;
-        log::info!("Perm group -> default system");
-        PermSystemEdgeRaw {
-            u: default_strategy.node_id,
-            v: system_id,
-            perms: SystemPermRaw::Perms(vec![SystemPerm::ViewSite]),
-        }
-        .save(&db)
-        .await?;
-        log::info!("default user -> guest user");
-        PermProblemEdgeRaw {
-            u: default_strategy.node_id,
-            v: guest_user_id,
-            perms: ProblemPermRaw::All,
-        }
-        .save(&db)
-        .await?;
+        
     } else {
         log::warn!("Skipping default perm group creation, This may lead to unexpected behavior.");
     }

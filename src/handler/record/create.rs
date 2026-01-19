@@ -1,13 +1,11 @@
 use crate::handler::ResultHandler;
 use crate::utils::perm::UserAuthCotext;
-use enum_const::EnumConst;
 use macro_handler::{export, generate_handler, handler, perm, require_login, route};
-use rmjac_core::graph::edge::perm_system::SystemPerm;
 use rmjac_core::graph::node::record::RecordNode;
-use rmjac_core::model::perm::check_system_perm;
 use rmjac_core::model::problem::ProblemRepository;
 use rmjac_core::model::record::{Record, RecordNewProp};
 use rmjac_core::model::ModelStore;
+use rmjac_core::service::perm::provider::{System, SystemPermService};
 
 #[generate_handler(route = "/create", real_path = "/api/record/create")]
 pub mod handler {
@@ -21,11 +19,7 @@ pub mod handler {
             .lock()
             .unwrap()
             .default_system_node;
-        check_system_perm(
-            user_id,
-            system_id,
-            SystemPerm::CreateRecord.get_const_isize().unwrap() as i64,
-        ) == 1
+        SystemPermService.verify(user_id, system_id, System::CreateRecord)
     }
 
     #[handler]

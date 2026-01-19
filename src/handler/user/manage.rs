@@ -11,13 +11,10 @@ use rmjac_core::error::CoreError;
 
 #[generate_handler(route = "/manage", real_path = "/api/user/manage")]
 pub mod handler {
-    use enum_const::EnumConst;
     use sea_orm::DatabaseConnection;
-    use rmjac_core::db::entity::node::pages::default_system_node;
-    use rmjac_core::graph::edge::perm_system::SystemPerm;
     use rmjac_core::graph::node::Node;
     use rmjac_core::graph::node::user::{UserNode, UserNodePublic};
-    use rmjac_core::model::perm::check_system_perm;
+    use rmjac_core::service::perm::provider::{System, SystemPermService};
     use super::*;
     async fn resolve_user_id(store: &impl ModelStore, iden: &str) -> ResultHandler<i64> {
         let db = store.get_db();
@@ -46,7 +43,7 @@ pub mod handler {
         }
         let node_id = default_node!(default_system_node);
 
-        if check_system_perm(user_context.user_id, node_id, SystemPerm::ManageAllUser.get_const_isize().unwrap() as i64) == 1 {
+        if SystemPermService.verify(user_context.user_id, node_id, System::ManageAllUser) {
             return true;
         }
         false

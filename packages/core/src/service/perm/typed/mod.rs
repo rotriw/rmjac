@@ -1,6 +1,8 @@
 use std::{future::Future, marker::PhantomData, ops::Add};
 
 use strum::IntoEnumIterator;
+
+
 pub trait PermService<T: PermVerify>: PermVerifySerivce<T> + PermActionService<T> {}
 
 pub trait PermVerifySerivce<P: PermVerify> {
@@ -10,6 +12,7 @@ pub trait PermVerifySerivce<P: PermVerify> {
 pub trait PermActionService<P: PermVerify> {
     fn add_path(&mut self, u: i64, v: i64, perm: &P) -> impl Future<Output = ()>;
     fn del_path(&mut self, u: i64, v: i64) -> impl Future<Output = ()>;
+    fn rm_path(&mut self, u: i64, v: i64, perm: &P) -> impl Future<Output = ()>;
     fn modify_path(&mut self, u: i64, v: i64, perm: &P) -> impl Future<Output = ()> {
         async move {
             self.del_path(u, v).await;
@@ -22,7 +25,12 @@ pub trait PermActionService<P: PermVerify> {
 pub trait SaveService {
     fn save_path(&mut self, u: i64, v: i64, perm: i64) -> impl Future<Output = ()>;
     fn del_path(&mut self, u: i64, v: i64, perm: i64) -> impl Future<Output = ()>;
-
+    fn modify_path(&mut self, u: i64, v: i64, perm: i64) -> impl Future<Output = ()> {
+        async move {
+            self.del_path(u, v, 0).await;
+            self.save_path(u, v, perm).await;
+        }
+    }
     fn load(&mut self) -> impl Future<Output = Vec<(i64, i64, i64)>>;
 }
 
@@ -37,7 +45,8 @@ pub trait PermTrait {
 }
 
 pub trait HasPath {
-    fn verify<T: PermVerify>(&self, u: i64, v: i64, perm: &T) -> (bool, bool); // have_u->v, have_p
+    fn get_path(&self, u: i64, v: i64) -> Option<i64>;
+    fn has_path<T: PermVerify>(&self, u: i64, v: i64, perm: &T) -> (bool, bool); // have_u->v, have_p
 }
 
 
@@ -78,9 +87,10 @@ pub trait PermExport {
     fn export_perm(&self) -> Vec<Self::Result>;
 }
 
-impl<NT, I> Add for PermSave<NT, I> {
+impl<NT, I, E: Into<PermSave<NT, I>>> Add<E> for PermSave<NT, I> {
     type Output = Self;
-    fn add(self, other: Self) -> Self {
+    fn add(self, other: E) -> Self {
+        let other = other.into();
         Self {
             perm: self.perm | other.perm,
             _nt: PhantomData,

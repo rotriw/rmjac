@@ -4,23 +4,17 @@ use crate::handler::{BasicHandler, ResultHandler};
 use enum_const::EnumConst;
 use macro_handler::generate_handler;
 use macro_handler::{export, from_path, handler, perm, route};
-use rmjac_core::graph::edge::perm_problem::ProblemPerm::ReadProblem;
-use rmjac_core::graph::edge::perm_problem::ProblemPermRaw;
 use rmjac_core::model::ModelStore;
-use rmjac_core::model::perm::check_problem_perm;
 use rmjac_core::model::problem::ProblemRepository;
 use rmjac_core::model::record::RecordRepository;
-use rmjac_core::utils::get_redis_connection;
 use rmjac_core::model::problem::ProblemModel;
+use rmjac_core::service::perm::provider::{Problem, ProblemPermService};
 use sea_orm::ColumnTrait;
 use tap::Conv;
 
 #[generate_handler(route = "/view", real_path = "/api/problem/view")]
 pub mod handler {
     use crate::utils::perm::UserAuthCotext;
-    use macro_handler::require_login;
-    use rmjac_core::model::user::User;
-    use sea_orm::DatabaseConnection;
     use rmjac_core::graph::edge::record::RecordEdge;
     use super::*;
 
@@ -30,7 +24,20 @@ pub mod handler {
         Ok(ProblemRepository::resolve(store, iden).await?)
     }
 
+    #[perm]
+    async fn check_view_perm(user_context: Option<UserAuthCotext>, pid: i64) -> bool {
+        // 如果用户已登录，检查是否有查看权限
+        if let Some(uc) = user_context && uc.is_real {
+            if ProblemPermService.verify(uc.user_id, pid, Problem::View) {
+                return true;
+            }
+        }
+        // 检查题目是否公开可见（使用特殊的公开用户ID 0）
+        ProblemPermService.verify(default_node!(guest_user_node), pid, Problem::View)
+    }
+
     #[handler]
+    #[perm(check_view_perm)]
     #[route("/{iden}")]
     #[export("model", "statement", "user_recent_records", "user_last_accepted_record")]
     async fn get_view(
@@ -73,6 +80,7 @@ pub mod handler {
     }
 
     #[handler]
+    #[perm(check_view_perm)]
     #[route("/{iden}")]
     #[export("model", "statement", "user_recent_records", "user_last_accepted_record")]
     async fn post_view(
