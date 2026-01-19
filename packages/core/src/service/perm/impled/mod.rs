@@ -4,19 +4,6 @@ use tap::Conv;
 use crate::service::perm::graph::Graph;
 use crate::service::perm::typed::{GraphAction, HasPath, PathAction, PermActionService, PermExport, PermSave, PermService, PermTrait, PermVerify, PermVerifySerivce, SaveService};
 
-// impl<T: Fn(i64) -> bool> PermVerify for T {
-//     fn verify(&self, perm: i64) -> bool {
-//         self(perm)
-//     }
-
-// }
-
-// S: Tools
-pub struct LocalPerm {
-    pub graph: Graph,
-}
-
-
 impl<T: GraphAction + HasPath> PermTrait for T {
     fn check<E: PermVerify>(&self, u: i64, v: i64, perm: &E) -> bool {
         // meet in middle.
@@ -55,99 +42,65 @@ impl<T: GraphAction + HasPath> PermTrait for T {
     }
 }
 
+/// PermEnum 即 PermSave, 可以翻译为 数字，等价权限组。
 pub type PermEnum<NT> = PermSave<NT, NT>;
 
-pub trait NTRequire<NT> = PermVerify + PermExport;
-
-pub struct DefaultPermService<NT: NTRequire<NT>, P: PermVerify = NT> {
-    pub local: LocalPerm,
-    _verify: PhantomData<PermSave<NT, NT>>,
-    _p: PhantomData<P>,
-}
-
-impl<NT: NTRequire<NT>, P: PermVerify> PermVerifySerivce<P> for DefaultPermService<NT, P> {
-
+impl<P: PermVerify, T: PermTrait> PermVerifySerivce<P> for T {
     fn verify<L: Into<P> + Clone>(&self, u: i64, v: i64, perm: L) -> bool {
-        self.local.graph.check(u, v, &(perm.clone().conv::<P>()))
+        self.check(u, v, &(perm.clone().conv::<P>()))
     }
-}
+} 
 
-impl<NT: NTRequire<NT>, P: PermVerify, I> PermVerifySerivce<P> for (DefaultPermService<NT, P>, I) {
-
-    fn verify<L: Into<P> + Clone>(&self, u: i64, v: i64, perm: L) -> bool {
-        self.0.local.graph.check(u, v, &(perm.clone().conv::<P>()))
-    }
-}
-
-impl<NT: NTRequire<NT>, P: PermVerify, I> PermVerifySerivce<P> for (&mut DefaultPermService<NT, P>, I) {
-
-    fn verify<L: Into<P> + Clone>(&self, u: i64, v: i64, perm: L) -> bool {
-        self.0.local.graph.check(u, v, &(perm.clone().conv::<P>()))
-    }
-}
-
-
-impl<NT: NTRequire<NT>, P: PermVerify, I> PermVerifySerivce<P> for (&DefaultPermService<NT, P>, I) {
-
-    fn verify<L: Into<P> + Clone>(&self, u: i64, v: i64, perm: L) -> bool {
-        self.0.local.graph.check(u, v, &(perm.clone().conv::<P>()))
-    }
-}
-
-impl<NT: NTRequire<NT>, P: PermVerify, S: SaveService> PermActionService<P> for (DefaultPermService<NT, P>, S) {
+impl<P: PermVerify, T: PermTrait + GraphAction + HasPath, S: SaveService> PermActionService<P> for (&mut T, S) {
     fn add_path(&mut self, u: i64, v: i64, perm: &P) -> impl Future<Output = ()> {
         async move {
-            let x = self.0.local.graph.get_path(u, v);
+            let x = (*self.0).get_path(u, v);
             if x.is_some() {
                 let new_perm = x.unwrap() | perm.get_value();
-                self.0.local.graph.del_perm(u, v);
-                self.0.local.graph.add_perm(u, v, new_perm);
+                (*self.0).del_perm(u, v);
+                (*self.0).add_perm(u, v, new_perm);
                 self.1.del_path(u, v, perm.get_value()).await;
                 self.1.save_path(u, v, new_perm).await;
                 return ();
             }
             self.1.save_path(u, v, perm.get_value()).await;
-            self.0.local.graph.add_perm(u, v, perm.get_value());
+            (*self.0).add_perm(u, v, perm.get_value());
         }
     }
 
     fn del_path(&mut self, u: i64, v: i64) -> impl Future<Output = ()> {
         self.1.del_path(u, v, 0);
-        self.0.local.graph.del_perm(u, v);
+        (*self.0).del_perm(u, v);
         async {}
     }
 
     fn rm_path(&mut self, u: i64, v: i64, perm: &P) -> impl Future<Output = ()> {
         async move {
-            let x = self.0.local.graph.get_path(u, v);
+            let x = (*self.0).get_path(u, v);
             if x.is_none() {
                 return ();
             }
             let current_perm = x.unwrap();
             let new_perm = current_perm & (!perm.get_value());
-            self.0.local.graph.del_perm(u, v);
+            self.0.del_perm(u, v);
             self.1.del_path(u, v, current_perm).await;
             if new_perm != 0 {
-                self.0.local.graph.add_perm(u, v, new_perm);
+                self.0.add_perm(u, v, new_perm);
                 self.1.save_path(u, v, new_perm).await;
             }
         }
     }
 
     fn init(&mut self) -> impl Future<Output = ()> {
-        let load_data = self.1.load();
-        let local = &mut self.0.local;
         async move {
+            let load_data = self.1.load();
             let data = load_data.await;
             for (u, v, perm) in data {
-                local.graph.add_perm::<i64>(u, v, perm);
+                (*self.0).add_perm::<i64>(u, v, perm);
             }
         }
     }
 }
-
-impl<NT: NTRequire<NT>, P: PermVerify, S: SaveService> PermService<P> for (DefaultPermService<NT, P>, S) {}
-// impl<NT: NTRequire<NT>, P: PermVerify, S: SaveService> PermService<P> for (&mut DefaultPermService<NT, P>, S) {}
 
 impl PermVerify for i64 {
     fn verify(&self, perm: i64) -> bool {
@@ -166,25 +119,5 @@ default impl<T: Into<i64> + Clone> PermVerify for T {
 
     fn get_value(&self) -> i64 {
         self.clone().conv::<i64>()
-    }
-}
-
-impl<NT, P> DefaultPermService<NT, P>
-where
-    NT: NTRequire<NT>,
-    P: PermVerify,
-{
-    pub fn new() -> Self {
-        Self {
-            local: LocalPerm {
-                graph: Graph {
-                    node: std::collections::HashMap::new(),
-                    has_path: std::collections::HashMap::new(),
-                    count: 0,
-                },
-            },
-            _verify: PhantomData,
-            _p: PhantomData,
-        }
     }
 }
