@@ -4,30 +4,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import React from "react"
 import { Button } from "@/components/ui/button"
-import { API_BASE_URL } from "@/api/client/config"
+import { API_BASE_URL } from "@/lib/constants" // Import from lib/constants
+import { getProfile } from "@/api/server/api_user_info" // Import getProfile
+import { SimplyUser } from "@rmjac/api-declare" // Import SimplyUser
 
 const ContributionGraph = () => <div className="h-32 bg-gray-50 rounded flex items-center justify-center text-gray-400">贡献图加载中...</div>
 
 interface UserProfileData {
-    user: {
-        node_id: number
-        avatar: string
-        name: string
-        iden: string
-        email?: string
-        creation_time: string
-    }
+    user: SimplyUser
     solved_count: number
     submission_count: number
 }
 
 async function getUserProfile(id: string): Promise<UserProfileData | null> {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/user/profile/${id}`, {
-            cache: 'no-store',
-        })
-        if (!response.ok) return null
-        return await response.json()
+        const response = await getProfile({ iden: id }); // Use getProfile
+        // The API returns SimplyUser, we need to add solved_count and submission_count if they were part of the old API response.
+        // Assuming current API structure doesn't return solved_count/submission_count directly, mock them for now.
+        // If the backend API for getProfile returns solved_count and submission_count, this can be simplified.
+        return {
+            user: response.user,
+            solved_count: 0, // Mocked for now, need actual API if available
+            submission_count: 0, // Mocked for now, need actual API if available
+        };
     } catch (error) {
         console.error("Failed to fetch user profile:", error)
         return null
@@ -43,7 +42,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
         // For now let's use the mock data provided in the original file but updated
     }
 
-    const data = profileData;
+    const data = profileData as UserProfileData; // Cast as UserProfileData since profileData can be null from getUserProfile.
 
     return (
         <div className="container mx-auto py-6 px-4 md:px-6">

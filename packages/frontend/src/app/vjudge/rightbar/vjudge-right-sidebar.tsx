@@ -28,7 +28,9 @@ import {
   Filter
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { VJudgeAccount, getMyVJudgeAccounts, VJudgeTask, listVJudgeTasks } from "@/api/server/vjudge"
+import { getMyAccounts } from "@/api/server/api_vjudge_my_accounts" // New import
+import { getTasks } from "@/api/server/api_vjudge_tasks" // New import
+import { VjudgeNode, VjudgeTaskNode } from "@rmjac/api-declare" // New imports for types
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -37,16 +39,16 @@ import { Button } from "@/components/ui/button"
 export function VJudgeRightSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [width, setWidth] = useState(300)
   const [isResizing, setIsResizing] = useState(false)
-  const [accounts, setAccounts] = useState<VJudgeAccount[]>([])
-  const [tasks, setTasks] = useState<VJudgeTask[]>([])
+  const [accounts, setAccounts] = useState<VjudgeNode[]>([]) // Changed type
+  const [tasks, setTasks] = useState<VjudgeTaskNode[]>([]) // Changed type
   const [loading, setLoading] = useState(true)
   const { isMobile } = useSidebar()
   const pathname = usePathname()
 
   const fetchAccounts = useCallback(async () => {
     try {
-      const data = await getMyVJudgeAccounts()
-      setAccounts(data)
+      const response = await getMyAccounts() // Changed API call
+      setAccounts(response.data) // Extract data
     } catch (error) {
       console.error("Failed to fetch accounts:", error)
     }
@@ -54,19 +56,12 @@ export function VJudgeRightSidebar({ ...props }: React.ComponentProps<typeof Sid
 
   const fetchTasks = useCallback(async () => {
     console.log(accounts);
-    // If we have accounts, fetch tasks for the first one or all?
-    // The API listVJudgeTasks requires a nodeId.
-    // For the sidebar, maybe we show tasks for the currently selected account if in manage page,
-    // or just a general list if we had a global task API.
-    // Since we only have listVJudgeTasks(nodeId), let's try to fetch for all accounts or the active one.
     if (accounts.length > 0) {
       try {
-        // For now, let's fetch tasks for the first account as a placeholder
-        // In a real app, we might want a global task list API.
-        const allTasks: VJudgeTask[] = []
+        const allTasks: VjudgeTaskNode[] = [] // Changed type
         for (const acc of accounts) {
-          const accTasks = await listVJudgeTasks(acc.node_id)
-          allTasks.push(...accTasks)
+          const accTasksResponse = await getTasks({ node_id: acc.node_id.toString() }) // Changed API call
+          allTasks.push(...accTasksResponse.data) // Extract data
         }
         setTasks(allTasks.sort((a, b) => new Date(b.public.created_at).getTime() - new Date(a.public.created_at).getTime()))
       } catch (error) {
@@ -117,7 +112,7 @@ export function VJudgeRightSidebar({ ...props }: React.ComponentProps<typeof Sid
     }
   }, [resize, stopResizing])
 
-  const getHandle = (account: VJudgeAccount) => {
+  const getHandle = (account: VjudgeNode) => { // Changed type
     return account.public.iden;
   }
 

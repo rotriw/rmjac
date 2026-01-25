@@ -15,5 +15,6 @@ export const apply = () => {
         "submittoken": submit.submit,
         "verifyapikey": verify.apikey,
         "verifypassword": verify.password,
+        "verifytoken": verify.token,
     };
 };

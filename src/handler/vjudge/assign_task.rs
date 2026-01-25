@@ -9,7 +9,7 @@ use rmjac_core::model::vjudge::VjudgeAccount;
 use serde::Deserialize;
 
 
-#[generate_handler(route = "/assign_task", real_path = "/api/vjudge/assign_task")]
+#[generate_handler(route = "/assign", real_path = "/api/vjudge/assign")]
 pub mod handler {
     use rmjac_core::model::vjudge::AssignTaskReq;
 
@@ -28,7 +28,7 @@ pub mod handler {
 
     #[handler]
     #[perm(check_perm)]
-    #[route("/")]
+    #[route("/task")]
     async fn post_assign(
         store: &mut impl ModelStore,
         user_context: Option<UserAuthCotext>,

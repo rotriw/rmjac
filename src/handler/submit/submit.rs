@@ -20,9 +20,10 @@ pub struct SubmitReq {
 
 #[generate_handler(route = "/vjudge", real_path = "/api/submit/vjudge")]
 pub mod handler {
-    use macro_handler::export;
+    use rmjac_core::graph::node::Node;
+use macro_handler::export;
     use rmjac_core::graph::node::record::RecordNode;
-
+    use rmjac_core::graph::node::user::remote_account::VjudgeNode;
     use super::*;
 
     #[perm]
@@ -65,8 +66,13 @@ pub mod handler {
             judge_option_n.insert(k, Box::new(StringOption { value: v }));
         }
 
+        let vjudge_node = VjudgeNode::from_db(store.get_db(), vjudge_id).await?;
+        let method = VjudgeAccount::method(&vjudge_node);
+
         let context = SubmitContext {
             code: code.clone(),
+            user_id: uc.user_id,
+            method,
         };
 
         let record = SubmissionService::submit(

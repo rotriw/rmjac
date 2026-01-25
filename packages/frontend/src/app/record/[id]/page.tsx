@@ -1,7 +1,8 @@
 import { StandardCard, TitleCard } from "@/components/card/card";
 import { TreeTable, TreeTableNode } from "@/components/table/treetable";
-import { Icond, RecordNode, RecordStatus, SubtaskUserRecord, RECORD_STATUS_COLOR_MAP, RECORD_STATUS_COLOR_MAP_INTER } from "./shared";
-import { getRecord } from "@/api/server/record";
+import { Icond, RecordStatus, SubtaskUserRecord, RECORD_STATUS_COLOR_MAP, RECORD_STATUS_COLOR_MAP_INTER } from "./shared";
+import { getView as getRecordView } from "@/api/server/api_record_view"; // Changed import
+import { RecordNode } from "@rmjac/api-declare"; // Import RecordNode from api-declare
 
 export function ShowColorfulCard( {status, score} : {status: RecordStatus, score?: number} ) {
   console.log(status);
@@ -23,7 +24,7 @@ function transformSubtasksToTreeNodes(subtasks: SubtaskUserRecord[], parentId: s
         <div className="flex w-full items-end justify-baseline text-shadow-white min-h-30">
           <div>
             <div className="text-lg font-bold flex items-center gap-1 min-w-1000">
-                <Icond size={5} status={subtask.status} animate={true} />
+                <Icond size={5} status={subtask.status} />
                 <span className=" opacity-90">{subtask.score} </span>
                 <span className=" opacity-90">{subtask.status}</span>
             </div>
@@ -77,7 +78,8 @@ function transformSubtasksToTreeNodes(subtasks: SubtaskUserRecord[], parentId: s
 }
 
 export default async function RecordPage({ params }: { params: Promise<{ id: string }> }) {
-  const fetchdata = await getRecord((await params).id);
+  const { id } = await params;
+  const fetchdata = await getRecordView({ record_id: id }); // Changed API call and param
   console.log(fetchdata);
   const record: RecordNode = fetchdata?.record || {
     node_id: 1,
@@ -261,7 +263,7 @@ export default async function RecordPage({ params }: { params: Promise<{ id: str
     ]
   }; // all color test
 
-  const treeData = transformSubtasksToTreeNodes([subtask_status]);
+  const treeData = transformSubtasksToTreeNodes([subtask_status], "", id); // Pass id for problem iden display
 
   return <>
     <div className="container mx-auto py-6 px-4 md:px-6">

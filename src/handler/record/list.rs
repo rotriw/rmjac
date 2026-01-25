@@ -12,17 +12,11 @@ use rmjac_core::model::problem::ProblemRepository;
 use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect};
 use serde::Serialize;
 
-#[derive(Serialize, Clone)]
-pub struct RecordListItem {
-    pub edge: RecordEdge,
-    pub problem_name: String,
-    pub problem_iden: String,
-    pub user_name: String,
-    pub user_iden: String,
-}
 
 #[generate_handler(route = "/list", real_path = "/api/record/list")]
 pub mod handler {
+    use rmjac_core::graph::edge::record::RecordListItem;
+
     use super::*;
 
     #[handler]

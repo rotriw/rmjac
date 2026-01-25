@@ -45,8 +45,8 @@ pub enum HttpError {
     HandlerError(HandlerError),
     #[display("IO Error")]
     IOError,
-    #[display("Actix Error")]
-    ActixError,
+    #[display("(Actix Error){}", _0)]
+    ActixError(String),
 }
 
 fn error_code(error: &HttpError) -> i64 {
@@ -60,7 +60,7 @@ fn error_code(error: &HttpError) -> i64 {
         },
         HttpError::CoreError(core_error) => core_error.conv::<i64>(),
         HttpError::IOError => 500,
-        HttpError::ActixError => 600,
+        HttpError::ActixError(_) => 600,
     }
 }
 
@@ -79,7 +79,7 @@ impl error::ResponseError for HttpError {
             HttpError::HandlerError(HandlerError::PermissionDenied) => StatusCode::FORBIDDEN,
             HttpError::CoreError(_)
             | HttpError::IOError
-            | HttpError::ActixError
+            | HttpError::ActixError(_)
             | HttpError::HandlerError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -87,7 +87,7 @@ impl error::ResponseError for HttpError {
 
 impl From<actix_web::Error> for HttpError {
     fn from(_error: actix_web::Error) -> Self {
-        HttpError::ActixError
+        HttpError::ActixError(_error.to_string())
     }
 }
 

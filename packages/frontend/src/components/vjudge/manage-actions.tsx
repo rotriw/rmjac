@@ -2,7 +2,9 @@
 
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { deleteVJudgeAccount, assignVJudgeTask } from "@/api/server/vjudge"
+import { postDeleteAccount } from "@/api/server/api_vjudge_account"
+import { postAssign } from "@/api/server/api_vjudge_assign"
+import { AssignTaskReq } from "@rmjac/api-declare"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { Badge, ChevronRight, LibraryIcon, Loader2, RefreshCwIcon, SendIcon, Sheet, Tag } from "lucide-react"
@@ -116,7 +118,7 @@ export function ManageActions({ nodeId }: ManageActionsProps) {
         if (!confirm("确定要解除绑定该账号吗？")) return
         setDeleting(true)
         try {
-            await deleteVJudgeAccount(nodeId)
+        await postDeleteAccount({ node_id: nodeId.toString() })
             router.push("/vjudge/account")
             router.refresh()
         } catch (e) {
@@ -130,10 +132,12 @@ export function ManageActions({ nodeId }: ManageActionsProps) {
     const handleSync = async () => {
         setSyncing(true)
         try {
-            await assignVJudgeTask({
-                vjudge_node_id: nodeId,
-                range: "recent"
-            })
+        const payload: AssignTaskReq = {
+          vjudge_node_id: nodeId as unknown as bigint,
+          range: "recent",
+          ws_id: socket.id ?? null,
+        }
+        await postAssign({ data: payload })
             toast.success("同步任务已提交")
         } catch (e) {
             console.error(e)

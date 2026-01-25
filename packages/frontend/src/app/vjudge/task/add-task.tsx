@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react"
 import { StandardCard } from "@/components/card/card"
 import { Input } from "@/components/ui/input"
-import { getMyVJudgeAccounts, assignVJudgeTask, type VJudgeAccount } from "@/api/client/vjudge"
+import { getMyAccounts } from "@/api/server/api_vjudge_my_accounts"
+import { postAssign } from "@/api/server/api_vjudge_assign"
+import { AssignTaskReq, VjudgeNode } from "@rmjac/api-declare"
 import { socket } from "@/lib/socket"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -27,7 +29,7 @@ const VJUDGE_CONFIG: Record<string, Record<string, string[]>> = {
 
 export function AddTaskCard({ onSubmitSuccess }: AddTaskCardProps) {
   const router = useRouter()
-  const [accounts, setAccounts] = useState<VJudgeAccount[]>([])
+  const [accounts, setAccounts] = useState<VjudgeNode[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<string | null>(null)
@@ -36,14 +38,16 @@ export function AddTaskCard({ onSubmitSuccess }: AddTaskCardProps) {
   const [syncCount, setSyncCount] = useState<string>("50")
   const [cfContestId, setCfContestId] = useState<string>("")
   const [cfProblemId, setCfProblemId] = useState<string>("")
-  const [cfLink, setCfLink] = useState<string>("")
+const [cfLink, setCfLink] = useState<string>("")
 
   useEffect(() => {
-    getMyVJudgeAccounts().then((data: VJudgeAccount[]) => {
-      setAccounts(data || [])
-    }).catch((err: Error) => {
-      console.error("Failed to load accounts", err)
-    })
+    getMyAccounts()
+      .then((resp) => {
+        setAccounts(resp.data || [])
+      })
+      .catch((err: Error) => {
+        console.error("Failed to load accounts", err)
+      })
   }, [])
 
   const handleSubmit = async () => {
@@ -89,22 +93,21 @@ export function AddTaskCard({ onSubmitSuccess }: AddTaskCardProps) {
     setLoading(true)
     
     try {
-      const res = await assignVJudgeTask({
-        vjudge_node_id: Number(selectedAccount),
+      const payload: AssignTaskReq = {
+        vjudge_node_id: Number(selectedAccount) as unknown as bigint,
         range: selectedTask === "submit" ? "submit" : finalRange,
-        ws_id: socket.id,
-      })
-      
-      if (res.code === 0 && res.data) {
-          const taskId = res.data.node_id;
-          const accountId = Number(selectedAccount);
-          if (onSubmitSuccess) {
-            onSubmitSuccess(taskId, accountId);
-          } else {
-            router.push(`/vjudge/task?id=${taskId}&account_id=${accountId}`);
-          }
+        ws_id: socket.id ?? null,
+      }
+      const res = await postAssign({ data: payload })
+      const taskData: any = res as any
+      const taskId = taskData?.node_id ?? taskData?.data?.node_id
+      const accountId = Number(selectedAccount)
+      if (taskId && onSubmitSuccess) {
+        onSubmitSuccess(taskId, accountId)
+      } else if (taskId) {
+        router.push(`/vjudge/task?id=${taskId}&account_id=${accountId}`)
       } else {
-          toast.error(res.msg || "提交失败")
+        toast.success("提交成功，任务已创建")
       }
     } catch (e) {
       console.error(e)

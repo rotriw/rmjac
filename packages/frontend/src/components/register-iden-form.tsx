@@ -2,10 +2,9 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { CheckIcon } from "lucide-react";
-import { API_BASE_URL } from "@/api/client/config";
+import { getCheckIden } from "@/api/server/api_user_info";
 
 
 export function RegisterIdenForm({ iden }: { iden?: string }) {
@@ -28,11 +27,14 @@ export function RegisterIdenForm({ iden }: { iden?: string }) {
             setIden(value)
             return;
         }
-        const res = await fetch(`${API_BASE_URL}/api/user/check_iden/${value}`);
-        const data = await res.json();
-        if (data?.exists === false) {
-          setIsValid(2);
-        } else {
+        try {
+          const data = await getCheckIden({ id: value });
+          if (data?.exists === false) {
+            setIsValid(2);
+          } else {
+            setIsValid(1);
+          }
+        } catch (_error) {
           setIsValid(1);
         }
       }}

@@ -498,6 +498,7 @@ impl VjudgeService {
         store: &mut impl ModelStore,
         problem: &CreateProblemProps,
     ) -> Result<()> {
+        log::debug!("Importing problem: {}", problem.problem_name);
         let db = store.get_db().clone();
         let redis = store.get_redis();
 
@@ -547,18 +548,14 @@ impl VjudgeService {
             let _ = node.modify(&db, Name, problem.problem_name.clone()).await;
         }
 
-        // 2. Delete existing connections (statements, tags)
-        let mut store_temp = (&db, &mut *redis);
-        ProblemRepository::purge(&mut store_temp, p_node_id).await?;
-
-        // 3. Re-add statements
+        log::info!("step 2");
         for statement in &problem.problem_statement {
             let schema = ProblemFactory::generate_statement_schema(statement.clone());
             let mut store_temp = (&db, &mut *redis);
             ProblemFactory::add_statement(&mut store_temp, p_node_id, schema).await?;
         }
+        log::info!("step 3");
 
-        // 4. Re-add tags
         for i in &problem.tags {
             use crate::db::entity::node::problem_tag::Column as ProblemTagColumn;
             let id = ProblemTagNode::from_db_filter(&db, ProblemTagColumn::TagName.eq(i)).await;
@@ -591,6 +588,7 @@ impl VjudgeService {
             .save(&db)
             .await;
         }
+        log::info!("step 4");
         Ok(())
     }
 
@@ -802,6 +800,7 @@ impl VjudgeService {
                 page_source: None,
                 page_rendered: None,
                 problem_difficulty: None,
+                judge_option: None,
                 show_order: vec!["statement".to_string()],
             }],
             creation_time: Some(chrono::Utc::now().naive_utc()),
@@ -854,15 +853,7 @@ impl VjudgeService {
         } else {
             (false, -1)
         };
-        let status = match submission.status.as_str() {
-            "Accepted" => RecordStatus::Accepted,
-            "WrongAnswer" => RecordStatus::WrongAnswer,
-            "TimeLimitExceeded" => RecordStatus::TimeLimitExceeded,
-            "MemoryLimitExceeded" => RecordStatus::MemoryLimitExceeded,
-            "RuntimeError" => RecordStatus::RuntimeError,
-            "CompilationError" => RecordStatus::CompileError,
-            _ => RecordStatus::UnknownError,
-        };
+        let status = submission.status.into();
         // Convert timestamp
         let submit_time = chrono::DateTime::parse_from_rfc3339(&submission.submit_time)
             .map(|dt| dt.naive_utc())

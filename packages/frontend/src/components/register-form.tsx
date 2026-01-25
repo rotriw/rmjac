@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { CaptchaForm } from "./register-captcha-form"
 import { RegisterIdenForm } from "./register-iden-form"
 import { redirect } from "next/navigation"
-import { API_BASE_URL } from "@/api/client/config"
+import { getBeforeRegister, postRegister } from "@/api/server/api_user_auth"
 
 // interface RegisterData {
 //   name: string;
@@ -36,7 +36,7 @@ export async function RegisterForm({
     challenge_code: string,
     challenge_verify: string,
     challenge_time: number,
-  } = (params?.email) ? await (await fetch(`${API_BASE_URL}/api/user/before_create?dark_mode=false&email=${params?.email}`)).json() : {};
+  } = (params?.email) ? await getBeforeRegister({ dark_mode: false, email: params.email as string }) : {} as any;
   const now_data = (!params?.email) ? (<>
     <div className="grid gap-3">
       <Label htmlFor="email">邮箱</Label>
@@ -98,6 +98,7 @@ export async function RegisterForm({
     {searchParams?.err === "iden_exist" ? <Label className="text-xs text-red-500">用户名已存在，请更换用户名。</Label> : ""}
     {searchParams?.err === "captcha_invalid" ? <Label className="text-xs text-red-500">验证码无效，请重新输入。</Label> : ""}
     {searchParams?.err === "captcha_expired" ? <Label className="text-xs text-red-500">验证码已过期，请刷新验证码。</Label> : ""}
+    {searchParams?.err === "register_failed" ? <Label className="text-xs text-red-500">注册失败： {searchParams?.msg}。</Label> : ""}
     <div className="grid gap-3">
       <div className="grid grid-cols-4 gap-3">
         <a href="/register"><Button type="button" variant="outline" className="col-span-1">
@@ -117,47 +118,40 @@ export async function RegisterForm({
       email: data.get("email"),
       password: data.get("password"),
       avatar: "",
-      verify: {
         challenge_text: data.get("captcha"),
         challenge_code: data.get("challenge_verify"),
         challenge_time: +(data.get("challenge_time") || 0),
         challenge_darkmode: "light",
-      }
     }));
-    const result = await fetch(`${API_BASE_URL}/api/user/register`, {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: data.get("nickname"),
-        iden: data.get("username"),
-        email: data.get("email"),
-        password: data.get("password"),
-        avatar: "",
-        verify: {
-          challenge_text: data.get("captcha"),
-          challenge_code: data.get("challenge_verify"),
-          challenge_time: +(data.get("challenge_time") || 0),
-          challenge_darkmode: "false",
-        }
-      })});
-    const res = await result.json();
-    console.log(res);
-    if (res?.user?.node_id) {
-      redirect('/register/success?email=' + data.get("email"));
-    } else {
-      if (res?.error === "(Core Error)_User IDEN already exists") {
-        redirect(`/register?email=${data.get("email")}&err=iden_exist`);
-      } else if (res?.error === "(Core Error)_User Email already exists") {
-        redirect(`/register?email=${data.get("email")}&err=iden_exist`);
-      } else if (res?.error === "(Handler Error)Conflict: Captcha is invalid") {
-        redirect(`/register?email=${data.get("email")}&err=captcha_invalid`);
-      } else if (res?.error === "(Handler Error)Conflict: Captcha is expired") {
-        redirect(`/register?email=${data.get("email")}&err=captcha_expired`);
+    try {
+      await postRegister({
+      name: data.get("nickname") as string,
+      iden: data.get("username") as string,
+      email: data.get("email") as string,
+      password: data.get("password") as string,
+      avatar: "",
+      verify: {
+        challenge_text: data.get("captcha") as string,
+        challenge_code: data.get("challenge_verify") as string,
+        challenge_time: +(data.get("challenge_time") || 0),
+        challenge_darkmode: "false",
+      }})
+    } catch (error: unknown) {
+      console.log(error);
+      const message = error instanceof Error ? error.message : ""
+      if (message.includes("IDEN") || message.includes("exists")) {
+        redirect(`/register?email=${data.get("email")}&err=iden_exist`)
       }
-      console.log(res);
+      if (message.includes("Invalid captcha")) {
+        redirect(`/register?email=${data.get("email")}&err=captcha_invalid`)
+      }
+      if (message.includes("Captcha is expired")) {
+        redirect(`/register?email=${data.get("email")}&err=captcha_expired`)
+      }
+      redirect(`/register?email=${data.get("email")}&err=register_failed&msg=${encodeURIComponent(message)}`)
     }
+
+      redirect('/register/success?email=' + data.get("email"))
   }
   if (params?.email) {
     return (

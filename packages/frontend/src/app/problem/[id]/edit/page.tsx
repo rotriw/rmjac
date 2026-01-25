@@ -6,25 +6,21 @@ import { Button } from "@/components/ui/button"
 import { StandardCard } from "@/components/card/card"
 import { Save } from "lucide-react"
 import { ProblemModule, SampleGroup, ProblemData } from "../../create/types"
+import { ContentType, ProblemStatementNode } from "@rmjac/api-declare"
 
-interface ProblemStatement {
-  public: {
-    statements: Array<{ iden: string; content: string }>;
-    sample_group?: Array<[string, string]>;
-    source?: string;
-    iden?: string;
-  };
-}
-import { getProblemForEdit, updateProblemStatement, updateProblemSource } from "@/api/client/problem"
+import { getView } from "@/api/server/api_problem_view"
+import { postUpdateStatementContent, postUpdateStatementSource } from "@/api/server/api_problem_manage"
 import { DetailData } from "@/components/problem/detail-data"
 
 interface EditPageProps {
   params: Promise<{ id: string }>
 }
 
+type EditableProblemData = ProblemData & { stmtNodeId?: number }
+
 export default function EditPage({ params }: EditPageProps) {
   const [problemId, setProblemId] = useState<string>("");
-  const [formValues, setFormValues] = useState<Record<string, string | ProblemData[]>>({})
+  const [formValues, setFormValues] = useState<Record<string, string | EditableProblemData[]>>({})
   const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string; data?: unknown } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,12 +40,12 @@ export default function EditPage({ params }: EditPageProps) {
     const loadProblemData = async () => {
       try {
         setIsLoading(true);
-        const data = await getProblemForEdit(problemId);
+        const data = await getView({ iden: problemId });
         
         if (data && data.model) {
           const problemStatements = data.model.problem_statement_node || [];
           
-          const transformedProblems: ProblemData[] = problemStatements.map(([statement]: [ProblemStatement, unknown], index: number) => {
+          const transformedProblems: EditableProblemData[] = problemStatements.map(([statement]: [ProblemStatementNode, unknown], index: number) => {
             const modules: ProblemModule[] = statement.public.statements.map((s) => ({
               id: `module_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 6)}`,
               title: getTitleFromType(s.iden),
@@ -70,7 +66,8 @@ export default function EditPage({ params }: EditPageProps) {
               problem_source: statement.public.source || "",
               problem_iden: statement.public.iden || "",
               modules,
-              sampleGroups
+              sampleGroups,
+              stmtNodeId: Number(statement.node_id)
             };
           });
           
@@ -110,18 +107,26 @@ export default function EditPage({ params }: EditPageProps) {
     setSubmitResult(null);
 
     try {
-      const problems = formValues.problems as ProblemData[] || [];
+      const problems = formValues.problems as EditableProblemData[] || [];
       
       for (const problem of problems) {
-        const problemStatements = problem.modules.map(module => ({
+        const problemStatements: ContentType[] = problem.modules.map(module => ({
           iden: module.type,
           content: module.content
         }));
         
-        await updateProblemStatement(problemId, problemStatements);
+        await postUpdateStatementContent({
+          iden: problemId,
+          stmtid: problem.stmtNodeId,
+          body: problemStatements,
+        })
         
         if (problem.problem_source) {
-          await updateProblemSource(problemId, problem.problem_source);
+          await postUpdateStatementSource({
+            iden: problemId,
+            stmtid: problem.stmtNodeId,
+            new_source: problem.problem_source,
+          })
         }
       }
 

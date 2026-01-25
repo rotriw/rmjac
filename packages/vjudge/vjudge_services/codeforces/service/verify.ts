@@ -32,7 +32,7 @@ export const verifyApiKey = async (
   apiSecret: string
 ): Promise<boolean> => {
     try {
-        const data = await fetchUserSubmissions(handle, apiKey, apiKey, 1, 1);
+        const data = await fetchUserSubmissions(handle, apiKey, apiSecret, 1, 1);
         return true;
     } catch (error) {
         return false;

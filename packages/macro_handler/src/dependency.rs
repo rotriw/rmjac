@@ -250,25 +250,6 @@ pub fn compute_execution_order(
                 }
             }
         }
-    } else {
-        // 如果没有指定，包含所有"before_"开头的函数
-        // 但只包含那些 from_path 属性中的变量都在路径变量中可用的
-        for before in before_funcs {
-            let name = before.name.to_string();
-            if name.starts_with("before_") {
-                // 检查 from_path 中声明的变量是否都在当前 handler 的路径变量中可用
-                // from_path 属性表示"必须从路径获取的变量"
-                let from_path_vars: Vec<String> =
-                    before.from_path.iter().map(|i| i.to_string()).collect();
-                let all_from_path_available = from_path_vars.iter().all(|v| path_vars.contains(v));
-
-                if all_from_path_available {
-                    for export in &before.exports {
-                        required_exports.insert(export.to_string());
-                    }
-                }
-            }
-        }
     }
 
     topological_sort(&graph, &required_exports)

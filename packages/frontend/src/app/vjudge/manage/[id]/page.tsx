@@ -1,13 +1,15 @@
 import { TitleCard, StandardCard } from "@/components/card/card";
-import { getVJudgeAccountDetail } from "@/api/server/vjudge";
+import { getDetail as getVJudgeAccountDetail } from "@/api/server/api_vjudge_account"; // Changed import
 import { notFound } from "next/navigation";
 import { ManageActions } from "@/components/vjudge/manage-actions";
+import { VjudgeNode } from "@rmjac/api-declare"; // Import VjudgeNode type
 
 export default async function ManageVjudgeAccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  let account;
+  let account: VjudgeNode | null = null; // Specify type as VjudgeNode
   try {
-      account = await getVJudgeAccountDetail(parseInt(id));
+      const response = await getVJudgeAccountDetail({ node_id: id }); // Changed API call
+      account = response.data; // Access data property
   } catch (_e) {
     console.error(_e);
       notFound();

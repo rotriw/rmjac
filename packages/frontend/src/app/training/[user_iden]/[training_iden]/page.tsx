@@ -3,7 +3,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { StandardCard, TitleCard } from "@/components/card/card"
-import { getTrainingByIden, TrainingProblem } from "@/api/server/training"
+import { getView as getTrainingView } from "@/api/server/api_training_view" // Changed import
+import { TrainingProblem, Training } from "@rmjac/api-declare" // Changed import
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import React from "react"
 
@@ -70,7 +71,8 @@ export default async function TrainingPage({ params }: PageProps) {
   const { user_iden, training_iden } = await params
 
   try {
-    const trainingData = await getTrainingByIden(user_iden, training_iden)
+    const trainingDataResponse = await getTrainingView({ user_iden, training_iden }) // Changed API call
+    const trainingData: Training = trainingDataResponse.data // Extract data and cast to Training type
     const { training_node, problem_list } = trainingData
 
     return (

@@ -6,6 +6,14 @@ macro_rules! now_time {
 }
 
 #[macro_export]
+macro_rules! default_node {
+    ($field:ident) => {
+        crate::env::DEFAULT_NODES.lock().unwrap().$field
+    };
+}
+
+
+#[macro_export]
 macro_rules! Json {
     () => {
         serde_json::json!({}).to_string()

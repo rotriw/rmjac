@@ -1,13 +1,16 @@
 import fs from "node:fs";
+import process from "node:process";
 import path from "node:path";
 import Progress from "progress";
 import { parse } from "../vjudge_services/codeforces/parse.ts";
 import { Problem } from "../declare/problem.ts";
 
-const HTML_DIR = "./data/codeforces/handled3/html";
-const OUTPUT_DIR = "./data/codeforces/handled3/parsed";
-const FAILED_FILE = "./data/codeforces/handled3/failed.jsonl";
-const PROCESSED_FILE = "./data/codeforces/handled3/processed.txt";
+const pathd = process.env.WHERE;
+
+const HTML_DIR = `./data/codeforces/${pathd}/html`;
+const OUTPUT_DIR = `./data/codeforces/${pathd}/parsed`;
+const FAILED_FILE = `./data/codeforces/${pathd}/failed.jsonl`;
+const PROCESSED_FILE = `./data/codeforces/${pathd}/processed.txt`;
 const CONCURRENT_LIMIT = 5;
 
 // 读取已处理的文件列表

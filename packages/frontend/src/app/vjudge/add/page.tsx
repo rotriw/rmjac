@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { bindVJudgeAccount } from "@/api/server/vjudge"
+import { postBind } from "@/api/server/api_vjudge_bind" // Changed import
+import { BindAccountReq } from "@rmjac/api-declare" // New import for type
 import {
   Loader2,
   CheckCircle2,
@@ -229,18 +230,20 @@ export default function AddVJudgeAccountPage() {
       const authPayload = selectedMethod.calc_func(fieldValues)
       const payload = JSON.parse(authPayload)
 
-      const res = await bindVJudgeAccount({
+      const bindAccountReq: BindAccountReq = {
         platform: selectedPlatform,
         method: payload.method,
         auth: payload.auth,
         iden: payload.handle,
         bypass_check: false,
-      })
+      }
 
-      if (res.code === 0) {
+      const res = await postBind({ data: bindAccountReq }) // Changed API call and payload
+
+      if (res.code === 0) { // Assuming res.code is still valid
         setSuccess(true)
         setTimeout(() => {
-          router.push(`/vjudge/manage/${res.data.node_id}`)
+          router.push(`/vjudge/manage/${res.data.node_id}`) // Assuming res.data contains node_id
           router.refresh()
         }, 2000)
       } else {
@@ -386,3 +389,4 @@ export default function AddVJudgeAccountPage() {
     </div>
   )
 }
+

@@ -57,9 +57,9 @@ pub mod handler {
 
     #[handler]
     #[perm(check_login)]
-    #[route("/{node_id}")]
+    #[route("/delete/{node_id}")]
     #[export("message")]
-    async fn delete_account(
+    async fn post_delete_account(
         store: &mut impl ModelStore,
         user_context: Option<UserAuthCotext>,
         account_node_id: i64,

@@ -24,8 +24,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-
-import { Record } from "./page"
+import { RecordEdge } from "@rmjac/api-declare"
 
 interface ProblemRightSidebarProps extends React.ComponentProps<typeof Sidebar> {
   problemId: string
@@ -41,7 +40,7 @@ interface ProblemRightSidebarProps extends React.ComponentProps<typeof Sidebar> 
       tag_name: string
     }
   }>
-  userRecords?: Record[]
+  userRecords?: RecordEdge[]
   statements?: Array<{
     node_id: number
     public: {
@@ -262,22 +261,21 @@ export function ProblemRightSidebar({
               {userRecords && userRecords.length > 0 ? (
                 <>
                   {userRecords.slice(0, 5).map((record) => (
-                    <SidebarMenuItem key={record.node_id}>
+                    <SidebarMenuItem key={record.record_node_id}>
                       <SidebarMenuButton className="h-auto py-2 flex-col items-start gap-1 bg-white/5 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/10 hover:bg-white/10 dark:hover:bg-white/10 !text-sidebar-foreground hover:!text-sidebar-foreground transition-all rounded-lg mx-1 shadow-sm mb-1">
                         <div className="flex items-center justify-between w-full px-1">
                           <Badge
-                            variant={record.public.record_status === 2 ? "default" : "destructive"}
+                            variant="default"
                             className="text-[10px] px-1 py-0 h-4"
                           >
-                            {getStatusText(record.public.record_status)}
+                            {record.record_status} {record.score}
                           </Badge>
                           <span className="text-[10px] text-muted-foreground">
-                            {new Date(record.public.creation_time).toLocaleDateString()}
+                            {new Date(record.submit_time).toLocaleDateString()}
                           </span>
                         </div>
                         <div className="text-[10px] text-muted-foreground flex justify-between w-full">
-                          <span>{record.public.language}</span>
-                          <span>{record.public.time_elapsed}ms / {record.public.memory_used}KB</span>
+                          <span>{record.platform}</span>
                         </div>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

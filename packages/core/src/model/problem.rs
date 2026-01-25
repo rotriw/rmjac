@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use std::hash::Hash;
 use crate::db::entity::node::problem_statement::ContentType;
 use crate::error::{CoreError, QueryExists};
 use crate::graph::action::get_node_type;
@@ -29,9 +31,9 @@ use crate::service::iden::{
     create_iden, get_node_id_iden, get_node_ids_from_iden, remove_iden_to_specific_node,
 };
 use crate::service::perm::impled::PermEnum;
-use crate::service::perm::provider::{Manage, ManagePermService, Pages, PagesPermService};
+use crate::service::perm::provider::{Manage, ManagePermService, Pages, PagesPermService, ProblemPermService, ViewPermService};
 use crate::service::perm::typed::{GetU, PermVerify};
-use crate::{Result, db};
+use crate::{Result, db, env};
 use chrono::Utc;
 use db::entity::edge::misc::Column as MiscColumn;
 use redis::Commands;
@@ -68,6 +70,7 @@ pub struct ProblemStatementProp {
     pub page_source: Option<String>,
     pub page_rendered: Option<String>,
     pub problem_difficulty: Option<i32>,
+    pub judge_option: Option<HashMap<String, String>>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
@@ -367,6 +370,7 @@ impl ProblemRepository {
 
 impl<'a> ProblemDraft<'a> {
     pub async fn commit(&self, store: &mut impl ModelStore) -> Result<ProblemNode> {
+        log::info!("Creating problem: {}", self.iden_slug);
         let db = store.get_db().clone();
         if get_node_ids_from_iden(
             &db,
@@ -441,14 +445,10 @@ impl<'a> ProblemDraft<'a> {
         .await?;
 
         if self.public_view_enabled {
-            let guest_node = crate::env::DEFAULT_NODES.lock().unwrap().guest_user_node;
-            /* PermProblemEdgeRaw {
-                u: guest_node,
-                v: problem_node.node_id,
-                perms: ProblemPermRaw::Perms(vec![ProblemPerm::ReadProblem]),
-            }
-            .save(store.get_db())
-            .await?; */
+            let default = default_node!(default_strategy_node);
+            ProblemPermissionService::add_viewer(store, default, problem_node.node_id).await?;
+            let guest = default_node!(guest_user_node);
+            ProblemPermissionService::add_viewer(store, guest, problem_node.node_id).await?;
         }
 
         Ok(problem_node)
@@ -560,6 +560,15 @@ impl ProblemStatement {
         Ok(result)
     }
 
+    pub async fn set_judge_option(
+        &self,
+        store: &mut impl ModelStore,
+        judge_option: HashMap<String, String>,
+    ) -> Result<()> {
+        SubmissionMethod::save(store, self.node_id, judge_option).await?;
+        Ok(())
+    }
+
     async fn flush_parent(&self, store: &mut impl ModelStore) -> Result<()> {
         if let Ok(parent_id) =
             ProblemStatementEdgeQuery::get_u_one(self.node_id, store.get_db()).await
@@ -579,13 +588,15 @@ pub enum Role {
     Owner,
 }
 
+use crate::service::perm::provider::Problem as ProblemPerm;
+
 impl ProblemPermissionService {
     pub async fn get_perm(p: i64, r: Role) -> Vec<i64> {
         // return node id list.
         let perms: i64 = match r {
-            Role::Edit => Pages::Edit.into(),
-            Role::Viewer => Pages::View.into(),
-            Role::Owner => Pages::Edit + Pages::Delete,
+            Role::Edit => ProblemPerm::Edit.into(),
+            Role::Viewer => ProblemPerm::View.into(),
+            Role::Owner => ProblemPerm::Edit + ProblemPerm::Delete,
         };
 
         PagesPermService::get_allow_u(p, perms)
@@ -593,13 +604,13 @@ impl ProblemPermissionService {
 
     pub async fn set_perm(p: i64, r: Role, u: i64, store: &impl ModelStore) -> Result<()> {
         let perms: i64 = match r {
-            Role::Edit => Pages::Edit.into(),
-            Role::Viewer => Pages::View.into(),
-            Role::Owner => Pages::Edit + Pages::Delete,
+            Role::Edit => ProblemPerm::Edit.into(),
+            Role::Viewer => ProblemPerm::View.into(),
+            Role::Owner => ProblemPerm::Edit + ProblemPerm::Delete,
         };
         // Replace permissions: delete all then add.
-        PagesPermService::del(u, p, Pages::All, store.get_db()).await;
-        PagesPermService::add(u, p, perms, store.get_db()).await;
+        PagesPermService::del(u, p, ProblemPerm::All, store.get_db()).await;
+        ProblemPermService::add(u, p, perms, store.get_db()).await;
         Ok(())
     }
 
@@ -639,6 +650,7 @@ impl ProblemPermissionService {
 
 // Backward compat alias
 pub use ProblemPermissionService as Perm;
+use crate::model::submit::{SubmissionMethod, SubmissionService};
 
 pub struct ProblemFactory;
 
@@ -650,6 +662,7 @@ impl ProblemFactory {
         ProblemStatementNodeRaw,
         ProblemLimitNodeRaw,
         Option<ProblemIdenString>,
+        HashMap<String, String>
     ) {
         (
             ProblemStatementNodeRaw {
@@ -683,6 +696,7 @@ impl ProblemFactory {
                 private: ProblemLimitNodePrivateRaw {},
             },
             Some(statement.iden),
+            statement.judge_option.unwrap_or_default()
         )
     }
 
@@ -692,6 +706,7 @@ impl ProblemFactory {
             ProblemStatementNodeRaw,
             ProblemLimitNodeRaw,
             Option<ProblemIdenString>,
+            HashMap<String, String>
         )>,
         tag_node_id: Vec<i64>,
         problem_name: &str,
@@ -728,9 +743,10 @@ impl ProblemFactory {
             ProblemStatementNodeRaw,
             ProblemLimitNodeRaw,
             Option<ProblemIdenString>,
+            HashMap<String, String>
         ),
     ) -> Result<ProblemStatementNode> {
-        let (problem_statement_node_raw, problem_limit_node_raw, iden) = problem_statement;
+        let (problem_statement_node_raw, problem_limit_node_raw, iden, option) = problem_statement;
         let db = store.get_db().clone();
         let problem_statement_node = problem_statement_node_raw.save(&db).await?;
         let problem_limit_node = problem_limit_node_raw.save(&db).await?;
@@ -775,6 +791,9 @@ impl ProblemFactory {
         }
         .save(store.get_db())
         .await?;
+        if !option.is_empty() {
+            SubmissionMethod::save(store, problem_statement_node.node_id, option).await?;
+        }
 
         TestcaseEdgeRaw {
             u: problem_statement_node.node_id,

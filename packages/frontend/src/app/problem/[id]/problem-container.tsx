@@ -5,13 +5,14 @@ import { useState } from "react"
 import { TitleCard } from "@/components/card/card"
 import ProblemClient from "./problem-client"
 import { ProblemRightSidebar } from "./problem-right-sidebar"
-import { ProblemModel, ProblemLimitNode, Record } from "./page"
+import { ProblemModel, ProblemLimitNode } from "./page"
+import { RecordEdge } from "@rmjac/api-declare"
 
 interface ProblemContainerProps {
   id: string
   model: ProblemModel
   mainLimit: ProblemLimitNode | null
-  user_recent_records: Record[] | undefined
+  user_recent_records: RecordEdge[] | undefined
   isLoggedIn: boolean
   statement: number
   platform: string

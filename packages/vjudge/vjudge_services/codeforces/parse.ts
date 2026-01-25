@@ -259,11 +259,16 @@ export const parse = async (html: string, url: string): Promise<Problem | ""> =>
         sample_group: convertCodeforcesDomToSampleGroup(dom),
         show_order: ["default_codeforces"],
         problem_difficulty: difficulty === -1 ? null : difficulty,
-        problem_tag_list: tag_list,
+        // page_rendered: html,
+        // problem_tag_list: tag_list,
+        judge_option: {
+            "p_id": problemIndex,
+            "c_id": contestId,
+        }
     };
 
     return {
-        problem_source: "codeforces",
+        // problem_source: "codeforces",
         problem_iden: `RmjCF${problemIden}`,
         problem_name: problemName,
         problem_statement: [problemStatement],

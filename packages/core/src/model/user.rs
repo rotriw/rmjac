@@ -27,6 +27,7 @@ use redis::TypedCommands;
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use tap::Conv;
+use crate::service::perm::provider::{Pages, PagesPermService, ProblemPermService, SystemPermService};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserRaw {
@@ -98,13 +99,9 @@ impl UserRaw {
     ) -> Result<()> {
         let default_node_id = env::DEFAULT_NODES.lock().unwrap().default_strategy_node;
         if default_node_id != -1 {
-            let _ = PermProblemEdgeRaw {
-                u: user.node_id,
-                v: default_node_id,
-                perms: crate::service::perm::provider::Problem::All.into(),
-            }
-            .save(db)
-            .await;
+            PagesPermService::add(user.node_id, default_node_id, -1, db).await;
+            ProblemPermService::add(user.node_id, default_node_id, -1, db).await;
+            SystemPermService::add(user.node_id, default_node_id, -1, db).await;
         } else {
             log::warn!("Default strategy node not set, user will not have default permissions.");
         }

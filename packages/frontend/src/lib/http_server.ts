@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "@/lib/constants";
-import { json } from "stream/consumers";
+import { cookies } from "next/headers";
 
 interface ApiResponse<T> {
   code: number;
@@ -26,20 +26,27 @@ async function request<TRequest, TResponse>(
   }
 
   try {
-    config.credentials = "include";
+    const manage = await cookies();
+    config.headers = {
+        cookie: manage.toString(),
+        "Content-Type": "application/json",
+    };
+    console.log(config);
     const response = await fetch(`${API_BASE_URL}${url}`, config);
+
     const jsonResponse: ApiResponse<TResponse> = await response.json();
+
     if (!response.ok || jsonResponse.code !== 0) {
       // Handle API errors or non-2xx HTTP status codes
+      console.log(`to `, url);
       console.log(jsonResponse);
       console.error(`API Error: ${jsonResponse || response.statusText}`);
-      throw new Error(jsonResponse?.error || JSON.stringify(jsonResponse) || "An unknown API error occurred.");
+      throw new Error(jsonResponse.error || jsonResponse.message);
     }
-    console.log(jsonResponse);
+
 
     return jsonResponse;
   } catch (error) {
-    console.error(error);
     console.error(`Network or parsing error: ${error}`);
     throw error;
   }

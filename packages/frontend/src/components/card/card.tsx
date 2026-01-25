@@ -10,11 +10,12 @@ function StandardCard({
 }: React.ComponentProps<"div"> & {
   title?: string
   className?: string
-  childrenClassName?: string
+  childrenClassName?: string,
+  children: React.ReactNode | React.ReactNode[]
 }) {
   return (
     <>
-      <Card className={`mb-2 p-0 rounded-sm gap-0 ${className} text-neutral-800 shadow-sm border-1 border-neutral-100`} {...props}>
+      <Card className={`mb-2 p-0 rounded-sm gap-0 ${className} text-neutral-800 shadow-none border-none border-neutral-100`} {...props}>
         <span className="text-xs font-bold px-3 pt-2 text-neutral-600">
           {title}
         </span>

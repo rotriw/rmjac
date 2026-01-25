@@ -13,8 +13,9 @@ export interface ProblemStatement {
     memory_limit: number; // 内存限制，单位 KB
     sample_group: [string, string][]; // 样例 [输入, 输出]
     show_order: string[]; // 题目显示顺序
-    problem_difficulty: number | null; // 题目难度
-    page_rendered: string | null; // 题目渲染后的 HTML 内容
+    problem_difficulty: number | null | undefined; // 题目难度
+    page_rendered: string | null | undefined; // 题目渲染后的 HTML 内容
+    judge_option: Record<string, string>;
 }
 
 export interface Problem {

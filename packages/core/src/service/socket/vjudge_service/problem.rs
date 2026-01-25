@@ -8,7 +8,7 @@ use socketioxide::extract::{Data, SocketRef};
 
 #[auth_socket_connect]
 async fn handle_problem_create(socket: SocketRef, Data(problem): Data<CreateProblemProps>) {
-    log::debug!("Creating/Updating problem from socket {}.", socket.id);
+    log::info!("Creating/Updating problem from socket {}.", socket.id);
     let db = get_connect().await;
     if let Err(err) = db {
         log::error!("Failed to connect to database: {}", err);

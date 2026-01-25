@@ -173,6 +173,7 @@ use strum_macros::EnumIter;
 
 pub mod subtask;
 pub mod testcase;
+pub mod submit_info;
 
 impl From<i64> for RecordStatus {
     fn from(value: i64) -> Self {

@@ -8,10 +8,7 @@ import { {{type_imports}} } from '@rmjac/api-declare'
 export type ApiEnvelope<T> = { code: number; msg?: string; data?: T } & Record<string, any>
 
 export function unwrap<T>(resp: ApiEnvelope<T>): T {
-  if (resp.code !== 0) {
-    throw new Error(resp.msg || 'Unknown error')
-  }
-  return (resp.data ?? (resp as any)) as T
+  return resp as T;
 }
 
 // ==================== API Functions ====================

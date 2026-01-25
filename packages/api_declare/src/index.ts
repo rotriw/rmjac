@@ -79,6 +79,7 @@ export * from "./interface/ProblemTagNodePublic";
 export * from "./interface/ProblemTagNodePublicRaw";
 export * from "./interface/RecordEdge";
 export * from "./interface/RecordEdgeRaw";
+export * from "./interface/RecordListItem";
 export * from "./interface/RecordNewProp";
 export * from "./interface/RecordNode";
 export * from "./interface/RecordNodePrivate";

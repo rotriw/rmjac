@@ -2,19 +2,19 @@
 
 import { useState } from "react"
 import { VJudgeAccountCard } from "@/components/vjudge/account-card"
-import { VJudgeAccount } from "@/api/server/vjudge"
+import { VjudgeNode } from "@rmjac/api-declare" // Changed import: VJudgeAccount to VjudgeNode
 import { StandardCard, TitleCard } from "@/components/card/card"
 import { UserPlus } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
 interface ClientPageProps {
-  initialAccounts: VJudgeAccount[]
+  initialAccounts: VjudgeNode[] // Changed type
 }
 
 export function ClientVjudgeAccountPage({ initialAccounts }: ClientPageProps) {
-  const [accounts] = useState<VJudgeAccount[]>(initialAccounts)
-
+  const [accounts] = useState<VjudgeNode[]>(initialAccounts) // Changed type
+    console.log(accounts);
   return (
     <div className="py-6 px-4 md:px-6 animate-in fade-in duration-300">
       <div className="mb-6 flex justify-between items-start">

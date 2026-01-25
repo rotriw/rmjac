@@ -5,11 +5,11 @@ import { useSearchParams } from "next/navigation"
 import { TitleCard } from "@/components/card/card"
 import { FormQuery, FormField } from "@/components/tools/query";
 import { StandardCard } from "@/components/card/card";
-import { createTraining } from "@/api/client/training";
-import { TrainingNode, TrainingList, TrainingProblem, CreateProps } from "@rmjac/api-declare";
+import { postCreate as createTraining } from "@/api/client/api_training_create"; // Changed import and alias
+import { TrainingNode, TrainingList, TrainingProblem, CreateTrainingReq } from "@rmjac/api-declare"; // Changed import: CreateProps to CreateTrainingReq
 
 // Define a type for the form values
-interface TrainingFormValues extends Omit<CreateProps, 'problem_list' | 'write_perm_user' | 'read_perm_user'> {
+interface TrainingFormValues extends Omit<CreateTrainingReq, 'problem_list' | 'write_perm_user' | 'read_perm_user'> {
   mode: "simple" | "complex" | "import";
   problems?: string; // Comma-separated problem IDs for simple mode
   import_url?: string; // URL for import mode
@@ -46,7 +46,7 @@ export function TrainingCreateTool() {
         problem_list.own_problem = problemIds.map(id => ({ ProblemIden: [0, id] })); // Assuming ProblemIden takes [number, string]
       }
 
-      const submissionData: CreateProps = {
+      const submissionData: CreateTrainingReq = { // Changed type to CreateTrainingReq
         iden: formValues.iden || "",
         title: formValues.title || "未命名题单",
         description_public: formValues.description_public || "",
@@ -59,19 +59,19 @@ export function TrainingCreateTool() {
         read_perm_user: []
       };
 
-      const result = await createTraining(submissionData);
+      const result = await createTraining({ data: submissionData }); // Changed API call: pass as { data: ... }
 
       if (result) {
         setSubmitResult({
           success: true,
           message: `题单创建成功！`,
-          data: result
+          data: result.data // Assuming result has a data property
         });
       } else {
         setSubmitResult({
           success: false,
           message: `创建失败: 未知错误`, // createTraining will throw an error on failure, so result should always be defined here
-          data: result
+          data: result // Assuming result is the error object in this case, or can be null.
         });
       }
     } catch (error) {

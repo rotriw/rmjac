@@ -32,6 +32,8 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubmitContext {
     pub code: String,
+    pub user_id: i64,
+    pub method: String,
 }
 
 pub trait CompileOptionValue {
@@ -174,6 +176,8 @@ pub trait JudgeService {
             "operation": "submit",
             "platform": self.platform_name(),
             "vjudge_node": vjudge_node,
+            "method": context.method,
+            "user_id": context.user_id,
             "context": context,
             "option": {
                 "language": value.language.export_name(),

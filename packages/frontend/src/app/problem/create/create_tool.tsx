@@ -4,10 +4,9 @@ import { useSearchParams } from "next/navigation"
 import { TitleCard } from "@/components/card/card"
 import { FormQuery, FormField } from "@/components/tools/query";
 import { StandardCard } from "@/components/card/card";
-import { ProblemData } from "./types";
-import {createProblem} from "@/api/client/problem";
-import { DetailData } from "@/components/problem/detail-data"
-import { ProblemModel } from "@rmjac/api-declare";
+import { ProblemData } from "./types"; // ProblemData type is still here, not from api-declare
+import { postCreate as createProblem } from "@/api/client/api_problem_create"; // Changed import and alias
+import { ProblemModel, ProblemStatementProp } from "@rmjac/api-declare"; // Added ProblemStatementProp import
 
 export function ProblemTool() {
   const searchParams = useSearchParams()
@@ -22,15 +21,7 @@ export function ProblemTool() {
     setSubmitResult(null);
     
     const currentProblems = (formValues.problems as ProblemData[]) || [];    
-    let problemStatements: Array<{
-      statement_source: string;
-      iden?: string;
-      problem_statements: Array<{ iden: string; content: string }>;
-      time_limit: number;
-      memory_limit: number;
-      sample_group?: Array<[string, string]>;
-      show_order: string[];
-    }>;
+    let problemStatements: ProblemStatementProp[]; // Changed type to ProblemStatementProp[]
     
     if (currentProblems.length === 0) {
       problemStatements = [{
@@ -58,10 +49,8 @@ export function ProblemTool() {
         sample_group: problem.sampleGroups.length > 0 ? problem.sampleGroups.map(sample => [sample.input, sample.output]) : []
       }));
     }  
-    //get from cookie.
-    const user_id = +document.cookie.split('; ').find(row => row.startsWith('_uid='))?.split('=')[1] || '';
-    const submissionData = {
-      user_id,
+    
+    const submissionData = { // This object now directly matches PostCreateParams
       problem_iden: formValues.iden as string || currentProblems[0]?.problem_iden || "",
       problem_name: formValues.name as string || "未命名题目",
       problem_statement: problemStatements,
@@ -69,7 +58,7 @@ export function ProblemTool() {
     };
     
     try {
-      const newProblem = await createProblem(submissionData);
+      const newProblem = await createProblem(submissionData); // Changed API call: pass directly as params
       
       setSubmitResult({
         success: true,

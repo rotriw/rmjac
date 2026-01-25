@@ -22,11 +22,25 @@ pub mod handler {
     async fn get_options(
         store: &mut impl ModelStore,
         platform_str: String,
+        sid: i64,
     ) -> ResultHandler<Vec<LanguageChoiceInformation>> {
         let options = SubmissionService::allowed_methods(store, &platform_str)
             .await
             .map_err(HttpError::CoreError)?;
-
-        Ok(options)
+        let default_options = SubmissionService::default_options(store, sid).await?;
+        for cs in &default_options {
+            log::info!("{} !!", &cs.0);
+        }
+        let res_options = options.into_iter().map(|f| {
+            let mut allow_option = f.allow_option;
+            allow_option.retain(|v| {
+                !default_options.contains_key(&v.name)
+            });
+            LanguageChoiceInformation {
+                name: f.name,
+                allow_option,
+            }
+        }).collect();
+        Ok(res_options)
     }
 }

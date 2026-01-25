@@ -23,6 +23,8 @@ pub mod user;
 pub mod user_remote;
 pub mod vjudge_task;
 
+pub mod submit_info;
+
 use crate::Result;
 
 pub trait DbNodeInfo {

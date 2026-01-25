@@ -21,3 +21,4 @@ pub mod testcase_subtask;
 
 pub mod testcase;
 pub mod vjudge_task;
+pub mod submit_info;

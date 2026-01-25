@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectItem } from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { bindVJudgeAccount, VJudgeAccount } from "@/api/server/vjudge"
+import { postBind } from "@/api/server/api_vjudge_bind"
+import { BindAccountReq, VjudgeNode } from "@rmjac/api-declare"
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 import { StandardCard } from "@/components/card/card"
 
 interface AddAccountFormProps {
-    onSuccess?: (account: VJudgeAccount) => void
+  onSuccess?: (account: VjudgeNode) => void
 }
 
 export function AddAccountForm({ onSuccess }: AddAccountFormProps) {
@@ -36,27 +37,21 @@ export function AddAccountForm({ onSuccess }: AddAccountFormProps) {
     setMessage("正在绑定账号...")
 
     try {
-      // Pack handle and password into auth.Password for now since backend doesn't have dedicated handle field
-      // Format: JSON string
-      const authPayload = JSON.stringify({ handle, password });
+      const authPayload: BindAccountReq = {
+        platform,
+        method: "Password",
+        auth: { Password: password },
+        bypass_check: false,
+        ws_id: null,
+        iden: handle,
+      }
 
-      const res = await bindVJudgeAccount({
-          platform: platform,
-          remote_mode: 2, // Default to SyncCode (2) or similar? Let's assume 2 for now.
-          auth: { Password: authPayload },
-          bypass_check: false,
-          // ws_id: ... // We need socket ID for verification feedback? 
-          // For now, let's omit ws_id or we need to get it from a context.
-      })
-      
-      if (res.code === 0) {
-          setStatus('success')
-          setMessage("账号绑定请求已提交。请稍后查看验证状态。")
-          if (onSuccess) {
-              onSuccess(res.data)
-          }
-      } else {
-          throw new Error(res.msg || "绑定失败")
+      const res = await postBind({ data: authPayload })
+
+      setStatus('success')
+      setMessage("账号绑定请求已提交。请稍后查看验证状态。")
+      if (onSuccess) {
+          onSuccess((res as unknown as VjudgeNode) || undefined)
       }
 
     } catch (error: unknown) {

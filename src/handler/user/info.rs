@@ -47,9 +47,9 @@ pub mod handler {
     #[handler]
     #[route("/check_iden/{id}")]
     #[export("exists")]
-    async fn get_check_iden(store: &mut impl ModelStore, id: String) -> ResultHandler<(bool,)> {
+    async fn get_check_iden(store: &mut impl ModelStore, id: String) -> ResultHandler<bool> {
         let exists = User::identifier_exists(store.get_db(), id.as_str()).await?;
-        Ok((exists,))
+        Ok(exists)
     }
 
     #[handler]
@@ -58,9 +58,9 @@ pub mod handler {
     async fn get_profile(
         store: &mut impl ModelStore,
         user_id: i64,
-    ) -> ResultHandler<(SimplyUser,)> {
+    ) -> ResultHandler<SimplyUser> {
         let user = SimplyUser::load(store.get_db(), user_id).await?;
-        Ok((user,))
+        Ok(user)
     }
 
     #[handler]

@@ -13,7 +13,7 @@ const PARSED_DIRS = [
     "./data/codeforces/handled5/parsed",
 ];
 const UPLOADED_FILE = "./data/codeforces/uploaded.txt";
-const CONCURRENT_LIMIT = 10;
+const CONCURRENT_LIMIT = 2;
 
 // 全局变量
 let socket: Socket | null = null;
@@ -132,6 +132,7 @@ async function authenticate(sock: Socket): Promise<boolean> {
 
 // 上传单个题目
 function uploadProblem(sock: Socket, problem: Problem): Promise<boolean> {
+    return new Promise((resolve) => {
     let done: Problem = {
         problem_iden: problem.problem_iden,
         problem_name: problem.problem_name,
@@ -148,6 +149,7 @@ function uploadProblem(sock: Socket, problem: Problem): Promise<boolean> {
                 problem_source: ps.problem_source,
                 page_rendered: null,
                 problem_difficulty: ps.problem_difficulty,
+                judge_option: ps.judge_option,
             }
         }),
         user_id: problem.user_id,
@@ -155,6 +157,8 @@ function uploadProblem(sock: Socket, problem: Problem): Promise<boolean> {
         tags: problem.tags,
     };
     sock.emit("fetch_done_success", done);
+        resolve(true);
+    });
 }
 
 // 连接到服务器

@@ -246,3 +246,10 @@ pub fn route(_attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn require_login(_attr: TokenStream, item: TokenStream) -> TokenStream {
     item
 }
+
+/// 强制要求 Handler 的 props 包含的列表。
+/// 使用此prop即有能力允许拓宽使用的 before 函数。
+#[proc_macro_attribute]
+pub fn require_prop(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    item
+}

@@ -15,10 +15,12 @@ use crate::graph::node::training::problem::{
 use crate::graph::node::training::{
     TrainingNode, TrainingNodePrivateRaw, TrainingNodePublicRaw, TrainingNodeRaw,
 };
+use crate::graph::node::user::UserNode;
 use crate::graph::node::{Node, NodeRaw};
 use crate::model::ModelStore;
 use crate::model::problem::ProblemRepository;
 use crate::model::record::RecordRepository;
+use crate::model::user::SimplyUser;
 use crate::service::iden::{create_iden, get_node_id_iden, get_node_ids_from_iden};
 use crate::service::perm::provider::{Pages, PagesPermService};
 use async_recursion::async_recursion;
@@ -97,6 +99,7 @@ impl TrainingRepo {
         list: &TrainingList,
         _write_perm: Vec<i64>,
         _read_perm: Vec<i64>,
+        user_id: i64,
     ) -> Result<TrainingNode> {
         let node =
             new_training_node(db, title, pb_iden, desc_pub, desc_priv, start, end, kind).await?;
@@ -112,12 +115,7 @@ impl TrainingRepo {
             "Granting training creator permissions for user {}",
             user_iden
         );
-        if let Some(creator_node_id) =
-            first_node_id(get_node_ids_from_iden(db, redis, user_iden).await?)
-        {
-            Self::set_creator_perm(db, creator_node_id, node.node_id).await?;
-        }
-
+        Self::set_creator_perm(db, user_id, node.node_id).await?;
         Ok(node)
     }
 
@@ -141,10 +139,9 @@ impl TrainingRepo {
 
         let training_node = Self::create(
             db, redis, title, user_iden, pb_iden, desc_pub, desc_priv, start, end, kind, list,
-            write_perm, read_perm,
+            write_perm, read_perm, user_node_id,
         )
         .await?;
-        Self::set_creator_perm(db, user_node_id, training_node.node_id).await?;
         Ok(training_node)
     }
 
@@ -764,12 +761,13 @@ impl Training {
         list: &TrainingList,
         write_perm: Vec<i64>,
         read_perm: Vec<i64>,
+        user_id: i64,
     ) -> Result<TrainingNode> {
         let db = store.get_db().clone();
         let redis = store.get_redis();
         TrainingRepo::create(
             &db, redis, title, user_iden, pb_iden, desc_pub, desc_priv, start, end, kind, list,
-            write_perm, read_perm,
+            write_perm, read_perm, user_id
         )
         .await
     }
@@ -777,7 +775,6 @@ impl Training {
     pub async fn create_as(
         store: &mut impl ModelStore,
         title: &str,
-        user_iden: &str,
         pb_iden: &str,
         desc_pub: &str,
         desc_priv: &str,
@@ -791,11 +788,12 @@ impl Training {
     ) -> Result<TrainingNode> {
         let db = store.get_db().clone();
         let redis = store.get_redis();
+        let user_iden = SimplyUser::load(&db, user_node_id).await?.iden;
         TrainingRepo::create_as(
             &db,
             redis,
             title,
-            user_iden,
+            user_iden.as_str(),
             pb_iden,
             desc_pub,
             desc_priv,

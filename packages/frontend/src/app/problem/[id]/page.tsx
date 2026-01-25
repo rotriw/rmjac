@@ -1,79 +1,53 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { TypstRenderer } from "@/components/typst-renderer"
-import { API_BASE_URL } from "@/api/client/config"
+import { API_BASE_URL } from "@/lib/constants" // Import from constants
 import ProblemContainer from "./problem-container"
-import {ProblemStatementNode, viewProblem} from "@/api/server/problem"
+import { getView as getProblemView } from "@/api/server/api_problem_view" // Import new API function
+import { getUserInfo } from "@/api/server/api_user_info" // Import for checkUserLogin
+import {
+  ProblemStatementNode,
+  ProblemLimitNode,
+  ProblemTagNode,
+  ProblemNode,
+  ProblemModel,
+  ContentType,
+  RecordEdge, // Import RecordEdge
+  SimplyUser, // Import SimplyUser
+} from "@rmjac/api-declare" // Import directly from api-declare
 
-export interface Record {
-  node_id: number
-  public: {
-    record_status: number
-    time_elapsed: number
-    memory_used: number
-    language: string
-    creation_time: string
-  }
-}
+// The old Record interface is not directly needed if using RecordEdge from api-declare
+// export interface Record {
+//   node_id: number
+//   public: {
+//     record_status: number
+//     time_elapsed: number
+//     memory_used: number
+//     language: string
+//     creation_time: string
+//   }
+// }
 
-
-
-export interface ProblemLimitNode {
-  node_id: number
-  public: {
-    time_limit: number
-    memory_limit: number
-  }
-}
-
-export interface ProblemTagNode {
-  node_id: number
-  public: {
-    tag_name: string
-    tag_description: string
-  }
-}
-
-export interface ProblemNode {
-  node_id: number
-  public: {
-    name: string
-    creation_time: string
-  }
-}
-
-export interface ProblemModel {
-  problem_node: ProblemNode
-  problem_statement_node: Array<[ProblemStatementNode, ProblemLimitNode]>
-  tag: ProblemTagNode[]
-  author?: {
-    node_id: number
-    avatar: string
-    name: string
-    iden: string
-  }
-}
+// The old ProblemLimitNode, ProblemTagNode, ProblemNode, ProblemModel interfaces are now from api-declare
+// No longer need to redefine them here.
 
 interface ProblemData {
   model: ProblemModel
   statement: number
-  user_recent_records?: Record[]
-  user_last_accepted_record?: Record[]
+  user_recent_records?: RecordEdge[] // Use RecordEdge
+  user_last_accepted_record?: RecordEdge[] // Use RecordEdge
 }
 
 async function checkUserLogin(): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/user/info`, {
-      cache: 'no-store',
-      credentials: 'include',
-    })
-    return response.ok
-  } catch {
+    const response = await getUserInfo() // Use new API function
+    return response.is_login
+  } catch (error) {
+    console.error("Failed to check user login status:", error)
     return false
   }
 }
 
-import { ContentType } from "@/api/server/problem"
 
 function renderContent(content: ContentType[]) {
   const refname = {
@@ -103,10 +77,19 @@ function renderContent(content: ContentType[]) {
 
 export default async function ProblemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [problemData, isLoggedIn] = await Promise.all([
-    viewProblem(id),
+  const [problemDataResponse, isLoggedIn] = await Promise.all([
+    getProblemView({ iden: id }), // Use new API function and pass iden as param
     checkUserLogin()
   ])
+
+  // Adapt the response to the ProblemData interface
+  const problemData: ProblemData = {
+    model: problemDataResponse.model,
+    statement: problemDataResponse.statement,
+    user_recent_records: problemDataResponse.user_recent_records || [],
+    user_last_accepted_record: problemDataResponse.user_last_accepted_record || [],
+  }
+
 
   if (!problemData) {
     return (
@@ -150,4 +133,3 @@ export default async function ProblemPage({ params }: { params: Promise<{ id: st
     </ProblemContainer>
   )
 }
-

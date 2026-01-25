@@ -1,8 +1,9 @@
 use crate::env::CONFIG;
 use crate::handler::{ResultHandler, UserAuthCotext};
-use crate::utils::challenge::{self, gen_captcha, gen_verify_captcha};
+use crate::utils::challenge::{self, gen_captcha, gen_verify_captcha, verify_captcha};
 use macro_handler::{export, generate_handler, handler, perm, route};
-use rmjac_core::graph::node::user::UserNodePublic;
+use rmjac_core::graph::node::user::{UserNode, UserNodePublic};
+use rmjac_core::graph::node::token::TokenNode;
 use rmjac_core::model::ModelStore;
 use rmjac_core::model::user::{UserAuthService, UserRaw};
 use rmjac_core::now_time;
@@ -23,43 +24,42 @@ pub struct LoginProp {
 
 #[generate_handler(route = "/auth", real_path = "/api/user/auth")]
 pub mod handler {
+    use rmjac_core::error::CoreError::StringError;
+    use rmjac_core::model::user::UserCreaterUserVerify;
+    use crate::handler::HttpError::CoreError;
     use super::*;
-    use crate::handler::HandlerError::Conflict;
-    use crate::handler::{HandlerError, HttpError};
-    use crate::utils::challenge::verify_captcha;
-    use rmjac_core::error::CoreError;
-    use rmjac_core::graph::node::token::TokenNode;
-    use rmjac_core::graph::node::user::UserNode;
-    use rmjac_core::model::user::{User, UserCreaterUserVerify};
-    use tap::Conv;
 
-    #[perm]
-    async fn verify_challenge(
+    #[export(ensure_verify)]
+    async fn before_verify(
         iden: &str,
         name: &str,
         email: &str,
         avatar: &str,
         password: &str,
-        challenge_text: &str,
         verify: UserCreaterUserVerify,
-    ) -> bool {
+    ) -> ResultHandler<bool> {
         let now = now_time!();
         if now.and_utc().timestamp_millis() - verify.challenge_time > 5 * 60 * 1000 {
-            return false;
+            Err(CoreError(StringError("Captcha is expired".to_string())))?;
+
         }
-        verify_captcha(
+        let res = verify_captcha(
             &verify.challenge_text,
             email,
             verify.challenge_time,
             &CONFIG.lock().unwrap().secret_challenge_code,
             verify.challenge_darkmode == "dark",
             &verify.challenge_code,
-        )
+        );
+        if res == false {
+            Err(CoreError(StringError("Invalid captcha".to_string())))?;
+        }
+
+        Ok(true)
     }
 
     #[handler]
     #[route("/register")]
-    #[perm(verify_challenge)]
     #[export("message", "user")]
     async fn post_register(
         store: &mut impl ModelStore,
@@ -68,6 +68,7 @@ pub mod handler {
         email: &str,
         avatar: &str,
         password: &str,
+        ensure_verify: bool,
     ) -> ResultHandler<(String, UserNode)> {
         let user = UserRaw {
             iden: iden.to_string(),
@@ -88,7 +89,7 @@ pub mod handler {
         store: &mut impl ModelStore,
         user: &str,
         password: &str,
-        long_token: Option<bool>,
+        ltoken: Option<bool>,
     ) -> ResultHandler<(i64, UserNode, TokenNode)> {
         let token_iden = "Unknown Device";
         let mut redis = get_redis_connection();
@@ -98,14 +99,19 @@ pub mod handler {
             user,
             password,
             token_iden,
-            long_token.unwrap_or(false),
+            ltoken.unwrap_or(false),
         )
         .await?;
         Ok((user.node_id, user, token))
     }
 
+    async fn perm() -> bool {
+        true
+    }
+
     #[handler]
     #[route("/before_register")]
+    #[perm(perm)]
     #[export("challenge_code", "challenge_verify", "challenge_time")]
     async fn get_before_register(
         dark_mode: bool,

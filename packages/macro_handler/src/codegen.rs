@@ -32,7 +32,7 @@ pub fn generate_handler_impl(
     let export_service = generate_export_service(handler_base_path, &service_registrations);
 
     #[cfg(feature = "export_ts_type")]
-    let value = crate::export::export_func_generate(handler_real_path, handler_funcs);
+    let value = crate::export::export_func_generate(handler_real_path, handler_funcs, before_funcs, perm_funcs);
 
     Ok(quote! {
         #(#route_handlers)*
@@ -143,17 +143,17 @@ fn generate_route_handler(
 }
 
 /// 参数分析结果
-struct ParameterAnalysis {
-    needs_props: bool,
-    props_fields: Vec<(Ident, Type)>,
-    path_params: Vec<(Ident, Type)>,
-    before_exports: HashMap<String, (String, Ident)>, // param_name -> (before_name, export_name)
+pub struct ParameterAnalysis {
+    pub needs_props: bool,
+    pub props_fields: Vec<(Ident, Type)>,
+    pub path_params: Vec<(Ident, Type)>,
+    pub before_exports: HashMap<String, (String, Ident)>, // param_name -> (before_name, export_name)
     /// before 函数需要从 props 获取的参数
-    before_props_params: HashMap<String, Vec<(Ident, Type)>>, // before_name -> [(param_name, param_type)]
+    pub before_props_params: HashMap<String, Vec<(Ident, Type)>>, // before_name -> [(param_name, param_type)]
 }
 
 /// 分析handler函数的参数来源
-fn analyze_parameters(
+pub fn analyze_parameters(
     handler: &HandlerFunction,
     path_vars: &[String],
     before_funcs: &[BeforeFunction],
@@ -391,7 +391,7 @@ fn generate_route_function(
 
         quote! {
             if !#perm_name(#(#perm_args),*).await {
-                return Err(actix_web::error::ErrorForbidden("Permission denied"));
+                Err(crate::handler::HttpError::HandlerError(crate::handler::HandlerError::PermissionDenied))?;
             }
         }
     } else {
@@ -444,7 +444,7 @@ fn generate_route_function(
         quote! {
             let __user_context = __req.extensions().get::<UserAuthCotext>().cloned();
             if __user_context.is_none() {
-                return Err(actix_web::error::ErrorForbidden("Permission denied"));
+                Err(crate::handler::HttpError::HandlerError(crate::handler::HandlerError::PermissionDenied))?;
             }
             let __login_user_context = __user_context.clone().unwrap();
         }
@@ -504,7 +504,7 @@ fn generate_route_function(
             #(#path_param_defs,)*
             #route_params
             #props_param
-        ) -> Result<actix_web::HttpResponse, actix_web::Error> {
+        ) -> crate::handler::ResultHandler<actix_web::HttpResponse> {
             use actix_web::HttpMessage;
 
             let __db = __db_actix.get_ref();
@@ -521,8 +521,7 @@ fn generate_route_function(
 
 
 
-            let result = #handler_name(#(#handler_args),*).await
-                .map_err(|e| actix_web::error::ErrorInternalServerError(e))?;
+            let result = #handler_name(#(#handler_args),*).await?;
 
             Ok(actix_web::HttpResponse::Ok()
                 .content_type("application/json")
@@ -536,7 +535,7 @@ fn generate_route_function(
 }
 
 /// 将引用类型转换为所有权类型（用于 Path 提取）
-fn convert_ref_to_owned(ty: &Type) -> TokenStream {
+pub fn convert_ref_to_owned(ty: &Type) -> TokenStream {
     if let syn::Type::Reference(ref_ty) = ty {
         // 检查是否是 &str
         if let syn::Type::Path(type_path) = ref_ty.elem.as_ref() {

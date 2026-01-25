@@ -7,27 +7,31 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { StandardCard } from "@/components/card/card"
-import { getSubmitOptions, submitCode, JudgePlatformOptions } from "@/api/client/submit"
+import { getOptions as getSubmitOptions } from "@/api/client/api_submit_options" // Changed import
+import { postSubmit as submitCode } from "@/api/client/api_submit_vjudge" // Changed import
 import { Select, SelectItem } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Loader2 } from "lucide-react"
+import { LanguageChoiceInformation, RecordEdge, RecordNode } from "@rmjac/api-declare" // New imports
+import { redirect } from "next/dist/server/api-utils"
 
-interface Record {
-  node_id: number
-  public: {
-    record_status: number
-    time_elapsed: number
-    memory_used: number
-    language: string
-    creation_time: string
-  }
-}
+// Changed Record interface to RecordNode from api-declare
+// interface Record {
+//   node_id: number
+//   public: {
+//     record_status: number
+//     time_elapsed: number
+//     memory_used: number
+//     language: string
+//     creation_time: string
+//   }
+// }
 
 interface ProblemClientProps {
   problemId: string
   statementId: number
-  userRecords?: Record[]
+  userRecords?: RecordEdge[] // Changed type
   isLoggedIn?: boolean
   platform: string
 }
@@ -41,11 +45,11 @@ export default function ProblemClient({
 }: ProblemClientProps) {
   const [code, setCode] = useState("")
   const [language, setLanguage] = useState("")
-  const [options, setOptions] = useState<JudgePlatformOptions | null>(null)
+  const [options, setOptions] = useState<LanguageChoiceInformation[] | null>(null) // Changed type
   const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string | boolean | number }>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingOptions, setIsLoadingOptions] = useState(true)
-  const [vjudgeId] = useState<number>(1)
+  const [vjudgeId] = useState<number>(25865) // vjudgeId seems to be fixed to 1, might need to be dynamic later
   const [publicView] = useState(true)
 
   const currentLanguageOptions = options?.find((l) => l.name === language)
@@ -75,10 +79,10 @@ export default function ProblemClient({
     async function fetchOptions() {
       try {
         setIsLoadingOptions(true)
-        const data = await getSubmitOptions(platform)
-        setOptions(data)
-        if (data && data.length > 0) {
-          setLanguage(data[0].name)
+        const response = await getSubmitOptions({ platform: platform, sid: statementId }) // Changed API call and param
+        setOptions(response.options) // Extract options
+        if (response.options && response.options.length > 0) {
+          setLanguage(response.options[0].name)
         }
       } catch {
         toast.error("获取提交选项失败")
@@ -134,22 +138,23 @@ export default function ProblemClient({
       toast.error("请选择一个 Vjudge 账号")
       return
     }
-
+    let record_id = 0;
     try {
       setIsSubmitting(true)
-      const judge_option: { [key: string]: string } = {}
+      const judge_option: { [key: string]: unknown } = {} // Changed type to unknown
       for (const [key, value] of Object.entries(selectedOptions)) {
         judge_option[key] = String(value)
       }
-      const result = await submitCode({
-        statement_id: statementId,
+      const result = await submitCode({ // Changed API call and payload
+        stmt_id: statementId,
         vjudge_id: vjudgeId,
         code,
         language,
         judge_option,
         public_view: publicView
       })
-      toast.success(`提交成功，记录 ID: ${result.record_id}`)
+      toast.success(`提交成功，记录 ID: ${result.record.node_id}`) // Access node_id from record
+      record_id = result.record.node_id;
       // Optionally redirect to record page or refresh history
     } catch (error) {
       const msg = error instanceof Error ? error.message : "提交失败";
@@ -157,6 +162,8 @@ export default function ProblemClient({
     } finally {
       setIsSubmitting(false)
     }
+    if (record_id !== 0)
+      window.location.href = `/record/${record_id}`;
   }
 
   const getStatusText = (status: number) => {
@@ -192,7 +199,7 @@ export default function ProblemClient({
                     加载中...
                   </div>
                 ) : (
-                  <Select value={language} onChange={(e) => setLanguage(e.target.value)}>
+                  <Select value={language} onValueChange={(value) => setLanguage(value)}> {/* Changed onChange to onValueChange */}
                     <SelectItem value="" disabled>
                       选择语言
                     </SelectItem>
@@ -212,9 +219,8 @@ export default function ProblemClient({
                   {opt.allowed_option && opt.allowed_option.length > 0 ? (
                     <Select
                       value={String(selectedOptions[opt.name] ?? "")}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        setSelectedOptions((prev) => ({ ...prev, [opt.name]: val }))
+                      onValueChange={(value) => { // Changed onChange to onValueChange
+                        setSelectedOptions((prev) => ({ ...prev, [opt.name]: value }))
                       }}
                     >
                       {opt.allowed_option.map((value) => (
@@ -276,19 +282,18 @@ export default function ProblemClient({
           {userRecords && userRecords.length > 0 ? (
             <div className="space-y-2">
               {userRecords.map((record) => (
-                <div key={record.node_id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div key={record.record_node_id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-4">
                     <Badge
-                      variant={record.public.record_status === 2 ? "default" : "destructive"}
                     >
-                      {getStatusText(record.public.record_status)}
+                      {record.record_status} {record.score}
                     </Badge>
                     <span className="text-sm text-gray-600">
-                      {record.public.language} • {record.public.time_elapsed}ms • {record.public.memory_used}KB
+                      {record.submit_time}
                     </span>
                   </div>
                   <span className="text-sm text-gray-500">
-                    {new Date(record.public.creation_time).toLocaleString()}
+                    {new Date(record.submit_time).toLocaleString()}
                   </span>
                 </div>
               ))}

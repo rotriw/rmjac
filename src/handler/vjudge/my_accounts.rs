@@ -19,7 +19,7 @@ pub mod handler {
 
     #[handler]
     #[perm(check_perm)]
-    #[route("/")]
+    #[route("/get")]
     #[export("data")]
     async fn get_my_accounts(
         store: &mut impl ModelStore,

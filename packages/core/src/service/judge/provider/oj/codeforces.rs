@@ -73,6 +73,8 @@ impl JudgeService for CodeforcesJudgeService {
             "operation": "submit",
             "platform": "codeforces",
             "vjudge_node": vjudge_node,
+            "method": context.method,
+            "user_id": context.user_id,
             "url": data.url,
             "context": context,
             "language_id": data.select_id,
@@ -97,11 +99,7 @@ pub fn convert(option: ChoiceOption<CodeforcesLanguage>) -> CodeforcesJudgeData 
         }
     }
     if !contest_id.is_empty() && !problem_id.is_empty() {
-        if contest_id.len() <= 4 {
-            url = format!("{}/contest/{}/problem/{}", url, contest_id, problem_id);
-        } else {
-            url = format!("{}/gym/{}/problem/{}", url, contest_id, problem_id);
-        }
+        url = format!("{}:{}", contest_id, problem_id);
     }
     CodeforcesJudgeData {
         url,
@@ -121,7 +119,7 @@ impl CompileOption for ContestID {
     }
 
     fn export_compile_name(&self) -> &'static str {
-        "--c_id="
+        "c_id"
     }
 
     fn export_show_name(&self) -> &'static str {
@@ -151,7 +149,7 @@ impl CompileOption for ProblemID {
     }
 
     fn export_compile_name(&self) -> &'static str {
-        "--p_id="
+        "p_id"
     }
 
     fn export_show_name(&self) -> &'static str {

@@ -19,7 +19,7 @@ impl CompileOption for ContestID {
     }
 
     fn export_compile_name(&self) -> &'static str {
-        "--c_id="
+        "c_id"
     }
 
     fn export_show_name(&self) -> &'static str {
@@ -46,7 +46,7 @@ impl CompileOption for ProblemID {
     }
 
     fn export_compile_name(&self) -> &'static str {
-        "--p_id="
+        "p_id"
     }
 
     fn export_show_name(&self) -> &'static str {
@@ -219,6 +219,8 @@ impl JudgeService for AtcoderJudgeService {
             "operation": "submit",
             "platform": "atcoder",
             "vjudge_node": vjudge_node,
+            "method": context.method,
+            "user_id": context.user_id,
             "url": data.url,
             "context": context,
             "language_id": data.select_id,

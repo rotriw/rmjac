@@ -9,8 +9,16 @@ import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StandardCard } from "@/components/card/card"
-import { getAllProblems, difficultyColors} from "@/api/server/problem"
+import { getList as getProblemList } from "@/api/server/api_problem_list" // Changed import
 import { ProblemListItem } from "@rmjac/api-declare"
+
+const difficultyColors: Record<string, string> = {
+  "入门": "bg-green-500",
+  "简单": "bg-blue-500",
+  "中等": "bg-yellow-500",
+  "困难": "bg-orange-500",
+  "极限": "bg-red-500",
+};
 
 export default function ProblemsPage() {
   const [problems, setProblems] = useState<ProblemListItem[]>([])
@@ -55,7 +63,7 @@ export default function ProblemsPage() {
 
   const fetchProblems = async () => {
     try {
-      const response = await getAllProblems()
+      const response = await getProblemList({}) // Changed API call
       setProblems(response.problems)
     } catch (error) {
       console.error("Failed to fetch problems:", error)

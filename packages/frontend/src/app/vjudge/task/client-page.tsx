@@ -5,7 +5,9 @@ import { useSearchParams } from "next/navigation"
 import { StandardCard, TitleCard } from "@/components/card/card"
 import { ViewVjudgeMessage } from "./viewmessage"
 import { AddTaskCard } from "./add-task"
-import { VJudgeTask, listVJudgeTasks, getMyVJudgeAccounts } from "@/api/server/vjudge"
+import { VjudgeTaskNode } from "@rmjac/api-declare" // Changed import for type
+import { getTasks } from "@/api/server/api_vjudge_tasks" // Changed import
+import { getMyAccounts } from "@/api/server/api_vjudge_my_accounts" // Changed import
 import { Loader2, History, PlusCircle, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
@@ -13,7 +15,7 @@ export function VjudgePageContent() {
   const searchParams = useSearchParams()
   const taskId = searchParams.get("id")
   const [loading, setLoading] = useState(false)
-  const [task, setTask] = useState<VJudgeTask | null>(null)
+  const [task, setTask] = useState<VjudgeTaskNode | null>(null) // Changed type
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -26,23 +28,22 @@ export function VjudgePageContent() {
       setLoading(true)
       setError("")
       try {
-        // We need to find which account this task belongs to.
-        // Currently, the backend doesn't provide a direct getTaskById API.
-        // However, we can optimize by checking the account_id if it was provided in the URL,
-        // or by fetching all accounts and their tasks.
         const accountId = searchParams.get("account_id");
         let foundTask = null;
 
         if (accountId) {
-          const tasks = await listVJudgeTasks(Number(accountId));
+          const tasksResponse = await getTasks({ node_id: Number(accountId).toString() }); // Changed API call
+          const tasks = tasksResponse.data; // Access data property
           foundTask = tasks.find(t => t.node_id === Number(taskId)) || null;
         }
 
         if (!foundTask) {
-          const accounts = await getMyVJudgeAccounts();
+          const accountsResponse = await getMyAccounts(); // Changed API call
+          const accounts = accountsResponse.data; // Access data property
           for (const acc of accounts) {
             if (acc.node_id === Number(accountId)) continue; // Already checked
-            const tasks = await listVJudgeTasks(acc.node_id);
+            const tasksResponse = await getTasks({ node_id: acc.node_id.toString() }); // Changed API call
+            const tasks = tasksResponse.data; // Access data property
             const t = tasks.find(t => t.node_id === Number(taskId));
             if (t) {
               foundTask = t;
@@ -65,7 +66,7 @@ export function VjudgePageContent() {
     }
 
     fetchTaskDetail()
-  }, [taskId])
+  }, [taskId, searchParams])
 
   if (loading) {
     return (

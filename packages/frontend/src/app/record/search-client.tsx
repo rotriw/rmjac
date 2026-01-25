@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { TreeTable, TreeTableNode } from "@/components/table/treetable";
 import { Input } from "@/components/ui/input";
-import { listRecords } from "@/api/server/record";
+import { getList as getRecordList } from "@/api/server/api_record_list"; // Changed import
 import { RecordStatus, RECORD_STATUS_COLOR_MAP_INTER, Icond } from "./[id]/shared";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { RecordRightSidebar } from "./rightbar";
 import { TitleCard } from "@/components/card/card";
-import { RecordEdge } from "@rmjac/api-declare";
+import { RecordEdge, RecordListItem } from "@rmjac/api-declare"; // Added RecordListItem import
 
 interface RecordItem {
     edge: RecordEdge;
@@ -23,7 +23,7 @@ interface RecordItem {
 
 export default function RecordSearchClient() {
     const router = useRouter();
-    const [records, setRecords] = useState<RecordItem[]>([]);
+    const [records, setRecords] = useState<RecordListItem[]>([]); // Changed type to RecordListItem
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
@@ -39,7 +39,7 @@ export default function RecordSearchClient() {
         if (loading) return;
         setLoading(true);
         try {
-            const query: Record<string, string | number> = {
+            const query: Record<string, string | number | string[] | null | undefined> = {
                 page: pageNum,
                 per_page: 20,
             };
@@ -49,7 +49,7 @@ export default function RecordSearchClient() {
                 query.status = parseInt(filters.status);
             }
 
-            const res = await listRecords(query);
+            const res = await getRecordList(query); // Changed API call
             if (res && res.records) {
                 if (isNewSearch) {
                     setRecords(res.records);
@@ -94,21 +94,21 @@ export default function RecordSearchClient() {
     }, [loading, hasMore]);
 
     const treeData: TreeTableNode[] = records.map((item) => ({
-        id: item.edge.id,
+        id: item.edge.record_node_id, // Changed to node_id as id
         background: RECORD_STATUS_COLOR_MAP_INTER[item.edge.record_status],
-        onClick: () => router.push(`/record/${item.edge.record_node_id}`),
+        onClick: () => router.push(`/record/${item.edge.record_node_id}`), // Changed to node_id
         content_title: (
             <div className="flex items-center gap-2 text-sm font-medium">
                 <Icond size={4} status={item.edge.record_status} />
                 <span className="font-bold">{item.edge.record_status}</span>
-                <span className="opacity-70">#{item.edge.id}</span>
+                <span className="opacity-70">#{item.edge.record_node_id}</span>
             </div>
         ),
         content: (
             <div className="flex items-center justify-between w-full pr-4">
                 <div className="flex items-center gap-4 text-sm">
                     <span onClick={(e) => e.stopPropagation()}>用户: <Link href={`/user/${item.user_iden}`} className="hover:underline font-semibold">{item.user_name} ({item.user_iden})</Link></span>
-                    <span onClick={(e) => e.stopPropagation()}>题目: <Link href={`/problem/${item.problem_iden.replace("problem", "")}`} className="hover:underline font-semibold">{item.problem_name} ({item.problem_iden.replace("problem", "")})</Link></span>
+                    <span onClick={(e) => e.stopPropagation()}>题目: <Link href={`/problem/${item.problem_iden.replaceAll('problem', '')}`} className="hover:underline font-semibold">{item.problem_name} ({item.problem_iden.replaceAll('problem', '')})</Link></span>
                     <span>分数: <span className="font-bold">{item.edge.score}</span></span>
                     <span>长度: {item.edge.code_length} B</span>
                     <span className="opacity-60">{new Date(item.edge.submit_time).toLocaleString()}</span>

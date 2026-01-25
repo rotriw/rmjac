@@ -10,7 +10,7 @@ use rmjac_core::service::perm::typed::PermVerify;
 pub mod handler {
     use super::*;
 
-    #[from_path(user_iden, training_iden)]
+    #[from_path()]
     #[export(node_id)]
     async fn before_resolve(
         store: &mut impl ModelStore,
@@ -42,25 +42,27 @@ pub mod handler {
 
     #[handler]
     #[perm(check_view_perm)]
-    #[route("/{user_iden}/{training_iden}")]
+    #[route("/normal")]
     #[export("data")]
     async fn get_view(
         store: &mut impl ModelStore,
         node_id: i64,
-    ) -> ResultHandler<(Training,)> {
+    ) -> ResultHandler<Training> {
         let training = Training::get(store, node_id).await?;
-        Ok((training,))
+        Ok(training)
     }
 
     #[handler]
     #[perm(check_view_perm)]
-    #[route("/{user_iden}/{training_iden}")]
+    #[route("/normal")]
     #[export("data")]
     async fn post_view(
         store: &mut impl ModelStore,
+        user_iden: &str,
+        training_iden: &str,
         node_id: i64,
-    ) -> ResultHandler<(Training,)> {
+    ) -> ResultHandler<Training> {
         let training = Training::get(store, node_id).await?;
-        Ok((training,))
+        Ok(training)
     }
 }

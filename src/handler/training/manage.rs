@@ -14,7 +14,7 @@ pub mod handler {
 
     use super::*;
 
-    #[from_path(user_iden, training_iden)]
+    #[from_path()]
     #[export(tid)]
     async fn before_resolve(
         store: &mut impl ModelStore,
@@ -45,12 +45,12 @@ pub mod handler {
 
     #[perm]
     #[require_login]
-    async fn require_edit(user_context: UserAuthCotext, node_id: i64) -> bool {
+    async fn require_edit(user_context: UserAuthCotext, tid: i64) -> bool {
         let uid = user_context.user_id;
-        if PagesPermService::verify(uid, node_id, Pages::Edit) {
+        if PagesPermService::verify(uid, tid, Pages::Edit) {
             return true;
         }
-        if SystemPermService::verify(uid, node_id, System::ManageAllTraining) {
+        if SystemPermService::verify(uid, tid, System::ManageAllTraining) {
             return true;
         }
         false
@@ -58,12 +58,12 @@ pub mod handler {
 
     #[perm]
     #[require_login]
-    async fn require_sudo(user_context: UserAuthCotext, node_id: i64) -> bool {
+    async fn require_sudo(user_context: UserAuthCotext, tid: i64) -> bool {
         let uid = user_context.user_id;
-        if PagesPermService::verify(uid, node_id, Pages::Delete) {
+        if PagesPermService::verify(uid, tid, Pages::Delete) {
             return true;
         }
-        if SystemPermService::verify(uid, node_id, System::ManageAllTraining) {
+        if SystemPermService::verify(uid, tid, System::ManageAllTraining) {
             return true;
         }
         false
@@ -71,12 +71,12 @@ pub mod handler {
 
     #[handler]
     #[perm(require_edit)]
-    #[route("/{tid}/add_problem_for_list")]
+    #[route("/add_problem_for_list")]
     #[export("failed_count", "failed", "successful_data")]
     async fn post_add_problem_for_list(
         store: &mut impl ModelStore,
-        tid: i64,
         problems: Vec<String>,
+        tid: i64,
         lid: i64,
         is_listed: bool,
     ) -> ResultHandler<(usize, Vec<String>, Vec<(i64, i64)>)> {
@@ -96,8 +96,8 @@ pub mod handler {
     }
 
     #[handler]
-    #[perm(check_manage_perm)]
-    #[route("/{user_iden}/{training_iden}/add_problem_list")]
+    #[perm(require_edit)]
+    #[route("/add_problem_list")]
     #[export("new")]
     async fn post_add_problem_list(
         store: &mut impl ModelStore,
@@ -113,8 +113,8 @@ pub mod handler {
     }
 
     #[handler]
-    #[perm(check_manage_perm)]
-    #[route("/{user_iden}/{training_iden}/modify_description")]
+    #[perm(require_edit)]
+    #[route("/modify_description")]
     #[export("message")]
     async fn post_modify_desc(
         store: &mut impl ModelStore,
@@ -137,8 +137,8 @@ pub mod handler {
     }
 
     #[handler]
-    #[perm(check_manage_perm)]
-    #[route("/{user_iden}/{training_iden}/remove_problem")]
+    #[perm(require_sudo)]
+    #[route("/remove_problem")]
     #[export("message")]
     async fn post_remove_problem(
         store: &mut impl ModelStore,
@@ -160,8 +160,8 @@ pub mod handler {
     }
 
     #[handler]
-    #[perm(check_manage_perm)]
-    #[route("/{user_iden}/{training_iden}/update_order")]
+    #[perm(require_edit)]
+    #[route("/update_order")]
     #[export("message")]
     async fn post_update_order(
         store: &mut impl ModelStore,

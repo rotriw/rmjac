@@ -7,8 +7,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { redirect } from "next/navigation"
-import { API_BASE_URL } from "@/api/client/config"
 import { cookies } from "next/headers"
+import { postLogin } from "@/api/server/api_user_auth"
 
 export function LoginForm({
   className,
@@ -16,38 +16,21 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
   async function handleSubmit(data: FormData) {
     "use server"
-    console.log(data.get("user"));
-    console.log(JSON.stringify({
-      user: data.get("user"),
-      password: data.get("password"),
-    }));
-    const body = await fetch(`${API_BASE_URL}/api/user/login/normal`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user: data.get("user"),
-          password: data.get("password"),
-          long_token: null
-        })
-      }
-    );
-    console.log(body.status);
-    const res = await body.json();
-    console.log(res);
-    if (res?.code == 60003) {
-      redirect('/login?err=60003')
+    try {
+      const res = await postLogin({
+        
+        user: data.get("user") as string,
+        password: data.get("password") as string,
+      })
+
+      const cookieStore = await cookies()
+      cookieStore.set('_uid', String(res.user_id))
+      cookieStore.set('token', res.token.private.token)
+    } catch (_error) {
+      redirect(`/login?err=login_failed&reason=${_error}`)
     }
-    if (res?.code == 0) {
-      console.log(123);
-      // login successful
-      // set cookie.
-      const cookieStore = await cookies();
-      cookieStore.set('_uid', res?.data.user_id);
-      cookieStore.set('token', res?.data.token_private?.token);
-      redirect('/')
-    }
+    redirect('/')
+    
   }
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>

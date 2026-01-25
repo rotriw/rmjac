@@ -131,6 +131,44 @@ export async function loginWithPassword(
     return "";
 }
 
+export async function checkLoginWithToken(
+    handle: string,
+    token: string,
+): Promise<boolean> {
+    try {
+        const browser = await getOnePage();
+        const page = await browser.newPage();
+        browser.setCookie({
+            name: "JSESSIONID",
+            value: token,
+            domain: "codeforces.com",
+            path: "/",
+            expires: -1,
+            secure: false,
+            httpOnly: true,
+            sameSite: "Lax",
+            size: token.length,
+            priority: "Medium",
+            sourcePort: 443,
+            sourceScheme: "Secure",
+            sameParty: false,
+        });
+        await page.goto("https://codeforces.com/");
+        if (!(await page.content()).includes("Home") && !(await page.content()).includes("Top")) {
+            await page.clickAndWaitForNavigation("body");
+            await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+        // await page.reload({ waitUntil: "domcontentloaded" });
+        const content = await page.content();
+        if (content.includes(handle)) {
+            return true;
+        }
+    } catch (e) {
+        console.log(`Error checking login with token: ${e}`);
+    }
+    return false;
+}
+
 export async function checkLoginWithPassword(
     handle: string,
     password: string,

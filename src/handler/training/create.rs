@@ -41,7 +41,6 @@ pub mod handler {
         let training_data = Training::create_as(
             store,
             &data.title,
-            &user_id.to_string(),
             &data.iden,
             &data.description_public,
             &data.description_private,

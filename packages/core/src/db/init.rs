@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+    use std::collections::HashMap;
 
 use async_trait::async_trait;
 use log::LevelFilter;
@@ -232,6 +232,13 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             UpdatedAt: date_time not_null,
         }),
     );
+    tables.insert(
+        "node_submit_node".to_string(),
+        table_create!(iden::node::submit_info::SubmitInfo, {
+            NodeId: big_integer not_null primary_key,
+            OptionData: text not_null,
+        }),
+    );
 
     tables.insert(
         "edge".to_string(),
@@ -462,6 +469,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         "node_iden".to_string(),
         Table::drop()
             .table(iden::node::iden::Iden::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        "node_submit_info".to_string(),
+        Table::drop()
+            .table(iden::node::submit_info::SubmitInfo::Table)
             .if_exists()
             .to_owned(),
     );

@@ -3,28 +3,28 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { VJudgeAccount } from "@/api/server/vjudge"
+import { VjudgeNode } from "@rmjac/api-declare"
 import Link from "next/link"
 import { CheckCircle2, XCircle, Settings } from "lucide-react"
 
 interface VJudgeAccountCardProps {
-  account: VJudgeAccount
+    account: VjudgeNode
 }
 
 export function VJudgeAccountCard({ account }: VJudgeAccountCardProps) {
   let handle = account.public.iden;
   
   // Try to extract handle from auth
-  if (account.private.auth?.Password) {
-      try {
-          const authData = JSON.parse(account.private.auth.Password);
-          if (authData.handle) {
-              handle = authData.handle;
-          }
-      } catch (e) {
-          // If not JSON, maybe just the password? Or we treat it as unknown.
-          // Or maybe we can display the iden? iden is "vjudge_uid_Platform".
-      }
+    const auth = account.private?.auth
+    if (auth && "Password" in auth && auth.Password) {
+        try {
+            const authData = JSON.parse(auth.Password)
+            if (authData.handle) {
+                handle = authData.handle
+            }
+        } catch (_error) {
+            // Fallback to default handle if parsing fails
+        }
   }
 
   return (

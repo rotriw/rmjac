@@ -196,7 +196,7 @@ pub mod handler {
 
     #[handler]
     #[perm(require_sudo)]
-    #[route("/{iden}/transfer_owner")]
+    #[route("/{iden}/add_owner")]
     #[export("message")]
     async fn post_transfer_owner(
         store: &mut impl ModelStore,
@@ -205,8 +205,6 @@ pub mod handler {
         new_owner: i64,
     ) -> ResultHandler<(String,)> {
         let old_owner_id = user_context.user_id;
-        // Transfer ownership: remove old owner and add new owner
-        ProblemPermissionService::remove_owner(store, old_owner_id, pid).await?;
         ProblemPermissionService::add_owner(store, new_owner, pid).await?;
         Ok(("successful".to_string(),))
     }

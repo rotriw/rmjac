@@ -19,6 +19,16 @@ pub struct RecordEdge {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[ts(export)]
+pub struct RecordListItem {
+    pub edge: RecordEdge,
+    pub problem_name: String,
+    pub problem_iden: String,
+    pub user_name: String,
+    pub user_iden: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct RecordEdgeRaw {
     pub u: i64,
     pub v: i64,

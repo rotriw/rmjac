@@ -10,17 +10,12 @@ import {
 } from "@/components/ui/sidebar"
 import { LogOut, User } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { getUserInfo } from "@/api/server/user"
+import { getUserInfo } from "@/api/server/api_user_info"
 import Link from "next/link"
 import { getGravatarUrl } from "@/lib/gravatar"
+import { SimplyUser } from "@rmjac/api-declare"
 
-interface UserData {
-  node_id: number
-  avatar: string
-  name: string
-  iden: string
-  email?: string
-}
+type UserData = SimplyUser
 
 export function UserAvatar() {
   const [user, setUser] = useState<UserData | null>(null)

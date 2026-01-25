@@ -2,7 +2,9 @@
 //!
 //! 在编译时收集 handler 信息，并生成 TypeScript 客户端代码
 
-use crate::types::HandlerFunction;
+use crate::types::{HandlerFunction, BeforeFunction, PermFunction};
+use crate::dependency::compute_execution_order;
+use crate::codegen::analyze_parameters;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fs;
@@ -226,36 +228,78 @@ fn parse_export_names(handler: &HandlerFunction) -> Vec<String> {
 }
 
 /// 生成类型导出信息并收集 handler 信息
-pub fn export_func_generate(type_real_path: &str, handlers: &[HandlerFunction]) {
+pub fn export_func_generate(
+    type_real_path: &str,
+    handlers: &[HandlerFunction],
+    before_funcs: &[BeforeFunction],
+    perm_funcs: &[PermFunction],
+) {
     let export_dir = env!("EXPORT");
 
     for handler in handlers {
         let function_name = handler.name.to_string();
         let http_method = handler.method.as_actix_macro().to_string();
         let route_template = handler.path_template.clone();
-        let path_params = extract_path_vars(&route_template);
+        let path_params_vec = extract_path_vars(&route_template);
 
-        // 收集非特殊参数（来自 handler 函数签名）
-        let mut params: Vec<(String, String)> = handler
-            .params
-            .iter()
-            .filter(|p| !p.is_self)
-            .filter(|p| {
-                let name = p.name.to_string();
-                !matches!(
-                    name.as_str(),
-                    "db" | "_db" | "redis" | "_redis" | "store" | "user_context"
-                )
-            })
-            .map(|p| (p.name.to_string(), rust_type_to_ts_name(&p.ty)))
-            .collect();
+        // 确定需要执行的perm函数
+        let perm_func = if let Some(ref perm_name) = handler.perm_func {
+            perm_funcs.iter().find(|p| &p.name == perm_name)
+        } else {
+            perm_funcs.iter().find(|p| p.name == "perm")
+        };
 
-        // 添加路径参数（如果还没有在 params 中）
-        for path_param in &path_params {
-            if !params.iter().any(|(name, _)| name == path_param) {
-                // 路径参数默认为 string 类型
-                params.insert(0, (path_param.clone(), "string".to_string()));
+        // 计算依赖和执行顺序
+        // 这里的逻辑需要与 codegen.rs 中的逻辑保持一致
+        let execution_order = match compute_execution_order(handler, perm_func, before_funcs, &path_params_vec) {
+            Ok(order) => order,
+            Err(e) => {
+                eprintln!("cargo:warning=Failed to compute execution order for {}: {}", function_name, e);
+                continue;
             }
+        };
+
+        // 整合 perm_func 参数到 handler (与 codegen 一致)
+        let mut total_handler = handler.clone();
+        if let Some(perm_func) = perm_func {
+            let mut now_params = std::collections::HashMap::new();
+            for param in &total_handler.params {
+                now_params.insert(param.name.clone().to_string(), true);
+            }
+            for used_param in &perm_func.params {
+                if now_params.contains_key(&used_param.name.to_string()) {
+                    continue;
+                }
+                total_handler.params.push(used_param.clone());
+                now_params.insert(used_param.name.clone().to_string(), true);
+            }
+        }
+
+        // 分析参数
+        let analysis = match analyze_parameters(&total_handler, &path_params_vec, before_funcs, &execution_order) {
+            Ok(a) => a,
+            Err(e) => {
+                eprintln!("cargo:warning=Failed to analyze parameters for {}: {}", function_name, e);
+                continue;
+            }
+        };
+
+        // 构建导出参数列表
+        let mut params: Vec<(String, String)> = Vec::new();
+
+        // 1. 先添加路径参数
+        for path_param in &path_params_vec {
+            // 路径参数默认为 string，或者如果能从 analysis.path_params 找到类型
+            let mut param_type = "string".to_string();
+            if let Some((_, ty)) = analysis.path_params.iter().find(|(name, _)| name.to_string() == *path_param) {
+                param_type = rust_type_to_ts_name(ty);
+            }
+            params.push((path_param.clone(), param_type));
+        }
+
+        // 2. 添加 Props 参数 (非路径参数)
+        for (name_ident, ty) in &analysis.props_fields {
+            params.push((name_ident.to_string(), rust_type_to_ts_name(ty)));
         }
 
         // 解析 export 属性获取返回字段名
@@ -311,7 +355,7 @@ pub fn export_func_generate(type_real_path: &str, handlers: &[HandlerFunction]) 
             http_method,
             route_template,
             params,
-            path_params,
+            path_params: path_params_vec,
             export_fields,
             return_type_name,
             used_types,
@@ -358,9 +402,13 @@ fn generate_handler_ts(handler: &ExportedHandler) -> String {
     };
 
     // 生成 HTTP 调用参数
-    let http_args = match handler.http_method.as_str() {
-        "get" => format!("url"),
-        _ => format!("url, params"),
+    let http_args = if handler.params.is_empty() {
+        match handler.http_method.as_str() {
+            "get" | "delete" => format!("url, undefined"),
+            _ => format!("url"),
+        }
+    } else {
+        format!("url, params")
     };
 
     // 生成参数接口
@@ -467,7 +515,7 @@ fn generate_output(handler: &ExportedHandler, export_dir: &str) {
         (existing, types)
     } else {
         // 初始化时先用空字符串替换，后面会更新
-        (header_str.to_string(), Vec::new())
+        (header_str.to_string(), Vec::<String>::new())
     };
 
     // 添加新的类型到导入列表
@@ -485,7 +533,7 @@ fn generate_output(handler: &ExportedHandler, export_dir: &str) {
         "export async function {}",
         to_camel_case(&handler.function_name)
     );
-    if !content.contains(&function_marker) {
+    if !content.contains(function_marker.as_str()) {
         content = format!("{}\n{}", content, handler_code);
     }
 

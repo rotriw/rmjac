@@ -8,16 +8,15 @@ import { FormQuery } from "@/components/tools/query"
 import { StandardCard } from "@/components/card/card"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { ManageRightSidebar, ManageMode } from "./rightbar"
+import { getView as getTrainingByIden } from "@/api/client/api_training_view"
 import {
-  getTrainingByIden,
-  addProblemToTrainingList,
-  addProblemListToTraining,
-  modifyTrainingListDescription,
-  removeProblemFromTraining,
-  updateTrainingOrder,
-  type TrainingProblem,
-  type TrainingList
-} from "@/api/client/training"
+  postAddProblemForList,
+  postAddProblemList,
+  postModifyDesc,
+  postRemoveProblem,
+  postUpdateOrder,
+} from "@/api/client/api_training_manage"
+import { Training, TrainingProblem, TrainingList } from "@rmjac/api-declare";
 import { TreeTable, TreeTableNode } from "@/components/table/treetable"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,19 +29,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet"
 
-interface TrainingData {
-  training_node: {
-    public: {
-      name: string
-      iden: string
-      description: string
-    }
-    private: {
-      description: string
-    }
-  }
-  problem_list: TrainingList
-}
+interface TrainingData extends Training {}
 
 interface TrainingManageToolProps {
   user_iden: string
@@ -58,7 +45,8 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
 
   const fetchData = useCallback(async () => {
     try {
-      const data = (await getTrainingByIden(user_iden, training_iden)).data;
+      const response = await getTrainingByIden({ user_iden, training_iden });
+      const data = response.data; // Access data property
       setTrainingData(data)
       setFormValues({
         title: data.training_node.public.name,
@@ -103,14 +91,20 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
   const handleAddProblem = async (list_node_id: number, problemsStr: string) => {
     const problems = problemsStr.split(",").map(p => p.trim()).filter(p => p)
     try {
-      const res = await addProblemToTrainingList(user_iden, training_iden, {
-        list_node_id,
-        problems
+      if (!trainingData) {
+        toast.error("训练数据未加载")
+        return
+      }
+      const res = await postAddProblemForList({ // Changed API call
+        user_iden,
+        training_iden,
+        problems,
+        lid: list_node_id,
       })
-      toast.success(res.message || "添加成功")
+      toast.success(res.message || "添加成功") // Assuming message exists on response
       fetchData()
-    } catch {
-      toast.error("添加失败")
+    } catch(err) {
+      toast.error(`添加失败: ${err}`)
     }
   }
 
@@ -120,7 +114,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
     data: { description?: string; node_id?: string; iden?: string }
   ) => {
     try {
-      let problem_list_data: unknown;
+      let problem_list_data: TrainingList; // Changed type to TrainingList
       if (type === "ProblemTraining") {
         problem_list_data = {
           description: data.description || "New Module",
@@ -128,33 +122,41 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
         };
       } else if (type === "ProblemPresetTraining") {
         problem_list_data = {
+          description: data.description || "Preset Training", // Added description
+          own_problem: [], // Added own_problem
           ProblemPresetTraining: [parseInt(data.node_id || "0"), data.iden || ""]
         };
       } else {
         problem_list_data = {
+          description: data.description || "Exist Training", // Added description
+          own_problem: [], // Added own_problem
           ExistTraining: [parseInt(data.node_id || "0"), data.iden || ""]
         };
       }
 
-      const res = await addProblemListToTraining(user_iden, training_iden, {
-        list_node_id,
+      const res = await postAddProblemList({ // Changed API call
+        user_iden,
+        training_iden,
+        lid: list_node_id,
         problem_list: problem_list_data
       })
-      toast.success(res.message || "操作成功")
+      toast.success(res.message || "操作成功") // Assuming message exists
       fetchData()
-    } catch {
-      toast.error("操作失败")
+    } catch(err) {
+      toast.error(`操作失败: ${err}`)
     }
   }
 
   const handleRemoveProblem = async (list_node_id: number, delete_node_id: number) => {
     if (!confirm("确定要删除吗？")) return
     try {
-      const res = await removeProblemFromTraining(user_iden, training_iden, {
-        list_node_id,
-        delete_node_id
+      const res = await postRemoveProblem({ // Changed API call
+        user_iden,
+        training_iden,
+        lid: list_node_id,
+        edge_id: delete_node_id
       })
-      toast.success(res.message || "删除成功")
+      toast.success(res.message || "删除成功") // Assuming message exists
       fetchData()
     } catch {
       toast.error("删除失败")
@@ -180,8 +182,10 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
     })
 
     try {
-      await updateTrainingOrder(user_iden, training_iden, {
-        list_node_id,
+      await postUpdateOrder({ // Changed API call
+        user_iden,
+        training_iden,
+        lid: list_node_id,
         orders
       })
       fetchData()
@@ -197,8 +201,10 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
     })
 
     try {
-      await updateTrainingOrder(user_iden, training_iden, {
-        list_node_id,
+      await postUpdateOrder({ // Changed API call
+        user_iden,
+        training_iden,
+        lid: list_node_id,
         orders
       })
       fetchData()
@@ -212,10 +218,12 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
     const newDesc = prompt("请输入新的描述")
     if (newDesc === null) return
     try {
-      await modifyTrainingListDescription(user_iden, training_iden, {
-        list_node_id,
-        description_public: newDesc,
-        description_private: ""
+      await postModifyDesc({ // Changed API call
+        user_iden,
+        training_iden,
+        lid: list_node_id,
+        public: newDesc,
+        private: ""
       })
       fetchData()
     } catch {
