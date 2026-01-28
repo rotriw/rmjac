@@ -1,3 +1,5 @@
+use sea_orm::QuerySelect;
+use sea_orm::QueryFilter;
 use std::collections::HashMap;
 use std::hash::Hash;
 use crate::db::entity::node::problem_statement::ContentType;
@@ -35,9 +37,11 @@ use crate::service::perm::provider::{Manage, ManagePermService, Pages, PagesPerm
 use crate::service::perm::typed::{GetU, PermVerify};
 use crate::{Result, db, env};
 use chrono::Utc;
+use pgp::bytes::BufMut;
 use db::entity::edge::misc::Column as MiscColumn;
 use redis::Commands;
-use sea_orm::{ColumnTrait, DatabaseConnection};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait};
+use sea_orm::sea_query::SimpleExpr;
 use serde::{Deserialize, Serialize};
 
 use crate::model::ModelStore;
@@ -94,7 +98,7 @@ pub struct ProblemListQuery {
     pub name: Option<String>,
     pub tag: Option<Vec<String>>,
     pub author: Option<String>,
-    pub difficulty: Option<i32>,
+    pub difficulty: Option<(i32, i32)>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
@@ -127,6 +131,12 @@ impl CacheKey for ProblemRepository {
 impl ProblemRepository {
     pub async fn iden(store: &mut impl ModelStore, id: i64) -> Result<String> {
         Self::extract_problem_iden(store, id).await
+    }
+
+    pub async fn by_stmt(store: &mut impl ModelStore, stmt_id: i64) -> Result<i64> {
+        let db = store.get_db().clone();
+        let prob_id = ProblemStatementEdgeQuery::get_u_one(stmt_id, &db).await?;
+        Ok(prob_id)
     }
 
     async fn extract_problem_iden(store: &mut impl ModelStore, problem_id: i64) -> Result<String> {
@@ -368,6 +378,101 @@ impl ProblemRepository {
     }
 }
 
+pub struct ProblemSearch;
+impl ProblemSearch {
+
+
+    pub async fn by_tag(store: &mut impl ModelStore, tag: i64, (per_page, page): (u64, u64)) -> Result<Vec<Problem>> {
+        Ok(
+            ProblemTagEdgeQuery::get_u_filter_extend::<SimpleExpr>(tag, vec![], store.get_db(), Some(per_page), Some((page - 1) * per_page))
+            .await?
+            .iter()
+            .map(|f| {
+                Problem::new(f.0.clone())
+            }).collect()
+        )
+    }
+
+    pub async fn by_author(store: &mut impl ModelStore, author: String, (per_page, page): (u64, u64)) -> Result<Vec<Problem>> {
+        let author = get_user_by_iden(store.get_db(), &author).await?.node_id;
+        use db::entity::edge::misc::Column;
+        Ok(
+            MiscEdgeQuery::get_u_filter_extend(author, vec![Column::MiscType.eq("author")], store.get_db(), Some(per_page), Some((page - 1) * per_page))
+            .await?
+            .iter()
+            .map(|f| {
+                Problem::new(f.0.clone())
+            }).collect()
+        )
+    }
+
+    pub async fn by_difficulty(store: &mut impl ModelStore, difficulty_range: (i32, i32), (per_page, page): (u64, u64)) -> Result<Vec<Problem>> {
+        use db::entity::node::problem_statement::{Column, Entity};
+        let problems = Entity::find()
+            .filter(Column::ProblemDifficulty.between(difficulty_range.0, difficulty_range.1))
+            .limit(per_page)
+            .offset(((page -1) * per_page))
+            .all(store.get_db())
+            .await?;
+        let mut result = vec![];
+        for problem in problems {
+            let p = ProblemRepository::by_stmt(store, problem.node_id).await?;
+            result.push(Problem::new(p));
+        }
+        Ok(result)
+    }
+
+    pub async fn by_name(store: &mut impl ModelStore, name: String, (per_page, page): (u64, u64)) -> Result<Vec<Problem>> {
+        use db::entity::node::problem::{Column, Entity};
+        let problems = Entity::find()
+            .filter(Column::Name.contains(&name))
+            .limit(per_page)
+            .offset((page - 1) * per_page)
+            .all(store.get_db())
+            .await?
+            .iter()
+            .map(|f| {
+                Problem::new(f.node_id)
+            }).collect();
+        Ok(problems)
+    }
+
+    pub async fn combine(
+        store: &mut impl ModelStore,
+        query: &ProblemListQuery,
+    ) -> Result<Vec<Problem>> {
+        // first check problem,
+        let mut now_result = vec![];
+        let mut is_start = false;
+        let page = (query.per_page.unwrap_or(20), query.page.unwrap_or(1));
+        search_combine(Self::by_name, &mut now_result, &mut is_start, store, query.name.clone(), page).await?;
+        search_combine(Self::by_author, &mut now_result, &mut is_start, store, query.author.clone(), page).await?;
+        search_combine(Self::by_difficulty, &mut now_result, &mut is_start, store, query.difficulty, page).await?;
+        if let Some(tags) = query.tag.clone() {
+            for tag in tags {
+                let tag_node = ProblemTagNode::from_db_filter(
+                    store.get_db(),
+                    db::entity::node::problem_tag::Column::TagName.eq(tag),
+                )
+                .await?;
+                if tag_node.is_empty() {
+                    return Ok(vec![]);
+                }
+                search_combine(
+                    Self::by_tag,
+                    &mut now_result,
+                    &mut is_start,
+                    store,
+                    Some(tag_node[0].node_id),
+                    page,
+                )
+                .await?;
+            }
+        }
+        Ok(now_result)
+    }
+}
+
 impl<'a> ProblemDraft<'a> {
     pub async fn commit(&self, store: &mut impl ModelStore) -> Result<ProblemNode> {
         log::info!("Creating problem: {}", self.iden_slug);
@@ -455,8 +560,16 @@ impl<'a> ProblemDraft<'a> {
     }
 }
 
+
+#[derive(Ord, PartialOrd, Eq, PartialEq, Clone)]
 pub struct Problem {
     pub node_id: i64,
+}
+
+impl Into<i64> for Problem {
+    fn into(self) -> i64 {
+        self.node_id
+    }
 }
 
 impl Problem {
@@ -650,7 +763,12 @@ impl ProblemPermissionService {
 
 // Backward compat alias
 pub use ProblemPermissionService as Perm;
+use crate::db::entity::edge::edge::Entity;
+use crate::db::entity::edge::misc::Column;
+use crate::db::entity::node::user::get_user_by_iden;
+use crate::graph::edge::record::RecordEdgeQuery;
 use crate::model::submit::{SubmissionMethod, SubmissionService};
+use crate::utils::search::search_combine;
 
 pub struct ProblemFactory;
 

@@ -1,16 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StandardCard } from "@/components/card/card"
-import { getList as getProblemList } from "@/api/server/api_problem_list" // Changed import
-import { ProblemListItem } from "@rmjac/api-declare"
+import { postSearch } from "@/api/server/api_problem_search"
+import { ProblemListItem, ProblemListQuery } from "@rmjac/api-declare"
+import { Loader2 } from "lucide-react"
 
 const difficultyColors: Record<string, string> = {
   "入门": "bg-green-500",
@@ -22,12 +22,13 @@ const difficultyColors: Record<string, string> = {
 
 export default function ProblemsPage() {
   const [problems, setProblems] = useState<ProblemListItem[]>([])
-  const [filteredProblems, setFilteredProblems] = useState<ProblemListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  
+  // Since API doesn't return total count, we optimistically allow next page if we got full page
+  const [hasMore, setHasMore] = useState(false)
 
   const problemsPerPage = 20
 
@@ -49,70 +50,51 @@ export default function ProblemsPage() {
     return 256
   }
 
-  useEffect(() => {
-    fetchProblems()
-  }, [])
-
-  useEffect(() => {
-    filterProblems()
-  }, [problems, searchTerm, difficultyFilter])
-
-  useEffect(() => {
-    setTotalPages(Math.ceil(filteredProblems.length / problemsPerPage))
-  }, [filteredProblems])
-
-  const fetchProblems = async () => {
+  const fetchProblems = useCallback(async () => {
+    setLoading(true)
     try {
-      const response = await getProblemList({}) // Changed API call
+      // Cast payload to any to bypass BigInt type definition while passing numbers for JSON compatibility
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const query: any = {
+        page: currentPage,
+        per_page: problemsPerPage,
+        name: searchTerm || null,
+        tag: difficultyFilter !== "all" ? [difficultyFilter] : null
+      }
+      
+      const response = await postSearch({ query: query as ProblemListQuery })
       setProblems(response.problems)
+      setHasMore(response.problems.length === problemsPerPage)
     } catch (error) {
       console.error("Failed to fetch problems:", error)
+      setProblems([])
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentPage, searchTerm, difficultyFilter])
 
-  const filterProblems = () => {
-    let filtered = problems
-
-    if (searchTerm) {
-      filtered = filtered.filter(
-        problem => {
-          const name = getProblemName(problem)
-          const tags = getProblemTags(problem)
-          return name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            problem.iden.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-        }
-      )
-    }
-
-    if (difficultyFilter !== "all") {
-      filtered = filtered.filter(problem => getProblemTags(problem).includes(difficultyFilter))
-    }
-
-    setFilteredProblems(filtered)
-    setCurrentPage(1)
-  }
-
-  const paginatedProblems = filteredProblems.slice(
-    (currentPage - 1) * problemsPerPage,
-    currentPage * problemsPerPage
-  )
+  // Debounce search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProblems()
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [fetchProblems])
 
   const handleReset = () => {
     setSearchTerm("")
     setDifficultyFilter("all")
+    setCurrentPage(1)
   }
 
-  if (loading) {
-    return (
-      <div className="container mx-auto py-6 px-4 md:px-6">
-        <div className="flex justify-center items-center min-h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </div>
-    )
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value)
+    setCurrentPage(1) // Reset to page 1 on search
+  }
+
+  const handleDifficultyChange = (value: string) => {
+    setDifficultyFilter(value)
+    setCurrentPage(1) // Reset to page 1 on filter
   }
 
   return (
@@ -121,30 +103,35 @@ export default function ProblemsPage() {
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex-1">
             <Input
-              placeholder="搜索题目名称、ID或标签..."
+              placeholder="搜索题目名称、ID..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               className="w-full"
             />
           </div>
-          <Select value={difficultyFilter} onValueChange={setDifficultyFilter} className="w-full sm:w-32">
-            <option value="all">全部难度</option>
-            <option value="入门">入门</option>
-            <option value="简单">简单</option>
-            <option value="中等">中等</option>
-            <option value="困难">困难</option>
-            <option value="极限">极限</option>
+          <Select value={difficultyFilter} onValueChange={handleDifficultyChange}>
+            <SelectTrigger className="sm:w-32">
+              <SelectValue placeholder="难度" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">全部难度</SelectItem>
+                <SelectItem value="入门">入门</SelectItem>
+                <SelectItem value="简单">简单</SelectItem>
+                <SelectItem value="中等">中等</SelectItem>
+                <SelectItem value="困难">困难</SelectItem>
+                <SelectItem value="极限">极限</SelectItem>
+            </SelectContent>
           </Select>
           <Button onClick={handleReset} variant="outline">
             重置
           </Button>
         </div>
 
-        <div className="rounded-md border">
+        <div className="rounded-md border relative min-h-[200px]">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16">ID</TableHead>
+                <TableHead className="w-24">ID</TableHead>
                 <TableHead>题目名称</TableHead>
                 <TableHead className="w-20">难度</TableHead>
                 <TableHead className="w-20">时间限制</TableHead>
@@ -152,25 +139,33 @@ export default function ProblemsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedProblems.length === 0 ? (
+              {loading ? (
+                 <TableRow>
+                    <TableCell colSpan={5} className="h-32 text-center">
+                        <div className="flex justify-center items-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                    </TableCell>
+                 </TableRow>
+              ) : problems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8">
                     没有找到匹配的题目
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedProblems.map((problem) => {
+                problems.map((problem) => {
                   const tags = getProblemTags(problem)
                   const name = getProblemName(problem)
                   return (
-                  <TableRow key={problem.iden} className="hover:bg-gray-50">
+                  <TableRow key={problem.iden} className="hover:bg-gray-50/50">
                     <TableCell className="font-mono text-sm">
                       {problem.iden}
                     </TableCell>
                     <TableCell>
                       <Link 
                         href={`/problem/${problem.iden}`}
-                        className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                        className="text-primary hover:underline font-medium"
                       >
                         {name}
                       </Link>
@@ -179,13 +174,13 @@ export default function ProblemsPage() {
                           <Badge
                             key={tag}
                             variant="secondary"
-                            className="text-xs"
+                            className="text-xs font-normal"
                           >
                             {tag}
                           </Badge>
                         ))}
                         {tags.length > 3 && (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" className="text-xs font-normal">
                             +{tags.length - 3}
                           </Badge>
                         )}
@@ -197,7 +192,7 @@ export default function ProblemsPage() {
                           return (
                             <Badge
                               key={tag}
-                              className={difficultyColors[tag as keyof typeof difficultyColors]}
+                              className={`${difficultyColors[tag as keyof typeof difficultyColors]} text-white border-0`}
                             >
                               {tag}
                             </Badge>
@@ -206,10 +201,10 @@ export default function ProblemsPage() {
                         return null
                       })}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm text-muted-foreground">
                       {getTimeLimit(problem)} ms
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm text-muted-foreground">
                       {getMemoryLimit(problem)} MB
                     </TableCell>
                   </TableRow>
@@ -219,42 +214,22 @@ export default function ProblemsPage() {
           </Table>
         </div>
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6">
-            <div className="text-sm text-gray-600">
-              显示 {(currentPage - 1) * problemsPerPage + 1} -{" "}
-              {Math.min(currentPage * problemsPerPage, filteredProblems.length)} 
-              {" "} 共 {filteredProblems.length} 道题目
+        <div className="flex items-center justify-between mt-6">
+            <div className="text-sm text-muted-foreground">
+              第 {currentPage} 页
             </div>
             <div className="flex gap-2">
               <Button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
+                disabled={currentPage === 1 || loading}
                 variant="outline"
                 size="sm"
               >
                 上一页
               </Button>
-              <div className="flex items-center gap-2">
-                <span className="text-sm">第</span>
-                <Input
-                  type="number"
-                  min="1"
-                  max={totalPages}
-                  value={currentPage}
-                  onChange={(e) => {
-                    const page = parseInt(e.target.value) || 1
-                    if (page >= 1 && page <= totalPages) {
-                      setCurrentPage(page)
-                    }
-                  }}
-                  className="w-16 text-center"
-                />
-                <span className="text-sm">/ {totalPages} 页</span>
-              </div>
               <Button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={!hasMore || loading}
                 variant="outline"
                 size="sm"
               >
@@ -262,7 +237,6 @@ export default function ProblemsPage() {
               </Button>
             </div>
           </div>
-        )}
       </StandardCard>
     </div>
   )

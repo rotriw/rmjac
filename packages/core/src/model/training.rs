@@ -42,7 +42,7 @@ pub struct TrainingList {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ts_rs::TS)]
 #[ts(export)]
 pub enum TrainingProblem {
-    ProblemIden((i64, String)), // edge_id, problem_iden
+    ProblemIden((i64, String, i64)), // edge_id, problem_iden, problem_node_id
     ProblemTraining(TrainingList),
     ProblemPresetTraining((i64, String)),
     ExistTraining((i64, String)),
@@ -166,7 +166,7 @@ impl TrainingRepo {
                         .await?;
                     }
                 }
-                TrainingProblem::ProblemIden((_edge_id, iden)) => {
+                TrainingProblem::ProblemIden((_edge_id, iden, _node_id)) => {
                     if let Some(problem_node) = resolve_problem_node(db, redis, iden).await? {
                         attach_problem_edge(
                             db,
@@ -234,7 +234,7 @@ impl TrainingRepo {
                         };
                         result
                             .own_problem
-                            .push(TrainingProblem::ProblemIden((edge.id, problem_iden)));
+                            .push(TrainingProblem::ProblemIden((edge.id, problem_iden, next_node_id)));
                     } else {
                         let sub_problem = Self::list(db, redis, next_node_id).await?;
                         result
@@ -302,7 +302,7 @@ impl TrainingRepo {
         pb_iden: &str,
     ) -> Result<i64> {
         let user_id = get_user_by_iden(db, user_iden).await?.node_id.to_string();
-        Ok(get_node_ids_from_iden(db, redis, training_key(&user_id, pb_iden).as_str()).await?[0])
+        Ok(get_node_ids_from_iden(db, redis, training_key(&user_iden, pb_iden).as_str()).await?[0])
     }
 
     pub async fn get(
@@ -704,8 +704,10 @@ impl TrainingRepo {
         let problem_list =
             TrainingProblemEdgeQuery::get_order_asc_extend(training_node_id, db).await?;
         for edge in problem_list {
+            log::info!("Visiting node {}", edge.v);
             let node_type = get_node_type(db, edge.v).await?;
             if node_type == "problem" || node_type == "problem_statement" {
+                log::info!("Checking problem status for node {}", edge.v);
                 let problem_status = RecordRepository::user_status(db, user_node_id, edge.v).await;
                 if let Ok(problem_status) = problem_status {
                     result.total_task += 1;

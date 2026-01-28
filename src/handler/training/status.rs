@@ -12,7 +12,6 @@ pub mod handler {
 
     use super::*;
 
-    #[from_path(user_iden, training_iden)]
     #[export(node_id)]
     async fn before_resolve(
         store: &mut impl ModelStore,
@@ -35,7 +34,7 @@ pub mod handler {
 
     #[handler]
     #[perm(check_status_perm)]
-    #[route("/{user_iden}/{training_iden}")]
+    #[route("/get")]
     #[export("message", "data")]
     async fn get_status(
         store: &mut impl ModelStore,

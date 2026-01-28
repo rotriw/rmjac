@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { StandardCard, TitleCard } from "@/components/card/card"
-import { getView as getTrainingView } from "@/api/server/api_training_view" // Changed import
-import { TrainingProblem, Training } from "@rmjac/api-declare" // Changed import
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { StandardCard } from "@/components/card/card"
+import { getView as getTrainingView } from "@/api/server/api_training_view"
+import { TrainingProblem, Training } from "@rmjac/api-declare"
+import { TreeTable, TreeTableNode } from "@/components/table/treetable"
+import TrainingContainer from "./training-container"
 import React from "react"
 
 interface PageProps {
@@ -15,127 +15,139 @@ interface PageProps {
   }>
 }
 
-function renderProblemList(problems: TrainingProblem[], depth = 0): React.ReactNode {
-  return problems.map((problem, index) => {
-    if (problem.ProblemIden) {
-      return (
-        <TableRow key={`problem-${index}`} className="hover:bg-gray-50">
-          <TableCell className="font-mono text-sm pl-4">
-            {problem.ProblemIden}
-          </TableCell>
-          <TableCell>
+// Convert TrainingProblem to TreeTableNode, with status colors
+function problemToTreeNode(
+  problem: TrainingProblem,
+  statusMap: Map<number, string>,
+  index: number
+): TreeTableNode | null {
+  if ("ProblemIden" in problem) {
+    const [edgeId, problemIden, problemNodeId] = problem.ProblemIden
+    const edgeIdNum = typeof edgeId === "bigint" ? Number(edgeId) : edgeId
+    const status = statusMap.get(Number(problemNodeId))
+    const isAccepted = status === "Accepted"
+    
+    return {
+      id: `problem-${edgeIdNum}`,
+      content: (
+        <div className="flex items-center justify-between flex-1">
+          <div>
             <Link
-              href={`/problem/${problem.ProblemIden}`}
+              href={`/problem/${problemIden}`}
               className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
             >
-              题目 {problem.ProblemIden}
+              {problemIden}
             </Link>
-          </TableCell>
-          <TableCell>
+          </div>
+          <div className="flex gap-2 items-center">
             <Badge variant="outline">题目</Badge>
-          </TableCell>
-        </TableRow>
-      )
-    } else if (problem.ProblemTraining) {
-      return (
-        <React.Fragment key={`training-${index}`}>
-          <TableRow className="bg-gray-50">
-            <TableCell colSpan={3} className="font-medium py-3 pl-4">
-              {problem.ProblemTraining.description}
-            </TableCell>
-          </TableRow>
-          {renderProblemList(problem.ProblemTraining.own_problem, depth + 1)}
-        </React.Fragment>
-      )
-    } else if (problem.ExistTraining) {
-      const [, name] = problem.ExistTraining
-      return (
-        <TableRow key={`exist-training-${index}`} className="hover:bg-gray-50">
-          <TableCell className="font-mono text-sm pl-4">
-            {name}
-          </TableCell>
-          <TableCell>
-            <span className="text-gray-600">引用训练: {name}</span>
-          </TableCell>
-          <TableCell>
-            <Badge variant="secondary">引用</Badge>
-          </TableCell>
-        </TableRow>
-      )
-    }
-    return null
-  })
+            {isAccepted && (
+              <Badge className="bg-green-600 text-white">✓ 已通过</Badge>
+            )}
+          </div>
+        </div>
+      ),
+      background: isAccepted ? "#dcfce7" : undefined, // light green
+    } as TreeTableNode
+  } else if ("ProblemTraining" in problem) {
+    const trainingList = problem.ProblemTraining
+    return {
+      id: `training-${index}`,
+      content: (
+        <div className="font-medium">
+          {trainingList.description}
+        </div>
+      ),
+      children: trainingList.own_problem
+        .map((p: TrainingProblem, idx: number) => problemToTreeNode(p, statusMap, idx))
+        .filter((n): n is TreeTableNode => n !== null),
+    } as TreeTableNode
+  } else if ("ExistTraining" in problem) {
+    const [, name] = problem.ExistTraining
+    return {
+      id: `exist-training-${index}`,
+      content: (
+        <div className="flex items-center justify-between flex-1">
+          <span className="text-gray-600">引用训练: {name}</span>
+          <Badge variant="secondary">引用</Badge>
+        </div>
+      ),
+    } as TreeTableNode
+  }
+  return null
 }
+
 
 export default async function TrainingPage({ params }: PageProps) {
   const { user_iden, training_iden } = await params
 
   try {
     const trainingDataResponse = await getTrainingView({ user_iden, training_iden }) // Changed API call
+    // const passData = trainingDataResponse.user;
     const trainingData: Training = trainingDataResponse.data // Extract data and cast to Training type
     const { training_node, problem_list } = trainingData
+    console.log(problem_list);
+    // Get user status if logged in
+    let statusMap = new Map<number, string>()
+    try {
+      const statusResp = trainingDataResponse.user;
+      console.log(statusResp);
+      console.log("Training status response:", statusResp)
+      if (statusResp?.data) {
+        statusMap = new Map(Object.entries(statusResp?.data).map(([k, v]) => [
+          +k,
+          String(v),
+        ]))
+        console.log(statusMap);
+      }
+    } catch (err) {
+      // User not logged in or status fetch failed, just continue without status
+      console.warn("Could not fetch training status:", err)
+    }
+
+    // Convert problems to TreeTableNodes
+    const treeData = problem_list.own_problem
+      .map((p, idx) => problemToTreeNode(p, statusMap, idx))
+      .filter((n): n is TreeTableNode => n !== null)
+
+    // 检查是否有编辑权限（根据 API 是否返回 user 数据来判断）
+    const hasEditPermission = trainingDataResponse.user !== null
+
+    // 统计已完成数量
+    const completedCount = Array.from(statusMap.values()).filter(
+      (status) => status === "Accepted"
+    ).length
 
     return (
-      <div className="container mx-auto py-6 px-4 md:px-6">
-        <TitleCard 
-          title={training_node.public.name} 
-          description={`ID: ${training_node.public.iden}`}
-        >
-          <div className="flex gap-2 mt-4">
-            <Badge variant="outline">
-              {training_node.public.training_type}
-            </Badge>
-            <Badge variant="outline">
-              {new Date(training_node.public.start_time).toLocaleDateString()} - {new Date(training_node.public.end_time).toLocaleDateString()}
-            </Badge>
+      <TrainingContainer
+        userIden={user_iden}
+        trainingIden={training_iden}
+        trainingName={training_node.public.name}
+        trainingType={training_node.public.training_type}
+        startTime={training_node.public.start_time}
+        endTime={training_node.public.end_time}
+        hasEditPermission={hasEditPermission}
+        completedCount={completedCount}
+        totalCount={treeData.length}
+        problems={problem_list.own_problem}
+        statusMap={statusMap}
+      >
+        <StandardCard title="简介">
+          <div className="prose max-w-none mb-6">
+            <p>{training_node.public.description}</p>
           </div>
-        </TitleCard>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
-          <div className="lg:col-span-3">
-            <StandardCard title="训练详情">
-              <div className="prose max-w-none mb-6">
-                <p>{training_node.public.description}</p>
-              </div>
+        </StandardCard>
 
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-32">ID</TableHead>
-                      <TableHead>名称</TableHead>
-                      <TableHead className="w-24">类型</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {problem_list.own_problem.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center py-8 text-gray-500">
-                          暂无题目
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      renderProblemList(problem_list.own_problem)
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </StandardCard>
-          </div>
-
-          <div className="lg:col-span-1">
-            <div className="space-y-4">
-              <StandardCard title="操作">
-                <Link href="/training">
-                  <Button variant="outline" className="w-full">
-                    返回训练列表
-                  </Button>
-                </Link>
-              </StandardCard>
+        <div className="rounded-md border-sm mt-6">
+          {treeData.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              暂无题目
             </div>
-          </div>
+          ) : (
+            <TreeTable data={treeData} />
+          )}
         </div>
-      </div>
+      </TrainingContainer>
     )
   } catch (error) {
     console.error("Failed to fetch training:", error)

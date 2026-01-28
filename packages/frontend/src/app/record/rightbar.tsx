@@ -14,7 +14,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Select, SelectItem } from "@/components/ui/select"
-import { Search, Loader2 } from "lucide-react"
+import { Search as SearchIcon, Loader2, FolderSearch } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { ProblemSearch } from "@/api-components/problem/problem-search"
 
 interface Filters {
   user: string;
@@ -106,11 +108,28 @@ export function RecordRightSidebar({
 
             <div className="space-y-2">
               <Label className="text-sm font-medium">题目 (ID 或 Iden)</Label>
-              <Input
-                placeholder="题目 ID 或 Iden"
-                value={filters.problem}
-                onChange={(e) => setFilters({ ...filters, problem: e.target.value })}
-              />
+              <div className="flex gap-2">
+                <Input
+                  placeholder="题目 ID 或 Iden"
+                  value={filters.problem}
+                  onChange={(e) => setFilters({ ...filters, problem: e.target.value })}
+                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon" title="搜索题目">
+                      <FolderSearch className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0" align="end">
+                    <ProblemSearch onSelect={(node) => {
+                      setFilters({ ...filters, problem: node.id })
+                      // We can't easily close the popover from here without controlled state, 
+                      // but clicking outside works. 
+                      // To auto-close, we would need to control the Popover open state.
+                    }} />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -142,7 +161,7 @@ export function RecordRightSidebar({
                 onSearch();
               }}
             >
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SearchIcon className="mr-2 h-4 w-4" />}
               搜索
             </Button>
           </SidebarGroupContent>

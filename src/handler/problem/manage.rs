@@ -204,7 +204,7 @@ pub mod handler {
         pid: i64,
         new_owner: i64,
     ) -> ResultHandler<(String,)> {
-        let old_owner_id = user_context.user_id;
+        // let old_owner_id = user_context.user_id;
         ProblemPermissionService::add_owner(store, new_owner, pid).await?;
         Ok(("successful".to_string(),))
     }

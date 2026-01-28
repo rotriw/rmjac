@@ -1,8 +1,9 @@
 import { StandardCard, TitleCard } from "@/components/card/card";
 import { TreeTable, TreeTableNode } from "@/components/table/treetable";
-import { Icond, RecordStatus, SubtaskUserRecord, RECORD_STATUS_COLOR_MAP, RECORD_STATUS_COLOR_MAP_INTER } from "./shared";
+import { Icond, RecordStatus, SubtaskUserRecord, RECORD_STATUS_COLOR_MAP, RECORD_STATUS_COLOR_MAP_INTER } from "@/api-components/record/status-utils";
 import { getView as getRecordView } from "@/api/server/api_record_view"; // Changed import
 import { RecordNode } from "@rmjac/api-declare"; // Import RecordNode from api-declare
+import RecordInfoCard from "./record-info-card";
 
 export function ShowColorfulCard( {status, score} : {status: RecordStatus, score?: number} ) {
   console.log(status);
@@ -37,7 +38,7 @@ function transformSubtasksToTreeNodes(subtasks: SubtaskUserRecord[], parentId: s
         </div>
     ) : undefined;
 
-    let defaultExpanded = subtask.status !== "Accepted" && subtask.subtask_status.length > 0;
+    const defaultExpanded = subtask.status !== "Accepted" && subtask.subtask_status.length > 0;
 
     return {
       id: currentId,
@@ -47,16 +48,16 @@ function transformSubtasksToTreeNodes(subtasks: SubtaskUserRecord[], parentId: s
       content_title: (
         parentId === "" ? <div className="flex items-center gap-2 text-sm font-medium">
           <div className="flex items-center gap-1">
-             <Icond size={2.5} status={subtask.status} />
-             <span className="mr-1 border-current font-bold">{subtask.score}</span>
-             {subtask.status} <span className="ml-1 mr-1 border-current font-bold">{subtask.time} ms</span>·
+            <Icond size={2.5} status={subtask.status} />
+            <span className="mr-1 border-current font-bold">{subtask.score}</span>
+            {subtask.status} <span className="ml-1 mr-1 border-current font-bold">{subtask.time} ms</span>·
           <span className="ml-1 border-current font-bold">{subtask.memory} KB</span>
           </div>
         </div>  : <div className="flex items-center gap-2 text-sm font-medium">
           <span className="font-semibold">{isGroup ? "Subtask" : "Testcase"} {currentId.slice(2, )}</span>
           <div className="flex items-center gap-1">
-             <Icond size={2.5} status={subtask.status} />
-             {subtask.status}
+            <Icond size={2.5} status={subtask.status} />
+            {subtask.status}
           </div>
         </div>
       ),
@@ -81,190 +82,9 @@ export default async function RecordPage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   const fetchdata = await getRecordView({ record_id: id }); // Changed API call and param
   console.log(fetchdata);
-  const record: RecordNode = fetchdata?.record || {
-    node_id: 1,
-    public: {
-        record_order: 1,
-        record_score: 100,
-        record_platform: "平台",
-        record_status: "Accepted",
-        record_message: "消息",
-        record_time: "2025-01-01 00:00:00",
-        record_update_time: "2025-01-01 00:00:00",
-        code: "#include <iostream>\nint main() { return 0; }",
-        code_language: "C++",
-        record_url: "URL",
-    },
-    private: {
-        code: "#include <iostream>\nint main() { return 0; }",
-        code_language: "C++",
-    }
-  }
-  const subtask_status: SubtaskUserRecord = fetchdata?.judge_data || {
-    time: 100,
-    memory: 100,
-    status: "Wrong Answer",
-    score: 0,
-    subtask_status: [
-      {
-        time: 50,
-        memory: 50,
-        status: "Accepted",
-        score: 50,
-        subtask_status: [{
-            time: 50,
-            memory: 50,
-            status: "Wrong Answer",
-            score: 50,
-            subtask_status: []
-          },]
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Wrong Answer",
-        score: 50,
-        subtask_status: []
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Compile Error",
-        score: 0,
-        subtask_status: []
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Dangerous Code",
-        subtask_status: [],
-        score: 0,
-      },
-      // test all colors.
-      {
-        time: 50,
-        memory: 50,
-        status: "Time Limit Exceeded",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Memory Limit Exceeded",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Idleness Limit Exceeded",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "NotFound",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Remote Platform Connection Failed",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Remote Platform Refused",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Remote Platform Unknown Error",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Remote Service Unknown Error",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Runtime Error",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Output Limit Exceeded",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Waiting",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Unknown Error",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Deleted",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "OnlyArchived",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Skipped",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Partial Accepted",
-        subtask_status: [],
-        score: 0,
-      },
-      {
-        time: 50,
-        memory: 50,
-        status: "Sandbox Error",
-        subtask_status: [],
-        score: 0,
-      },
-    ]
-  }; // all color test
-
+  const record: RecordNode = fetchdata?.record;
+  const subtask_status: SubtaskUserRecord = fetchdata?.judge_data as unknown as SubtaskUserRecord;
   const treeData = transformSubtasksToTreeNodes([subtask_status], "", id); // Pass id for problem iden display
-
   return <>
     <div className="container mx-auto py-6 px-4 md:px-6">
         <TitleCard title="记录详情" description={`RECORD ${record.public.record_order}`} />
@@ -281,17 +101,7 @@ export default async function RecordPage({ params }: { params: Promise<{ id: str
               </StandardCard>
             </div>
             <div className="lg:col-span-1">
-              <StandardCard title="信息">
-                <div className="text-sm space-y-2">
-                  <div><strong>平台:</strong> {record.public.record_platform}</div>
-                  <div><strong>状态:</strong> {record.public.record_status}</div>
-                  <div><strong>分数:</strong> {record.public.record_score}</div>
-                  <div><strong>提交时间:</strong> {record.public.record_time}</div>
-                  <div><strong>最后更新:</strong> {record.public.record_update_time}</div>
-                  <div><strong>语言:</strong> {record.private.code_language}</div>
-                  <div><strong>原始记录链接:</strong> <a href={record.public.record_url} className="text-blue-600 underline">{record.public.record_url}</a></div>
-                </div>
-              </StandardCard>
+              <RecordInfoCard record={record} recordId={id} />
             </div>
         </div>
     </div>

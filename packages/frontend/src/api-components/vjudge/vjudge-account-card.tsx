@@ -50,9 +50,6 @@ export function VJudgeAccountCard({ account }: VJudgeAccountCardProps) {
             <div className="text-xs text-muted-foreground mt-1">
             模式: {
                 // Assuming remote_mode string is returned?
-                // The Node definition uses enum but serialized as string/int?
-                // Let's assume it's displayed as is or mapped.
-                // The API interface defines it as string.
                 account.public.remote_mode
             }
             </div>

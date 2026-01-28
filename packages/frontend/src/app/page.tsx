@@ -1,4 +1,4 @@
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/components/layout/app-sidebar";
 import { StandardCard, TitleCard } from "@/components/card/card";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

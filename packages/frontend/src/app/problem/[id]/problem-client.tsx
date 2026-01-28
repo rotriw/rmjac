@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Loader2 } from "lucide-react"
 import { LanguageChoiceInformation, RecordEdge, RecordNode } from "@rmjac/api-declare" // New imports
 import { redirect } from "next/dist/server/api-utils"
+import { RecordEdgeCard } from "@/api-components/record/record-edge-card"
 
 // Changed Record interface to RecordNode from api-declare
 // interface Record {
@@ -166,20 +167,6 @@ export default function ProblemClient({
       window.location.href = `/record/${record_id}`;
   }
 
-  const getStatusText = (status: number) => {
-    const statusMap: { [key: number]: string } = {
-      0: "Pending",
-      1: "Running",
-      2: "Accepted",
-      3: "Wrong Answer",
-      4: "Time Limit Exceeded",
-      5: "Memory Limit Exceeded",
-      6: "Runtime Error",
-      7: "Compile Error",
-    }
-    return statusMap[status] || "Unknown"
-  }
-
   return (
     <Tabs defaultValue="submit" className="mt-6">
       <TabsList className="grid w-full grid-cols-2">
@@ -282,20 +269,7 @@ export default function ProblemClient({
           {userRecords && userRecords.length > 0 ? (
             <div className="space-y-2">
               {userRecords.map((record) => (
-                <div key={record.record_node_id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <Badge
-                    >
-                      {record.record_status} {record.score}
-                    </Badge>
-                    <span className="text-sm text-gray-600">
-                      {record.submit_time}
-                    </span>
-                  </div>
-                  <span className="text-sm text-gray-500">
-                    {new Date(record.submit_time).toLocaleString()}
-                  </span>
-                </div>
+                <RecordEdgeCard edge={record} key={record.id} />
               ))}
             </div>
           ) : (

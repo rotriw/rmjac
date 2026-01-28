@@ -1,5 +1,5 @@
 "use client"
-import { RECORD_STATUS_COLOR_MAP } from "@/app/record/[id]/shared";
+import { RECORD_STATUS_COLOR_MAP } from "@/api-components/record/status-utils";
 import { socket } from "@/lib/socket";
 import { useEffect, useReducer, useState, useRef } from "react";
 import { StandardCard } from "@/components/card/card";

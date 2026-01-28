@@ -1,8 +1,8 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { TypstEditor } from "@/components/typst-editor"
-import { TypstRenderer } from "@/components/typst-renderer"
+import { TypstEditor } from "@/components/editor/typst-editor"
+import { TypstRenderer } from "@/components/editor/typst-renderer"
 import { exportDocument, type ExportKind } from "@/lib/typst-lsp"
 
 function base64ToUint8Array(b64: string) {

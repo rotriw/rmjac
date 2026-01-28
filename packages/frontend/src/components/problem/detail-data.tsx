@@ -5,7 +5,7 @@ import { ProblemData } from "@/app/problem/create/types"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
-import { IntegratedTypstEditor } from "@/components/integrated-typst-editor"
+import { IntegratedTypstEditor } from "@/components/editor/integrated-typst-editor"
 interface DetailDataProps {
   values?: Record<string, string | ProblemData[]>;
   onChange?: (values: Record<string, string | ProblemData[]>) => void;

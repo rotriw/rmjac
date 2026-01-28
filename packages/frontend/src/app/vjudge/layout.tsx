@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/components/layout/app-sidebar";
 import { VJudgeRightSidebar } from "./rightbar/vjudge-right-sidebar";
 
 export const metadata: Metadata = {

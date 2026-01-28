@@ -226,11 +226,12 @@ const TreeNode = ({
             ) : (
                 // Standard Rendering for non-root / non-special nodes
                 <div className="flex-1 flex items-center min-w-0">
-                     <div className="flex items-center">
+                     {node.content_title && <div className="flex items-center">
                         <Badge style={{background: darkerColor}} className="text-white mr-2">
                         {node.content_title}
                         </Badge>
                      </div>
+                     }
                      <div className="flex-1 min-w-0">
                         {node.content}
                      </div>

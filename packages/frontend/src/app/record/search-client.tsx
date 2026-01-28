@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { TreeTable, TreeTableNode } from "@/components/table/treetable";
 import { Input } from "@/components/ui/input";
 import { getList as getRecordList } from "@/api/server/api_record_list"; // Changed import
-import { RecordStatus, RECORD_STATUS_COLOR_MAP_INTER, Icond } from "./[id]/shared";
+import { RecordStatus, RECORD_STATUS_COLOR_MAP_INTER, Icond } from "@/api-components/record/status-utils";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -51,13 +51,21 @@ export default function RecordSearchClient() {
 
             const res = await getRecordList(query); // Changed API call
             if (res && res.records) {
+                console.log("RecordSearchClient: Updating records state.");
                 if (isNewSearch) {
                     setRecords(res.records);
                 } else {
-                    setRecords(prev => [...prev, ...res.records]);
+                    setRecords(prev => {
+                        // Filter out duplicates based on record_node_id before appending
+                        const newUniqueRecords = res.records.filter(
+                            (newItem) => !prev.some((existingItem) => existingItem.edge.record_node_id === newItem.edge.record_node_id)
+                        );
+                        return [...prev, ...newUniqueRecords];
+                    });
                 }
                 setHasMore(res.records.length === 20);
                 if (res.total !== undefined) setTotal(res.total);
+                console.log("RecordSearchClient: Records state updated.");
             } else {
                 setHasMore(false);
             }
@@ -99,7 +107,7 @@ export default function RecordSearchClient() {
         onClick: () => router.push(`/record/${item.edge.record_node_id}`), // Changed to node_id
         content_title: (
             <div className="flex items-center gap-2 text-sm font-medium">
-                <Icond size={4} status={item.edge.record_status} />
+                <Icond size={4} status={item.edge.record_status} /><span className="font-bold">{item.edge.score}</span>
                 <span className="font-bold">{item.edge.record_status}</span>
                 <span className="opacity-70">#{item.edge.record_node_id}</span>
             </div>
@@ -107,10 +115,9 @@ export default function RecordSearchClient() {
         content: (
             <div className="flex items-center justify-between w-full pr-4">
                 <div className="flex items-center gap-4 text-sm">
-                    <span onClick={(e) => e.stopPropagation()}>用户: <Link href={`/user/${item.user_iden}`} className="hover:underline font-semibold">{item.user_name} ({item.user_iden})</Link></span>
-                    <span onClick={(e) => e.stopPropagation()}>题目: <Link href={`/problem/${item.problem_iden.replaceAll('problem', '')}`} className="hover:underline font-semibold">{item.problem_name} ({item.problem_iden.replaceAll('problem', '')})</Link></span>
-                    <span>分数: <span className="font-bold">{item.edge.score}</span></span>
-                    <span>长度: {item.edge.code_length} B</span>
+                    <span onClick={(e) => e.stopPropagation()}><Link href={`/problem/${item.problem_iden.replaceAll('problem', '')}`} className="hover:underline font-semibold">{item.problem_name} ({item.problem_iden.replaceAll('problem', '')})</Link></span>
+                    <span>{item.edge.code_length} B</span>
+                    <span onClick={(e) => e.stopPropagation()}><Link href={`/user/${item.user_iden}`} className="hover:underline opacity-60">{item.user_name}</Link></span>
                     <span className="opacity-60">{new Date(item.edge.submit_time).toLocaleString()}</span>
                 </div>
             </div>
@@ -120,7 +127,7 @@ export default function RecordSearchClient() {
     return (
         <SidebarProvider defaultOpen={true}>
             <div className="flex flex-1 flex-col lg:flex-row w-full min-h-screen">
-                <div className="flex-1 p-6 space-y-6 min-w-0">
+                <div className="flex-1 p-6 min-w-0">
                     <TitleCard title="记录列表" description="查看所有提交记录" />
                     <div className="flex justify-end items-center">
                         <div className="flex items-center gap-2">

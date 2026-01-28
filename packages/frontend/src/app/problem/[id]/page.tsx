@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { TypstRenderer } from "@/components/typst-renderer"
+import { TypstRenderer } from "@/components/editor/typst-renderer"
 import { API_BASE_URL } from "@/lib/constants" // Import from constants
 import ProblemContainer from "./problem-container"
 import { getView as getProblemView } from "@/api/server/api_problem_view" // Import new API function

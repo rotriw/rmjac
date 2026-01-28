@@ -328,7 +328,7 @@ where
                 .into_iter()
                 .map(|edge| {
                     let edge_a = edge.conv::<DbModel>().conv::<EdgeA>();
-                    (edge_a.get_v_node_id(), edge_a.get_edge_id())
+                    (edge_a.get_u_node_id(), edge_a.get_edge_id())
                 })
                 .collect())
         }

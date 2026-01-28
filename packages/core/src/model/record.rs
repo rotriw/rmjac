@@ -238,15 +238,10 @@ impl RecordRepository {
         problem_id: i64,
     ) -> Result<RecordStatus> {
         let node_type = get_node_type(db, problem_id).await?;
-        let problem_id = if node_type == "problem_statement" {
-            ProblemStatementEdgeQuery::get_u(problem_id, db).await?[0]
-        } else {
-            problem_id
-        };
         use db::entity::edge::record::Column;
-
+        log::info!("Getting records for user id: {} {}", user_id, problem_id);
         // Now edge is user->problem, so we filter by u_node_id=user_id and v_node_id=problem_id
-        let get_record = RecordEdgeQuery::get_u_filter_extend_content(
+        let get_record = RecordEdgeQuery::get_v_filter_extend_content(
             user_id,
             vec![
                 Column::RecordStatus.eq(RecordStatus::Accepted.get_const_isize().unwrap() as i64),
@@ -260,7 +255,7 @@ impl RecordRepository {
         if !get_record.is_empty() {
             Ok(RecordStatus::Accepted)
         } else {
-            let get_record = RecordEdgeQuery::get_u_filter_extend_content(
+            let get_record = RecordEdgeQuery::get_v_filter_extend_content(
                 user_id,
                 vec![Column::VNodeId.eq(problem_id)],
                 db,
@@ -333,6 +328,8 @@ impl RecordRepository {
         Ok(count)
     }
 }
+
+pub struct RecordSearch;
 
 pub struct Record {
     pub node_id: i64,

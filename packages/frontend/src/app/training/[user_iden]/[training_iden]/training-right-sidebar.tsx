@@ -1,0 +1,307 @@
+"use client"
+
+import * as React from "react"
+import { useState, useEffect, useCallback } from "react"
+import Link from "next/link"
+import { Badge } from "@/components/ui/badge"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarSeparator,
+  useSidebar,
+} from "@/components/ui/sidebar"
+import { Settings, BarChart3, CheckCircle2, ListTree, ArrowLeft, Code2, SendIcon, FileCode } from "lucide-react"
+import { TrainingProblem } from "@rmjac/api-declare"
+import { ScrollArea } from "@/components/ui/scroll-area"
+
+interface ProblemSubmission {
+  problemId: string
+  problemName: string
+  edgeId: number
+  problemNodeId: number
+  status?: string
+}
+
+interface TrainingRightSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  userIden: string
+  trainingIden: string
+  hasEditPermission: boolean
+  completedCount: number
+  totalCount: number
+  viewMode?: "problems" | "submissions"
+  onViewModeChange?: (mode: "problems" | "submissions") => void
+  problems?: TrainingProblem[]
+  statusMap?: Map<number, string>
+  selectedProblemId?: string
+  onProblemSelect?: (problemId: string) => void
+}
+
+export function TrainingRightSidebar({
+  userIden,
+  trainingIden,
+  hasEditPermission,
+  completedCount,
+  totalCount,
+  viewMode = "problems",
+  onViewModeChange,
+  problems = [],
+  statusMap = new Map(),
+  selectedProblemId,
+  onProblemSelect,
+  ...props
+}: TrainingRightSidebarProps) {
+  const [width, setWidth] = useState(320)
+  const [isResizing, setIsResizing] = useState(false)
+  const [problemList, setProblemList] = React.useState<ProblemSubmission[]>([])
+  const { isMobile } = useSidebar()
+
+  // 递归提取所有题目
+  const extractProblems = React.useCallback((
+    problemList: TrainingProblem[],
+    result: ProblemSubmission[] = []
+  ): ProblemSubmission[] => {
+    for (const problem of problemList) {
+      if ("ProblemIden" in problem) {
+        const [edgeId, problemIden, problemNodeId] = problem.ProblemIden
+        const edgeIdNum = typeof edgeId === "bigint" ? Number(edgeId) : edgeId
+        const problemNodeIdNum = typeof problemNodeId === "bigint" ? Number(problemNodeId) : problemNodeId
+        const status = statusMap.get(problemNodeIdNum)
+        
+        result.push({
+          problemId: String(problemIden),
+          problemName: String(problemIden),
+          edgeId: edgeIdNum,
+          problemNodeId: problemNodeIdNum,
+          status
+        })
+      } else if ("ProblemTraining" in problem) {
+        extractProblems(problem.ProblemTraining.own_problem, result)
+      }
+    }
+    return result
+  }, [statusMap])
+
+  React.useEffect(() => {
+    if (problems.length > 0) {
+      const extracted = extractProblems(problems)
+      setProblemList(extracted)
+      // 如果没有选中题目且有题目列表，自动选中第一题
+      if (!selectedProblemId && extracted.length > 0 && onProblemSelect) {
+        onProblemSelect(extracted[0].problemId)
+      }
+    }
+  }, [problems, extractProblems, selectedProblemId, onProblemSelect])
+
+  const startResizing = useCallback(() => {
+    setIsResizing(true)
+  }, [])
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false)
+  }, [])
+
+  const resize = useCallback(
+    (mouseMoveEvent: MouseEvent) => {
+      if (isResizing) {
+        const newWidth = window.innerWidth - mouseMoveEvent.clientX
+        if (newWidth > 200 && newWidth < 600) {
+          setWidth(newWidth)
+        }
+      }
+    },
+    [isResizing]
+  )
+
+  useEffect(() => {
+    window.addEventListener("mousemove", resize)
+    window.addEventListener("mouseup", stopResizing)
+    return () => {
+      window.removeEventListener("mousemove", resize)
+      window.removeEventListener("mouseup", stopResizing)
+    }
+  }, [resize, stopResizing])
+
+  const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+
+  return (
+    <Sidebar
+      side="right"
+      variant="sidebar"
+      collapsible="none"
+      className="border-l bg-sidebar lg:h-screen lg:sticky lg:top-0 transition-none w-full lg:w-auto"
+      style={{ width: !isMobile ? `${width}px` : undefined }}
+      {...props}
+    >
+      {!isMobile && (
+        <div
+          className="absolute left-0 top-0 w-1 h-full cursor-col-resize hover:bg-primary/30 transition-colors z-50"
+          onMouseDown={startResizing}
+        />
+      )}
+      <SidebarContent>
+        {/* 切换视图 */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => onViewModeChange?.(viewMode === "problems" ? "submissions" : "problems")}
+                  className={`h-auto py-3 flex-col items-start gap-1 transition-all rounded-lg mx-1 border backdrop-blur-md ${
+                    viewMode === "submissions"
+                      ? "bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90 hover:text-white"
+                      : "bg-white/5 dark:bg-white/5 border-white/10 dark:border-white/10 hover:bg-white/10 dark:hover:bg-white/10 !text-sidebar-foreground"
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full px-1">
+                    <div className="flex items-center gap-2">
+                      <Code2 className={`size-4 ${viewMode === "submissions" ? "text-primary-foreground" : "text-primary/80"}`} />
+                      <span className="font-semibold text-xs">{viewMode === "submissions" ? "返回题目列表" : "查看提交代码"}</span>
+                    </div>
+                  </div>
+                  <div className={`text-[10px] pl-7 font-medium ${viewMode === "submissions" ? "text-primary-foreground/80" : "text-muted-foreground/80"}`}>
+                    {viewMode === "submissions" ? "点击返回" : "点击查看"}
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+        {viewMode === "submissions" && problemList.length > 0 && (
+          <>
+            <SidebarGroup>
+              <SidebarGroupLabel>选择题目</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <ScrollArea>
+                  <SidebarMenu>
+                    {problemList.map((problem) => (
+                      <SidebarMenuItem key={problem.edgeId}>
+                        <SidebarMenuButton
+                          onClick={() => onProblemSelect?.(problem.problemId)}
+                          className={`h-auto py-2.5 flex-col items-start gap-1 transition-all rounded-lg border ${
+                            selectedProblemId === problem.problemId
+                              ? "bg-primary/10 border-primary text-primary"
+                              : "border-transparent hover:bg-white/5 dark:hover:bg-white/5"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-2">
+                              <FileCode className="size-3.5" />
+                              <span className="font-medium text-xs">{problem.problemName}</span>
+                            </div>
+                            {problem.status === "Accepted" && (
+                              <Badge className="bg-green-600 text-white text-[10px] px-1.5 py-0">✓</Badge>
+                            )}
+                          </div>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </ScrollArea>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarSeparator />
+          </>
+        )}
+        {/* 导航区域 */}
+        <SidebarGroup>
+          <SidebarGroupLabel>导航</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <Link href="/training">
+                  <SidebarMenuButton className="h-auto py-3 flex-col items-start gap-1 bg-white/5 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/10 hover:bg-white/10 dark:hover:bg-white/10 !text-sidebar-foreground hover:!text-sidebar-foreground transition-all rounded-lg">
+                    <div className="flex items-center gap-2 px-1">
+                      <ArrowLeft className="size-4 text-primary/80" />
+                      <span className="font-semibold text-xs">返回训练列表</span>
+                    </div>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* 进度统计 */}
+        <SidebarGroup>
+          <SidebarGroupLabel>训练进度</SidebarGroupLabel>
+          <SidebarGroupContent className="px-3 space-y-3">
+            {/* 进度条 */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">完成进度</span>
+                <span className="font-semibold text-primary">{progressPercentage}%</span>
+              </div>
+              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-green-500 transition-all duration-300"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+            </div>
+
+            {/* 统计卡片 */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <CheckCircle2 className="size-3.5 text-green-600" />
+                  <span className="text-[10px] font-medium text-green-700 dark:text-green-400">已完成</span>
+                </div>
+                <div className="text-xl font-bold text-green-700 dark:text-green-400">{completedCount}</div>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <ListTree className="size-3.5 text-blue-600" />
+                  <span className="text-[10px] font-medium text-blue-700 dark:text-blue-400">总题数</span>
+                </div>
+                <div className="text-xl font-bold text-blue-700 dark:text-blue-400">{totalCount}</div>
+              </div>
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* 题目选择 - 仅在提交记录模式显示 */}
+        
+
+        {/* 管理操作 - 仅有权限时显示 */}
+        {hasEditPermission && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>管理</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <Link href={`/training/manage/${userIden}/${trainingIden}`}>
+                      <SidebarMenuButton className="h-auto py-3 flex-col items-start gap-1 transition-all rounded-lg border backdrop-blur-md bg-white/5 dark:bg-white/5 border-white/10 dark:border-white/10 hover:bg-white/10 dark:hover:bg-white/10 !text-sidebar-foreground">
+                        <div className="flex items-center gap-2 px-1">
+                          <Settings className="size-4 text-primary/80" />
+                          <span className="font-semibold text-xs">管理训练</span>
+                        </div>
+                        <div className="text-[10px] pl-7 font-medium text-muted-foreground/80">
+                          编辑题目和设置
+                        </div>
+                      </SidebarMenuButton>
+                    </Link>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
+      </SidebarContent>
+    </Sidebar>
+  )
+}

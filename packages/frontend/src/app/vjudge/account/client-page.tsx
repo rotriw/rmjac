@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { VJudgeAccountCard } from "@/components/vjudge/account-card"
+import { VJudgeAccountCard } from "@/api-components/vjudge/vjudge-account-card"
 import { VjudgeNode } from "@rmjac/api-declare" // Changed import: VJudgeAccount to VjudgeNode
 import { StandardCard, TitleCard } from "@/components/card/card"
 import { UserPlus } from "lucide-react"

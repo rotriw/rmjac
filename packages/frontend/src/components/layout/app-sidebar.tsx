@@ -1,6 +1,6 @@
 import * as React from "react"
-import { NavMain } from "@/components/nav-main"
-import { UserAvatar } from "@/components/user-avatar"
+import { NavMain } from "@/components/layout/nav-main"
+import { UserAvatar } from "@/components/layout/current-user-avatar"
 import {
   Sidebar,
   SidebarContent,

@@ -70,7 +70,7 @@ impl error::ResponseError for HttpError {
             .insert_header(ContentType::json())
             .body(Json! {
                 "code": error_code(self),
-                "error": self.to_string(),
+                "msg": self.to_string(),
             })
     }
 

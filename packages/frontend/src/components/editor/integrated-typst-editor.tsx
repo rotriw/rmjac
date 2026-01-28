@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { TypstEditor } from "@/components/typst-editor"
-import { TypstRenderer } from "@/components/typst-renderer"
+import { TypstEditor } from "@/components/editor/typst-editor"
+import { TypstRenderer } from "@/components/editor/typst-renderer"
 import { ProblemData } from "@/app/problem/create/types"
 
 interface IntegratedTypstEditorProps {
