@@ -8,6 +8,7 @@ import { FormQuery } from "@/components/tools/query"
 import { StandardCard } from "@/components/card/card"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { ManageRightSidebar, ManageMode } from "./rightbar"
+import PermissionsEditor from "./permissions-editor"
 import { getView as getTrainingByIden } from "@/api/client/api_training_view"
 import {
   postAddProblemForList,
@@ -46,7 +47,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
   const fetchData = useCallback(async () => {
     try {
       const response = await getTrainingByIden({ user_iden, training_iden });
-      const data = response.data; // Access data property
+      const data = response.data;
       setTrainingData(data)
       setFormValues({
         title: data.training_node.public.name,
@@ -85,26 +86,34 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
 
   const handleInfoSubmit = async () => {
     // TODO: Implement info update API if available
-    toast.info("信息更新功能待实现")
+    // 当前没有更新训练基本信息的 API，只能保存本地表单值
+    toast.info("训练基本信息的编辑功能需要后端 API 支持")
   }
 
   const handleAddProblem = async (list_node_id: number, problemsStr: string) => {
     const problems = problemsStr.split(",").map(p => p.trim()).filter(p => p)
+    if (problems.length === 0) {
+      toast.error("请输入至少一个题目标识")
+      return
+    }
     try {
       if (!trainingData) {
         toast.error("训练数据未加载")
         return
       }
-      const res = await postAddProblemForList({ // Changed API call
+      const res = await postAddProblemForList({
         user_iden,
         training_iden,
         problems,
         lid: list_node_id,
       })
-      toast.success(res.message || "添加成功") // Assuming message exists on response
+      toast.success(`成功添加 ${res.successful_data.length} 个题目，失败 ${res.failed_count} 个`)
+      if (res.failed.length > 0) {
+        toast.info(`失败题目: ${res.failed.join(", ")}`)
+      }
       fetchData()
     } catch(err) {
-      toast.error(`添加失败: ${err}`)
+      toast.error(`添加失败: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
@@ -114,52 +123,64 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
     data: { description?: string; node_id?: string; iden?: string }
   ) => {
     try {
-      let problem_list_data: TrainingList; // Changed type to TrainingList
+      let problem_list_data: TrainingList;
       if (type === "ProblemTraining") {
+        if (!data.description || data.description.trim() === "") {
+          toast.error("请输入子模块名称")
+          return
+        }
         problem_list_data = {
-          description: data.description || "New Module",
+          description: data.description,
           own_problem: []
         };
       } else if (type === "ProblemPresetTraining") {
+        if (!data.node_id || !data.iden) {
+          toast.error("请输入预设 ID 和标识，格式：ID,标识")
+          return
+        }
         problem_list_data = {
-          description: data.description || "Preset Training", // Added description
-          own_problem: [], // Added own_problem
-          ProblemPresetTraining: [parseInt(data.node_id || "0"), data.iden || ""]
+          description: data.description || data.iden,
+          own_problem: [],
+          ProblemPresetTraining: [parseInt(data.node_id), data.iden]
         };
       } else {
+        if (!data.node_id || !data.iden) {
+          toast.error("请输入引用 ID 和标识，格式：ID,标识")
+          return
+        }
         problem_list_data = {
-          description: data.description || "Exist Training", // Added description
-          own_problem: [], // Added own_problem
-          ExistTraining: [parseInt(data.node_id || "0"), data.iden || ""]
+          description: data.description || data.iden,
+          own_problem: [],
+          ExistTraining: [parseInt(data.node_id), data.iden]
         };
       }
 
-      const res = await postAddProblemList({ // Changed API call
+      const res = await postAddProblemList({
         user_iden,
         training_iden,
         lid: list_node_id,
         problem_list: problem_list_data
       })
-      toast.success(res.message || "操作成功") // Assuming message exists
+      toast.success(`成功创建: ${res.new.description || "新项"}`)
       fetchData()
     } catch(err) {
-      toast.error(`操作失败: ${err}`)
+      toast.error(`操作失败: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
   const handleRemoveProblem = async (list_node_id: number, delete_node_id: number) => {
-    if (!confirm("确定要删除吗？")) return
+    if (!confirm("确定要删除吗？此操作不可撤销。")) return
     try {
-      const res = await postRemoveProblem({ // Changed API call
+      const res = await postRemoveProblem({
         user_iden,
         training_iden,
         lid: list_node_id,
         edge_id: delete_node_id
       })
-      toast.success(res.message || "删除成功") // Assuming message exists
+      toast.success(res.message || "删除成功")
       fetchData()
-    } catch {
-      toast.error("删除失败")
+    } catch(err) {
+      toast.error(`删除失败: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
@@ -182,15 +203,16 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
     })
 
     try {
-      await postUpdateOrder({ // Changed API call
+      const res = await postUpdateOrder({
         user_iden,
         training_iden,
         lid: list_node_id,
         orders
       })
+      toast.success(res.message || "排序成功")
       fetchData()
-    } catch {
-      toast.error("排序失败")
+    } catch(err) {
+      toast.error(`排序失败: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
@@ -201,33 +223,34 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
     })
 
     try {
-      await postUpdateOrder({ // Changed API call
+      const res = await postUpdateOrder({
         user_iden,
         training_iden,
         lid: list_node_id,
         orders
       })
+      toast.success(res.message || "排序已更新")
       fetchData()
-      toast.success("排序已更新")
-    } catch {
-      toast.error("排序失败")
+    } catch(err) {
+      toast.error(`排序失败: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
   const handleUpdateDescription = async (list_node_id: number) => {
-    const newDesc = prompt("请输入新的描述")
-    if (newDesc === null) return
+    const newDesc = prompt("请输入新的描述：")
+    if (newDesc === null || newDesc.trim() === "") return
     try {
-      await postModifyDesc({ // Changed API call
+      const res = await postModifyDesc({
         user_iden,
         training_iden,
         lid: list_node_id,
         public: newDesc,
         private: ""
       })
+      toast.success(res.message || "描述已更新")
       fetchData()
-    } catch {
-      toast.error("修改失败")
+    } catch(err) {
+      toast.error(`修改失败: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
@@ -370,8 +393,11 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
                 size="sm"
                 onClick={() => {
                   const input = document.getElementById(`add-p-${listNodeId}`) as HTMLInputElement
-                  handleAddProblem(listNodeId, input.value)
-                  if (isSheet) setActiveListNodeId(null)
+                  if (input.value.trim()) {
+                    handleAddProblem(listNodeId, input.value)
+                    input.value = ""
+                    if (isSheet) setActiveListNodeId(null)
+                  }
                 }}
               >
                 添加
@@ -402,13 +428,16 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
                 onClick={() => {
                   const input = document.getElementById(`add-l-${listNodeId}`) as HTMLInputElement
                   const type = (document.getElementById(`type-l-${listNodeId}`) as HTMLSelectElement).value as "ProblemTraining" | "ProblemPresetTraining" | "ExistTraining"
-                  if (type === "ProblemTraining") {
-                    handleAddTrainingProblem(listNodeId, type, { description: input.value })
-                  } else {
-                    const [node_id, iden] = input.value.split(",")
-                    handleAddTrainingProblem(listNodeId, type, { node_id, iden, description: iden })
+                  if (input.value.trim()) {
+                    if (type === "ProblemTraining") {
+                      handleAddTrainingProblem(listNodeId, type, { description: input.value })
+                    } else {
+                      const [node_id, iden] = input.value.split(",").map(s => s.trim())
+                      handleAddTrainingProblem(listNodeId, type, { node_id, iden, description: iden })
+                    }
+                    input.value = ""
+                    if (isSheet) setActiveListNodeId(null)
                   }
-                  if (isSheet) setActiveListNodeId(null)
                 }}
               >
                 执行
@@ -458,11 +487,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
   }
 
   const renderPermissionsMode = () => (
-    <div className="space-y-6">
-      <StandardCard title="权限编辑">
-        <p className="text-sm text-muted-foreground">权限编辑功能正在开发中...</p>
-      </StandardCard>
-    </div>
+    <PermissionsEditor userIden={user_iden} trainingIden={training_iden} />
   )
 
   if (loading) return <div className="p-8">加载中...</div>

@@ -162,6 +162,29 @@ where
         }
     }
 
+
+    fn get_edges_with_filter<T: IntoCondition>(
+        filter: Vec<T>,
+        db: &DatabaseConnection,
+        number_per_page: Option<u64>,
+        offset: Option<u64>,
+    ) -> impl Future<Output = Result<Vec<EdgeA>>> {
+        async move {
+            use sea_orm::QueryFilter;
+            let mut edges = DbEntity::find();
+            for f in filter {
+                edges = edges.filter(f);
+            }
+            edges = if let (Some(number_per_page), Some(offset)) = (number_per_page, offset) {
+                edges.offset(offset).limit(number_per_page)
+            } else {
+                edges
+            };
+            let edges = edges.all(db).await?;
+            Ok(edges.into_iter().map(|edge| edge.into().into()).collect())
+        }
+    }
+
     fn get_v_filter_extend<T: IntoCondition>(
         u: i64,
         filter: Vec<T>,
@@ -608,6 +631,7 @@ where
             })
             .collect())
     }
+
 
     pub async fn get_v_filter_extend_content<T: IntoCondition>(
         u: i64,

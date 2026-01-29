@@ -1,5 +1,5 @@
 use crate::Result;
-use crate::db::entity::node::user::get_user_by_iden;
+use crate::db::entity::node::user::{get_guest_user_node, get_user_by_iden};
 use crate::error::CoreError;
 use crate::graph::action::get_node_type;
 use crate::graph::edge::perm_problem::PermProblemEdgeQuery;
@@ -30,6 +30,8 @@ use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
 use std::collections::HashMap;
+use crate::graph::node::group::GroupNode;
+use crate::graph::node::perm_group::PermGroupNode;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ts_rs::TS)]
 #[ts(export)]
@@ -893,7 +895,88 @@ impl Training {
     }
 }
 
-// Private helpers
+pub struct TrainingPerm;
+
+#[derive(Debug, Clone, Deserialize, Serialize, ts_rs::TS)]
+#[ts(export)]
+pub enum PermOwner {
+    User(SimplyUser),
+    Group(String),
+    Unknown(i64)
+}
+
+impl TrainingPerm {
+    pub fn by_nodes(
+        perm: i64,
+        tid: i64
+    ) -> Vec<i64> {
+        PagesPermService::get_allow_u(tid, perm)
+    }
+
+    pub async fn set(
+        store: &mut impl ModelStore,
+        perm: i64,
+        uid: i64,
+        tid: i64,
+    ) -> Result<String> {
+        let uid = if uid == -2 {
+            get_guest_user_node(store.get_db(), ).await?
+        } else {
+            uid
+        };
+        log::debug!(
+            "Granting training permission:  {uid} -> training {tid} with perm {perm}"
+        );
+        PagesPermService::add(uid, tid, perm, store.get_db()).await;
+        Ok("Permission granted successfully".to_string())
+    }
+
+    pub async fn del(
+        store: &mut impl ModelStore,
+        perm: i64,
+        uid: i64,
+        tid: i64,
+    ) -> Result<String> {
+        log::debug!(
+            "Revoking training permission:  {uid} -> training {tid} with perm {perm}"
+        );
+        let uid = if uid == -2 {
+            get_guest_user_node(store.get_db(), ).await?
+        } else {
+            uid
+        };
+        PagesPermService::del(uid, tid, perm, store.get_db()).await;
+        Ok("Permission revoked successfully".to_string())
+    }
+
+    pub async fn get(
+        store: &mut impl ModelStore,
+        perm: i64,
+        tid: i64
+    ) -> Result<Vec<PermOwner>> {
+        let result = Self::by_nodes(perm, tid);
+        let mut owners = vec![];
+        for owner_id in result {
+            if let Ok(node_type) = get_node_type(store.get_db(), owner_id).await {
+                match node_type.as_str() {
+                    "user" => {
+                        let user = SimplyUser::load(store.get_db(), owner_id).await?;
+                        owners.push(PermOwner::User(user));
+                    }
+                    "perm_group" => {
+                        let id = PermGroupNode::from_db(store.get_db(), owner_id).await?.private.name;
+                        owners.push(PermOwner::Group(id));
+                    }
+                    _ => {
+                        owners.push(PermOwner::Unknown(owner_id));
+                    }
+                }
+            }
+        }
+        Ok(owners)
+    }
+}
+
 fn training_key(user_iden: &str, pb_iden: &str) -> String {
     format!("training#{user_iden}#{pb_iden}")
 }

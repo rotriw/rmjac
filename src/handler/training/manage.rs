@@ -11,7 +11,7 @@ use rmjac_core::service::perm::provider::{Pages, PagesPermService, System, Syste
 pub mod handler {
     use macro_handler::{export, require_login};
     use rmjac_core::{error::CoreError, graph::node::training::problem::TrainingProblemNode, model::training::TrainingRepo};
-
+    use rmjac_core::model::training::{PermOwner, TrainingPerm};
     use super::*;
 
     #[from_path()]
@@ -175,4 +175,120 @@ pub mod handler {
         Training::set_order(store, lid, orders).await?;
         Ok("success".to_string())
     }
+
+    #[handler]
+    #[perm(require_edit)]
+    #[route("/get_viewer")]
+    #[export("viewer")]
+    async fn post_get_viewers(
+        store: &mut impl ModelStore,
+        tid: i64,
+    ) -> ResultHandler<Vec<PermOwner>> {
+        let viewers = TrainingPerm::get(store, Pages::View.into(), tid).await?;
+        Ok(viewers)
+    }
+
+    #[handler]
+    #[perm(require_sudo)]
+    #[route("/get_editor")]
+    #[export("editor")]
+    async fn post_get_editor(
+        store: &mut impl ModelStore,
+        tid: i64,
+    ) -> ResultHandler<Vec<PermOwner>> {
+        let editors = TrainingPerm::get(store, Pages::Edit.into(), tid).await?;
+        Ok(editors)
+    }
+
+    #[handler]
+    #[perm(require_sudo)]
+    #[route("/get_owner")]
+    #[export("owner")]
+    async fn post_get_owners(
+        store: &mut impl ModelStore,
+        tid: i64,
+        user_iden: &str,
+    ) -> ResultHandler<Vec<PermOwner>> {
+        let owner = TrainingPerm::get(store, Pages::Edit + Pages::Delete, tid).await?;
+        Ok(owner)
+    }
+
+    #[handler]
+    #[perm(require_sudo)]
+    #[route("/add_owner")]
+    #[export("message")]
+    async fn post_add_owner(
+        store: &mut impl ModelStore,
+        tid: i64,
+        user_id: i64,
+    ) -> ResultHandler<String> {
+        TrainingPerm::set(store, Pages::Edit + Pages::Delete, user_id, tid).await?;
+        Ok("successful".to_string())
+    }
+
+    #[handler]
+    #[perm(require_sudo)]
+    #[route("/add_editor")]
+    #[export("message")]
+    async fn post_add_editor(
+        store: &mut impl ModelStore,
+        tid: i64,
+        user_id: i64,
+    ) -> ResultHandler<String> {
+        TrainingPerm::set(store, (Pages::Edit).into(), user_id, tid).await?;
+        Ok("successful".to_string())
+    }
+
+    #[handler]
+    #[perm(require_edit)]
+    #[route("/add_viewer")]
+    #[export("message")]
+    async fn post_add_viewer(
+        store: &mut impl ModelStore,
+        tid: i64,
+        user_id: i64,
+    ) -> ResultHandler<String> {
+        TrainingPerm::set(store, (Pages::View).into(), user_id, tid).await?;
+        Ok("successful".to_string())
+    }
+
+
+    #[handler]
+    #[perm(require_sudo)]
+    #[route("/remove_owner")]
+    #[export("message")]
+    async fn post_remove_owner(
+        store: &mut impl ModelStore,
+        tid: i64,
+        user_id: i64,
+    ) -> ResultHandler<String> {
+        TrainingPerm::del(store, Pages::Edit + Pages::Delete, user_id, tid).await?;
+        Ok("successful".to_string())
+    }
+
+    #[handler]
+    #[perm(require_sudo)]
+    #[route("/remove_editor")]
+    #[export("message")]
+    async fn post_remove_editor(
+        store: &mut impl ModelStore,
+        tid: i64,
+        user_id: i64,
+    ) -> ResultHandler<String> {
+        TrainingPerm::del(store, Pages::Edit.into(), user_id, tid).await?;
+        Ok("successful".to_string())
+    }
+
+    #[handler]
+    #[perm(require_edit)]
+    #[route("/remove_viewer")]
+    async fn post_remove_viewer(
+        store: &mut impl ModelStore,
+        tid: i64,
+        user_id: i64,
+    ) -> ResultHandler<String> {
+        TrainingPerm::del(store, Pages::View.into(), user_id, tid).await?;
+        Ok("successful".to_string())
+    }
+
 }

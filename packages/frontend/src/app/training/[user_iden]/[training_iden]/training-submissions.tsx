@@ -80,7 +80,8 @@ export default function TrainingSubmissions({
       try {
         setIsLoading(true)
         const response = await getRecordList({
-          problem: `problem${selectedProblemId}`,
+          problem: selectedProblemId,
+          status: 100,
           per_page: 50
         })
         setRecords(response.records)

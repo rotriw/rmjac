@@ -3,9 +3,10 @@ use serde::{Deserialize, Serialize};
 use db::entity::node::perm_group::ActiveModel as PermGroupNodeActiveModel;
 use db::entity::node::perm_group::Column as PermGroupNodeColumn;
 use db::entity::node::perm_group::Model as PermGroupNodeModel;
+use db::entity::node::perm_group::Entity as PermGroupNodeEntity;
 
 use crate::db;
-use crate::graph::node::NodeRaw;
+use crate::graph::node::{Node, NodeRaw};
 
 #[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
 #[ts(export)]
@@ -63,6 +64,17 @@ impl NodeRaw<PermGroupNode, PermGroupNodeModel, PermGroupNodeActiveModel> for Pe
     }
 
     fn get_node_type(&self) -> &str {
+        "perm_group"
+    }
+}
+
+
+impl Node<PermGroupNodeActiveModel, PermGroupNodeModel, PermGroupNodeEntity> for PermGroupNode {
+    fn get_node_id(&self) -> i64 {
+        self.node_id
+    }
+
+    fn get_node_type() -> &'static str {
         "perm_group"
     }
 }

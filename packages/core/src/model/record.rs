@@ -23,11 +23,14 @@ use redis::TypedCommands;
 use sea_orm::sea_query::{IntoCondition, SimpleExpr};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, NotSet, QueryFilter,
-    QuerySelect, Set,
+    QueryOrder, QuerySelect, Set,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use sea_orm::sea_query::SimpleExpr::Column;
 use tap::Conv;
+use crate::db::entity::node::user::get_user_by_iden;
+use crate::model::problem::ProblemRepository;
 
 pub trait ModelStore {
     fn get_db(&self) -> &DatabaseConnection;
@@ -328,8 +331,6 @@ impl RecordRepository {
         Ok(count)
     }
 }
-
-pub struct RecordSearch;
 
 pub struct Record {
     pub node_id: i64,
@@ -927,5 +928,145 @@ impl Subtask {
         let db = store.get_db().clone();
         let subtask_id = TestcaseEdgeQuery::get_v_one(statement_id, &db).await?;
         Ok(subtask_id)
+    }
+}
+
+// Record Search and Query structures
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct RecordListQuery {
+    pub page: Option<u64>,
+    pub per_page: Option<u64>,
+    pub user: Option<String>,
+    pub problem: Option<String>,
+    pub status: Option<i64>,
+    pub platform: Option<String>,
+}
+
+#[derive(Ord, PartialOrd, Eq, PartialEq, Clone)]
+pub struct RecordSearchResult {
+    pub node_id: i64,
+}
+
+impl Into<i64> for RecordSearchResult {
+    fn into(self) -> i64 {
+        self.node_id
+    }
+}
+
+impl RecordSearchResult {
+    pub fn new(node_id: i64) -> Self {
+        Self { node_id }
+    }
+}
+
+pub struct RecordSearch;
+
+impl RecordSearch {
+    pub async fn combine(
+        store: &mut impl crate::model::ModelStore,
+        query: &RecordListQuery,
+    ) -> Result<Vec<RecordSearchResult>> {
+        use crate::utils::search::search_combine;
+        let mut now_result = vec![];
+        let page = (query.per_page.unwrap_or(20), query.page.unwrap_or(1));
+        let mut filters = vec![];
+        use crate::db::entity::edge::record::Column;
+        if let Some(status) = query.status {
+            filters.push(Column::RecordStatus.eq(status));
+        }
+        if let Some(platform) = &query.platform {
+            filters.push(Column::Platform.eq(platform));
+        }
+        if let Some(user) = &query.user {
+            let user_id = get_user_by_iden(store.get_db(), user).await?.node_id;
+            filters.push(Column::UNodeId.eq(user_id));
+        }
+        if let Some(problem) = &query.problem {
+            let (_, problem_id) = ProblemRepository::resolve(store, problem).await?;
+            filters.push(Column::VNodeId.eq(problem_id));
+        }
+        let records = RecordEdgeQuery::get_edges_with_filter(
+            filters,
+            store.get_db(),
+            Some(page.0),
+            Some(page.0 * (page.1 - 1)),
+        ).await?;
+        log::info!("{:?}", records);
+        for record in records {
+            now_result.push(RecordSearchResult::new(record.record_node_id));
+        }
+        Ok(now_result)
+    }
+
+    pub async fn to_list_items(
+        store: &mut impl crate::model::ModelStore,
+        records: Vec<RecordSearchResult>,
+    ) -> Result<Vec<crate::graph::edge::record::RecordListItem>> {
+        use crate::graph::node::problem::ProblemNode;
+        use crate::graph::node::user::UserNode;
+        use crate::graph::node::Node;
+        use crate::service::iden::get_node_id_iden;
+
+        let db = store.get_db().clone();
+        let mut items = Vec::with_capacity(records.len());
+
+        for record in records {
+            // Get record edge from record_node_id
+            let edge_opt = RecordEdgeQuery::get_from_record_node_id(record.node_id, &db).await?;
+            
+            if let Some(record_edge) = edge_opt {
+                let problem_node_id = record_edge.v;
+                let node_type = crate::graph::action::get_node_type(&db, problem_node_id)
+                    .await
+                    .unwrap_or_default();
+
+                let (problem_name, problem_iden) = if node_type == "problem_statement" {
+                    let idens = get_node_id_iden(&db, store.get_redis(), problem_node_id)
+                        .await
+                        .unwrap_or_default();
+                    let iden = idens.first().cloned().unwrap_or_else(|| "unknown".to_string());
+
+                    let problem_node_ids = ProblemStatementEdgeQuery::get_u(problem_node_id, &db)
+                        .await
+                        .unwrap_or_default();
+
+                    let name = if let Some(&p_id) = problem_node_ids.first() {
+                        match ProblemNode::from_db(&db, p_id).await {
+                            Ok(p) => p.public.name,
+                            Err(_) => "Unknown Problem".to_string(),
+                        }
+                    } else {
+                        "Unknown Problem".to_string()
+                    };
+                    (name, iden)
+                } else {
+                    let idens = get_node_id_iden(&db, store.get_redis(), problem_node_id)
+                        .await
+                        .unwrap_or_default();
+                    let iden = idens.first().cloned().unwrap_or_else(|| "unknown".to_string());
+
+                    match ProblemNode::from_db(&db, problem_node_id).await {
+                        Ok(p) => (p.public.name, iden),
+                        Err(_) => ("Unknown Problem".to_string(), iden),
+                    }
+                };
+
+                let (user_name, user_iden) = match UserNode::from_db(&db, record_edge.u).await {
+                    Ok(u) => (u.public.name, u.public.iden),
+                    Err(_) => ("Unknown User".to_string(), "unknown".to_string()),
+                };
+
+                items.push(crate::graph::edge::record::RecordListItem {
+                    edge: record_edge,
+                    problem_name,
+                    problem_iden,
+                    user_name,
+                    user_iden,
+                });
+            }
+        }
+
+        Ok(items)
     }
 }

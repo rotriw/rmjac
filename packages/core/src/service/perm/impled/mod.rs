@@ -82,9 +82,10 @@ impl<P: PermVerify, T: PermTrait + GraphAction + HasPath, S: SaveService> PermAc
     }
 
     fn del_path(&mut self, u: i64, v: i64) -> impl Future<Output = ()> {
-        self.1.del_path(u, v, 0);
-        (*self.0).del_perm(u, v);
-        async {}
+        async move {
+            self.1.del_path(u, v, 0).await;
+            (*self.0).del_perm(u, v);
+        }
     }
 
     fn rm_path(&mut self, u: i64, v: i64, perm: &P) -> impl Future<Output = ()> {

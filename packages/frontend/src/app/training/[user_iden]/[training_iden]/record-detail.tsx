@@ -168,6 +168,12 @@ export default function RecordDetail({ record, problemId, problemName }: RecordD
         <div className="border-b bg-muted/50 px-4 py-2">
           <h3 className="font-semibold">评测详情</h3>
         </div>
+
+        <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto text-sm">
+          <code>
+            {recordNode.private.code}
+          </code>
+        </pre>
         {treeData.length > 0 ? (
           <div className="p-4">
             <TreeTable data={treeData} />
