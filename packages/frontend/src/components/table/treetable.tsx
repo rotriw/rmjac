@@ -5,6 +5,7 @@ import { ChevronRight, Plus, GripVertical } from "lucide-react";
 import { darken, lighten } from "colorizr";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export type TableNodeBackground = string;
 
@@ -19,6 +20,9 @@ export interface TreeTableNode {
   node_index?: number;
   onClick?: () => void;
   onAdd?: () => void;
+  addPopoverContent?: React.ReactNode;
+  addPopoverOpen?: boolean;
+  onAddPopoverOpenChange?: (open: boolean) => void;
   onReorder?: (newOrder: (string | number)[]) => void;
 }
 
@@ -236,15 +240,34 @@ const TreeNode = ({
                         {node.content}
                      </div>
                      {node.onAdd && (
-                        <div
-                          className="shrink-0 ml-2 p-1 rounded-md hover:bg-black/5 transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            node.onAdd?.();
-                          }}
-                        >
-                          <Plus className="w-4 h-4" style={{ color: darkestColor }} />
-                        </div>
+                        node.addPopoverContent ? (
+                          <Popover open={node.addPopoverOpen} onOpenChange={node.onAddPopoverOpenChange}>
+                            <PopoverTrigger asChild>
+                              <div
+                                className="shrink-0 ml-2 p-1 rounded-md hover:bg-black/5 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  node.onAdd?.();
+                                }}
+                              >
+                                <Plus className="w-4 h-4" style={{ color: darkestColor }} />
+                              </div>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-90 p-3" align="start" onClick={(e) => e.stopPropagation()}>
+                              {node.addPopoverContent}
+                            </PopoverContent>
+                          </Popover>
+                        ) : (
+                          <div
+                            className="shrink-0 ml-2 p-1 rounded-md hover:bg-black/5 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              node.onAdd?.();
+                            }}
+                          >
+                            <Plus className="w-4 h-4" style={{ color: darkestColor }} />
+                          </div>
+                        )
                      )}
                 </div>
             )}

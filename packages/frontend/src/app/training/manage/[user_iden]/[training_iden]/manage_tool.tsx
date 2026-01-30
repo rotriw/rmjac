@@ -10,6 +10,8 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { ManageRightSidebar, ManageMode } from "./rightbar"
 import PermissionsEditor from "./permissions-editor"
 import { getView as getTrainingByIden } from "@/api/client/api_training_view"
+import { postSearch as searchProblem } from "@/api/client/api_problem_search"
+import { postCreate as createProblem } from "@/api/client/api_problem_create"
 import {
   postAddProblemForList,
   postAddProblemList,
@@ -17,18 +19,16 @@ import {
   postRemoveProblem,
   postUpdateOrder,
 } from "@/api/client/api_training_manage"
-import { Training, TrainingProblem, TrainingList } from "@rmjac/api-declare";
+import { ProblemListItem, ProblemListQuery, ProblemStatementProp, Training, TrainingProblem, TrainingList } from "@rmjac/api-declare";
 import { TreeTable, TreeTableNode } from "@/components/table/treetable"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Trash2, ArrowUp, ArrowDown, Plus, FolderPlus } from "lucide-react"
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 interface TrainingData extends Training {}
 
@@ -43,6 +43,17 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
   const [loading, setLoading] = useState(true)
   const [formValues, setFormValues] = useState<Record<string, string>>({})
   const [activeListNodeId, setActiveListNodeId] = useState<number | null>(null)
+  const [rootPopoverOpen, setRootPopoverOpen] = useState(false)
+  const [rootSearchKeyword, setRootSearchKeyword] = useState("")
+  const [rootSearchResults, setRootSearchResults] = useState<ProblemListItem[]>([])
+  const [rootSearching, setRootSearching] = useState(false)
+  const [rootSearchError, setRootSearchError] = useState<string | null>(null)
+  const [rootSelectedIndex, setRootSelectedIndex] = useState(0)
+  const [listSearchKeyword, setListSearchKeyword] = useState("")
+  const [listSearchResults, setListSearchResults] = useState<ProblemListItem[]>([])
+  const [listSearching, setListSearching] = useState(false)
+  const [listSearchError, setListSearchError] = useState<string | null>(null)
+  const [listSelectedIndex, setListSelectedIndex] = useState(0)
 
   const fetchData = useCallback(async () => {
     try {
@@ -65,6 +76,81 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  useEffect(() => {
+    if (activeListNodeId !== null) {
+      setListSearchKeyword("")
+      setListSearchResults([])
+      setListSearchError(null)
+      setListSelectedIndex(0)
+    }
+  }, [activeListNodeId])
+
+  const handleProblemSearch = useCallback(async (
+    keyword: string,
+    setResults: React.Dispatch<React.SetStateAction<ProblemListItem[]>>,
+    setSearching: React.Dispatch<React.SetStateAction<boolean>>,
+    setError: React.Dispatch<React.SetStateAction<string | null>>,
+    options?: { silentOnEmpty?: boolean }
+  ) => {
+    const trimmed = keyword.trim()
+    if (!trimmed) {
+      if (!options?.silentOnEmpty) {
+        toast.info("请输入搜索关键词")
+      }
+      setResults([])
+      setError(null)
+      setSearching(false)
+      return
+    }
+    setSearching(true)
+    setError(null)
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const query: any = {
+        page: 1,
+        per_page: 10,
+        name: trimmed,
+        tag: null,
+      }
+      const response = await searchProblem({ query: query as ProblemListQuery })
+      setResults(response.problems)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "搜索失败")
+      setResults([])
+    } finally {
+      setSearching(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!rootPopoverOpen) return
+    setRootSelectedIndex(0)
+    const timer = setTimeout(() => {
+      handleProblemSearch(
+        rootSearchKeyword,
+        setRootSearchResults,
+        setRootSearching,
+        setRootSearchError,
+        { silentOnEmpty: true }
+      )
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [rootSearchKeyword, rootPopoverOpen, handleProblemSearch])
+
+  useEffect(() => {
+    if (activeListNodeId === null) return
+    const timer = setTimeout(() => {
+      handleProblemSearch(
+        listSearchKeyword,
+        setListSearchResults,
+        setListSearching,
+        setListSearchError,
+        { silentOnEmpty: true }
+      )
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [listSearchKeyword, activeListNodeId, handleProblemSearch])
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -254,6 +340,9 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
     }
   }
 
+  const getProblemName = (item: ProblemListItem) => item.model.problem_node.public.name
+  const getProblemTags = (item: ProblemListItem) => item.model.tag.map(t => t.public.tag_name)
+
   const renderInfoMode = () => (
     <div className="space-y-6">
       <FormQuery
@@ -284,6 +373,151 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
 
   const renderProblemsMode = () => {
     if (!trainingData) return null
+
+    const renderManagePanel = (
+      listNodeId: number,
+      keyword: string,
+      setKeyword: React.Dispatch<React.SetStateAction<string>>,
+      selectedIndex: number,
+      setSelectedIndex: React.Dispatch<React.SetStateAction<number>>,
+      results: ProblemListItem[],
+      searching: boolean,
+      error: string | null,
+      setResults: React.Dispatch<React.SetStateAction<ProblemListItem[]>>,
+      setSearching: React.Dispatch<React.SetStateAction<boolean>>,
+      setError: React.Dispatch<React.SetStateAction<string | null>>,
+      autoFocus = false
+    ) => {
+      const optionItems = [
+        ...results.map((item) => ({ type: "problem" as const, item })),
+        { type: "submodule" as const, label: `创建子模块：${keyword || "（未输入）"}` },
+        { type: "placeholder" as const, label: "创建占位题面并加入当前列表" }
+      ]
+
+      const safeIndex = Math.min(selectedIndex, Math.max(optionItems.length - 1, 0))
+      if (safeIndex !== selectedIndex) {
+        setSelectedIndex(safeIndex)
+      }
+
+      const handleExecute = () => {
+        if (keyword.includes(",")) {
+          handleBatchAddProblems(listNodeId, keyword)
+          return
+        }
+        const selected = optionItems[safeIndex]
+        if (!selected) return
+        if (selected.type === "submodule") {
+          handleCreateSubmodule(keyword, listNodeId)
+        } else if (selected.type === "placeholder") {
+          handleCreatePlaceholderProblem(keyword, listNodeId)
+        } else {
+          handleAddProblem(listNodeId, selected.item.iden)
+        }
+      }
+
+      return (
+      <div className="space-y-3">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="搜索题目名称或 ID"
+              value={keyword}
+              autoFocus={autoFocus}
+              maxLength={64}
+              onChange={(e) => setKeyword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  handleExecute()
+                }
+                if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                  e.preventDefault()
+                  setSelectedIndex((prev) => {
+                    if (e.key === "ArrowUp") return Math.max(prev - 1, 0)
+                    return Math.min(prev + 1, optionItems.length - 1)
+                  })
+                }
+                if (e.key === "Tab") {
+                  e.preventDefault()
+                  setSelectedIndex((prev) => (prev + 1) % Math.max(optionItems.length, 1))
+                }
+              }}
+              className="h-8"
+            />
+            <Button size="sm" onClick={() => handleProblemSearch(keyword, setResults, setSearching, setError, { silentOnEmpty: false })} disabled={searching}>
+              {searching ? "搜索中..." : "搜索"}
+            </Button>
+          </div>
+          {error && (
+            <div className="text-xs text-red-600">{error}</div>
+          )}
+          <div className="rounded-md border">
+            {searching ? (
+              <div className="text-xs text-muted-foreground py-4 text-center">搜索中...</div>
+            ) : (
+              <div className="divide-y">
+                {optionItems.map((option, index) => {
+                  const isSelected = index === safeIndex
+                  if (option.type === "problem") {
+                    const item = option.item
+                    return (
+                      <button
+                        key={item.iden}
+                        type="button"
+                        className={cn(
+                          "flex w-full items-center gap-2 px-3 py-2 text-left",
+                          isSelected ? "bg-primary/10" : "hover:bg-muted"
+                        )}
+                        onClick={() => setSelectedIndex(index)}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium">{getProblemName(item)}</div>
+                          <div className="text-xs text-muted-foreground">ID: {item.iden}</div>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {getProblemTags(item).slice(0, 3).map((tag) => (
+                              <span key={tag} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  }
+
+                  return (
+                    <button
+                      key={option.type}
+                      type="button"
+                      className={cn(
+                        "flex w-full items-center px-3 py-2 text-left text-xs",
+                        isSelected ? "bg-primary/10" : "hover:bg-muted"
+                      )}
+                      onClick={() => setSelectedIndex(index)}
+                    >
+                      {option.label}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              variant={safeIndex === 1 ? "secondary" : "default"}
+              onClick={handleExecute}
+            >
+              回车可提交
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
     const transformToTreeNodes = (list: TrainingList, parentListNodeId: number): TreeTableNode[] => {
       return list.own_problem.map((p: TrainingProblem, index: number) => {
@@ -335,7 +569,23 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
             children,
             background: isSubTraining ? "#f3f4f6" : undefined,
             defaultExpanded: true,
-            onAdd: () => setActiveListNodeId(nodeId)
+            onAdd: () => setActiveListNodeId(nodeId),
+            addPopoverContent: renderManagePanel(
+              nodeId,
+              listSearchKeyword,
+              setListSearchKeyword,
+              listSelectedIndex,
+              setListSelectedIndex,
+              listSearchResults,
+              listSearching,
+              listSearchError,
+              setListSearchResults,
+              setListSearching,
+              setListSearchError,
+              true
+            ),
+            addPopoverOpen: activeListNodeId === nodeId,
+            onAddPopoverOpenChange: (open) => setActiveListNodeId(open ? nodeId : null)
           }
         } else if (p.ProblemPresetTraining) {
           const preset = p.ProblemPresetTraining
@@ -376,18 +626,19 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
       })
     }
 
-    const treeData = transformToTreeNodes(trainingData.problem_list, trainingData.problem_list.node_id)
+    const rootListNodeId = trainingData.problem_list.node_id
+    const treeData = transformToTreeNodes(trainingData.problem_list, rootListNodeId)
 
     const renderAddTools = (listNodeId: number, isSheet = false) => (
-      <div className={cn("space-y-4", !isSheet && "mt-4 p-4 border rounded-lg bg-muted/30")}>
-        <div className={cn("grid gap-4", !isSheet ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
-          <div className="space-y-2">
+      <div className={cn("space-y-3", !isSheet && "mt-4 p-4 border rounded-lg bg-muted/30")}> 
+        <div className={cn("grid gap-3", !isSheet ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}> 
+          <div className="space-y-1.5">
             <p className="text-sm font-medium flex items-center gap-2"><Plus className="h-4 w-4" /> 快速添加题目</p>
             <div className="flex gap-2">
               <Input
                 id={`add-p-${listNodeId}`}
                 placeholder="P1000, P1001"
-                className="h-9"
+                className="h-8"
               />
               <Button
                 size="sm"
@@ -405,18 +656,18 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
             </div>
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <p className="text-sm font-medium flex items-center gap-2"><FolderPlus className="h-4 w-4" /> 创建子模块 / 引用</p>
             <div className="flex gap-2">
               <Input
                 id={`add-l-${listNodeId}`}
                 placeholder="名称 或 ID,标识"
-                className="h-9"
+                className="h-8"
               />
               <select
                 id={`type-l-${listNodeId}`}
                 title="类型"
-                className="h-9 rounded-md border border-input bg-background px-2 py-1 text-sm"
+                className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm"
               >
                 <option value="ProblemTraining">子模块</option>
                 <option value="ProblemPresetTraining">预设</option>
@@ -448,6 +699,61 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
       </div>
     )
 
+    const handleCreateSubmodule = async (keyword: string, listNodeId: number) => {
+      const trimmed = keyword.trim()
+      if (!trimmed) {
+        toast.error("请输入关键词作为子模块名称")
+        return
+      }
+      await handleAddTrainingProblem(listNodeId, "ProblemTraining", { description: trimmed })
+    }
+
+    const handleCreatePlaceholderProblem = async (keyword: string, listNodeId: number) => {
+      const trimmed = keyword.trim()
+      if (!trimmed) {
+        toast.error("请输入关键词作为题面名称")
+        return
+      }
+      const problemIden = trimmed.replace(/\s+/g, "_")
+      const problemStatements: ProblemStatementProp[] = [
+        {
+          statement_source: "",
+          iden: problemIden,
+          problem_statements: [
+            { iden: "description", content: "请在此处填写题目描述" }
+          ],
+          time_limit: 1000,
+          memory_limit: 256,
+          sample_group: [],
+          show_order: ["description"],
+          page_source: null,
+          page_rendered: null,
+          problem_difficulty: null,
+          judge_option: null,
+        }
+      ]
+      try {
+        await createProblem({
+          problem_iden: problemIden,
+          problem_name: trimmed,
+          problem_statement: problemStatements,
+          tags: [],
+        })
+        await handleAddProblem(listNodeId, problemIden)
+      } catch (error) {
+        toast.error(`创建占位题面失败: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+
+    const handleBatchAddProblems = async (listNodeId: number, keyword: string) => {
+      const parts = keyword.split(",").map((part) => part.trim()).filter(Boolean)
+      if (parts.length === 0) {
+        toast.error("请输入题目标识")
+        return
+      }
+      await handleAddProblem(listNodeId, parts.join(","))
+    }
+
     return (
       <div className="space-y-6">
         <StandardCard title="题目列表管理">
@@ -455,33 +761,41 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
             <div className="text-sm text-muted-foreground">
               当前根列表: <span className="font-mono">{trainingData.problem_list.description}</span> (ID: {trainingData.problem_list.node_id})
             </div>
-            <Button variant="outline" size="sm" onClick={() => setActiveListNodeId(trainingData.problem_list.node_id)}>
-              <Plus className="h-4 w-4 mr-2" /> 管理根列表
-            </Button>
+            <Popover open={rootPopoverOpen} onOpenChange={setRootPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" /> 管理根列表
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-90 p-3">
+                <div className="text-sm font-medium mb-2">根列表管理</div>
+                {renderManagePanel(
+                  rootListNodeId,
+                  rootSearchKeyword,
+                  setRootSearchKeyword,
+                  rootSelectedIndex,
+                  setRootSelectedIndex,
+                  rootSearchResults,
+                  rootSearching,
+                  rootSearchError,
+                  setRootSearchResults,
+                  setRootSearching,
+                  setRootSearchError,
+                  true
+                )}
+              </PopoverContent>
+            </Popover>
           </div>
           <TreeTable
             data={treeData}
             enableReorder={true}
             onReorder={(parentId, newOrder) => {
-              const listNodeId = parentId ? parseInt(parentId.toString().split('-')[1]) : trainingData.problem_list.node_id
+              const listNodeId = parentId ? parseInt(parentId.toString().split('-')[1]) : rootListNodeId
               handleReorder(listNodeId, newOrder)
             }}
           />
         </StandardCard>
 
-        <Sheet open={activeListNodeId !== null} onOpenChange={(open) => !open && setActiveListNodeId(null)}>
-          <SheetContent side="right" className="sm:max-w-md">
-            <SheetHeader>
-              <SheetTitle>添加内容</SheetTitle>
-              <SheetDescription>
-                正在向节点 (ID: {activeListNodeId}) 添加题目或子模块。
-              </SheetDescription>
-            </SheetHeader>
-            <div className="py-6">
-              {activeListNodeId !== null && renderAddTools(activeListNodeId, true)}
-            </div>
-          </SheetContent>
-        </Sheet>
       </div>
     )
   }

@@ -21,7 +21,7 @@ import { TitleCard, StandardCard } from "@/components/card/card"
 import { Badge } from "@/components/ui/badge"
 import { TreeTable, TreeTableNode } from "@/components/table/treetable"
 import { oklch2hex } from 'colorizr'
-import { RECORD_STATUS_COLOR_MAP_INTER } from "@/app/record/[id]/shared"
+import { RECORD_STATUS_COLOR_MAP_INTER } from "@/api-components/record/index"
 
 /*
   stable: 0 - 稳定。通常来源可靠的API或官方支持。

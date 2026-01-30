@@ -33,6 +33,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::Mutex as AsyncMutex;
+use crate::service::cron::init::handle_vjudge_task;
+use crate::service::cron::tasks::upload_recent::UploadRecentTaskProps;
 
 lazy_static::lazy_static! {
     static ref PROBLEM_UPDATE_LOCKS: Mutex<HashMap<String, Arc<AsyncMutex<()>>>> = Mutex::new(HashMap::new());
@@ -422,6 +424,38 @@ impl VjudgeAccount {
             _ => "unknown".to_string(),
         }
     }
+
+    pub async fn set_cron_task(db: &DatabaseConnection, vjudge_node: &VjudgeNode, user_id: i64) -> Result<()> {
+        let cron = "0 * * * * * *";
+        let data = UploadRecentTaskProps {
+            vjudge_node: vjudge_node.clone(),
+            range: "1:50".to_string(),
+            user_id
+        };
+        let new_task = VjudgeTaskNodeRaw {
+            public: VjudgeTaskNodePublicRaw {
+                status: "cron_online".to_string(),
+                log: format!(
+                    "cron:{}\n[TASK_INFO]\nupload_recent\n{}\n[TASK_DONE]",
+                    cron,
+                    serde_json::to_string(&data)?
+                ),
+            },
+            private: VjudgeTaskNodePrivateRaw {},
+        }.save(db).await?;
+
+        MiscEdgeRaw {
+            u: vjudge_node.node_id,
+            v: new_task.node_id,
+            misc_type: "vjudge_task".to_string(),
+        }
+            .save(db)
+            .await?;
+
+        handle_vjudge_task(new_task).await;
+
+        Ok(())
+    }
 }
 
 pub struct VjudgeTask {
@@ -452,6 +486,14 @@ impl VjudgeTask {
             }
         }
         Ok(task_nodes)
+    }
+
+    pub async fn update_log(db: &DatabaseConnection, task_id: i64, log: String) -> Result<()> {
+        use crate::db::entity::node::vjudge_task::Column;
+        let task_node = VjudgeTaskNode::from_db(db, task_id).await?;
+        let now_time = now_time!();
+        let _ = task_node.modify(db, Column::Log, format!("{}\nTIME(UTC): {}, {}",  task_node.public.log, now_time.to_string(), log)).await?;
+        Ok(())
     }
 }
 
@@ -692,7 +734,7 @@ impl VjudgeService {
             && let Ok(task_node) = VjudgeTaskNode::from_db(db, task_id).await
         {
             use crate::db::entity::node::vjudge_task::Column;
-            let _ = task_node.modify(db, Column::Log, log_data).await;
+            VjudgeTask::update_log(db, task_id, log_data.clone()).await?;
             let _ = task_node
                 .modify(db, Column::Status, "completed".to_string())
                 .await;

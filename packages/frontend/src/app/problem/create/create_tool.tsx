@@ -4,15 +4,24 @@ import { useSearchParams } from "next/navigation"
 import { TitleCard } from "@/components/card/card"
 import { FormQuery, FormField } from "@/components/tools/query";
 import { StandardCard } from "@/components/card/card";
-import { ProblemData } from "./types"; // ProblemData type is still here, not from api-declare
-import { postCreate as createProblem } from "@/api/client/api_problem_create"; // Changed import and alias
-import { ProblemModel, ProblemStatementProp } from "@rmjac/api-declare"; // Added ProblemStatementProp import
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { DetailData } from "@/components/problem/detail-data"
+import { ProblemData } from "./types";
+import { postCreate as createProblem } from "@/api/client/api_problem_create";
+import { postSearch } from "@/api/client/api_problem_search"
+import { ProblemListItem, ProblemListQuery, ProblemNode, ProblemStatementProp } from "@rmjac/api-declare";
 
 export function ProblemTool() {
   const searchParams = useSearchParams()
-  const [formValues, setFormValues] = useState<Record<string, string | ProblemData[]>>({})
-  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string; data?: ProblemModel | unknown } | null>(null);
+  const [formValues, setFormValues] = useState<Record<string, string | string[] | ProblemData[]>>({})
+  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string; data?: ProblemNode | unknown } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState("")
+  const [searchResults, setSearchResults] = useState<ProblemListItem[]>([])
+  const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
   
   // Handle form submission
   const handleSubmit = async (e?: React.MouseEvent) => {
@@ -20,61 +29,96 @@ export function ProblemTool() {
     setIsSubmitting(true);
     setSubmitResult(null);
     
-    const currentProblems = (formValues.problems as ProblemData[]) || [];    
-    let problemStatements: ProblemStatementProp[]; // Changed type to ProblemStatementProp[]
-    
-    if (currentProblems.length === 0) {
-      problemStatements = [{
-        statement_source: "",
-        iden: "default",
-        problem_statements: [
-          { iden: "description", content: "请在此处填写题目描述" }
+    const currentProblems = (formValues.problems as ProblemData[]) || []
+    const problemStatements: ProblemStatementProp[] = (currentProblems.length > 0 ? currentProblems : [
+      {
+        id: "default",
+        problem_source: "",
+        problem_iden: "default",
+        modules: [
+          { id: "default-description", title: "题面描述", content: "请在此处填写题目描述", type: "description" }
         ],
+        sampleGroups: []
+      }
+    ]).map((problem) => {
+      const modules = problem.modules.map((module) => ({
+        iden: module.type,
+        content: module.content
+      }))
+      return {
+        statement_source: problem.problem_source || "",
+        iden: problem.problem_iden || "default",
+        problem_statements: modules,
         time_limit: 1000,
         memory_limit: 256,
-        sample_group: [],
-        show_order: ["default"]
-      }];
-    } else {
-      problemStatements = currentProblems.map(problem => ({
-        statement_source: problem.problem_source,
-        iden: problem.problem_iden || undefined,
-        problem_statements: problem.modules.map(module => ({
-          iden: module.type,
-          content: module.content
-        })),
-        time_limit: 1000, // default time limit in ms
-        memory_limit: 256,  // default memory limit in MB
-        show_order: ["default"],
-        sample_group: problem.sampleGroups.length > 0 ? problem.sampleGroups.map(sample => [sample.input, sample.output]) : []
-      }));
-    }  
+        sample_group: problem.sampleGroups.length > 0 ? problem.sampleGroups.map(sample => [sample.input, sample.output]) : [],
+        show_order: modules.map(module => module.iden),
+        page_source: null,
+        page_rendered: null,
+        problem_difficulty: null,
+        judge_option: null,
+      }
+    })
     
-    const submissionData = { // This object now directly matches PostCreateParams
-      problem_iden: formValues.iden as string || currentProblems[0]?.problem_iden || "",
-      problem_name: formValues.name as string || "未命名题目",
+    const submissionData = {
+      problem_iden: (formValues.iden as string) || currentProblems[0]?.problem_iden || "",
+      problem_name: (formValues.name as string) || "未命名题目",
       problem_statement: problemStatements,
-      tags: Array.isArray(formValues.tags) ? formValues.tags as string[] : []
-    };
+      tags: Array.isArray(formValues.tags) ? (formValues.tags as string[]) : []
+    }
     
     try {
-      const newProblem = await createProblem(submissionData); // Changed API call: pass directly as params
+      const newProblem = await createProblem(submissionData)
       
       setSubmitResult({
         success: true,
         message: `题目创建成功！\n题目名称: ${submissionData.problem_name}\n题目标识: ${submissionData.problem_iden}`,
-        data: newProblem
-      });
+        data: newProblem.problem
+      })
     } catch (error) {
       setSubmitResult({
         success: false,
         message: `网络错误: ${error instanceof Error ? error.message : '未知网络错误'}`,
         data: error
-      });
+      })
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
+  const getProblemName = (item: ProblemListItem) => item.model.problem_node.public.name
+  const getProblemTags = (item: ProblemListItem) => item.model.tag.map(t => t.public.tag_name)
+
+  const handleProblemSearch = async () => {
+    setSearching(true)
+    setSearchError(null)
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const query: any = {
+        page: 1,
+        per_page: 10,
+        name: searchKeyword || null,
+        tag: null
+      }
+      const response = await postSearch({ query: query as ProblemListQuery })
+      setSearchResults(response.problems)
+    } catch (error) {
+      setSearchError(error instanceof Error ? error.message : "搜索失败")
+      setSearchResults([])
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const handleApplyProblem = (item: ProblemListItem) => {
+    const name = getProblemName(item)
+    const tags = getProblemTags(item)
+    setFormValues((prev) => ({
+      ...prev,
+      name,
+      iden: item.iden,
+      tags
+    }))
+  }
   const props: FormField[] = [
     {
       type: "group",
@@ -95,14 +139,6 @@ export function ProblemTool() {
     },
     {
       type: "group",
-      title: "题面详情",
-      children: [{
-        type: "custom",
-        children: DetailData
-      }]
-    },
-    {
-      type: "group",
       title: "快捷工具",
       children: [{
         type: "group",
@@ -116,7 +152,7 @@ export function ProblemTool() {
           title: "引入",
           onClick: () => {
             // Handle quick quote functionality
-            console.log('Quick quote clicked:', formValues['quick-quote'])
+            console.log("Quick quote clicked:", formValues["quick-quote"])
           }
         }]
       }]
@@ -141,18 +177,88 @@ export function ProblemTool() {
     setFormValues(initialValues)
   }, [searchParams])
   
-  const handleFormChange = (values: Record<string, string | ProblemData[]>) => {
+  const handleFormChange = (values: Record<string, string | string[] | ProblemData[]>) => {
     setFormValues(values)
   }
   
   return (
     <div className="container mx-auto py-6 px-4 md:px-6">
       <TitleCard title="创建题目" description="create" />
+      <StandardCard title="搜题">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input
+              placeholder="输入题目名称或ID"
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  handleProblemSearch()
+                }
+              }}
+              className="h-8"
+            />
+            <div className="flex gap-2">
+              <Button onClick={handleProblemSearch} size="sm" disabled={searching}>
+                {searching ? "搜索中..." : "搜索"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchKeyword("")
+                  setSearchResults([])
+                  setSearchError(null)
+                }}
+              >
+                清空
+              </Button>
+            </div>
+          </div>
+          {searchError && (
+            <div className="text-sm text-red-600">
+              {searchError}
+            </div>
+          )}
+          <div className="rounded-md border">
+            {searching ? (
+              <div className="text-sm text-muted-foreground py-6 text-center">搜索中...</div>
+            ) : searchResults.length === 0 ? (
+              <div className="text-sm text-muted-foreground py-6 text-center">暂无结果</div>
+            ) : (
+              <div className="divide-y">
+                {searchResults.map((item) => (
+                  <div key={item.iden} className="flex flex-col sm:flex-row sm:items-center gap-2 p-3">
+                    <div className="flex-1">
+                      <div className="font-medium">{getProblemName(item)}</div>
+                      <div className="text-xs text-muted-foreground">ID: {item.iden}</div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {getProblemTags(item).slice(0, 4).map((tag) => (
+                          <Badge key={tag} variant="secondary" className="text-xs font-normal">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => handleApplyProblem(item)}>
+                      带入
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </StandardCard>
       <FormQuery
         fields={props}
-        values={formValues}
+        values={formValues as Record<string, string | string[]>}
         onChange={handleFormChange}
       />
+      <StandardCard title="题面详情">
+        <DetailData values={formValues} onChange={handleFormChange} />
+      </StandardCard>
       
       {/* 结果显示Card */}
       {submitResult && (
@@ -164,16 +270,6 @@ export function ProblemTool() {
             <p className={submitResult.success ? "text-green-800" : "text-red-800"}>
               {submitResult.message}
             </p>
-            {submitResult.data && (
-              <details className="mt-3">
-                <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-800">
-                  查看详细响应数据
-                </summary>
-                <pre className="mt-2 p-3 bg-gray-100 rounded-md text-xs overflow-auto max-h-60">
-                  {JSON.stringify(submitResult.data, null, 2)}
-                </pre>
-              </details>
-            )}
           </div>
         </StandardCard>
       )}

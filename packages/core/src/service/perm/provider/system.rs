@@ -19,4 +19,5 @@ pub enum System {
     CreateRecord = 128,
     ManageVjudge = 256,
     ManageAllUser = 512,
+    SendVjudgeProblemRequest = 1024,
 }

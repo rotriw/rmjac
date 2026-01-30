@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { StandardCard } from "@/components/card/card"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { getMyAccounts } from "@/api/server/api_vjudge_my_accounts"
 import { postAssign } from "@/api/server/api_vjudge_assign"
 import { AssignTaskReq, VjudgeNode } from "@rmjac/api-declare"
@@ -38,7 +39,8 @@ export function AddTaskCard({ onSubmitSuccess }: AddTaskCardProps) {
   const [syncCount, setSyncCount] = useState<string>("50")
   const [cfContestId, setCfContestId] = useState<string>("")
   const [cfProblemId, setCfProblemId] = useState<string>("")
-const [cfLink, setCfLink] = useState<string>("")
+  const [cfLink, setCfLink] = useState<string>("")
+  const [customRangeOpen, setCustomRangeOpen] = useState(false)
 
   useEffect(() => {
     getMyAccounts()
@@ -49,6 +51,12 @@ const [cfLink, setCfLink] = useState<string>("")
         console.error("Failed to load accounts", err)
       })
   }, [])
+
+  useEffect(() => {
+    if (selectedScope !== "custom") {
+      setCustomRangeOpen(false)
+    }
+  }, [selectedScope])
 
   const handleSubmit = async () => {
     if (!selectedAccount) {
@@ -240,6 +248,60 @@ const [cfLink, setCfLink] = useState<string>("")
                   <div className="flex flex-wrap gap-2">
                     {filteredTasks.find(t => t.value === selectedTask)?.scopes.map((scope) => {
                       const isSelected = selectedScope === scope.value
+                      if (scope.value === "custom") {
+                        return (
+                          <Popover key={scope.value} open={customRangeOpen} onOpenChange={setCustomRangeOpen}>
+                            <PopoverTrigger asChild>
+                              <Badge
+                                variant={isSelected ? "default" : "outline"}
+                                className={cn(
+                                  "cursor-pointer py-1.5 px-3 text-xs transition-all",
+                                  isSelected ? "shadow-sm bg-blue-600 hover:bg-blue-700" : "hover:bg-muted"
+                                )}
+                                onClick={() => {
+                                  setSelectedScope(scope.value)
+                                  setCustomRangeOpen(true)
+                                }}
+                              >
+                                {scope.label}
+                              </Badge>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-72 p-3" align="start">
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium">输入范围</label>
+                                <div className="flex gap-3">
+                                  <div className="flex-1 space-y-1">
+                                    <span className="text-[10px] text-muted-foreground">起点</span>
+                                    <Input
+                                      type="number"
+                                      value={syncStart}
+                                      onChange={(e) => setSyncStart(e.target.value)}
+                                      placeholder="1"
+                                      className="h-8 text-xs"
+                                    />
+                                  </div>
+                                  <div className="flex-1 space-y-1">
+                                    <span className="text-[10px] text-muted-foreground">个数</span>
+                                    <Input
+                                      type="number"
+                                      value={syncCount}
+                                      onChange={(e) => setSyncCount(e.target.value)}
+                                      placeholder="50"
+                                      className="h-8 text-xs"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex justify-end">
+                                  <Button size="sm" variant="secondary" onClick={() => setCustomRangeOpen(false)}>
+                                    确定
+                                  </Button>
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        )
+                      }
+
                       return (
                         <Badge
                           key={scope.value}
@@ -254,34 +316,6 @@ const [cfLink, setCfLink] = useState<string>("")
                         </Badge>
                       )
                     })}
-                  </div>
-                </div>
-              )}
-
-              {selectedTask === "syncList" && selectedScope === "custom" && (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
-                  <label className="text-sm font-medium">4. 输入范围</label>
-                  <div className="flex gap-4">
-                    <div className="flex-1 space-y-1">
-                      <span className="text-[10px] text-muted-foreground">起点 (从第几个开始)</span>
-                      <Input
-                        type="number"
-                        value={syncStart}
-                        onChange={(e) => setSyncStart(e.target.value)}
-                        placeholder="1"
-                        className="h-8 text-xs"
-                      />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <span className="text-[10px] text-muted-foreground">个数 (同步多少个)</span>
-                      <Input
-                        type="number"
-                        value={syncCount}
-                        onChange={(e) => setSyncCount(e.target.value)}
-                        placeholder="50"
-                        className="h-8 text-xs"
-                      />
-                    </div>
                   </div>
                 </div>
               )}

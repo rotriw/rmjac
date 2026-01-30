@@ -9,6 +9,7 @@ pub mod judge;
 pub mod perm;
 pub mod socket;
 pub mod track;
+pub mod cron;
 
 pub async fn service_start(
     db: &DatabaseConnection,
@@ -34,6 +35,10 @@ pub async fn service_start(
     log::info!("Starting socket service on port: {vjudge_port}");
     tokio::spawn(async move {
         socket::service::service_start(vjudge_port).await.unwrap();
+    });
+    log::info!("Starting cron service");
+    tokio::spawn(async {
+        cron::service_start().await;
     });
     Ok(())
 }
