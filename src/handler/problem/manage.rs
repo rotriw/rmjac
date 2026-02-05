@@ -7,7 +7,7 @@ use rmjac_core::graph::edge::problem_statement::ProblemStatementEdgeQuery;
 use rmjac_core::graph::node::problem::statement::ProblemStatementNode;
 use rmjac_core::model::ModelStore;
 use rmjac_core::model::problem::{
-    ProblemFactory, ProblemPermissionService, ProblemRepository, ProblemStatement,
+    ProblemFactory, ProblemPermissionService, ProblemImport, ProblemStatement,
     ProblemStatementProp,
 };
 use rmjac_core::service::perm::provider::{Problem, ProblemPermService, System, SystemPermService};
@@ -18,7 +18,7 @@ pub mod handler {
     #[from_path(iden)]
     #[export(pid, stmtid)]
     async fn before_resolve(store: &mut impl ModelStore, iden: &str) -> ResultHandler<(i64, i64)> {
-        Ok(ProblemRepository::resolve(store, iden).await?)
+        Ok(ProblemImport::resolve(store, iden).await?)
     }
 
     #[perm]
@@ -61,7 +61,7 @@ pub mod handler {
         if stmtid != -1 {
             ProblemStatementEdgeQuery::delete(store.get_db(), pid, stmtid).await?;
         } else {
-            ProblemRepository::purge(store, pid).await?;
+            ProblemImport::purge(store, pid).await?;
         }
         Ok((format!("delete problem {}", pid),))
     }
@@ -200,11 +200,9 @@ pub mod handler {
     #[export("message")]
     async fn post_transfer_owner(
         store: &mut impl ModelStore,
-        user_context: UserAuthCotext,
         pid: i64,
         new_owner: i64,
     ) -> ResultHandler<(String,)> {
-        // let old_owner_id = user_context.user_id;
         ProblemPermissionService::add_owner(store, new_owner, pid).await?;
         Ok(("successful".to_string(),))
     }

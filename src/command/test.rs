@@ -107,7 +107,6 @@
 //     let _ = dbg!(handle_score(SubtaskCalcMethod::Function, None, test_detail));
 // }
 
-use rmjac_core::model::problem::ProblemModel;
 
 pub fn run() -> Option<()> {
     // let log_level: LevelFilter = log_level

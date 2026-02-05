@@ -4,6 +4,7 @@ pub mod create;
 pub mod manage;
 pub mod status;
 pub mod view;
+pub mod list;
 
 pub fn service() -> Scope {
     web::scope("/api/training")
@@ -11,4 +12,5 @@ pub fn service() -> Scope {
         .service(view::handler::export_http_service())
         .service(status::handler::export_http_service())
         .service(manage::handler::export_http_service())
+        .service(list::handler::export_http_service())
 }

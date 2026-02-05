@@ -1,6 +1,6 @@
 use tokio::sync::Mutex;
 use chrono::Utc;
-use cron_tab::{AsyncCron, Cron};
+use cron_tab::AsyncCron;
 use lazy_static::lazy_static;
 use crate::env::db::get_connect;
 use crate::service::cron::init::get_task_cron_data;

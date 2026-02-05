@@ -200,28 +200,13 @@ export const convertCodeforcesDomToSampleGroup = (dom: JSDOM): [string, string][
 export const parse = async (html: string, url: string): Promise<Problem | ""> => {
     const dom = new JSDOM(html);
     const document = dom.window.document;
-    const problemStatementDiv = document.querySelector(".problem-statement");
-    if (!problemStatementDiv) return "";
 
-    const header = problemStatementDiv.querySelector(".header");
-    if (!header) return "";
-
-    const title = header.querySelector(".title")?.textContent?.trim() || "";
-    const problemName = title.substring(title.indexOf(". ") + 2);
-
-    const timeLimitText = header.querySelector(".time-limit")?.textContent || "";
-    const timeLimitMatch = timeLimitText.match(/(\d+(\.\d+)?)\s*seconds?/);
-    const timeLimit = timeLimitMatch ? parseFloat(timeLimitMatch[1]) * 1000 : 0;
-
-    const memoryLimitText = header.querySelector(".memory-limit")?.textContent || "";
-    const memoryLimitMatch = memoryLimitText.match(/(\d+)\s*megabytes?/);
-    const memoryLimit = memoryLimitMatch ? parseInt(memoryLimitMatch[1]) * 1024 : 0;
     const urlParts = url.match(/problemset\/problem\/(\d+)\/(\w+)/) || url.match(/contest\/(\d+)\/problem\/(\w+)/);
     let contestId = urlParts?.[1] || "unk";
     let problemIndex = urlParts?.[2] || "unk";
-    
+
     if (contestId === "unk") {
-        problemIndex =  document.querySelector(".problemindexholder")?.getAttribute("problemindex")?.trim() || "unk";
+        problemIndex = document.querySelector(".problemindexholder")?.getAttribute("problemindex")?.trim() || "unk";
         const links = document.querySelectorAll("a");
         for (const link of links) {
             const href = link.getAttribute("href") || "";
@@ -230,50 +215,113 @@ export const parse = async (html: string, url: string): Promise<Problem | ""> =>
                 contestId = match[2];
                 break;
             }
-            // gym
         }
     }
 
     const problemIden = `${contestId}${problemIndex}`;
+    let problemName = "";
+    let timeLimit = 0;
+    let memoryLimit = 0;
+    let tag_list: string[] = [];
+    let difficulty: number | null = null;
 
-    const tag_list: string[] = [];
-    let difficulty = -1;
-    document.querySelectorAll(".sidebox").forEach(box => {
-        if (box.querySelector(".caption")?.textContent?.trim().includes("Problem tags")) {
-            box.querySelectorAll(".tag-box").forEach(tag => {
-                const tagText = tag.textContent?.trim() || "";
-                if (tagText.startsWith("*")) difficulty = parseInt(tagText.substring(1));
-                else if (tagText) tag_list.push(tagText);
-            });
-        }
-    });
-
-    const problemStatement: ProblemStatement = {
-        statement_source: "codeforces",
-        problem_source: "codeforces",
-        page_source: html,
-        iden: `CF${problemIden}`,
-        problem_statements: await convertCodeforcesDomToTypst(dom),
-        time_limit: timeLimit,
-        memory_limit: memoryLimit,
-        sample_group: convertCodeforcesDomToSampleGroup(dom),
-        show_order: ["default_codeforces"],
-        problem_difficulty: difficulty === -1 ? null : difficulty,
-        // page_rendered: html,
-        // problem_tag_list: tag_list,
-        judge_option: {
-            "p_id": problemIndex,
-            "c_id": contestId,
-        }
-    };
-
-    return {
-        // problem_source: "codeforces",
+    const buildProblem = (problemStatement: ProblemStatement, name: string, tags: string[]): Problem => ({
         problem_iden: `RmjCF${problemIden}`,
-        problem_name: problemName,
+        problem_name: name,
         problem_statement: [problemStatement],
         creation_time: new Date().toISOString(),
-        tags: tag_list,
+        tags,
         user_id: 1,
-    };
+    });
+
+    try {
+        const problemStatementDiv = document.querySelector(".problem-statement");
+        if (!problemStatementDiv) throw new Error("Missing .problem-statement");
+
+        const header = problemStatementDiv.querySelector(".header");
+        if (!header) throw new Error("Missing problem header");
+
+        const title = header.querySelector(".title")?.textContent?.trim() || "";
+        problemName = title.substring(title.indexOf(". ") + 2) || `Codeforces ${problemIden}`;
+
+        const timeLimitText = header.querySelector(".time-limit")?.textContent || "";
+        const timeLimitMatch = timeLimitText.match(/(\d+(\.\d+)?)\s*seconds?/);
+        timeLimit = timeLimitMatch ? parseFloat(timeLimitMatch[1]) * 1000 : 0;
+
+        const memoryLimitText = header.querySelector(".memory-limit")?.textContent || "";
+        const memoryLimitMatch = memoryLimitText.match(/(\d+)\s*megabytes?/);
+        memoryLimit = memoryLimitMatch ? parseInt(memoryLimitMatch[1]) * 1024 : 0;
+
+        let diff = -1;
+        tag_list = [];
+        document.querySelectorAll(".sidebox").forEach(box => {
+            if (box.querySelector(".caption")?.textContent?.trim().includes("Problem tags")) {
+                box.querySelectorAll(".tag-box").forEach(tag => {
+                    const tagText = tag.textContent?.trim() || "";
+                    if (tagText.startsWith("*")) diff = parseInt(tagText.substring(1));
+                    else if (tagText) tag_list.push(tagText);
+                });
+            }
+        });
+        difficulty = diff === -1 ? null : diff;
+
+        const problemStatements = await convertCodeforcesDomToTypst(dom);
+        if (problemStatements.length === 0) throw new Error("Empty problem statements parsed");
+
+        const problemStatement: ProblemStatement = {
+            statement_source: "codeforces",
+            problem_source: "codeforces",
+            page_source: html,
+            iden: `CF${problemIden}`,
+            problem_statements: problemStatements,
+            time_limit: timeLimit,
+            memory_limit: memoryLimit,
+            sample_group: convertCodeforcesDomToSampleGroup(dom),
+            show_order: ["default_codeforces"],
+            problem_difficulty: difficulty,
+            page_rendered: undefined,
+            judge_option: {
+                "p_id": problemIndex,
+                "c_id": contestId,
+            }
+        };
+
+        return buildProblem(problemStatement, problemName, tag_list);
+    } catch (_error) {
+        const problemSectionHtml = document.querySelector(".problem-statement")?.outerHTML?.trim() || "";
+
+        // Fallback to body without top header/navigation if the problem section is missing or empty.
+        let bodyWithoutHeader = "";
+        try {
+            const bodyClone = document.body.cloneNode(true) as HTMLElement;
+            bodyClone.querySelectorAll('header').forEach(h => h.remove());
+            bodyClone.querySelector('#header')?.remove();
+            bodyWithoutHeader = bodyClone.innerHTML.trim();
+        } catch (_) {
+            bodyWithoutHeader = "";
+        }
+
+        const pageRendered = problemSectionHtml || bodyWithoutHeader || html;
+
+        const fallbackProblemStatement: ProblemStatement = {
+            statement_source: "codeforces",
+            problem_source: "codeforces",
+            page_source: html,
+            iden: `CF${problemIden}`,
+            problem_statements: [{ iden: "render_html", content: "render_html" }],
+            time_limit: timeLimit,
+            memory_limit: memoryLimit,
+            sample_group: [],
+            show_order: ["render_html"],
+            problem_difficulty: difficulty,
+            page_rendered: pageRendered,
+            judge_option: {
+                "p_id": problemIndex,
+                "c_id": contestId,
+            }
+        };
+
+        const fallbackName = problemName || document.querySelector("title")?.textContent?.trim() || `Codeforces ${problemIden}`;
+        return buildProblem(fallbackProblemStatement, fallbackName, tag_list);
+    }
 }

@@ -19,7 +19,6 @@ export const apikey = async (task: VerifyTaskData) => {
 export const password = async (task: VerifyTaskData) => {
     const password = task.vjudge_node.private.auth.Password;
     const res = await loginWithPassword(task.vjudge_node.public.iden, password || "");
-    console.log(res);
     let verified = false;
     if (res !== "") {
         verified = true;

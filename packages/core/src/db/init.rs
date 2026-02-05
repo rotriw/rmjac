@@ -7,7 +7,6 @@ use sea_orm::{self, ConnectOptions, Database};
 use sea_orm_migration::prelude::*;
 
 use crate::graph::edge::EdgeRaw;
-use crate::graph::edge::perm_manage::PermManageEdgeRaw;
 use crate::graph::edge::perm_system::PermSystemEdgeRaw;
 use crate::graph::node::iden::{IdenNodePrivateRaw, IdenNodePublicRaw, IdenNodeRaw};
 use crate::{
@@ -390,6 +389,15 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             VNodeId: big_integer not_null,
         }),
     );
+    tables.insert(
+        "edge_training_user".to_string(),
+        table_create!(iden::edge::training_user::TrainingUser, {
+            EdgeId: big_integer not_null primary_key,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
+            Status: big_integer not_null,
+        }),
+    );
     tables
 }
 
@@ -641,6 +649,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
             .if_exists()
             .to_owned(),
     );
+    tables.insert(
+        "edge_training_user".to_string(),
+        Table::drop()
+            .table(iden::edge::training_user::TrainingUser::Table)
+            .if_exists()
+            .to_owned(),
+    );
     tables
 }
 
@@ -768,7 +783,7 @@ pub async fn init(
 
     if up.contains(&"all") || up.contains(&"node_perm_group") {
         log::info!("Creating default perm group");
-        let default_strategy = PermGroupNodeRaw {
+        let _default_strategy = PermGroupNodeRaw {
             iden: "default".to_string(),
             service: "default".to_string(),
             public: PermGroupNodePublicRaw {},

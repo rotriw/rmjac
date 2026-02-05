@@ -1,4 +1,4 @@
-use crate::handler::{HandlerError, HttpError, ResultHandler};
+use crate::handler::{HttpError, ResultHandler};
 use crate::utils::perm::UserAuthCotext;
 use macro_handler::{export, from_path, generate_handler, handler, perm, route, require_login};
 use rmjac_core::error::CoreError;

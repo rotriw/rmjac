@@ -1,6 +1,5 @@
 //! Pages permission provider
 use macro_perm::Perm;
-use perm_tool::SaveService;
 use strum_macros::{EnumCount, EnumIter};
 
 /// 页面权限类型

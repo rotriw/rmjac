@@ -9,12 +9,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { StandardCard } from "@/components/card/card"
 import { getOptions as getSubmitOptions } from "@/api/client/api_submit_options" // Changed import
 import { postSubmit as submitCode } from "@/api/client/api_submit_vjudge" // Changed import
+import { getMyAccounts } from "@/api/client/api_vjudge_my_accounts"
 import { Select, SelectItem } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Loader2 } from "lucide-react"
-import { LanguageChoiceInformation, RecordEdge, RecordNode } from "@rmjac/api-declare" // New imports
-import { redirect } from "next/dist/server/api-utils"
+import { LanguageChoiceInformation, RecordEdge, VjudgeNode } from "@rmjac/api-declare" // New imports
 import { RecordEdgeCard } from "@/api-components/record/record-edge-card"
 
 // Changed Record interface to RecordNode from api-declare
@@ -50,8 +50,16 @@ export default function ProblemClient({
   const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string | boolean | number }>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingOptions, setIsLoadingOptions] = useState(true)
-  const [vjudgeId] = useState<number>(25865) // vjudgeId seems to be fixed to 1, might need to be dynamic later
+  const [accounts, setAccounts] = useState<VjudgeNode[]>([])
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(false)
+  const [selectedAccountId, setSelectedAccountId] = useState("")
   const [publicView] = useState(true)
+
+  const platformKey = platform?.toLowerCase?.() || ""
+  const filteredAccounts = accounts.filter((acc) =>
+    acc.public.platform.toLowerCase() === platformKey
+  )
+  const vjudgeId = selectedAccountId ? Number(selectedAccountId) : null
 
   const currentLanguageOptions = options?.find((l) => l.name === language)
 
@@ -93,6 +101,34 @@ export default function ProblemClient({
     }
     fetchOptions()
   }, [platform])
+
+  useEffect(() => {
+    let active = true
+    if (!isLoggedIn) return
+    async function fetchAccounts() {
+      try {
+        setIsLoadingAccounts(true)
+        const response = await getMyAccounts()
+        if (!active) return
+        const list = response.data || []
+        setAccounts(list)
+        const defaultAccount = list.find(
+          (acc) => acc.public.platform.toLowerCase() === platformKey
+        )
+        if (defaultAccount) {
+          setSelectedAccountId(defaultAccount.node_id.toString())
+        }
+      } catch (error) {
+        console.error("Failed to load VJudge accounts", error)
+      } finally {
+        if (active) setIsLoadingAccounts(false)
+      }
+    }
+    fetchAccounts()
+    return () => {
+      active = false
+    }
+  }, [isLoggedIn, platformKey])
 
   useEffect(() => {
     if (!options || !language) return
@@ -179,6 +215,33 @@ export default function ProblemClient({
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label>VJudge 账号</Label>
+                {isLoadingAccounts ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    加载中...
+                  </div>
+                ) : filteredAccounts.length > 0 ? (
+                  <Select
+                    value={selectedAccountId}
+                    onValueChange={(value) => setSelectedAccountId(value)}
+                  >
+                    <SelectItem value="" disabled>
+                      请选择账号
+                    </SelectItem>
+                    {filteredAccounts.map((account) => (
+                      <SelectItem key={account.node_id.toString()} value={account.node_id.toString()}>
+                        {account.public.iden}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    暂无可用账号，请先绑定 VJudge 账号
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
                 <Label>编程语言</Label>
                 {isLoadingOptions ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -253,7 +316,7 @@ export default function ProblemClient({
             <div className="flex justify-between items-center">
               <Button
                 onClick={handleSubmit}
-                disabled={!code.trim() || isSubmitting || isLoadingOptions}
+                disabled={!code.trim() || isSubmitting || isLoadingOptions || !vjudgeId}
                 variant={isLoggedIn ? "default" : "outline"}
               >
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

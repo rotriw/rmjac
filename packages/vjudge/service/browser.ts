@@ -3,60 +3,60 @@ import { Browser } from "npm:rebrowser-puppeteer-core";
 //@ts-ignore
 import plugin from "puppeteer-extra-plugin-click-and-wait";
 import axios from "axios";
+
+
+
 class BrowserPool {
-    private pool: any[] = [];
+    private pool: Record<string, Browser> = {};
+    private visitOrder: string[] = [];
     private readonly maxSize: number;
 
-    constructor(maxSize: number = 5) {
+    constructor(maxSize: number = 20) {
         this.maxSize = maxSize;
     }
 
-    async acquire(): Promise<Browser> {
-        if (this.pool.length > 0) {
-            return this.pool.pop()!;
+    async acquire(uid: string): Promise<Browser> {
+        if (this.pool[uid]) {
+            return this.pool[uid];
         }
+        if (this.visitOrder.length >= this.maxSize) {
+            const oldestUid = this.visitOrder.shift()!;
+            const oldestBrowser = this.pool[oldestUid];
+            await oldestBrowser.close();
+            delete this.pool[oldestUid];
+        }
+        this.visitOrder.push(uid);
         const { browser } = await connect({
-            
             headless: false,
             plugins: [plugin()],
             args: [
                 '--no-sandbox',
             ],
         });
-        await browser.newPage();
+        browser.newPage();
+        this.pool[uid] = browser;
         return browser;
-    }
-
-    async release(browser: any) {
-        if (this.pool.length < this.maxSize) {
-            this.pool.push(browser);
-        } else {
-            await browser.close();
-        }
     }
 }
 
 const browserPool = new BrowserPool();
 
-async function getContentWithBrowser(url: string): Promise<string> {
+async function getContentWithBrowser(url: string, uid: string | undefined): Promise<string> {
     let browser: any | null = null;
     try {
-        browser = await browserPool.acquire();
+        browser = await browserPool.acquire(uid || "default");
         const new_tab = await browser.newPage();
-        let _ = await new_tab.goto(url);
-        if (!(await new_tab?.content()).includes("problem-statement")) {
+        const _ = await new_tab.goto(url);
+        if ((await new_tab?.content()).includes("Just a moment...")) {
             await new_tab.clickAndWaitForNavigation("body");
         }
-        let new_value = await new_tab.goto(url);
-        let data = (await new_value.text());
+        const new_value = await new_tab.goto(url);
+        const data = (await new_value.text());
+        new_tab.close();
         return data;
     } catch (e) {
-        console.error(`Error fetching ${url} with browser:`, e);
+        LOG.error(`Error fetching ${url} with browser:`, e);
         return "";
-    } finally {
-        if (browser) {
-            await browserPool.release(browser);
-        }
     }
 }
 
@@ -64,24 +64,24 @@ async function getContentWithAxios(url: string): Promise<string> {
     try {
         const response = await axios.get(url);
         if (response.status !== 200) {
-            console.error(`Failed to fetch ${url} with axios: ${response.status}`);
+            LOG.error(`Failed to fetch ${url} with axios: ${response.status}`);
             return "";
         }
         return response.data;
     } catch (e) {
-        console.error(`Error fetching ${url} with axios:`, e);
+        LOG.error(`Error fetching ${url} with axios:`, e);
         return "";
     }
 }
 
-export async function getPageContent(url: string, useBrowser: boolean): Promise<string> {
+export async function getPageContent(url: string, useBrowser: boolean, uid: string | undefined): Promise<string> {
     if (useBrowser) {
-        return await getContentWithBrowser(url);
+        return await getContentWithBrowser(url, uid);
     } else {
         return await getContentWithAxios(url);
     }
 }
 
-export async function getOnePage() {
-    return await browserPool.acquire();
+export async function getOnePage(uid: string | undefined) {
+    return await browserPool.acquire(uid || "default");
 }

@@ -14,16 +14,13 @@ export function TrainingCard({ training }: TrainingCardProps) {
   }
 
   return (
-    <Card className="hover:bg-muted/50 transition-colors h-full">
+    <Card className="bg-muted/50 transition-colors h-full gap-1 shadow-none rounded-sm">
       <CardHeader>
         <CardTitle>{training.name}</CardTitle>
-        <CardDescription>{training.description}</CardDescription>
+        <CardDescription>{training.description.slice(0, 20)}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-                <span className="font-semibold">Type:</span> {training.training_type}
-            </div>
+        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 <span>{formatDate(training.start_time)} - {formatDate(training.end_time)}</span>

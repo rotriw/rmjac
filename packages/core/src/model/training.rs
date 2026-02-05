@@ -2,7 +2,6 @@ use crate::Result;
 use crate::db::entity::node::user::{get_guest_user_node, get_user_by_iden};
 use crate::error::CoreError;
 use crate::graph::action::get_node_type;
-use crate::graph::edge::perm_problem::PermProblemEdgeQuery;
 use crate::graph::edge::training_problem::{
     TrainingProblemEdge, TrainingProblemEdgeQuery, TrainingProblemEdgeRaw, TrainingProblemType,
 };
@@ -15,11 +14,10 @@ use crate::graph::node::training::problem::{
 use crate::graph::node::training::{
     TrainingNode, TrainingNodePrivateRaw, TrainingNodePublicRaw, TrainingNodeRaw,
 };
-use crate::graph::node::user::UserNode;
 use crate::graph::node::{Node, NodeRaw};
 use crate::model::ModelStore;
-use crate::model::problem::ProblemRepository;
-use crate::model::record::RecordRepository;
+use crate::model::problem::ProblemImport;
+use crate::model::record::RecordImport;
 use crate::model::user::SimplyUser;
 use crate::service::iden::{create_iden, get_node_id_iden, get_node_ids_from_iden};
 use crate::service::perm::provider::{Pages, PagesPermService};
@@ -30,8 +28,8 @@ use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
 use std::collections::HashMap;
-use crate::graph::node::group::GroupNode;
 use crate::graph::node::perm_group::PermGroupNode;
+use crate::model::training_list::TrainingList as TList;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ts_rs::TS)]
 #[ts(export)]
@@ -144,6 +142,7 @@ impl TrainingRepo {
             write_perm, read_perm, user_node_id,
         )
         .await?;
+        TList::own(&mut (db, redis), training_node.node_id, user_node_id).await?;
         Ok(training_node)
     }
 
@@ -232,7 +231,7 @@ impl TrainingRepo {
                     if node_type == "problem" || node_type == "problem_statement" {
                         let problem_iden = {
                             let mut store = (db, &mut *redis);
-                            ProblemRepository::iden(&mut store, next_node_id).await?
+                            ProblemImport::iden(&mut store, next_node_id).await?
                         };
                         result
                             .own_problem
@@ -303,7 +302,7 @@ impl TrainingRepo {
         user_iden: &str,
         pb_iden: &str,
     ) -> Result<i64> {
-        let user_id = get_user_by_iden(db, user_iden).await?.node_id.to_string();
+        let _user_id = get_user_by_iden(db, user_iden).await?.node_id.to_string();
         Ok(get_node_ids_from_iden(db, redis, training_key(&user_iden, pb_iden).as_str()).await?[0])
     }
 
@@ -429,7 +428,7 @@ impl TrainingRepo {
     ) -> Result<Vec<(i64, i64)>> {
         let (problem_node_id, statement_node_id) = {
             let mut store = (db, &mut *redis);
-            ProblemRepository::resolve(&mut store, problem_iden).await?
+            ProblemImport::resolve(&mut store, problem_iden).await?
         };
         Self::add(
             db,
@@ -710,7 +709,7 @@ impl TrainingRepo {
             let node_type = get_node_type(db, edge.v).await?;
             if node_type == "problem" || node_type == "problem_statement" {
                 log::info!("Checking problem status for node {}", edge.v);
-                let problem_status = RecordRepository::user_status(db, user_node_id, edge.v).await;
+                let problem_status = RecordImport::user_status(db, user_node_id, edge.v).await;
                 if let Ok(problem_status) = problem_status {
                     result.total_task += 1;
                     match problem_status {
@@ -981,7 +980,7 @@ fn training_key(user_iden: &str, pb_iden: &str) -> String {
     format!("training#{user_iden}#{pb_iden}")
 }
 
-fn first_node_id(ids: Vec<i64>) -> Option<i64> {
+pub fn first_node_id(ids: Vec<i64>) -> Option<i64> {
     ids.first().copied()
 }
 
@@ -1064,7 +1063,7 @@ async fn resolve_problem_node(
     iden: &str,
 ) -> Result<Option<i64>> {
     let mut store = (db, redis);
-    match ProblemRepository::resolve(&mut store, iden).await {
+    match ProblemImport::resolve(&mut store, iden).await {
         Ok((problem_node_id, _)) => Ok(Some(problem_node_id)),
         Err(_) => Ok(None),
     }

@@ -1,14 +1,6 @@
 import { z } from "npm:zod";
 import "https://deno.land/x/dotenv@v3.2.2/load.ts";
 import { getOnePage } from "@/service/browser.ts";
-import * as cookie from "cookie";
-import { Cookie } from "npm:puppeteer-core";
-import { UniversalSubmission } from "@/declare/submission.ts";
-import { JSDOM } from "jsdom";
-import { HTTPResponse } from "npm:puppeteer-core";
-import { convertCFSubmissionStatus } from "@/declare/codeforces.ts";
-import { get_loc } from "../../../utils/cf_click.ts";
-import { CALIB_THIN_PRISM_MODEL } from "@techstark/opencv-js";
 
 const submissionSchema = z.object({
     id: z.number(),
@@ -101,13 +93,12 @@ export async function loginWithPassword(
     handle: string,
     password: string,
 ): Promise<string | ""> {
-    const browser = await getOnePage();
+    const browser = await getOnePage(handle);
     const page = await browser.newPage();
     console.log(page);
     await page.goto("https://codeforces.com/enter");
-    // deno-lint-ignore ban-ts-comment
-    //@ts-ignore
     if (!(await page.content()).includes("Please wait") && !(await page.content()).includes("Login")) {
+        //@ts-ignore 幽默ts
         await page.clickAndWaitForNavigation("body");
         await new Promise(resolve => setTimeout(resolve, 3000));
     }
@@ -136,7 +127,7 @@ export async function checkLoginWithToken(
     token: string,
 ): Promise<boolean> {
     try {
-        const browser = await getOnePage();
+        const browser = await getOnePage(handle);
         const page = await browser.newPage();
         browser.setCookie({
             name: "JSESSIONID",
@@ -149,12 +140,13 @@ export async function checkLoginWithToken(
             sameSite: "Lax",
             size: token.length,
             priority: "Medium",
-            sourcePort: 443,
+            session: true,
             sourceScheme: "Secure",
             sameParty: false,
         });
         await page.goto("https://codeforces.com/");
         if (!(await page.content()).includes("Home") && !(await page.content()).includes("Top")) {
+            //@ts-ignore 幽默ts
             await page.clickAndWaitForNavigation("body");
             await new Promise(resolve => setTimeout(resolve, 3000));
         }
@@ -183,190 +175,4 @@ export async function checkLoginWithPassword(
         LOG.info(`Error checking login with password: ${e}`);
         return false;
     }
-}
-
-export async function fetchSubmissionWithId(
-    handle: string,
-    token: string,
-    id: string,
-    contest_id: string,
-): Promise<UniversalSubmission> {
-    const browser = await getOnePage();
-    const page = await browser.newPage();
-    browser.setCookie({
-        name: "JSESSIONID",
-        value: token,
-        domain: "codeforces.com",
-        path: "/",
-        expires: -1,
-        secure: false,
-        httpOnly: true,
-        sameSite: "Lax",
-        size: token.length,
-        priority: "Medium",
-        sourcePort: 443,
-        sourceScheme: "Secure",
-        sameParty: false,
-    });
-    const type = (+contest_id < 10000) ? "contest" : "gym";
-    await page.goto(`https://codeforces.com/${type}/${contest_id}/submission/${id}`, { waitUntil: "domcontentloaded" });
-    const nl = await page.reload() as unknown as HTTPResponse;
-    // console.log(await page.content());
-    const content = await nl.text();
-    const dom = new JSDOM(content);
-    const $ = dom.window.document;
-    let problem_id = "";
-    $.querySelectorAll("a")?.forEach(a => {
-        if (a.href.includes(`/contest/${contest_id}/problem/`)) {
-            problem_id = a.textContent || "";
-        } else if (a.href.includes(`/gym/${contest_id}/problem/`)) {
-            problem_id = a.textContent || "";
-        }
-    });
-    let language = "";
-    let status = "";
-    let date_time = "";
-    const trs = $.querySelectorAll("tr");
-    for (const tr of trs) {
-        const td = tr.querySelectorAll("td");
-        console.log(td);
-        let if_find = false;
-        if (td.length > 0) {
-            const td0 = td[0];
-            if (td0.textContent?.includes(id)) {
-                if_find = true;
-            }
-        }
-        if (!if_find) {
-            continue;
-        }
-        console.log(td[3].innerHTML, td[4].innerHTML);
-        console.log(td[3].textContent, td[4].textContent);
-        language = td[3].textContent.trim().replaceAll('    ', '').replaceAll('\n', '') || "";
-        status = td[4].textContent || "";
-        date_time = new Date(td[7].textContent).toISOString();
-        break;
-    }
-    
-    // convert status.
-    const csrf_token = await page.evaluate(() => {
-        return document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
-    });
-    console.log(csrf_token);
-    const [response] = await Promise.all([
-        page.waitForResponse(response => response.url().includes("submitSource")),
-        page.evaluate(async (id) => {
-            console.log(id);
-            console.log(document.querySelector("meta[name='csrf-token']")?.getAttribute("content"));
-            const res = await $.post("/data/submitSource", { submissionId: id, csrf_token: document.querySelector("meta[name='X-Csrf-Token']")?.getAttribute("content") || ""})
-            return res;
-        }, id)
-    ]);
-    const data = await response.json();
-    console.log(data);
-    const code = data.source;
-    const count = +data.testCount;
-    const passed: [string, string, number, number, number][] = [];
-    for (let i = 1; i <= count; i ++ ) {
-        const status = convertCFSubmissionStatus(data[`verdict#${i}`]);
-        const time = +data[`timeConsumed#${i}`];
-        const memory = +data[`memoryConsumed#${i}`];
-        passed.push([`${i}`, status, (status === "Accepted" ? 1 : 0), time, memory]);
-    }
-    if (data[`timeConsumed#${count + 1}`]) {
-        const status = convertCFSubmissionStatus(data[`verdict#${count + 1}`]);
-        const time = +data[`timeConsumed#${count + 1}`];
-        const memory = +data[`memoryConsumed#${count + 1}`];
-        passed.push([`${count + 1}`, status, (status === "Accepted" ? 1 : 0), time, memory]);
-    }
-    if (status === "OK") {
-        status = "Accepted";
-    } else {
-        status = convertCFSubmissionStatus(data[`verdict#${count + 1}`]);
-    }
-    const result: UniversalSubmission = {
-        remote_id: +id,
-        remote_platform: "codeforces",
-        remote_problem_id: `CF${problem_id}`,
-        language,
-        code,
-        status,
-        message: "",
-        score: 0,
-        submit_time: date_time,
-        url: `https://codeforces.com/contest/${contest_id}/submission/${id}`,
-        passed,
-    };
-    console.log(result);
-    return result;
-}
-
-export async function submitProblem(
-    handle: string,
-    token: string,
-    contest_id: string,
-    problem_id: string,
-    code: string,
-    language: string,
-): Promise<string> {
-    const browser = await getOnePage();
-    const page = await browser.newPage();
-    browser.setCookie({
-        name: "JSESSIONID",
-        value: token,
-        domain: "codeforces.com",
-        path: "/",
-        expires: -1,
-        secure: false,
-        httpOnly: true,
-        sameSite: "Lax",
-        size: token.length,
-        priority: "Medium",
-        sourcePort: 443,
-        sourceScheme: "Secure",
-        sameParty: false,
-    });
-    await page.goto(`https://codeforces.com/contest/${contest_id}/submit`, { waitUntil: "domcontentloaded" });
-    await page.setViewport({
-        width: 2000,
-        height: 1000,
-        deviceScaleFactor: 2,
-    });
-    for (let i = 0; i < 10; i ++ ) {
-        await page.keyboard.press('PageDown');
-    }
-    await new Promise(resolve => setTimeout(resolve, 4000));
-    const image = await page.screenshot({
-        type: "jpeg",
-        quality: 100,
-    });
-    const pos = await get_loc(image);
-    await new Promise(resolve => setTimeout(resolve, 100));
-    await page.mouse.click(pos.x / 2 + 50, pos.y / 2 + 50, {
-        button: "left",
-        clickCount: 2,
-    });
-    // choose language.
-    // choose problem.
-    const problem_select = await page.waitForSelector("select[name='submittedProblemIndex']");
-    await problem_select.select(problem_id);
-    const language_select = await page.waitForSelector("select[name='programTypeId']");
-    await language_select.select(language);
-    await page.type("textarea[name='source']", code, {
-        delay: 0,
-    });
-    await Promise.all([
-        page.waitForNavigation(),
-        page.click("input[id='singlePageSubmitButton']")
-    ]);
-    const data = await page.content();
-    const dom = new JSDOM(data);
-    const $ = dom.window.document;
-    const trs = $.querySelectorAll("tr");
-    for (const tr of trs) {
-        if (tr.getAttribute("data-submission-id") !== null) {
-            return tr.getAttribute("data-submission-id") || "";
-        }
-    }
-    return "";
 }

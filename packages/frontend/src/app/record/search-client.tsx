@@ -128,7 +128,7 @@ export default function RecordSearchClient() {
         <SidebarProvider defaultOpen={true}>
             <div className="flex flex-1 flex-col lg:flex-row w-full min-h-screen">
                 <div className="flex-1 p-6 min-w-0">
-                    <TitleCard title="记录列表" description="查看所有提交记录" />
+                    <TitleCard title="记录" description="Record" />
                     <div className="flex justify-end items-center">
                         <div className="flex items-center gap-2">
                         <Input

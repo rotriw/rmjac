@@ -7,6 +7,7 @@ import { Problem } from "./declare/problem.ts";
 
 declare global {
     var LOG: log4js.Logger;
+    var socket: import("socket.io-client").Socket<any>;
     var PRIVATE_KEY: string;
     var PRIVATE_PWD: string;
     var SERVER_URL: string;

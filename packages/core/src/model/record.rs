@@ -30,7 +30,8 @@ use std::collections::HashMap;
 use sea_orm::sea_query::SimpleExpr::Column;
 use tap::Conv;
 use crate::db::entity::node::user::get_user_by_iden;
-use crate::model::problem::ProblemRepository;
+use crate::model::problem::ProblemImport;
+use crate::service::perm::provider::{Pages, PagesPermService};
 
 pub trait ModelStore {
     fn get_db(&self) -> &DatabaseConnection;
@@ -75,9 +76,9 @@ pub struct UpdateRecordRootStatusData {
     pub score: i64,
 }
 
-pub struct RecordRepository;
+pub struct RecordImport;
 
-impl RecordRepository {
+impl RecordImport {
     pub async fn by_statement(
         db: &DatabaseConnection,
         statement_node_id: i64,
@@ -332,15 +333,9 @@ impl RecordRepository {
     }
 }
 
-pub struct Record {
-    pub node_id: i64,
-}
+pub struct RecordFactory;
 
-impl Record {
-    pub fn new(node_id: i64) -> Self {
-        Self { node_id }
-    }
-
+impl RecordFactory {
     pub async fn create_archived(
         db: &DatabaseConnection,
         record: RecordNewProp,
@@ -364,8 +359,8 @@ impl Record {
                 code_language: record.code_language.to_string(),
             },
         }
-        .save(db)
-        .await?;
+            .save(db)
+            .await?;
 
         // Create edge: user -> problem, with record_node_id pointing to the detailed record node
         let _user_problem_edge = RecordEdgeRaw {
@@ -378,8 +373,8 @@ impl Record {
             submit_time: chrono::Utc::now().naive_utc(),
             platform: record.platform.to_string(),
         }
-        .save(db)
-        .await?;
+            .save(db)
+            .await?;
 
         Ok(record_node)
     }
@@ -409,8 +404,8 @@ impl Record {
                 code_language: record.code_language.to_string(),
             },
         }
-        .save(db)
-        .await?;
+            .save(db)
+            .await?;
 
         // Create edge: user -> problem, with record_node_id pointing to the detailed record node
         let _user_problem_edge = RecordEdgeRaw {
@@ -423,11 +418,23 @@ impl Record {
             submit_time: time,
             platform: record.platform.to_string(),
         }
-        .save(db)
-        .await?;
+            .save(db)
+            .await?;
+
+        PagesPermService::add(user_node_id, record_node.node_id, Pages::All, db).await;
+
         Ok(record_node)
     }
+}
 
+pub struct Record {
+    pub node_id: i64,
+}
+
+impl Record {
+    pub fn new(node_id: i64) -> Self {
+        Self { node_id }
+    }
     pub async fn set_status(
         &self,
         db: &DatabaseConnection,
@@ -983,7 +990,7 @@ impl RecordSearch {
             filters.push(Column::UNodeId.eq(user_id));
         }
         if let Some(problem) = &query.problem {
-            let (_, problem_id) = ProblemRepository::resolve(store, problem).await?;
+            let (_, problem_id) = ProblemImport::resolve(store, problem).await?;
             filters.push(Column::VNodeId.eq(problem_id));
         }
         let records = RecordEdgeQuery::get_edges_with_filter(

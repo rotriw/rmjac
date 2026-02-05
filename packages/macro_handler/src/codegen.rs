@@ -1,3 +1,5 @@
+#![allow(for_loops_over_fallibles)]
+#![allow(unused)]
 //! 代码生成器
 
 use crate::dependency::compute_execution_order;
@@ -10,7 +12,7 @@ use syn::{Ident, Lit, Type};
 
 /// 生成完整的handler实现
 pub fn generate_handler_impl(
-    handler_real_path: &str,
+    _handler_real_path: &str,
     handler_base_path: &str,
     before_funcs: &[BeforeFunction],
     perm_funcs: &[PermFunction],
@@ -32,7 +34,7 @@ pub fn generate_handler_impl(
     let export_service = generate_export_service(handler_base_path, &service_registrations);
 
     #[cfg(feature = "export_ts_type")]
-    let value = crate::export::export_func_generate(handler_real_path, handler_funcs, before_funcs, perm_funcs);
+    let value = crate::export::export_func_generate(_handler_real_path, handler_funcs, before_funcs, perm_funcs);
 
     Ok(quote! {
         #(#route_handlers)*
@@ -485,7 +487,7 @@ fn generate_route_function(
                 if let Ok(export_list) = export_list {
                     for lit in export_list {
                         if let Lit::Str(s) = lit {
-                            let ls = json_value.len();
+                            let _ls = json_value.len();
                             json_value.push(quote! {
                                 #s: result,
                             });

@@ -134,22 +134,34 @@ async function authenticate(sock: Socket): Promise<boolean> {
 // 上传单个题目
 function uploadProblem(sock: Socket, problem: Problem): Promise<boolean> {
     return new Promise((resolve) => {
+        const ls = problem.problem_iden.split("_");
+        const pid = ls[ls.length - 1];
+        const cid = ls.slice(0, ls.length - 1).join("-");
+
         const done: Problem = {
             problem_iden: problem.problem_iden,
-            problem_name: problem.problem_name,
+            problem_name: problem.problem_name.replace("\n\t\t\tEditorial", "").replace("Editorial", ""),
             problem_statement: problem.problem_statement.map(ps => {
+                const judgeOption = ps.judge_option && Object.keys(ps.judge_option).length > 0
+                    ? ps.judge_option
+                    : {
+                        c_id: cid,
+                        p_id: pid,
+                    };
+
                 return {
-                    statement_source: ps.statement_source || "AtCoder",
+                    statement_source: "atcoder",
                     iden: ps.iden,
-                    problem_statements: ps.problem_statements,
-                    time_limit: ps.time_limit,
-                    memory_limit: ps.memory_limit,
+                    problem_statements: ps.problem_statements || [],
+                    time_limit: ps.time_limit || 0,
+                    memory_limit: ps.memory_limit || 0,
                     sample_group: ps.sample_group || [],
                     show_order: ps.show_order || ["default"],
                     page_source: ps.page_source || "",
-                    problem_source: ps.problem_source || "AtCoder",
-                    page_rendered: null,
+                    problem_source: ps.problem_source || "atcoder",
+                    page_rendered: ps.page_rendered ?? null,
                     problem_difficulty: ps.problem_difficulty,
+                    judge_option: judgeOption,
                 }
             }),
             user_id: problem.user_id || 1,

@@ -1,11 +1,10 @@
-use crate::handler::{HandlerError, HttpError, ResultHandler};
+use crate::handler::ResultHandler;
 use crate::utils::perm::UserAuthCotext;
-use macro_handler::{export, from_path, generate_handler, handler, perm, require_login, route};
+use macro_handler::{export, generate_handler, handler, perm, require_login, route};
 use rmjac_core::db::entity::node::user::{get_user_by_email, get_user_by_iden};
 use rmjac_core::error::CoreError;
-use rmjac_core::graph::node::user::UserNodePublicRaw;
 use rmjac_core::model::ModelStore;
-use rmjac_core::model::user::{SimplyUser, User, UserUpdateProps};
+use rmjac_core::model::user::{User, UserUpdateProps};
 use serde::Deserialize;
 
 #[generate_handler(route = "/manage", real_path = "/api/user/manage")]

@@ -10,7 +10,6 @@ use crate::graph::node::problem::ProblemNode;
 use crate::graph::node::problem::tag::{
     ProblemTagNode, ProblemTagNodePrivateRaw, ProblemTagNodePublicRaw, ProblemTagNodeRaw,
 };
-use crate::graph::node::record::RecordStatus;
 use crate::graph::node::user::remote_account::{
     RemoteMode, VjudgeAuth, VjudgeNode, VjudgeNodePrivateRaw, VjudgeNodePublicRaw, VjudgeNodeRaw,
 };
@@ -19,12 +18,10 @@ use crate::graph::node::vjudge_task::{
 };
 use crate::graph::node::{Node, NodeRaw};
 use crate::model::ModelStore;
-use crate::model::problem::{
-    CreateProblemProps, ProblemFactory, ProblemRepository, ProblemStatementProp,
-};
-use crate::model::record::{Record, RecordNewProp, RecordRepository, SubtaskUserRecord};
+use crate::model::problem::{CreateProblemProps, ProblemFactory, ProblemImport, ProblemStatement, ProblemStatementProp};
+use crate::model::record::{Record, RecordNewProp, RecordImport, SubtaskUserRecord, RecordFactory};
 use crate::service::iden::get_node_ids_from_iden;
-use crate::service::perm::provider::{Manage, ManagePermService, System, SystemPermService};
+use crate::service::perm::provider::{System, SystemPermService};
 use crate::service::socket::service::add_task;
 use crate::utils::encrypt::gen_random_string;
 use crate::utils::get_redis_connection;
@@ -147,22 +144,14 @@ impl VjudgeAccount {
         auth: Option<VjudgeAuth>,
         bypass_check: bool,
         ws_id: Option<String>,
+        is_public_account: bool,
     ) -> Result<VjudgeNode, AddErrorResult> {
-        let verified_code = if remote_mode == RemoteMode::PublicAccount {
-            "".to_string()
-        } else {
+        let verified_code = if remote_mode == RemoteMode::OnlyTrust {
             gen_random_string(10)
+        } else {
+            "".to_string()
         };
-        let verified = remote_mode == RemoteMode::PublicAccount || bypass_check;
-        match (&remote_mode, &auth) {
-            (&RemoteMode::PublicAccount, &None) | (&RemoteMode::SyncCode, &None) => {
-                return Err(CoreError::VjudgeError(
-                    "Guard: You must ensure auth is provided in your mode.".to_string(),
-                )
-                .into());
-            }
-            _ => {}
-        };
+        let verified = is_public_account || bypass_check;
         let vjudge_node = VjudgeNodeRaw {
             public: VjudgeNodePublicRaw {
                 platform: platform.clone(),
@@ -186,16 +175,15 @@ impl VjudgeAccount {
         .await?;
 
         match (&remote_mode, bypass_check, ws_id) {
-            (&RemoteMode::PublicAccount, _, _) => Ok(vjudge_node),
             (_, true, _) => Ok(vjudge_node),
             (_, _, Some(ws_id)) => {
-                let payload = serde_json::json!({
+                let payload = Json !{
                    "operation": "verify",
                     "vjudge_node": vjudge_node,
                     "ws_id": ws_id,
                     "platform": vjudge_node.public.platform.to_lowercase(),
                     "method": Self::method(&vjudge_node)
-                });
+                };
                 let success = add_task(&payload).await;
                 if !success {
                     return Err(AddErrorResult::Warning(
@@ -258,21 +246,11 @@ impl VjudgeAccount {
         &self,
         db: &DatabaseConnection,
         user_id: i64,
-        platform: String,
-        problem_id: i64,
+        platform: &str,
+        problem_id: &str,
         ws_id: Option<String>,
     ) -> Result<()> {
         let vjudge_node = VjudgeNode::from_db(db, self.node_id).await?;
-        if vjudge_node.public.remote_mode == RemoteMode::PublicAccount {
-            return Err(CoreError::VjudgeError(
-                "Public account cannot sync submission.".to_string(),
-            ));
-        }
-        if !vjudge_node.public.verified {
-            return Err(CoreError::VjudgeError(
-                "Vjudge account is not verified.".to_string(),
-            ));
-        }
         use crate::db::entity::edge::user_remote::Column::VNodeId;
         let user_remote_edges = UserRemoteEdgeQuery::get_v_filter_extend_content(
             user_id,
@@ -289,7 +267,7 @@ impl VjudgeAccount {
         }
 
         let payload = serde_json::json!({
-            "operation": "sync_user_remote_submission",
+            "operation": "syncList",
             "vjudge_node": vjudge_node,
             "user_id": user_id,
             "platform": platform,
@@ -406,23 +384,7 @@ impl VjudgeAccount {
     }
 
     pub fn method(vjudge_node: &VjudgeNode) -> String {
-        match (
-            vjudge_node.public.remote_mode.clone(),
-            vjudge_node.private.auth.clone(),
-            vjudge_node.public.platform.to_lowercase().as_str(),
-        ) {
-            (RemoteMode::PublicAccount, _, _) => "public_account".to_string(),
-            (RemoteMode::OnlySync, Some(VjudgeAuth::Token(_)), "codeforces") => {
-                "apikey".to_string()
-            }
-            (RemoteMode::SyncCode, Some(VjudgeAuth::Token(_)), "codeforces") => "token".to_string(),
-            (_, Some(VjudgeAuth::Password(_)), "codeforces") => "password".to_string(),
-            (RemoteMode::OnlySync, None, _) => "code".to_string(),
-            (RemoteMode::OnlySync, Some(VjudgeAuth::Token(_)), _) => "apikey".to_string(),
-            (RemoteMode::SyncCode, Some(VjudgeAuth::Token(_)), _) => "token".to_string(),
-            (RemoteMode::SyncCode, Some(VjudgeAuth::Password(_)), _) => "password".to_string(),
-            _ => "unknown".to_string(),
-        }
+        vjudge_node.public.remote_mode.clone().into()
     }
 
     pub async fn set_cron_task(db: &DatabaseConnection, vjudge_node: &VjudgeNode, user_id: i64) -> Result<()> {
@@ -500,6 +462,25 @@ impl VjudgeTask {
 pub struct VjudgeService;
 
 impl VjudgeService {
+
+    pub async fn refresh_one(
+        user_id: i64,
+        platform: &str,
+        vjudge_node: &VjudgeNode,
+        url: &str,
+    ) -> Result<()> {
+        let method = VjudgeAccount::method(&vjudge_node);
+        add_task(&Json! {
+            "operation": "syncOne",
+            "platform": platform,
+            "vjudge_node": vjudge_node,
+            "user_id": user_id,
+            "url": url,
+            "method": method,
+        }).await;
+
+        Ok(())
+    }
     pub async fn on_sync(
         store: &mut impl ModelStore,
         user_id: i64,
@@ -510,9 +491,9 @@ impl VjudgeService {
         let mut failed_list = vec![];
         for submission in submissions {
             let submission = submission.clone();
-            let problem_id = ProblemRepository::resolve(store, &submission.problem_iden).await;
+            let problem_id = ProblemImport::resolve(store, &submission.problem_iden).await;
             if let Ok((_, statement_node)) = problem_id {
-                let result = Record::create(
+                let result = RecordFactory::create(
                     &db,
                     RecordNewProp {
                         platform: platform.clone(),
@@ -535,7 +516,6 @@ impl VjudgeService {
         }
         failed_list
     }
-
     pub async fn import_problem(
         store: &mut impl ModelStore,
         problem: &CreateProblemProps,
@@ -589,15 +569,20 @@ impl VjudgeService {
             use crate::db::entity::node::problem::Column::Name;
             let _ = node.modify(&db, Name, problem.problem_name.clone()).await;
         }
-
-        log::info!("step 2");
         for statement in &problem.problem_statement {
-            let schema = ProblemFactory::generate_statement_schema(statement.clone());
-            let mut store_temp = (&db, &mut *redis);
-            ProblemFactory::add_statement(&mut store_temp, p_node_id, schema).await?;
+            let (_, stmt) = ProblemImport::resolve(store, &statement.iden).await?;
+            if stmt == -1 {
+                let schema = ProblemFactory::generate_statement_schema(statement.clone());
+                ProblemFactory::add_statement(store, p_node_id, schema).await?;
+            } else {
+                let stmt = ProblemStatement::new(stmt);
+                stmt.set_content(store, statement.problem_statements.clone()).await?;
+                stmt.set_source(store, &statement.statement_source).await?;
+                if let Some(judge_option) = &statement.judge_option {
+                    stmt.set_judge_option(store, judge_option.clone()).await?;
+                }
+            }
         }
-        log::info!("step 3");
-
         for i in &problem.tags {
             use crate::db::entity::node::problem_tag::Column as ProblemTagColumn;
             let id = ProblemTagNode::from_db_filter(&db, ProblemTagColumn::TagName.eq(i)).await;
@@ -630,7 +615,6 @@ impl VjudgeService {
             .save(&db)
             .await;
         }
-        log::info!("step 4");
         Ok(())
     }
 
@@ -801,7 +785,7 @@ impl VjudgeService {
     async fn resolve_problem(db: &DatabaseConnection, remote_problem_id: &str) -> (bool, i64, i64) {
         let mut redis = get_redis_connection();
         let mut store = (db, &mut redis);
-        let node_ids = ProblemRepository::resolve(&mut store, remote_problem_id).await;
+        let node_ids = ProblemImport::resolve(&mut store, remote_problem_id).await;
 
         if let Ok(ids) = node_ids {
             (true, ids.0, ids.1)
@@ -882,7 +866,7 @@ impl VjudgeService {
         statement_node_id: i64,
     ) -> Result<()> {
         // 判断是上传新纪录还是更新已有纪录
-        let records = RecordRepository::by_url(db, &submission.url).await;
+        let records = RecordImport::by_url(db, &submission.url).await;
         let (record_exists, existing_record_id) = if let Ok(records) = records
             && let Some(records) = records
         {
@@ -911,7 +895,7 @@ impl VjudgeService {
                 statement_node_id,
                 public_status: true,
             };
-            let result = Record::create(
+            let result = RecordFactory::create(
                 db,
                 record_prop,
                 user_id,

@@ -151,9 +151,6 @@ export default function TrainingClient({
                 <div className="p-4">
                   <div className="text-center text-muted-foreground py-8">
                     正在加载提交记录...
-                    <div className="text-xs mt-2">
-                      需要调用 API: /api/record/list?problem_id={selectedProblem?.problemId}
-                    </div>
                   </div>
                 </div>
               </ScrollArea>

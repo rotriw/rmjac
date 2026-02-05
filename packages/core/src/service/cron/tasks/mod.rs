@@ -1,5 +1,3 @@
-use deno_core::futures::future::err;
-use crate::error::CoreError;
 use crate::Result;
 
 /*

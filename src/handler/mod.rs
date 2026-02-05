@@ -1,3 +1,4 @@
+use sea_orm::{ActiveModelTrait, ColumnTrait};
 pub use crate::utils::perm::{AuthTool, UserAuthCotext};
 use rmjac_core::error::CoreError;
 
@@ -16,7 +17,8 @@ use actix_web::{
 };
 use derive_more::derive::Display;
 use log::LevelFilter;
-use sea_orm::{ConnectOptions, Database, DatabaseConnection};
+use sea_orm::{ConnectOptions, Database, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
+use rmjac_core::db::entity::edge::iden::Entity;
 
 #[derive(Debug, Display)]
 pub enum HandlerError {
@@ -131,6 +133,7 @@ pub async fn main(
         vjudge_auth,
     )
     .await;
+
     if data.is_err() {
         log::error!("Failed to start service: {:?}", data.err());
     }

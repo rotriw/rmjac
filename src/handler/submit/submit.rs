@@ -73,6 +73,7 @@ use macro_handler::export;
             code: code.clone(),
             user_id: uc.user_id,
             method,
+            record_id: 0,
         };
 
         let record = SubmissionService::submit(

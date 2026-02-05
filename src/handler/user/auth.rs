@@ -1,8 +1,8 @@
 use crate::env::CONFIG;
-use crate::handler::{ResultHandler, UserAuthCotext};
-use crate::utils::challenge::{self, gen_captcha, gen_verify_captcha, verify_captcha};
+use crate::handler::ResultHandler;
+use crate::utils::challenge::{gen_captcha, gen_verify_captcha, verify_captcha};
 use macro_handler::{export, generate_handler, handler, perm, route};
-use rmjac_core::graph::node::user::{UserNode, UserNodePublic};
+use rmjac_core::graph::node::user::UserNode;
 use rmjac_core::graph::node::token::TokenNode;
 use rmjac_core::model::ModelStore;
 use rmjac_core::model::user::{UserAuthService, UserRaw};
@@ -24,6 +24,8 @@ pub struct LoginProp {
 
 #[generate_handler(route = "/auth", real_path = "/api/user/auth")]
 pub mod handler {
+
+    use crate::handler::UserAuthCotext;
     use rmjac_core::error::CoreError::StringError;
     use rmjac_core::model::user::UserCreaterUserVerify;
     use crate::handler::HttpError::CoreError;
@@ -31,11 +33,7 @@ pub mod handler {
 
     #[export(ensure_verify)]
     async fn before_verify(
-        iden: &str,
-        name: &str,
         email: &str,
-        avatar: &str,
-        password: &str,
         verify: UserCreaterUserVerify,
     ) -> ResultHandler<bool> {
         let now = now_time!();

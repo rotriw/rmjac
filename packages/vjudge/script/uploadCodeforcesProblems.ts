@@ -7,12 +7,9 @@ import { Problem } from "../declare/problem.ts";
 
 // 配置
 const PARSED_DIRS = [
-    "./data/codeforces/handled/parsed",
-    "./data/codeforces/handled2/parsed",
-    "./data/codeforces/handled3/parsed",
     "./data/codeforces/handled5/parsed",
 ];
-const UPLOADED_FILE = "./data/codeforces/uploaded.txt";
+const UPLOADED_FILE = "./data/codeforces/uploaded5.txt";
 const CONCURRENT_LIMIT = 2;
 
 // 全局变量

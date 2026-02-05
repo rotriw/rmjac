@@ -10,5 +10,8 @@ export const apply = () => {
         "syncListpassword": syncList.password,
         "syncOnepassword": syncOne.password,
         "submittoken": submit.submit,
+        "verifytoken": submit.verify,
+        "syncOnetoken": syncOne.token,
+        "syncListtoken": syncList.token,
     };
 };

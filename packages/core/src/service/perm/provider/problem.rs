@@ -1,6 +1,5 @@
 //! Problem permission provider
 use macro_perm::Perm;
-use perm_tool::SaveService;
 use strum_macros::{EnumCount, EnumIter};
 
 /// 题目权限类型

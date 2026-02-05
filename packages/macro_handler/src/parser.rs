@@ -1,9 +1,11 @@
+#![allow(dead_code)]
+#![allow(unused)]
 //! 属性和函数解析器
 
 use crate::types::*;
 use darling::FromMeta;
 use proc_macro2::Ident;
-use syn::{Attribute, ImplItem, ImplItemFn, ItemFn, ItemImpl, ItemStruct, Lit};
+use syn::{Attribute, ItemFn, ItemStruct, Lit};
 
 /// 解析handler结构体上的属性
 pub fn parse_handler_struct(item: &ItemStruct) -> Result<HandlerStruct, syn::Error> {

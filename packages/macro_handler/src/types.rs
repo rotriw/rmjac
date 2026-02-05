@@ -1,3 +1,4 @@
+#![allow(unused)]
 //! 核心数据类型定义
 
 use std::collections::{HashMap, HashSet};

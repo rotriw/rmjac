@@ -40,8 +40,6 @@ where
 }
 
 use super::EdgeRequire;
-
-use sea_orm::EntityTrait;
 use tap::Conv;
 
 impl<DA, DM, DE, E, R> SaveService for (&PermEdge<DA, DM, DE, E, R>, &DatabaseConnection)
@@ -51,11 +49,11 @@ where
     R: From<(i64, i64, i64)>,
 {
     async fn del_path(&mut self, u: i64, v: i64, _perm: i64) -> () {
-        E::from_tuple((u, v), self.1).await.delete(self.1).await;
+        let _ = E::from_tuple((u, v), self.1).await.delete(self.1).await;
     }
 
     async fn save_path(&mut self, u: i64, v: i64, perm: i64) -> () {
-        R::from((u, v, perm)).save(&self.1).await;
+        let _ = R::from((u, v, perm)).save(&self.1).await;
     }
 
     async fn load(&mut self) -> Vec<(i64, i64, i64)> {

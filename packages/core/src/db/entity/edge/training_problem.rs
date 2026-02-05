@@ -22,7 +22,7 @@ impl ActiveModelBehavior for ActiveModel {}
 impl DbEdgeActiveModel<Model, TrainingProblemEdge> for ActiveModel {}
 impl DbEdgeInfo for ActiveModel {
     fn get_edge_type(&self) -> &str {
-        "problem_limit"
+        "training_problem"
     }
 }
 

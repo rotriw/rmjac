@@ -1,5 +1,3 @@
-use std::ops::Deref;
-use tap::Conv;
 use crate::model::ModelStore;
 use crate::Result;
 
@@ -13,7 +11,7 @@ GV: Future<Output = Result<Vec<F>>>
         return Ok(())
     }
     let value = value.unwrap();
-    let mut result = now_v;
+    let result = now_v;
     let new_value = query_func(db, value, range).await?;
     if !*is_s {
         *result = new_value;

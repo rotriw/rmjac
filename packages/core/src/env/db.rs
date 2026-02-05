@@ -13,7 +13,7 @@ pub async fn get_connect() -> Result<DatabaseConnection> {
         let mut options = ConnectOptions::new(DB_URL.lock().unwrap().clone())
             .set_schema_search_path(DB_SCHEMA.lock().unwrap().clone())
             .to_owned();
-        options.max_connections(100);
+        options.max_connections(50);
         *CONNECTION_POOL.lock().unwrap() = Some(Database::connect(options).await?);
     }
     Ok(CONNECTION_POOL.lock().unwrap().clone().unwrap())

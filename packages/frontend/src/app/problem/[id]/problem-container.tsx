@@ -7,6 +7,8 @@ import ProblemClient from "./problem-client"
 import { ProblemRightSidebar } from "./problem-right-sidebar"
 import { ProblemModel, ProblemLimitNode } from "./page"
 import { RecordEdge } from "@rmjac/api-declare"
+import ProblemFallbackRenderer from "./problem-fallback-renderer"
+import { TypstRenderer } from "@/components/editor/typst-renderer"
 
 interface ProblemContainerProps {
   id: string
@@ -16,6 +18,8 @@ interface ProblemContainerProps {
   isLoggedIn: boolean
   statement: number
   platform: string
+  structuredTypstContent?: string | null
+  fallbackSource?: string | null
   children?: React.ReactNode
 }
 
@@ -27,9 +31,34 @@ export default function ProblemContainer({
   isLoggedIn,
   statement,
   platform,
+  structuredTypstContent,
+  fallbackSource,
   children
 }: ProblemContainerProps) {
   const [viewMode, setViewMode] = useState<"statement" | "submit">("statement")
+  const hasFallback = Boolean(fallbackSource)
+  const [useFallback, setUseFallback] = useState<boolean>(hasFallback)
+
+  const renderStructuredContent = () => {
+    if (!structuredTypstContent) return null
+
+    return (
+      <TypstRenderer
+        content={structuredTypstContent}
+        onError={hasFallback ? () => setUseFallback(true) : undefined}
+      />
+    )
+  }
+
+  const renderBody = () => {
+    if (useFallback && fallbackSource) {
+      return <ProblemFallbackRenderer pageSource={fallbackSource} platform={platform} />
+    }
+    const structured = renderStructuredContent()
+    if (structured) return structured
+    if (fallbackSource) return <ProblemFallbackRenderer pageSource={fallbackSource} platform={platform} />
+    return children || <div className="text-gray-500">暂无题目描述</div>
+  }
 
   return (
     <div className="flex flex-col lg:flex-row flex-1 min-h-0">
@@ -41,7 +70,7 @@ export default function ProblemContainer({
               description={`ID: ${id}`}
             />
             <div className="mt-6">
-              {children}
+              {renderBody()}
             </div>
           </div>
         ) : (
@@ -67,6 +96,9 @@ export default function ProblemContainer({
           currentStatementId={statement}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
+          hasFallback={hasFallback}
+          showFallback={useFallback}
+          onToggleFallback={setUseFallback}
         />
       </div>
     </div>

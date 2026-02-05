@@ -3,8 +3,8 @@ use crate::utils::perm::UserAuthCotext;
 use macro_handler::{export, generate_handler, handler, perm, require_login, route};
 use rmjac_core::graph::node::record::RecordStatus;
 use rmjac_core::model::ModelStore;
-use rmjac_core::model::problem::ProblemRepository;
-use rmjac_core::model::record::RecordRepository;
+use rmjac_core::model::problem::ProblemImport;
+use rmjac_core::model::record::RecordImport;
 
 #[generate_handler(route = "/status", real_path = "/api/record/status")]
 pub mod handler {
@@ -27,9 +27,9 @@ pub mod handler {
         problem_iden: String,
     ) -> ResultHandler<(i64, i64, RecordStatus)> {
         let user_id = user_context.user_id;
-        let (problem_node_id, _) = ProblemRepository::resolve(store, &problem_iden).await?;
+        let (problem_node_id, _) = ProblemImport::resolve(store, &problem_iden).await?;
         let status =
-            RecordRepository::user_status(store.get_db(), user_id, problem_node_id).await?;
+            RecordImport::user_status(store.get_db(), user_id, problem_node_id).await?;
         Ok((user_id, problem_node_id, status))
     }
 }

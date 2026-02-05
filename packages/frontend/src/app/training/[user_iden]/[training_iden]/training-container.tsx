@@ -15,6 +15,8 @@ interface TrainingContainerProps {
   trainingType: string
   startTime: string
   endTime: string
+  trainingNodeId: number
+  initialPinned?: boolean
   hasEditPermission: boolean
   completedCount: number
   totalCount: number
@@ -30,6 +32,8 @@ export default function TrainingContainer({
   trainingType,
   startTime,
   endTime,
+  trainingNodeId,
+  initialPinned,
   hasEditPermission,
   completedCount,
   totalCount,
@@ -77,6 +81,8 @@ export default function TrainingContainer({
         <TrainingRightSidebar
           userIden={userIden}
           trainingIden={trainingIden}
+          trainingNodeId={trainingNodeId}
+          initialPinned={initialPinned}
           hasEditPermission={hasEditPermission}
           completedCount={completedCount}
           totalCount={totalCount}

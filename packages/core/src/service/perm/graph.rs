@@ -33,7 +33,7 @@ impl GetU for Graph {
             Some(node) => node
                 .prev
                 .iter()
-                .map(|(nxt, perm)| NextValue {
+                .map(|(nxt, _perm)| NextValue {
                     point: *nxt,
                     perm: *nxt,
                     count: self

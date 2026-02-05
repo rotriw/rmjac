@@ -1,10 +1,9 @@
 use crate::handler::ResultHandler;
 use crate::utils::perm::UserAuthCotext;
-use chrono::NaiveDateTime;
 use macro_handler::{export, generate_handler, handler, perm, route};
 use rmjac_core::model::ModelStore;
-use rmjac_core::model::training::{Training, TrainingList};
-use serde::{Deserialize, Serialize};
+use rmjac_core::model::training::Training;
+use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct TrainingCreateResult {

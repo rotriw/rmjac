@@ -86,6 +86,40 @@ export const convertAtcoderEnglishDomToTypst = async (content: Element): Promise
     return result;
 }
 
+const stripEditorial = (content: Element): Element => {
+    const clone = content.cloneNode(true) as Element;
+    clone.querySelectorAll("a").forEach(anchor => {
+        if (anchor.textContent?.trim() === "Editorial") {
+            const parent = anchor.parentElement;
+            if (parent && parent.textContent?.trim() === "Editorial") {
+                parent.remove();
+            } else {
+                anchor.remove();
+            }
+        }
+    });
+    clone.querySelectorAll("*").forEach(node => {
+        if (node.children.length === 0 && node.textContent?.trim() === "Editorial") {
+            node.remove();
+        }
+    });
+    return clone;
+};
+
+const extractContestId = (url: string): string => {
+    try {
+        const parsed = new URL(url);
+        const parts = parsed.pathname.split("/").filter(Boolean);
+        const contestIndex = parts.indexOf("contests");
+        if (contestIndex >= 0 && parts.length > contestIndex + 1) {
+            return parts[contestIndex + 1];
+        }
+        return "";
+    } catch (_error) {
+        return "";
+    }
+};
+
 export const parse = async (html: string, url: string): Promise<Problem | ""> => {
     const dom = new JSDOM(html);
     const doc = dom.window.document;
@@ -103,32 +137,72 @@ export const parse = async (html: string, url: string): Promise<Problem | ""> =>
 
     const taskStatement = doc.querySelector("#task-statement");
     const langEn = taskStatement?.querySelector("span.lang-en") || taskStatement; 
-    
+
     if (!langEn) return "";
 
     const problem_iden = url.split("/").pop() || "";
+    const contest_id = extractContestId(url);
 
-    const statement: ProblemStatement = {
-        statement_source: "AtCoder",
-        problem_source: "AtCoder",
-        page_source: html,
-        iden: problem_iden,
-        problem_statements: await convertAtcoderEnglishDomToTypst(langEn),
-        time_limit,
-        memory_limit,
-        sample_group: [],
-        show_order: ["default"],
-        problem_difficulty: null,
-        problem_tag_list: [],
-    };
+    const sanitizedLangEn = stripEditorial(langEn);
+    const statementHtml = sanitizedLangEn.innerHTML ?? "";
 
-    return {
-        problem_source: "AtCoder",
-        problem_iden: problem_iden,
-        problem_name: title,
-        problem_statement: [statement],
-        creation_time: new Date().toISOString(),
-        tags: [],
-        user_id: 1,
-    };
+    try {
+        const statement: ProblemStatement = {
+            statement_source: "AtCoder",
+            problem_source: "AtCoder",
+            page_source: statementHtml,
+            iden: problem_iden,
+            problem_statements: await convertAtcoderEnglishDomToTypst(sanitizedLangEn),
+            time_limit,
+            memory_limit,
+            sample_group: [],
+            show_order: ["default"],
+            problem_difficulty: null,
+            page_rendered: null,
+            judge_option: {
+                "c_id": contest_id,
+                "p_id": problem_iden,
+            },
+        };
+
+        return {
+            problem_source: "AtCoder",
+            problem_iden: problem_iden,
+            problem_name: title,
+            problem_statement: [statement],
+            creation_time: new Date().toISOString(),
+            tags: [],
+            user_id: 1,
+        };
+    } catch (_error) {
+        const fallbackRendered = statementHtml || taskStatement?.innerHTML?.trim() || doc.body.innerHTML.trim();
+
+        const fallbackStatement: ProblemStatement = {
+            statement_source: "AtCoder",
+            problem_source: "AtCoder",
+            page_source: statementHtml,
+            iden: problem_iden,
+            problem_statements: [{ iden: "render_html", content: "render_html" }],
+            time_limit,
+            memory_limit,
+            sample_group: [],
+            show_order: ["render_html"],
+            problem_difficulty: null,
+            page_rendered: fallbackRendered,
+            judge_option: {
+                "c_id": contest_id,
+                "p_id": problem_iden,
+            },
+        };
+
+        return {
+            problem_source: "AtCoder",
+            problem_iden: problem_iden,
+            problem_name: title || doc.querySelector("title")?.textContent?.trim() || `AtCoder ${problem_iden}`,
+            problem_statement: [fallbackStatement],
+            creation_time: new Date().toISOString(),
+            tags: [],
+            user_id: 1,
+        };
+    }
 };

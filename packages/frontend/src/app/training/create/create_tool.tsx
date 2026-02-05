@@ -5,14 +5,25 @@ import { useSearchParams } from "next/navigation"
 import { TitleCard } from "@/components/card/card"
 import { FormQuery, FormField } from "@/components/tools/query";
 import { StandardCard } from "@/components/card/card";
-import { postCreate as createTraining } from "@/api/client/api_training_create"; // Changed import and alias
-import { TrainingNode, TrainingList, TrainingProblem, CreateTrainingReq } from "@rmjac/api-declare"; // Changed import: CreateProps to CreateTrainingReq
+import { postCreate as createTraining } from "@/api/client/api_training_create";
+import { TrainingNode, TrainingList, TrainingProblem, CreateTrainingReq } from "@rmjac/api-declare";
+import { TrainingCreateRightSidebar } from "./training-create-right-sidebar";
+import { TypstEditor } from "@/components/editor/typst-editor";
+import { TypstRenderer } from "@/components/editor/typst-renderer";
 
 // Define a type for the form values
-interface TrainingFormValues extends Omit<CreateTrainingReq, 'problem_list' | 'write_perm_user' | 'read_perm_user'> {
+interface TrainingFormValues {
   mode: "simple" | "complex" | "import";
+  training_type: string;
+  start_time: string;
+  end_time: string;
+  iden: string;
+  title: string;
+  description_public: string;
+  description_private: string;
   problems?: string; // Comma-separated problem IDs for simple mode
   import_url?: string; // URL for import mode
+  [key: string]: string | undefined;
 }
 
 export function TrainingCreateTool() {
@@ -29,6 +40,7 @@ export function TrainingCreateTool() {
   })
   const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string; data?: TrainingNode | unknown } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState<"form" | "preview">("form");
 
   const handleSubmit = async (e?: React.MouseEvent) => {
     e?.preventDefault();
@@ -37,18 +49,21 @@ export function TrainingCreateTool() {
 
     try {
       const problem_list: TrainingList = {
+        node_id: 0,
         description: "Default List",
         own_problem: [] as TrainingProblem[]
       };
 
       if (formValues.mode === "simple" && formValues.problems) {
-        const problemIds = (formValues.problems as string).split(",").map(id => id.trim()).filter(id => id);
-        problem_list.own_problem = problemIds.map(id => ({ ProblemIden: [0, id] })); // Assuming ProblemIden takes [number, string]
+        const problemIds = formValues.problems.split(",").map(id => id.trim()).filter(id => id);
+        problem_list.own_problem = problemIds.map(id => ({
+          ProblemIden: [0, id, 0] as [number, string, number]
+        }));
       }
 
-      const submissionData: CreateTrainingReq = { // Changed type to CreateTrainingReq
+      const submissionData: CreateTrainingReq = {
         iden: formValues.iden || "",
-        title: formValues.title || "未命名题单",
+        title: formValues.title || "未命名训练",
         description_public: formValues.description_public || "",
         description_private: formValues.description_private || "",
         start_time: formValues.start_time ? formValues.start_time + ":00" : "",
@@ -59,19 +74,19 @@ export function TrainingCreateTool() {
         read_perm_user: []
       };
 
-      const result = await createTraining({ data: submissionData }); // Changed API call: pass as { data: ... }
+      const result = await createTraining({ data: submissionData });
 
       if (result) {
         setSubmitResult({
           success: true,
-          message: `题单创建成功！`,
-          data: result.data // Assuming result has a data property
+          message: `训练创建成功！`,
+          data: result.data
         });
       } else {
         setSubmitResult({
           success: false,
-          message: `创建失败: 未知错误`, // createTraining will throw an error on failure, so result should always be defined here
-          data: result // Assuming result is the error object in this case, or can be null.
+          message: `创建失败: 未知错误`,
+          data: result
         });
       }
     } catch (error) {
@@ -85,21 +100,7 @@ export function TrainingCreateTool() {
     }
   };
 
-  const fields: FormField<TrainingFormValues>[] = [
-    {
-      type: "group",
-      title: "创建模式",
-      children: [{
-        type: "select",
-        name: "mode",
-        title: "选择模式",
-        options: [
-          { label: "简单模式 (快速导入题目)", value: "simple" },
-          { label: "复杂模式 (后续编辑题目)", value: "complex" },
-          { label: "导入模式 (从外部网站导入)", value: "import" }
-        ]
-      }]
-    },
+  const fields: FormField[] = [
     {
       type: "group",
       title: "基本信息",
@@ -107,17 +108,12 @@ export function TrainingCreateTool() {
         {
           type: "input",
           name: "title",
-          title: "题单标题"
+          title: "训练标题"
         },
         {
           type: "input",
           name: "iden",
-          title: "题单标识 (iden)"
-        },
-        {
-          type: "input",
-          name: "description_public",
-          title: "公开描述"
+          title: "训练标识 (iden)"
         }
       ]
     },
@@ -158,15 +154,6 @@ export function TrainingCreateTool() {
           title: "结束时间"
         }
       ]
-    },
-    {
-      type: "group",
-      title: "提交",
-      children: [{
-        type: "button",
-        title: isSubmitting ? "提交中..." : "创建题单",
-        onClick: handleSubmit,
-      }]
     }
   ];
 
@@ -181,48 +168,137 @@ export function TrainingCreateTool() {
         description_public: "",
         description_private: "",
     }
-    searchParams.forEach((value, key) => {
-      // Need to cast to string, as searchParams values are always strings
-      (initialValues as Record<string, string>)[key] = value
-    })
+    if (searchParams) {
+      searchParams.forEach((value, key) => {
+        initialValues[key] = value
+      })
+    }
     setFormValues(initialValues)
   }, [searchParams])
 
-  const handleFormChange = (values: TrainingFormValues) => {
-    setFormValues(values)
+  const handleFormChange = (values: Record<string, string | string[]>) => {
+    setFormValues(prev => ({
+      ...prev,
+      ...Object.fromEntries(
+        Object.entries(values).map(([k, v]) => [k, Array.isArray(v) ? v.join(',') : v])
+      )
+    }))
   }
 
-  return (
-    <div className="container mx-auto py-6 px-4 md:px-6">
-      <TitleCard title="创建题单" description="Create a new training session" />
-      <FormQuery
-        fields={fields}
-        values={formValues}
-        onChange={handleFormChange}
-      />
+  const handleDescriptionChange = (value: string) => {
+    setFormValues(prev => ({
+      ...prev,
+      description_public: value
+    }))
+  }
 
-      {submitResult && (
-        <StandardCard
-          title={submitResult.success ? "提交成功" : "提交失败"}
-          className={submitResult.success ? "mt-6 border-green-200 bg-green-50" : "mt-6 border-red-200 bg-red-50"}
-        >
-          <div className="space-y-3">
-            <p className={submitResult.success ? "text-green-800" : "text-red-800"}>
-              {submitResult.message}
+  const handleModeChange = (mode: TrainingFormValues["mode"]) => {
+    setFormValues(prev => ({
+      ...prev,
+      mode
+    }))
+  }
+
+  // Convert formValues to the format expected by FormQuery
+  const formQueryValues: Record<string, string | string[]> = Object.fromEntries(
+    Object.entries(formValues).filter(([, v]) => v !== undefined).map(([k, v]) => [k, v as string])
+  )
+
+  return (
+    <div className="flex flex-col lg:flex-row flex-1 min-h-0">
+      {/* 主内容区域 */}
+      <div className="flex-1 w-full py-6 px-4 md:px-6 lg:overflow-y-auto">
+        <TitleCard title="创建训练" description="Create a new training session" />
+        
+        <FormQuery
+          fields={fields}
+          values={formQueryValues}
+          onChange={handleFormChange}
+        />
+
+        {/* 公开描述编辑区 - Typst 编辑器 */}
+        <StandardCard title="公开描述" className="mt-6">
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              使用 Typst 语法编写训练的公开描述，右侧可预览渲染效果
             </p>
-            {submitResult.data && (
-              <details className="mt-3">
-                <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-800">
-                  查看详细响应数据
-                </summary>
-                <pre className="mt-2 p-3 bg-gray-100 rounded-md text-xs overflow-auto max-h-60">
-                  {JSON.stringify(submitResult.data, null, 2)}
-                </pre>
-              </details>
+            
+            {viewMode === "form" ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Typst 编辑器 */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">编辑器</label>
+                  <TypstEditor
+                    value={formValues.description_public || ""}
+                    onChange={handleDescriptionChange}
+                    height="400px"
+                    onRender={() => {}}
+                  />
+                </div>
+                
+                {/* 实时预览 */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">实时预览</label>
+                  <div 
+                    className="border rounded-md p-4 bg-white min-h-[400px] overflow-auto"
+                    style={{ fontSize: '14px', lineHeight: '1.6' }}
+                  >
+                    <TypstRenderer content={formValues.description_public || ""} />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div 
+                className="border rounded-md p-6 bg-white min-h-[400px] overflow-auto"
+                style={{ fontSize: '16px', lineHeight: '1.6' }}
+              >
+                <TypstRenderer content={formValues.description_public || ""} />
+              </div>
             )}
           </div>
         </StandardCard>
-      )}
+
+        {submitResult && (
+          <StandardCard
+            title={submitResult.success ? "提交成功" : "提交失败"}
+            className={submitResult.success ? "mt-6 border-green-200 bg-green-50" : "mt-6 border-red-200 bg-red-50"}
+          >
+            <div className="space-y-3">
+              <p className={submitResult.success ? "text-green-800" : "text-red-800"}>
+                {submitResult.message}
+              </p>
+              {submitResult.data != null && (
+                <details className="mt-3">
+                  <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-800">
+                    查看详细响应数据
+                  </summary>
+                  <pre className="mt-2 p-3 bg-gray-100 rounded-md text-xs overflow-auto max-h-60">
+                    {JSON.stringify(submitResult.data, (_key, value) =>
+                      typeof value === 'bigint' ? value.toString() : value
+                    , 2)}
+                  </pre>
+                </details>
+              )}
+            </div>
+          </StandardCard>
+        )}
+      </div>
+
+      {/* 右边栏 */}
+      <div className="w-full lg:w-auto">
+        <TrainingCreateRightSidebar
+          mode={formValues.mode}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          onModeChange={handleModeChange}
+          formValues={{
+            title: formValues.title,
+            iden: formValues.iden,
+            start_time: formValues.start_time,
+            end_time: formValues.end_time,
+          }}
+        />
+      </div>
     </div>
   )
 }

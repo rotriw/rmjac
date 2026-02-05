@@ -89,6 +89,8 @@ pub mod user_remote;
 pub mod judge;
 pub mod testcase;
 
+pub mod training_user;
+
 pub trait EdgeQuery<DbActive, DbModel, DbEntity, EdgeA>
 where
     (DbActive, DbModel, DbEntity, EdgeA): DBMetaWithEdge<DbActive, DbModel, DbEntity, EdgeA>,
@@ -862,7 +864,7 @@ where
 }
 
 pub trait EdgeTrait<EdgeRaw, Edge> {
-    fn save_db(E: EdgeRaw, db: &DatabaseConnection) -> impl Future<Output = Result<Edge>>;
+    fn save_db(e: EdgeRaw, db: &DatabaseConnection) -> impl Future<Output = Result<Edge>>;
 }
 
 pub trait Edge<DbActive, DbModel, DbEntity>

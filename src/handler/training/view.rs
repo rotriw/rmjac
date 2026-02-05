@@ -4,11 +4,12 @@ use macro_handler::{export, from_path, generate_handler, handler, perm, route};
 use rmjac_core::model::ModelStore;
 use rmjac_core::model::training::Training;
 use rmjac_core::service::perm::provider::{Pages, PagesPermService, System, SystemPermService};
-use rmjac_core::service::perm::typed::PermVerify;
 
 #[generate_handler(route = "/view", real_path = "/api/training/view")]
 pub mod handler {
+    use macro_handler::require_login;
     use rmjac_core::model::training::TrainingListStatus;
+    use rmjac_core::model::training_list::TrainingList;
     use super::*;
 
     #[from_path()]
@@ -41,11 +42,44 @@ pub mod handler {
         )
     }
 
+    #[perm]
+    async fn check_view_perm_direct(user_context: Option<UserAuthCotext>, t_node_id: i64) -> bool {
+        check_view_perm(user_context, t_node_id).await
+    }
+
+    #[handler]
+    #[perm(check_view_perm_direct)]
+    #[route("/direct")]
+    #[export("data", "user")]
+    async fn get_view_direct(
+        user_context: Option<UserAuthCotext>,
+        store: &mut impl ModelStore,
+        t_node_id: i64,
+    ) -> ResultHandler<(Training, Option<TrainingListStatus>)> {
+        get_normal(user_context, store, t_node_id).await
+    }
+
+
+    #[handler]
+    #[require_login]
+    #[perm(check_view_perm_direct)]
+    #[route("/pin")]
+    #[export("message")]
+    async fn post_set_pin(
+        store: &mut impl ModelStore,
+        t_node_id: i64,
+        user_context: UserAuthCotext,
+        pin: bool,
+    ) -> ResultHandler<String> {
+        TrainingList::pin(store, t_node_id, user_context.user_id, pin).await?;
+        Ok("successful".to_string())
+    }
+
     #[handler]
     #[perm(check_view_perm)]
     #[route("/normal")]
     #[export("data", "user")]
-    async fn get_view(
+    async fn get_normal(
         user_context: Option<UserAuthCotext>,
         store: &mut impl ModelStore,
         node_id: i64,

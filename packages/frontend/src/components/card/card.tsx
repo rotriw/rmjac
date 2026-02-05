@@ -15,8 +15,8 @@ function StandardCard({
 }) {
   return (
     <>
-      <Card className={`shadow-none border-1 mb-2 p-0 rounded-md gap-0 ${className} text-neutral-800`} {...props}>
-        <div className="border-b-1 py-1">
+      <Card className={`shadow-none border-1 mb-2 p-0 rounded-sm gap-0 ${className} text-neutral-800`} {...props}>
+        <div className="border-b-1 py-1 rounded-t-sm bg-neutral-100/50">
           <span className="text-xs font-bold px-3 text-neutral-600">
             {title}
           </span>

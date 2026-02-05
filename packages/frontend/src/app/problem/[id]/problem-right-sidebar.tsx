@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sheet"
 import { RecordEdge } from "@rmjac/api-declare"
 import { RightSidebar } from "@/components/layout/right-sidebar"
+import { Eye, EyeOff } from "lucide-react"
 
 interface ProblemRightSidebarProps {
   problemId: string
@@ -47,6 +48,9 @@ interface ProblemRightSidebarProps {
   currentStatementId?: number
   viewMode?: "statement" | "submit"
   onViewModeChange?: (mode: "statement" | "submit") => void
+  hasFallback?: boolean
+  showFallback?: boolean
+  onToggleFallback?: (enabled: boolean) => void
 }
 
 export function ProblemRightSidebar({
@@ -58,6 +62,9 @@ export function ProblemRightSidebar({
   currentStatementId,
   viewMode = "statement",
   onViewModeChange,
+  hasFallback = false,
+  showFallback = false,
+  onToggleFallback,
 }: ProblemRightSidebarProps) {
   return (
     <RightSidebar defaultWidth={320} minWidth={200} maxWidth={600}>
@@ -157,6 +164,44 @@ export function ProblemRightSidebar({
           </SidebarMenu>
         </SidebarGroupContent>
         </SidebarGroup>
+
+      {hasFallback && (
+        <>
+          <SidebarSeparator />
+          <SidebarGroup>
+            <SidebarGroupLabel>回退渲染</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => onToggleFallback?.(!showFallback)}
+                    className={`h-auto py-3 flex-col items-start gap-1 bg-white/5 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/10 hover:bg-white/10 dark:hover:bg-white/10 !text-sidebar-foreground transition-all active:scale-[0.98] rounded-lg mx-1`}
+                  >
+                    <div className="flex items-center justify-between w-full px-1">
+                      <div className="flex items-center gap-2">
+                        {showFallback ? (
+                          <EyeOff className="size-4 text-primary/80" />
+                        ) : (
+                          <Eye className="size-4 text-primary/80" />
+                        )}
+                        <span className="font-semibold text-xs text-sidebar-foreground">
+                          {showFallback ? "显示回退版本" : "隐藏回退版本"}
+                        </span>
+                      </div>
+                      <Badge variant={showFallback ? "default" : "secondary"} className="text-[10px] h-4 px-1">
+                        {showFallback ? "已开启" : "已关闭"}
+                      </Badge>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground/80 pl-7 font-medium">
+                      点击切换是否优先显示回退渲染
+                    </div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </>
+      )}
 
 
       <SidebarSeparator />

@@ -12,10 +12,12 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
-import { Settings, CheckCircle2, ListTree, ArrowLeft, Code2, FileCode } from "lucide-react"
+import { Settings, CheckCircle2, ListTree, ArrowLeft, Code2, FileCode, Pin, PinOff, Loader2 } from "lucide-react"
 import { TrainingProblem } from "@rmjac/api-declare"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { RightSidebar } from "@/components/layout/right-sidebar"
+import { toast } from "sonner"
+import { postSetPin } from "@/api/client/api_training_view"
 
 interface ProblemSubmission {
   problemId: string
@@ -28,6 +30,8 @@ interface ProblemSubmission {
 interface TrainingRightSidebarProps {
   userIden: string
   trainingIden: string
+  trainingNodeId: number
+  initialPinned?: boolean
   hasEditPermission: boolean
   completedCount: number
   totalCount: number
@@ -42,6 +46,8 @@ interface TrainingRightSidebarProps {
 export function TrainingRightSidebar({
   userIden,
   trainingIden,
+  trainingNodeId,
+  initialPinned = false,
   hasEditPermission,
   completedCount,
   totalCount,
@@ -53,6 +59,8 @@ export function TrainingRightSidebar({
   onProblemSelect,
 }: TrainingRightSidebarProps) {
   const [problemList, setProblemList] = React.useState<ProblemSubmission[]>([])
+  const [isPinned, setIsPinned] = React.useState<boolean>(initialPinned)
+  const [pinLoading, setPinLoading] = React.useState(false)
 
   // 递归提取所有题目
   const extractProblems = React.useCallback((
@@ -90,6 +98,26 @@ export function TrainingRightSidebar({
       }
     }
   }, [problems, extractProblems, selectedProblemId, onProblemSelect])
+
+  const handleTogglePin = async () => {
+    if (!trainingNodeId) {
+      toast.error("无法获取训练 ID")
+      return
+    }
+
+    try {
+      setPinLoading(true)
+      const nextPin = !isPinned
+      await postSetPin({ t_node_id: trainingNodeId, pin: nextPin })
+      setIsPinned(nextPin)
+      toast.success(nextPin ? "已置顶训练" : "已取消置顶")
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "操作失败"
+      toast.error(msg)
+    } finally {
+      setPinLoading(false)
+    }
+  }
 
   const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
 
@@ -174,6 +202,37 @@ export function TrainingRightSidebar({
                   </div>
                 </SidebarMenuButton>
               </Link>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      <SidebarSeparator />
+
+      <SidebarGroup>
+        <SidebarGroupLabel>操作</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={handleTogglePin}
+                disabled={pinLoading}
+                className="h-auto py-3 flex-col items-start gap-1 transition-all rounded-lg mx-1 border backdrop-blur-md bg-white/5 dark:bg-white/5 border-white/10 dark:border-white/10 hover:bg-white/10 dark:hover:bg-white/10 !text-sidebar-foreground"
+              >
+                <div className="flex items-center gap-2 px-1">
+                  {pinLoading ? (
+                    <Loader2 className="size-4 animate-spin text-primary/80" />
+                  ) : isPinned ? (
+                    <PinOff className="size-4 text-primary/80" />
+                  ) : (
+                    <Pin className="size-4 text-primary/80" />
+                  )}
+                  <span className="font-semibold text-xs">{isPinned ? "取消置顶" : "置顶训练"}</span>
+                </div>
+                <div className="text-[10px] pl-7 font-medium text-muted-foreground/80">
+                  {isPinned ? "从训练列表取消置顶" : "在训练列表顶部展示"}
+                </div>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>

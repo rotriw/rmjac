@@ -33,6 +33,7 @@ use std::collections::HashMap;
 pub struct SubmitContext {
     pub code: String,
     pub user_id: i64,
+    pub record_id: i64,
     pub method: String,
 }
 

@@ -1,3 +1,4 @@
+#![allow(unused)]
 //! TypeScript API 导出生成器
 //!
 //! 在编译时收集 handler 信息，并生成 TypeScript 客户端代码
@@ -494,7 +495,7 @@ fn generate_output(handler: &ExportedHandler, export_dir: &str) {
     let export_path = Path::new(export_dir);
     if !export_path.exists() {
         if let Err(e) = fs::create_dir_all(export_path) {
-            eprintln!("cargo:warning=Failed to create export directory: {}", e);
+            eprintln!("Failed to create export directory: {}", e);
             return;
         }
     }
@@ -542,10 +543,10 @@ fn generate_output(handler: &ExportedHandler, export_dir: &str) {
 
     // 写入文件
     if let Err(e) = fs::write(&file_path, &content) {
-        eprintln!("cargo:warning=Failed to write export file: {}", e);
+        eprintln!("Failed to write export file: {}", e);
     } else {
         println!(
-            "cargo:warning=Generated TypeScript API: {}",
+            "Generated TypeScript API: {}",
             file_path.display()
         );
     }

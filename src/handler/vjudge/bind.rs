@@ -1,10 +1,9 @@
 use crate::handler::{HandlerError, HttpError, ResultHandler};
 use crate::utils::perm::UserAuthCotext;
 use macro_handler::{generate_handler, handler, perm, route};
-use rmjac_core::graph::node::user::remote_account::{RemoteMode, VjudgeAuth};
+use rmjac_core::graph::node::user::remote_account::RemoteMode;
 use rmjac_core::model::ModelStore;
 use rmjac_core::model::vjudge::{AddErrorResult, Platform, VjudgeAccount};
-use serde::Deserialize;
 
 #[generate_handler(route = "/bind", real_path = "/api/vjudge/bind")]
 pub mod handler {
@@ -42,18 +41,7 @@ pub mod handler {
                 )));
             }
         };
-        let remote_mode = match (platform, data.method.to_lowercase().as_str()) {
-            (Platform::Codeforces, "password") => RemoteMode::SyncCode,
-            (Platform::Codeforces, "token") => RemoteMode::SyncCode,
-            (Platform::Codeforces, "apikey") => RemoteMode::OnlySync,
-            (Platform::Atcoder, "password") => RemoteMode::SyncCode,
-            (Platform::Atcoder, "token") => RemoteMode::SyncCode,
-            _ => {
-                return Err(HttpError::HandlerError(HandlerError::InvalidInput(
-                    "Invalid method for platform".to_string(),
-                )));
-            }
-        };
+        let remote_mode = data.method.into();
 
         let result = VjudgeAccount::create(
             store.get_db(),
@@ -64,6 +52,7 @@ pub mod handler {
             data.auth.clone(),
             data.bypass_check.unwrap_or(false),
             data.ws_id.clone(),
+            false
         )
         .await;
 

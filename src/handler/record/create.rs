@@ -3,12 +3,13 @@ use crate::utils::perm::UserAuthCotext;
 use macro_handler::{export, generate_handler, handler, perm, require_login, route};
 use rmjac_core::graph::node::record::RecordNode;
 use rmjac_core::model::ModelStore;
-use rmjac_core::model::problem::ProblemRepository;
+use rmjac_core::model::problem::ProblemImport;
 use rmjac_core::model::record::{Record, RecordNewProp};
 use rmjac_core::service::perm::provider::{System, SystemPermService};
 
 #[generate_handler(route = "/create", real_path = "/api/record/create")]
 pub mod handler {
+    use rmjac_core::model::record::RecordFactory;
     use super::*;
 
     #[perm]
@@ -37,7 +38,7 @@ pub mod handler {
         public_status: bool,
     ) -> ResultHandler<(String, RecordNode)> {
         let (problem_node_id, statement_node_id) =
-            ProblemRepository::resolve(store, &problem_iden).await?;
+            ProblemImport::resolve(store, &problem_iden).await?;
 
         let user_id = user_context.user_id;
 
@@ -51,7 +52,7 @@ pub mod handler {
         };
 
         let record =
-            Record::create_archived(store.get_db(), record_props, user_id, problem_node_id).await?;
+            RecordFactory::create_archived(store.get_db(), record_props, user_id, problem_node_id).await?;
 
         Ok(("Record created successfully".to_string(), record))
     }

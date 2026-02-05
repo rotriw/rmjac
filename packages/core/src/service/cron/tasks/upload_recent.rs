@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use crate::env::db::get_connect;
 use crate::error::CoreError;
 use crate::graph::node::user::remote_account::VjudgeNode;
-use crate::model::vjudge::{VjudgeAccount, VjudgeTask};
+use crate::model::vjudge::VjudgeAccount;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UploadRecentTaskProps {

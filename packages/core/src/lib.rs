@@ -1,3 +1,4 @@
+#![allow(incomplete_features)]
 #![feature(super_let)]
 #![allow(clippy::too_many_arguments)]
 #![feature(trait_alias)]

@@ -6,8 +6,8 @@ use macro_handler::generate_handler;
 use macro_handler::{export, from_path, handler, perm, route};
 use rmjac_core::model::ModelStore;
 use rmjac_core::model::problem::ProblemModel;
-use rmjac_core::model::problem::ProblemRepository;
-use rmjac_core::model::record::RecordRepository;
+use rmjac_core::model::problem::ProblemImport;
+use rmjac_core::model::record::RecordImport;
 use rmjac_core::service::perm::provider::{Problem, ProblemPermService};
 use sea_orm::ColumnTrait;
 
@@ -20,7 +20,7 @@ pub mod handler {
     #[from_path(iden)]
     #[export(pid, stmtid)]
     async fn before_resolve(store: &mut impl ModelStore, iden: &str) -> ResultHandler<(i64, i64)> {
-        Ok(ProblemRepository::resolve(store, iden).await?)
+        Ok(ProblemImport::resolve(store, iden).await?)
     }
 
     #[perm]
@@ -61,12 +61,12 @@ pub mod handler {
         Option<Vec<RecordEdge>>,
         Option<Vec<RecordEdge>>,
     )> {
-        let model = ProblemRepository::model(store, pid).await?;
+        let model = ProblemImport::model(store, pid).await?;
         let get_user_submit_data = if let Some(uc) = &user_context
             && uc.is_real
         {
             let data =
-                RecordRepository::by_user_statement(store.get_db(), uc.user_id, stmtid, 100, 1)
+                RecordImport::by_user_statement(store.get_db(), uc.user_id, stmtid, 100, 1)
                     .await;
             data.ok()
         } else {
@@ -76,7 +76,7 @@ pub mod handler {
             && uc.is_real
         {
             Some(
-                RecordRepository::by_node(
+                RecordImport::by_node(
                     store.get_db(),
                     uc.user_id,
                     1,
@@ -114,12 +114,12 @@ pub mod handler {
         Option<Vec<RecordEdge>>,
         Option<Vec<RecordEdge>>,
     )> {
-        let model = ProblemRepository::model(store, pid).await?;
+        let model = ProblemImport::model(store, pid).await?;
         let get_user_submit_data = if let Some(uc) = &user_context
             && uc.is_real
         {
             let data =
-                RecordRepository::by_user_statement(store.get_db(), uc.user_id, stmtid, 100, 1)
+                RecordImport::by_user_statement(store.get_db(), uc.user_id, stmtid, 100, 1)
                     .await;
             data.ok()
         } else {
@@ -129,7 +129,7 @@ pub mod handler {
             && uc.is_real
         {
             Some(
-                RecordRepository::by_node(
+                RecordImport::by_node(
                     store.get_db(),
                     uc.user_id,
                     1,

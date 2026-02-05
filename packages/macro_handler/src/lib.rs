@@ -3,13 +3,10 @@
 //! 提供声明式的宏来简化Actix-web handler的编写，自动处理路由、参数解析、
 //! before函数链和权限检查。
 
-use darling::FromMeta;
-use darling::util::parse_attribute_to_meta_list;
 use proc_macro::TokenStream;
-use quote::{TokenStreamExt, quote};
+use quote::quote;
 use syn::punctuated::Punctuated;
-use syn::spanned::Spanned;
-use syn::{Attribute, Expr, Item, ItemMod, Lit, Meta, Path, Token, parse_macro_input, parse_quote};
+use syn::{Expr, Item, ItemMod, Lit, Meta, Token, parse_macro_input};
 
 mod codegen;
 mod dependency;
@@ -26,7 +23,6 @@ pub fn start_export_ts_type(_item: TokenStream) -> TokenStream {
 }
 
 use crate::parser::{FuncType, parse_func};
-use crate::types::HandlerStruct;
 use codegen::generate_handler_impl;
 
 /// 主handler宏 - 应用于包含handler结构体和impl的模块
@@ -89,7 +85,7 @@ fn generate_handler_final(attr: TokenStream, item: TokenStream) -> TokenStream {
     }
 
     if let Some((_, items)) = &module.content {
-        let mut handler_struct = None;
+        let mut _handler_struct = None;
         let mut other_items = Vec::new();
 
         let mut before_funcs = Vec::new();
@@ -101,7 +97,7 @@ fn generate_handler_final(attr: TokenStream, item: TokenStream) -> TokenStream {
                 Item::Struct(s) => {
                     // 检查是否有handler属性
                     if s.attrs.iter().any(|attr| attr.path().is_ident("handler")) {
-                        handler_struct = Some(s.clone());
+                        _handler_struct = Some(s.clone());
                     } else {
                         other_items.push(item.clone());
                     }
@@ -148,6 +144,10 @@ fn generate_handler_final(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         return quote! {
             #mod_vis mod #mod_name {
+                #![allow(dead_code)]
+                #![allow(unused_imports)]
+                #![allow(unused_variables)]
+                #![allow(unused)]
                 #(#other_items)*
                 #generated
             }

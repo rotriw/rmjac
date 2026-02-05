@@ -5,7 +5,7 @@ use crate::graph::node::problem::statement::ProblemStatementNode;
 use crate::graph::node::record::{RecordNode, RecordStatus};
 use crate::graph::node::user::remote_account::VjudgeNode;
 use crate::model::ModelStore;
-use crate::model::record::{Record, RecordNewProp};
+use crate::model::record::{Record, RecordFactory, RecordNewProp};
 use crate::service::judge::service::{CompileOptionValue, LanguageChoiceInformation, SubmitContext, get_tool, StringOption};
 use crate::service::socket::service::add_task;
 use std::collections::HashMap;
@@ -83,7 +83,7 @@ impl SubmissionService {
 
         let judge_service = get_tool(&statement_node.public.source.clone().to_lowercase())?;
 
-        let record_node = Record::create(
+        let record_node = RecordFactory::create(
             &db,
             RecordNewProp {
                 platform: statement_node.public.source.clone(),
@@ -99,6 +99,8 @@ impl SubmissionService {
             chrono::Utc::now().naive_utc(),
         )
         .await?;
+        let mut context = context;
+        context.record_id = record_node.node_id;
 
         let option = judge_service.get_option(language, judge_option);
         let task = judge_service.convert_to_json(option, vjudge_node, context);

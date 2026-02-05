@@ -1,7 +1,5 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { TypstRenderer } from "@/components/editor/typst-renderer"
-import { API_BASE_URL } from "@/lib/constants" // Import from constants
 import ProblemContainer from "./problem-container"
 import { getView as getProblemView } from "@/api/server/api_problem_view" // Import new API function
 import { getUserInfo } from "@/api/server/api_user_info" // Import for checkUserLogin
@@ -49,7 +47,7 @@ async function checkUserLogin(): Promise<boolean> {
 }
 
 
-function renderContent(content: ContentType[]) {
+function renderTypstContent(content: ContentType[]) {
   const refname = {
     "background": "题目背景",
     "description": "题目描述",
@@ -70,9 +68,7 @@ function renderContent(content: ContentType[]) {
     parts.push(`== ${title}\n${body}`)
   }
 
-  return (
-    <TypstRenderer content={parts.join("\n\n")} />
-  )
+  return parts.join("\n\n")
 }
 
 export default async function ProblemPage({ params }: { params: Promise<{ id: string }> }) {
@@ -115,6 +111,11 @@ export default async function ProblemPage({ params }: { params: Promise<{ id: st
   const mainStatement = statementIndex >= 0 ? model.problem_statement_node[statementIndex][0] : null
   const mainLimit = statementIndex >= 0 ? model.problem_statement_node[statementIndex][1] : null
   console.log(mainStatement);
+  const fallbackSource = mainStatement?.public?.page_rendered || mainStatement?.public?.page_source || null
+  const hasStructuredContent = (mainStatement?.public?.statements?.length || 0) > 0
+  const structuredTypstContent = hasStructuredContent && mainStatement?.public?.statements
+    ? renderTypstContent(mainStatement.public.statements)
+    : null
   return (
     <ProblemContainer
       id={id}
@@ -124,12 +125,8 @@ export default async function ProblemPage({ params }: { params: Promise<{ id: st
       isLoggedIn={isLoggedIn}
       statement={statement}
       platform={mainStatement?.public?.source || "local"}
-    >
-        {mainStatement?.public?.statements ? (
-          renderContent(mainStatement.public.statements)
-        ) : (
-          <div className="text-gray-500">暂无题目描述</div>
-        )}
-    </ProblemContainer>
+      structuredTypstContent={structuredTypstContent}
+      fallbackSource={fallbackSource}
+    />
   )
 }

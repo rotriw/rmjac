@@ -42,11 +42,16 @@ export async function connect() {
     });
 
     // deno-lint-ignore no-explicit-any
-    socket.on("task", async (data: any) => {
+    socket.on("task", async (data: any) => { try {
         console.log(data);
         if (typeof data === "string") {
             data = JSON.parse(data);
         }
-        await task_handler(data, socket);
+        await task_handler(data, socket as any);
+    } catch(err) {
+        LOG.error(`Task handling error: ${err}`);
+    }
     });
+
+    global.socket = socket;
 }

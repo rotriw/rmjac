@@ -85,9 +85,10 @@ interface TypstRendererProps {
   className?: string
   html?: string
   scrollPercentage?: number
+  onError?: (message: string) => void
 }
 
-export function TypstRenderer({ content, className = "", html, scrollPercentage }: TypstRendererProps) {
+export function TypstRenderer({ content, className = "", html, scrollPercentage, onError }: TypstRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -201,6 +202,7 @@ export function TypstRenderer({ content, className = "", html, scrollPercentage 
         if (cancelled) return
         const message = err instanceof Error ? err.message : "Typst渲染失败"
         setError(message)
+        if (onError) onError(message)
         if (containerRef.current) containerRef.current.innerHTML = ""
       } finally {
         if (!cancelled) setIsLoading(false)

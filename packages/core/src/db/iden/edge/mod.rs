@@ -15,4 +15,5 @@ pub mod testcase;
 pub mod training_problem;
 pub mod user_remote;
 
+pub mod training_user;
 pub mod judge;

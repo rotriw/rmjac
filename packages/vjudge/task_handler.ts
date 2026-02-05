@@ -5,11 +5,12 @@ declare global {
     var taskHandlerMap: Record<string, Record<string, (task: any) => Promise<any>>>;
 }
 
-const task_handler = async (task: TaskData, socket: Socket) => {
+const task_handler = async (task: any, socket: Socket) => {
     const { operation, platform, method } = task;
     if (global.taskHandlerMap[platform] && global.taskHandlerMap[platform][`${operation}${method}`]) {
         const ntask = task as any;
-        const res = await global.taskHandlerMap[platform][`${operation}${method}`](task);
+        const nmethod = method || "";
+        const res = await global.taskHandlerMap[platform][`${operation}${nmethod}`](task);
         let data;
         if (operation.startsWith("sync")) {
             data = { submissions: res.data };
@@ -24,7 +25,7 @@ const task_handler = async (task: TaskData, socket: Socket) => {
             ...data,
         });
     } else {
-        LOG.error(`Task handler not found for ${platform} ${operation}${method}`);
+        LOG.error(`Task handler not found for ${platform} ${operation}${method || ""}`);
     }
 }
 

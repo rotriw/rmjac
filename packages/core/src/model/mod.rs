@@ -1,9 +1,9 @@
 pub mod problem;
 pub mod record;
 pub mod training;
+pub mod training_list;
 pub mod user;
 pub mod vjudge;
-
 pub mod submit;
 
 use sea_orm::DatabaseConnection;

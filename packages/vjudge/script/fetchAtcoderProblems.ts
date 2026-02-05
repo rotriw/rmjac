@@ -4,7 +4,7 @@ import * as path from "https://deno.land/std@0.207.0/path/mod.ts";
 import { Problem, ProblemStatement, ContentType } from "../declare/problem.ts";
 // @deno-types="npm:@types/tex-to-typst"
 import { texToTypst } from "npm:tex-to-typst";
-import { parse } from "../vjudge/atcoder/parse.ts";
+import { parse } from "../vjudge_services/atcoder/parse.ts";
 
 
 // Helper to convert LaTeX to Typst
@@ -134,11 +134,142 @@ interface Contest {
     url: string;
 }
 
+// Simple async pool to limit concurrent tasks
+async function asyncPool<T>(limit: number, items: T[], worker: (item: T) => Promise<void>): Promise<void> {
+    const executing = new Set<Promise<void>>();
+
+    for (const item of items) {
+        const p = (async () => {
+            try {
+                await worker(item);
+            } finally {
+                executing.delete(p);
+            }
+        })();
+
+        executing.add(p);
+        if (executing.size >= limit) {
+            await Promise.race(executing);
+        }
+    }
+
+    await Promise.all(executing);
+}
+
+const REQUEST_DELAY_MS = 500;
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Ensure each request uses a fresh connection (no keep-alive)
+async function fetchWithFreshConnection(url: string): Promise<Response> {
+    const client = Deno.createHttpClient({ keepAlive: false });
+    try {
+        const response = await fetch(url, {
+            client,
+            headers: {
+                "Connection": "close"
+            }
+        });
+        await sleep(REQUEST_DELAY_MS);
+        return response;
+    } finally {
+        client.close();
+    }
+}
+
+const PROBLEM_CONCURRENCY = 2;
+const CONTEST_CONCURRENCY = 50;
+
+const parseContests = (html: string): Contest[] => {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    if (!doc) {
+        return [];
+    }
+
+    const contests: Contest[] = [];
+
+    const tables = doc.querySelectorAll('.table-responsive > table');
+    
+    tables.forEach(table => {
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach(row => {
+            const secondTd = row.querySelector('td:nth-child(2)');
+            const link = secondTd?.querySelector('a');
+
+            if (link && (link as Element).getAttribute('href')) {
+                const href = (link as Element).getAttribute('href')!;
+                const url = new URL(href, 'https://atcoder.jp').toString();
+                const name = link.textContent?.trim() || '';
+                const id = url.split('/').pop() || '';
+
+                if (id && name) {
+                    contests.push({ id, name, url });
+                }
+            }
+        });
+    });
+
+    return contests;
+};
+
+const fetchAndSaveContests = async (contestsPath: string): Promise<Contest[]> => {
+    const baseUrl = 'https://atcoder.jp/contests/archive';
+    const firstPageResponse = await fetchWithFreshConnection(baseUrl);
+    const firstPageHtml = await firstPageResponse.text();
+    const doc = new DOMParser().parseFromString(firstPageHtml, "text/html");
+    if (!doc) {
+        throw new Error("Failed to parse the first contests page.");
+    }
+
+    const pageLinks = doc.querySelectorAll('.pagination li a');
+    let lastPage = 1;
+    pageLinks.forEach(link => {
+        const pageNum = parseInt(link.textContent || '', 10);
+        if (!isNaN(pageNum) && pageNum > lastPage) {
+            lastPage = pageNum;
+        }
+    });
+
+    console.log(`Found ${lastPage} pages of contests.`);
+
+    let allContests: Contest[] = parseContests(firstPageHtml);
+
+    for (let i = 2; i <= lastPage; i++) {
+        console.log(`Fetching contest page ${i}...`);
+        const response = await fetchWithFreshConnection(`${baseUrl}?page=${i}`);
+        const html = await response.text();
+        const contests = parseContests(html);
+        allContests.push(...contests);
+    }
+
+    await fs.ensureDir(path.dirname(contestsPath));
+    await Deno.writeTextFile(contestsPath, JSON.stringify(allContests, null, 2));
+    console.log(`Saved ${allContests.length} contests to ${contestsPath}`);
+
+    return allContests;
+};
+
+const loadContests = async (contestsPath: string): Promise<Contest[]> => {
+    try {
+        const contestsContent = await Deno.readTextFile(contestsPath);
+        return JSON.parse(contestsContent) as Contest[];
+    } catch (error) {
+        if (error instanceof Deno.errors.NotFound) {
+            console.log(`Local contests file not found, fetching from remote...`);
+            return await fetchAndSaveContests(contestsPath);
+        }
+        throw error;
+    }
+};
+
 const fetchProblemsForContest = async (contest: Contest) => {
     const contestTasksUrl = `${contest.url}/tasks`;
     console.log(`Fetching tasks for contest: ${contest.id} from ${contestTasksUrl}`);
     
-    const response = await fetch(contestTasksUrl);
+    const response = await fetchWithFreshConnection(contestTasksUrl);
     if (!response.ok) {
         console.error(`Failed to fetch tasks for ${contest.id}: ${response.statusText}`);
         return;
@@ -164,10 +295,10 @@ const fetchProblemsForContest = async (contest: Contest) => {
 
     console.log(`Found ${problemLinks.length} problems for contest ${contest.id}`);
 
-    for (const problemUrl of problemLinks) {
+    const problemTasks = problemLinks.map(problemUrl => async () => {
         try {
             const problemIden = problemUrl.split("/").pop() || "";
-            if (!problemIden) continue;
+            if (!problemIden) return;
 
             const contestDir = path.join('data', 'atcoder', 'problems', contest.id);
             const outputPath = path.join(contestDir, `${problemIden}.json`);
@@ -175,7 +306,7 @@ const fetchProblemsForContest = async (contest: Contest) => {
             try {
                 await Deno.stat(outputPath);
                 console.log(`  Skipping ${problemIden}, file already exists.`);
-                continue;
+                return;
             } catch (e) {
                 if (!(e instanceof Deno.errors.NotFound)) {
                     throw e; // re-throw other errors
@@ -184,10 +315,10 @@ const fetchProblemsForContest = async (contest: Contest) => {
             }
 
             console.log(`  Fetching problem: ${problemUrl}`);
-            const problemResponse = await fetch(problemUrl);
+            const problemResponse = await fetchWithFreshConnection(problemUrl);
             if (!problemResponse.ok) {
                 console.error(`  Failed to fetch problem ${problemUrl}: ${problemResponse.statusText}`);
-                continue;
+                return;
             }
             const problemHtml = await problemResponse.text();
             const problem = await parse(problemHtml, problemUrl);
@@ -197,27 +328,31 @@ const fetchProblemsForContest = async (contest: Contest) => {
             await Deno.writeTextFile(outputPath, JSON.stringify(problem, null, 2));
             console.log(`  Successfully saved ${problem.problem_iden}.json`);
 
-            // Be nice to the server
-            await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error) {
             console.error(`  Error processing problem ${problemUrl}:`, error);
         }
-    }
+    });
+
+    await asyncPool(PROBLEM_CONCURRENCY, problemTasks, task => task());
 };
 
 const main = async () => {
     const contestsPath = path.join('data', 'atcoder_contests.json');
-    const contestsContent = await Deno.readTextFile(contestsPath);
-    const contests: Contest[] = JSON.parse(contestsContent);
+    const contests = await loadContests(contestsPath);
 
-    for (const contest of contests) {
-        // Skip heuristic contests for now, as they have a different structure
+    const filteredContests = contests.filter(contest => {
         if (contest.id.startsWith('ahc')) {
             console.log(`Skipping heuristic contest: ${contest.id}`);
-            continue;
+            return false;
         }
+        return true;
+    });
+
+    const contestTasks = filteredContests.map(contest => async () => {
         await fetchProblemsForContest(contest);
-    }
+    });
+
+    await asyncPool(CONTEST_CONCURRENCY, contestTasks, task => task());
 };
 
 main();

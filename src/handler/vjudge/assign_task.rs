@@ -6,7 +6,6 @@ use rmjac_core::graph::node::Node;
 use rmjac_core::graph::node::vjudge_task::VjudgeTaskNode;
 use rmjac_core::model::ModelStore;
 use rmjac_core::model::vjudge::VjudgeAccount;
-use serde::Deserialize;
 
 
 #[generate_handler(route = "/assign", real_path = "/api/vjudge/assign")]

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { StandardCard } from "@/components/card/card"
-import { getView as getTrainingView } from "@/api/server/api_training_view"
+import { getNormal as getTrainingView } from "@/api/server/api_training_view"
 import { TrainingProblem, Training } from "@rmjac/api-declare"
 import { TreeTable, TreeTableNode } from "@/components/table/treetable"
 import TrainingContainer from "./training-container"
@@ -77,24 +77,33 @@ function problemToTreeNode(
   return null
 }
 
+function countProblems(problemList: TrainingProblem[]): number {
+  let count = 0
+  for (const problem of problemList) {
+    if ("ProblemIden" in problem) {
+      count += 1
+    } else if ("ProblemTraining" in problem) {
+      count += countProblems(problem.ProblemTraining.own_problem)
+    }
+  }
+  return count
+}
+
 
 export default async function TrainingPage({ params }: PageProps) {
   const { user_iden, training_iden } = await params
 
   try {
-    const trainingDataResponse = await getTrainingView({ user_iden, training_iden }) // Changed API call
-    // const passData = trainingDataResponse.user;
-    const trainingData: Training = trainingDataResponse.data // Extract data and cast to Training type
+    const trainingDataResponse = await getTrainingView({ user_iden, training_iden })
+    const trainingData: Training = trainingDataResponse.data
     const { training_node, problem_list } = trainingData
-    console.log(problem_list);
+    const trainingNodeId = Number(training_node.node_id)
     // Get user status if logged in
     let statusMap = new Map<number, string>()
     try {
       const statusResp = trainingDataResponse.user;
-      console.log(statusResp);
-      console.log("Training status response:", statusResp)
-      if (statusResp?.data) {
-        statusMap = new Map(Object.entries(statusResp?.data).map(([k, v]) => [
+      if (statusResp) {
+        statusMap = new Map(Object.entries(statusResp.data).map(([k, v]) => [
           +k,
           String(v),
         ]))
@@ -112,11 +121,14 @@ export default async function TrainingPage({ params }: PageProps) {
 
     // 检查是否有编辑权限（根据 API 是否返回 user 数据来判断）
     const hasEditPermission = trainingDataResponse.user !== null
+    const isPinned = Boolean((trainingDataResponse as any).pin ?? (trainingDataResponse as any).is_pin ?? (trainingDataResponse as any).pinned ?? false)
 
     // 统计已完成数量
     const completedCount = Array.from(statusMap.values()).filter(
       (status) => status === "Accepted"
     ).length
+
+    const totalCount = countProblems(problem_list.own_problem)
 
     return (
       <TrainingContainer
@@ -126,9 +138,11 @@ export default async function TrainingPage({ params }: PageProps) {
         trainingType={training_node.public.training_type}
         startTime={training_node.public.start_time}
         endTime={training_node.public.end_time}
+        trainingNodeId={trainingNodeId}
+        initialPinned={isPinned}
         hasEditPermission={hasEditPermission}
         completedCount={completedCount}
-        totalCount={treeData.length}
+        totalCount={totalCount}
         problems={problem_list.own_problem}
         statusMap={statusMap}
       >

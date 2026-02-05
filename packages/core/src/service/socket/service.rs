@@ -130,8 +130,9 @@ async fn on_connect(socket: SocketRef, Data(_data): Data<Value>) {
     socket.on("auth", auth);
     socket.on("fetch_done_success", handle_problem_create);
     socket.on("sync_done_success", handle_update_vjudge_submission);
-    socket.on("submit_done_success", handle_submit_done);
+    socket.on("submit_done", handle_submit_done);
     socket.on("verified_done_success", handle_verified_result);
+
     socket.on_disconnect(async |socket: SocketRef| {
         log::debug!("Socket io disconnected: {:?} {:?}", socket.ns(), socket.id);
         erase_socket(socket.id.as_str());
@@ -187,12 +188,7 @@ pub async fn handle_vjudge_verified(socket: SocketRef, Data(data): Data<VJudgeVe
         log::error!("Failed to connect to database: {}", err);
         return;
     }
-    let db = db.unwrap(); // We know it's Ok here but let's be safe if I could match
-
-    // Fix: Access db correctly if it is Ok
-    // But wait, get_connect() returns Result<DatabaseConnection>.
-    // The previous code had `if let Ok(db) = db`.
-
+    let db = db.unwrap();
     let _user_id = {
         let data = env::USER_WEBSOCKET_CONNECTIONS_ACCOUNT.lock().unwrap();
         data.get(&socket.id.to_string()).cloned()

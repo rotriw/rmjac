@@ -1,7 +1,6 @@
 use sea_orm::QuerySelect;
 use sea_orm::QueryFilter;
 use std::collections::HashMap;
-use std::hash::Hash;
 use crate::db::entity::node::problem_statement::ContentType;
 use crate::error::{CoreError, QueryExists};
 use crate::graph::action::get_node_type;
@@ -32,12 +31,9 @@ use crate::model::user::SimplyUser;
 use crate::service::iden::{
     create_iden, get_node_id_iden, get_node_ids_from_iden, remove_iden_to_specific_node,
 };
-use crate::service::perm::impled::PermEnum;
-use crate::service::perm::provider::{Manage, ManagePermService, Pages, PagesPermService, ProblemPermService, ViewPermService};
-use crate::service::perm::typed::{GetU, PermVerify};
-use crate::{Result, db, env};
+use crate::service::perm::provider::{Pages, PagesPermService, ProblemPermService};
+use crate::{Result, db};
 use chrono::Utc;
-use pgp::bytes::BufMut;
 use db::entity::edge::misc::Column as MiscColumn;
 use redis::Commands;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait};
@@ -47,6 +43,13 @@ use serde::{Deserialize, Serialize};
 use crate::model::ModelStore;
 
 type ProblemIdenString = String;
+type ProblemStatementType = (
+    ProblemStatementNodeRaw,
+    ProblemLimitNodeRaw,
+    Option<ProblemIdenString>,
+    HashMap<String, String>
+);
+
 
 pub trait CacheKey {
     fn cache_key(node_id: i64) -> String;
@@ -120,15 +123,15 @@ pub struct ProblemDraft<'a> {
     pub public_view_enabled: bool,
 }
 
-pub struct ProblemRepository;
+pub struct ProblemImport;
 
-impl CacheKey for ProblemRepository {
+impl CacheKey for ProblemImport {
     fn cache_key(node_id: i64) -> String {
         format!("p_{node_id}")
     }
 }
 
-impl ProblemRepository {
+impl ProblemImport {
     pub async fn iden(store: &mut impl ModelStore, id: i64) -> Result<String> {
         Self::extract_problem_iden(store, id).await
     }
@@ -278,7 +281,7 @@ impl ProblemRepository {
                 .await?;
         match author_ids.first() {
             Some(&author_id) => {
-                let user = crate::model::user::SimplyUser::load(store.get_db(), author_id)
+                let user = SimplyUser::load(store.get_db(), author_id)
                     .await
                     .unwrap_or(SimplyUser {
                         node_id: author_id,
@@ -388,7 +391,7 @@ impl ProblemSearch {
             .await?
             .iter()
             .map(|f| {
-                Problem::new(f.0.clone())
+                Problem::new(f.0)
             }).collect()
         )
     }
@@ -401,7 +404,7 @@ impl ProblemSearch {
             .await?
             .iter()
             .map(|f| {
-                Problem::new(f.0.clone())
+                Problem::new(f.0)
             }).collect()
         )
     }
@@ -411,12 +414,12 @@ impl ProblemSearch {
         let problems = Entity::find()
             .filter(Column::ProblemDifficulty.between(difficulty_range.0, difficulty_range.1))
             .limit(per_page)
-            .offset(((page -1) * per_page))
+            .offset((page -1) * per_page )
             .all(store.get_db())
             .await?;
         let mut result = vec![];
         for problem in problems {
-            let p = ProblemRepository::by_stmt(store, problem.node_id).await?;
+            let p = ProblemImport::by_stmt(store, problem.node_id).await?;
             result.push(Problem::new(p));
         }
         Ok(result)
@@ -566,9 +569,9 @@ pub struct Problem {
     pub node_id: i64,
 }
 
-impl Into<i64> for Problem {
-    fn into(self) -> i64 {
-        self.node_id
+impl From<Problem> for i64 {
+    fn from(value: Problem) -> i64 {
+        value.node_id
     }
 }
 
@@ -582,23 +585,23 @@ impl Problem {
     }
 
     pub async fn get(&self, store: &mut impl ModelStore) -> Result<ProblemModel> {
-        ProblemRepository::model(store, self.node_id).await
+        ProblemImport::model(store, self.node_id).await
     }
 
     pub async fn refresh(&self, store: &mut impl ModelStore) -> Result<()> {
-        ProblemRepository::clear(store, self.node_id).await
+        ProblemImport::clear(store, self.node_id).await
     }
 
     pub async fn rm_all(&self, store: &mut impl ModelStore) -> Result<()> {
-        ProblemRepository::purge(store, self.node_id).await
+        ProblemImport::purge(store, self.node_id).await
     }
 
     pub async fn rm_stmt(&self, store: &mut impl ModelStore, stmt_id: i64) -> Result<()> {
-        ProblemRepository::detach_statement(store, self.node_id, stmt_id).await
+        ProblemImport::detach_statement(store, self.node_id, stmt_id).await
     }
 
     pub async fn rm_tag(&self, store: &mut impl ModelStore, tag_id: i64) -> Result<()> {
-        ProblemRepository::detach_tag(store, self.node_id, tag_id).await
+        ProblemImport::detach_tag(store, self.node_id, tag_id).await
     }
 
     pub async fn set_creator(&self, store: &impl ModelStore, user_id: i64) -> Result<()> {
@@ -614,6 +617,16 @@ impl Problem {
         .save(store.get_db())
         .await?;
         Ok(())
+    }
+
+    pub async fn add_tag(&self, store: &mut impl ModelStore, tag_id: i64) -> Result<()> {
+        ProblemTagEdgeRaw {
+            u: self.node_id,
+            v: tag_id,
+        }
+        .save(store.get_db())
+        .await?;
+        ProblemImport::clear(store, self.node_id).await
     }
 }
 
@@ -686,7 +699,7 @@ impl ProblemStatement {
         if let Ok(parent_id) =
             ProblemStatementEdgeQuery::get_u_one(self.node_id, store.get_db()).await
         {
-            let key = ProblemRepository::cache_key(parent_id);
+            let key = ProblemImport::cache_key(parent_id);
             let _ = store.get_redis().del::<_, ()>(&key);
         }
         Ok(())
@@ -763,11 +776,8 @@ impl ProblemPermissionService {
 
 // Backward compat alias
 pub use ProblemPermissionService as Perm;
-use crate::db::entity::edge::edge::Entity;
-use crate::db::entity::edge::misc::Column;
 use crate::db::entity::node::user::get_user_by_iden;
-use crate::graph::edge::record::RecordEdgeQuery;
-use crate::model::submit::{SubmissionMethod, SubmissionService};
+use crate::model::submit::SubmissionMethod;
 use crate::utils::search::search_combine;
 
 pub struct ProblemFactory;
@@ -820,12 +830,7 @@ impl ProblemFactory {
 
     pub async fn create_schema(
         store: &mut impl ModelStore,
-        problem_statement: Vec<(
-            ProblemStatementNodeRaw,
-            ProblemLimitNodeRaw,
-            Option<ProblemIdenString>,
-            HashMap<String, String>
-        )>,
+        problem_statement: Vec<ProblemStatementType>,
         tag_node_id: Vec<i64>,
         problem_name: &str,
         created_at: chrono::NaiveDateTime,

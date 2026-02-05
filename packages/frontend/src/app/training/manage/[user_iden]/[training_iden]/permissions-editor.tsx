@@ -213,7 +213,7 @@ export default function PermissionsEditor({ userIden, trainingIden }: Permission
           <StandardCard title="编辑权限">
             <div className="space-y-4">
               <div className="text-sm text-muted-foreground">
-                以下用户可以编辑此题单的内容：
+                以下用户可以编辑此训练的内容：
               </div>
               {renderUserList(editors, "editor")}
               <Button
@@ -258,7 +258,7 @@ export default function PermissionsEditor({ userIden, trainingIden }: Permission
                 </Button>
               </div>
               <div className="text-sm text-muted-foreground">
-                以下用户可以查看此题单：
+                以下用户可以查看此训练：
               </div>
               {renderUserList(viewers, "viewer")}
               <Button

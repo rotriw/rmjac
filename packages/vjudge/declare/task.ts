@@ -12,7 +12,8 @@ export interface VjudgeUserTaskData extends BasicTaskData {
 }
 
 export interface SyncTaskData extends VjudgeUserTaskData {
-    range: string;
+    range?: string;
+    url?: string;
 }
 
 export interface VerifyTaskData extends VjudgeUserTaskData {

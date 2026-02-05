@@ -10,7 +10,6 @@ const convertCFSubmissionStatus = (status: string) =>  {
 export const apikey = async (task: SyncTaskData): Promise<{ event: string, data: UniversalSubmission[] }> => {
     const handle = task.vjudge_node.public.iden;
     const auth = task.vjudge_node.private.auth;
-    
     let [from, count] = [0, 20];
     if (task.range === "all") {
         from = 1;
@@ -28,10 +27,10 @@ export const apikey = async (task: SyncTaskData): Promise<{ event: string, data:
             const status = convertCFSubmissionStatus(submission.verdict || "FAILED");
             let passed: [string, string, number, number, number][] = [];
             if (submission.passedTestCount) {
-                passed = Array.from({ length: submission.passedTestCount }, (_, i) => [(i + 1).toString(), "Accepted", 1, 0, 0]);
+                passed = Array.from({ length: submission.passedTestCount }, (_, i) => [(i + 1).toString(), "Accepted", 1, -1, -1]);
             }
             if (submission.verdict !== "OK" && submission.passedTestCount !== undefined) {
-                passed.push([(submission.passedTestCount + 1).toString(), status, 0, 0, 0]);
+                passed.push([(submission.passedTestCount + 1).toString(), status, 0, -1, -1]);
             }
             return {
                 remote_id: submission.id,

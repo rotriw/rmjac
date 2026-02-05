@@ -1,4 +1,4 @@
-use crate::handler::{HttpError, ResultHandler, UserAuthCotext};
+use crate::handler::{HttpError, ResultHandler};
 use macro_handler::{export, from_path, generate_handler, handler, route};
 use rmjac_core::model::ModelStore;
 use rmjac_core::model::submit::SubmissionService;

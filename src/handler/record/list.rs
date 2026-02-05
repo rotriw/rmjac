@@ -8,7 +8,7 @@ use rmjac_core::graph::node::Node;
 use rmjac_core::graph::node::problem::ProblemNode;
 use rmjac_core::graph::node::user::UserNode;
 use rmjac_core::model::ModelStore;
-use rmjac_core::model::problem::ProblemRepository;
+use rmjac_core::model::problem::ProblemImport;
 use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect};
 use serde::Serialize;
 

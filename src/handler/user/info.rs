@@ -1,12 +1,12 @@
 use crate::handler::HttpError;
 use crate::handler::ResultHandler;
 use crate::utils::perm::UserAuthCotext;
-use macro_handler::{export, from_path, generate_handler, handler, perm, route};
+use macro_handler::{export, from_path, generate_handler, handler, route};
 use rmjac_core::db::entity::node::user::{get_user_by_email, get_user_by_iden};
 use rmjac_core::error::CoreError;
 use rmjac_core::model::ModelStore;
 use rmjac_core::model::user::{SimplyUser, User};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct UserIden {

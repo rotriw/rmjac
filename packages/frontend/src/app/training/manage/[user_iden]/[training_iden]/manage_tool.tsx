@@ -9,7 +9,7 @@ import { StandardCard } from "@/components/card/card"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { ManageRightSidebar, ManageMode } from "./rightbar"
 import PermissionsEditor from "./permissions-editor"
-import { getView as getTrainingByIden } from "@/api/client/api_training_view"
+import { postView as getTrainingByIden } from "@/api/client/api_training_view"
 import { postSearch as searchProblem } from "@/api/client/api_problem_search"
 import { postCreate as createProblem } from "@/api/client/api_problem_create"
 import {
@@ -351,8 +351,8 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
             type: "group",
             title: "基本信息",
             children: [
-              { type: "input", name: "title", title: "题单标题" },
-              { type: "input", name: "iden", title: "题单标识 (iden)" },
+              { type: "input", name: "title", title: "训练标题" },
+              { type: "input", name: "iden", title: "训练标识 (iden)" },
               { type: "input", name: "description_public", title: "公开描述" },
               { type: "input", name: "description_private", title: "私有描述" },
             ]
@@ -812,7 +812,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
         <SidebarInset className="flex-1">
           <div className="container mx-auto py-6 px-4 md:px-6">
             <TitleCard 
-              title={`管理题单: ${trainingData?.training_node.public.name}`} 
+              title={`管理训练: ${trainingData?.training_node.public.name}`} 
               description={`Mode: ${mode}`} 
             />
             

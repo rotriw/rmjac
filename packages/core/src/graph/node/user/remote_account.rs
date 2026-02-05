@@ -7,18 +7,43 @@ pub enum VjudgeAuth {
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub enum RemoteMode {
-    PublicAccount = 0,
-    OnlySync = 1,
-    SyncCode = 2,
+    OnlyTrust = 0,
+    Apikey = 1,
+    Token = 2,
+    Password = 3,
+}
+
+impl From<String> for RemoteMode {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "only" => RemoteMode::OnlyTrust,
+            "apikey" => RemoteMode::Apikey,
+            "password" => RemoteMode::Password,
+            "token" => RemoteMode::Token,
+            _ => RemoteMode::Apikey,
+        }
+    }
+}
+
+impl From<RemoteMode> for String {
+    fn from(value: RemoteMode) -> Self {
+        match value {
+            RemoteMode::OnlyTrust => "only".to_string(),
+            RemoteMode::Apikey => "apikey".to_string(),
+            RemoteMode::Password => "password".to_string(),
+            RemoteMode::Token => "token".to_string(),
+        }
+    }
 }
 
 impl From<i32> for RemoteMode {
     fn from(value: i32) -> Self {
         match value {
-            0 => RemoteMode::PublicAccount,
-            2 => RemoteMode::SyncCode,
-            1 => RemoteMode::OnlySync,
-            _ => RemoteMode::SyncCode,
+            0 => RemoteMode::OnlyTrust,
+            1 => RemoteMode::Apikey,
+            2 => RemoteMode::Token,
+            3 => RemoteMode::Password,
+            _ => RemoteMode::Apikey,
         }
     }
 }
