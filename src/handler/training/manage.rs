@@ -11,6 +11,7 @@ use rmjac_core::service::perm::provider::{Pages, PagesPermService, System, Syste
 pub mod handler {
     use macro_handler::{export, require_login};
     use rmjac_core::{error::CoreError, graph::node::training::problem::TrainingProblemNode, model::training::TrainingRepo};
+    use rmjac_core::graph::edge::training_problem::TrainingProblemEdgeQuery;
     use rmjac_core::model::training::{PermOwner, TrainingPerm};
     use super::*;
 

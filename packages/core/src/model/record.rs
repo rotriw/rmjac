@@ -29,23 +29,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use sea_orm::sea_query::SimpleExpr::Column;
 use tap::Conv;
+use crate::db::entity::node::perm_group::Entity;
 use crate::db::entity::node::user::get_user_by_iden;
-use crate::model::problem::ProblemImport;
+use crate::model::ModelStore;
+use crate::model::problem::{ProblemImport, ProblemStatement};
 use crate::service::perm::provider::{Pages, PagesPermService};
-
-pub trait ModelStore {
-    fn get_db(&self) -> &DatabaseConnection;
-    fn get_redis(&mut self) -> &mut redis::Connection;
-}
-
-impl<'a> ModelStore for (&'a DatabaseConnection, &'a mut redis::Connection) {
-    fn get_db(&self) -> &DatabaseConnection {
-        self.0
-    }
-    fn get_redis(&mut self) -> &mut redis::Connection {
-        self.1
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[ts(export)]
@@ -901,6 +889,24 @@ impl Record {
             })
         }
     }
+
+    pub async fn get_user_passed(store: &mut impl ModelStore, uid: i64) -> Result<Vec<String>> {
+        use crate::db::entity::edge::record::*;
+        let user = Entity::find()
+            .filter(Column::UNodeId.eq(uid))
+            .filter(Column::RecordStatus.eq(100))
+            .all(store.get_db())
+            .await?;
+        let mut res = vec![];
+        for u in user {
+            let problem_iden = ProblemStatement {
+                node_id: u.v_node_id,
+            }.iden(store).await?;
+            res.push(problem_iden);
+        }
+
+        Ok(res)
+    }
 }
 
 pub struct Subtask;
@@ -971,34 +977,34 @@ pub struct RecordSearch;
 
 impl RecordSearch {
     pub async fn combine(
-        store: &mut impl crate::model::ModelStore,
+        store: &mut impl ModelStore,
         query: &RecordListQuery,
     ) -> Result<Vec<RecordSearchResult>> {
         use crate::utils::search::search_combine;
         let mut now_result = vec![];
         let page = (query.per_page.unwrap_or(20), query.page.unwrap_or(1));
-        let mut filters = vec![];
-        use crate::db::entity::edge::record::Column;
+        use crate::db::entity::edge::record::{Entity, Column};
+        let mut queryd = Entity::find();
         if let Some(status) = query.status {
-            filters.push(Column::RecordStatus.eq(status));
+            queryd = queryd.filter(Column::RecordStatus.eq(status));
         }
         if let Some(platform) = &query.platform {
-            filters.push(Column::Platform.eq(platform));
+            queryd = queryd.filter(Column::Platform.eq(platform.to_string()));
         }
         if let Some(user) = &query.user {
             let user_id = get_user_by_iden(store.get_db(), user).await?.node_id;
-            filters.push(Column::UNodeId.eq(user_id));
+            queryd = queryd.filter(Column::UNodeId.eq(user_id));
         }
         if let Some(problem) = &query.problem {
             let (_, problem_id) = ProblemImport::resolve(store, problem).await?;
-            filters.push(Column::VNodeId.eq(problem_id));
+            queryd = queryd.filter(Column::VNodeId.eq(problem_id));
         }
-        let records = RecordEdgeQuery::get_edges_with_filter(
-            filters,
-            store.get_db(),
-            Some(page.0),
-            Some(page.0 * (page.1 - 1)),
-        ).await?;
+        let records = queryd
+            .offset(page.0 * (page.1 - 1))
+            .limit(page.0)
+            .order_by_desc(Column::RecordNodeId)
+            .all(store.get_db())
+            .await?;
         log::info!("{:?}", records);
         for record in records {
             now_result.push(RecordSearchResult::new(record.record_node_id));

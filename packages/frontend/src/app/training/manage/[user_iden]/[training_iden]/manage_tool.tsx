@@ -548,7 +548,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
             </div>
           )
         } else if (p.ProblemTraining) {
-          const subTraining = p.ProblemTraining
+          const subTraining = p.ProblemTraining[1]
           content_title = "子模块"
           content = (
             <div className="flex items-center justify-between w-full">
@@ -557,7 +557,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
                 <Button variant="ghost" size="sm" className="h-8 px-2" onClick={(e) => { e.stopPropagation(); handleUpdateDescription(nodeId) }}>编辑描述</Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleMove(parentListNodeId, index, 'up', list.own_problem) }} disabled={index === 0}><ArrowUp className="h-4 w-4" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleMove(parentListNodeId, index, 'down', list.own_problem) }} disabled={index === list.own_problem.length - 1}><ArrowDown className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveProblem(parentListNodeId, nodeId) }}><Trash2 className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveProblem(parentListNodeId, p.ProblemTraining[0]) }}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </div>
           )

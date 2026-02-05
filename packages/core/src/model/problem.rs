@@ -132,9 +132,6 @@ impl CacheKey for ProblemImport {
 }
 
 impl ProblemImport {
-    pub async fn iden(store: &mut impl ModelStore, id: i64) -> Result<String> {
-        Self::extract_problem_iden(store, id).await
-    }
 
     pub async fn by_stmt(store: &mut impl ModelStore, stmt_id: i64) -> Result<i64> {
         let db = store.get_db().clone();
@@ -142,7 +139,7 @@ impl ProblemImport {
         Ok(prob_id)
     }
 
-    async fn extract_problem_iden(store: &mut impl ModelStore, problem_id: i64) -> Result<String> {
+    pub async fn iden(store: &mut impl ModelStore, problem_id: i64) -> Result<String> {
         let db = store.get_db().clone();
         let idens = get_node_id_iden(&db, store.get_redis(), problem_id).await?;
         Self::find_problem_iden(idens)
@@ -288,6 +285,7 @@ impl ProblemImport {
                         name: "unknown".to_string(),
                         iden: "unknown".to_string(),
                         avatar: "default".to_string(),
+                        description: "".to_string(),
                     });
                 Ok(Some(user))
             }

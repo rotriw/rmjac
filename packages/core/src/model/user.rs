@@ -492,6 +492,7 @@ pub struct SimplyUser {
     pub avatar: String,
     pub name: String,
     pub iden: String,
+    pub description: String,
 }
 
 #[derive(Deserialize, Clone, Serialize, ts_rs::TS)]
@@ -504,12 +505,13 @@ pub struct UserCreaterUserVerify {
 }
 
 impl SimplyUser {
-    pub fn new(node_id: i64, avatar: String, name: String, iden: String) -> Self {
+    pub fn new(node_id: i64, avatar: String, name: String, iden: String, description: String) -> Self {
         Self {
             node_id,
             avatar,
             name,
             iden,
+            description
         }
     }
 
@@ -520,6 +522,7 @@ impl SimplyUser {
             user.public.avatar,
             user.public.name,
             user.public.iden,
+            user.public.description
         ))
     }
 }

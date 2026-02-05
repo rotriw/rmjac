@@ -27,6 +27,22 @@ interface ProblemSubmission {
   status?: string
 }
 
+type ProblemInfoLike =
+  | string
+  | {
+      iden?: string
+      problem_name?: string
+      name?: string
+      title?: string
+      model?: {
+        problem_node?: {
+          public?: {
+            name?: string
+          }
+        }
+      }
+    }
+
 interface TrainingRightSidebarProps {
   userIden: string
   trainingIden: string
@@ -62,6 +78,28 @@ export function TrainingRightSidebar({
   const [isPinned, setIsPinned] = React.useState<boolean>(initialPinned)
   const [pinLoading, setPinLoading] = React.useState(false)
 
+  const resolveProblemName = React.useCallback((info: ProblemInfoLike): string => {
+    if (typeof info === "string") {
+      return info
+    }
+    const fromModel = info?.model?.problem_node?.public?.name
+    return (
+      fromModel ||
+      info?.problem_name ||
+      info?.name ||
+      info?.title ||
+      info?.iden ||
+      "未命名题目"
+    )
+  }, [])
+
+  const resolveProblemIden = React.useCallback((info: ProblemInfoLike, fallbackId: number): string => {
+    if (typeof info === "string") {
+      return info
+    }
+    return info?.iden || info?.problem_name || String(fallbackId)
+  }, [])
+
   // 递归提取所有题目
   const extractProblems = React.useCallback((
     problemList: TrainingProblem[],
@@ -69,20 +107,24 @@ export function TrainingRightSidebar({
   ): ProblemSubmission[] => {
     for (const problem of problemList) {
       if ("ProblemIden" in problem) {
-        const [edgeId, problemIden, problemNodeId] = problem.ProblemIden
+        const raw = problem.ProblemIden as unknown as [unknown, ProblemInfoLike, unknown, ProblemInfoLike?]
+        const [edgeId, problemInfo, problemNodeId, extraInfo] = raw
         const edgeIdNum = typeof edgeId === "bigint" ? Number(edgeId) : edgeId
         const problemNodeIdNum = typeof problemNodeId === "bigint" ? Number(problemNodeId) : problemNodeId
         const status = statusMap.get(problemNodeIdNum)
+        const displayInfo = extraInfo ?? problemInfo
+        const problemName = resolveProblemName(displayInfo)
+        const problemId = resolveProblemIden(displayInfo, problemNodeIdNum)
         
         result.push({
-          problemId: String(problemIden),
-          problemName: String(problemIden),
+          problemId,
+          problemName,
           edgeId: edgeIdNum,
           problemNodeId: problemNodeIdNum,
           status
         })
       } else if ("ProblemTraining" in problem) {
-        extractProblems(problem.ProblemTraining.own_problem, result)
+        extractProblems(problem.ProblemTraining[1].own_problem, result)
       }
     }
     return result

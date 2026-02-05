@@ -56,7 +56,7 @@ export default function TrainingSubmissions({
           status
         })
       } else if ("ProblemTraining" in problem) {
-        extractProblems(problem.ProblemTraining.own_problem, result)
+        extractProblems(problem.ProblemTraining[1].own_problem, result)
       }
       // ExistTraining 不包含具体题目
     }

@@ -55,10 +55,10 @@ function problemToTreeNode(
       id: `training-${index}`,
       content: (
         <div className="font-medium">
-          {trainingList.description}
+          {trainingList[1].description}
         </div>
       ),
-      children: trainingList.own_problem
+      children: trainingList[1].own_problem
         .map((p: TrainingProblem, idx: number) => problemToTreeNode(p, statusMap, idx))
         .filter((n): n is TreeTableNode => n !== null),
     } as TreeTableNode
@@ -83,7 +83,7 @@ function countProblems(problemList: TrainingProblem[]): number {
     if ("ProblemIden" in problem) {
       count += 1
     } else if ("ProblemTraining" in problem) {
-      count += countProblems(problem.ProblemTraining.own_problem)
+      count += countProblems(problem.ProblemTraining[1].own_problem)
     }
   }
   return count

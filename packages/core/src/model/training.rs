@@ -43,7 +43,7 @@ pub struct TrainingList {
 #[ts(export)]
 pub enum TrainingProblem {
     ProblemIden((i64, String, i64)), // edge_id, problem_iden, problem_node_id
-    ProblemTraining(TrainingList),
+    ProblemTraining((i64, TrainingList)), // edge_id, list.
     ProblemPresetTraining((i64, String)),
     ExistTraining((i64, String)),
 }
@@ -85,7 +85,7 @@ pub struct CreateTrainingReq {
 pub struct TrainingRepo;
 
 impl TrainingRepo {
-    pub async fn create(
+    async fn create_schema(
         db: &DatabaseConnection,
         redis: &mut redis::Connection,
         title: &str,
@@ -97,8 +97,6 @@ impl TrainingRepo {
         end: NaiveDateTime,
         kind: &str,
         list: &TrainingList,
-        _write_perm: Vec<i64>,
-        _read_perm: Vec<i64>,
         user_id: i64,
     ) -> Result<TrainingNode> {
         let node =
@@ -119,7 +117,7 @@ impl TrainingRepo {
         Ok(node)
     }
 
-    pub async fn create_as(
+    pub async fn create(
         db: &DatabaseConnection,
         redis: &mut redis::Connection,
         title: &str,
@@ -137,9 +135,9 @@ impl TrainingRepo {
     ) -> Result<TrainingNode> {
         log::info!("Creating new training with token, title:{}", title);
 
-        let training_node = Self::create(
+        let training_node = Self::create_schema(
             db, redis, title, user_iden, pb_iden, desc_pub, desc_priv, start, end, kind, list,
-            write_perm, read_perm, user_node_id,
+            user_node_id,
         )
         .await?;
         TList::own(&mut (db, redis), training_node.node_id, user_node_id).await?;
@@ -156,7 +154,7 @@ impl TrainingRepo {
         for (order, item) in problem.own_problem.iter().enumerate() {
             match item {
                 TrainingProblem::ProblemTraining(sub) => {
-                    if let Ok(sub_node) = Self::build_tree(db, redis, sub).await {
+                    if let Ok(sub_node) = Self::build_tree(db, redis, &sub.1).await {
                         attach_problem_edge(
                             db,
                             node.node_id,
@@ -240,7 +238,7 @@ impl TrainingRepo {
                         let sub_problem = Self::list(db, redis, next_node_id).await?;
                         result
                             .own_problem
-                            .push(TrainingProblem::ProblemTraining(sub_problem));
+                            .push(TrainingProblem::ProblemTraining((edge.id, sub_problem)));
                     }
                 }
                 TrainingProblemType::Preset => {
@@ -751,31 +749,8 @@ impl TrainingRepo {
 }
 
 impl Training {
-    pub async fn create(
-        store: &mut impl ModelStore,
-        title: &str,
-        user_iden: &str,
-        pb_iden: &str,
-        desc_pub: &str,
-        desc_priv: &str,
-        start: NaiveDateTime,
-        end: NaiveDateTime,
-        kind: &str,
-        list: &TrainingList,
-        write_perm: Vec<i64>,
-        read_perm: Vec<i64>,
-        user_id: i64,
-    ) -> Result<TrainingNode> {
-        let db = store.get_db().clone();
-        let redis = store.get_redis();
-        TrainingRepo::create(
-            &db, redis, title, user_iden, pb_iden, desc_pub, desc_priv, start, end, kind, list,
-            write_perm, read_perm, user_id
-        )
-        .await
-    }
 
-    pub async fn create_as(
+    pub async fn create(
         store: &mut impl ModelStore,
         title: &str,
         pb_iden: &str,
@@ -792,7 +767,7 @@ impl Training {
         let db = store.get_db().clone();
         let redis = store.get_redis();
         let user_iden = SimplyUser::load(&db, user_node_id).await?.iden;
-        TrainingRepo::create_as(
+        TrainingRepo::create(
             &db,
             redis,
             title,

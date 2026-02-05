@@ -5,7 +5,7 @@ use rmjac_core::graph::node::Node;
 use rmjac_core::graph::node::record::RecordNode;
 use rmjac_core::model::record::{Record, SubtaskUserRecord};
 // 使用 record 模块自己的 ModelStore trait
-use rmjac_core::model::record::ModelStore;
+use rmjac_core::model::ModelStore;
 
 #[generate_handler(route = "/view", real_path = "/api/record/view")]
 pub mod handler {

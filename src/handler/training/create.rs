@@ -37,7 +37,7 @@ pub mod handler {
         data: CreateTrainingReq,
     ) -> ResultHandler<(serde_json::Value,)> {
         let user_id = user_context.unwrap().user_id;
-        let training_data = Training::create_as(
+        let training_data = Training::create(
             store,
             &data.title,
             &data.iden,

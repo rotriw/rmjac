@@ -10,6 +10,7 @@ import { TrainingNode, TrainingList, TrainingProblem, CreateTrainingReq } from "
 import { TrainingCreateRightSidebar } from "./training-create-right-sidebar";
 import { TypstEditor } from "@/components/editor/typst-editor";
 import { TypstRenderer } from "@/components/editor/typst-renderer";
+import { Button } from "@/components/ui/button"
 
 // Define a type for the form values
 interface TrainingFormValues {
@@ -257,6 +258,7 @@ export function TrainingCreateTool() {
             )}
           </div>
         </StandardCard>
+        <Button onClick={handleSubmit}>创建</Button>
 
         {submitResult && (
           <StandardCard

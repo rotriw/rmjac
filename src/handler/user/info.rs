@@ -54,14 +54,17 @@ pub mod handler {
 
     #[handler]
     #[route("/profile/{iden}")]
-    #[export("user")]
+    #[export("user", "pass")]
     async fn get_profile(
         store: &mut impl ModelStore,
         user_id: i64,
-    ) -> ResultHandler<SimplyUser> {
+    ) -> ResultHandler<(SimplyUser, Vec<String>)> {
+        use rmjac_core::model::record::Record;
         let user = SimplyUser::load(store.get_db(), user_id).await?;
-        Ok(user)
+        let pass = Record::get_user_passed(store, user_id).await?;
+        Ok((user, pass))
     }
+
 
     #[handler]
     #[route("/info")]
