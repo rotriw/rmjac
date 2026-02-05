@@ -37,12 +37,12 @@ function TitleCard({
   description?: string
 }) {
   return (
-    <>
+    <div className="gap-0">
       <CardTitle>{title}</CardTitle>
       <CardDescription className="text-xs text-muted-foreground mb-2">
           {description}
       </CardDescription>
-    </>
+    </div>
   )
 }
 

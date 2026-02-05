@@ -28,7 +28,7 @@ interface TypstEditorProps {
   height?: string | number
   className?: string
   onRender?: (svg: string) => void
-  onMount?: (editor: unknown) => void
+  onMount?: (editor: monaco.editor.IStandaloneCodeEditor, monacoInstance: typeof monaco) => void
   onScroll?: (scrollTop: number, percentage?: number) => void
 }
 
@@ -39,7 +39,7 @@ export function TypstEditor({ value, onChange, onRender, height = "300px", class
   const [taskId] = useState<string>("typst-main")
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
-    onMount?.(editor)
+    onMount?.(editor, monaco)
 
     editor.onDidScrollChange((e) => {
       if (onScroll) {

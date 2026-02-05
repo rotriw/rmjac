@@ -737,6 +737,9 @@ impl TrainingRepo {
                     } else {
                         RecordStatus::NotFound
                     };
+                    for sub_complete in sub_status.data {
+                        result.data.insert(sub_complete.0, sub_complete.1);
+                    }
                     result.data.insert(edge.v, problem_status.to_string());
                 }
             }

@@ -105,7 +105,7 @@ export function RightSidebar({
       side="right"
       variant="sidebar"
       collapsible="none"
-      className={`border-l bg-sidebar lg:h-screen lg:sticky lg:top-0 transition-none w-full lg:w-auto ${className || ""}`}
+      className={`overflow-hidden border-l bg-sidebar lg:h-screen lg:sticky lg:top-0 transition-none w-full lg:w-auto ${className || ""}`}
       style={{ 
         width: !isMobile ? `${width}px` : undefined,
         ...style 
@@ -118,7 +118,7 @@ export function RightSidebar({
           onMouseDown={startResizing}
         />
       )}
-      <SidebarContent>
+      <SidebarContent className="overflow-x-hidden">
         {children}
       </SidebarContent>
     </Sidebar>

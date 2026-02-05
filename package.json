@@ -13,7 +13,7 @@
     "start": "cargo run -- start",
     "build": "cargo build --release",
     "init": "cargo run -- dbinit",
-    "export-core-type": "mkdir -p ./packages/api_declare/src/interface && rm -rf ./packages/api_declare/src/interface/* && cd ./packages/core && TS_RS_EXPORT_DIR=\"../api_declare/src/interface/\" cargo test export_bindings && cd ../api_declare && pnpm run generate_export",
+    "export-core-type": "mkdir -p ./packages/api_declare/src/interface && rm -rf ./packages/api_declare/src/interface/* && cd ./packages/core && TS_RS_LARGE_INT=\"number\" TS_RS_EXPORT_DIR=\"../api_declare/src/interface/\" cargo test export_bindings && cd ../api_declare && pnpm run generate_export",
     "export-client-function": "mkdir -p ./packages/frontend/src/api/client/ && rm -rf ./packages/frontend/src/api/client/* && TP=\"./template/ts/client.ts\" HP=\"./template/ts/client_header.ts\" EXPORT=\"./packages/frontend/src/api/client/\" cargo run --features export_ts_type  -- generate",
     "export-server-function": "mkdir -p ./packages/frontend/src/api/server/ && rm -rf ./packages/frontend/src/api/server/* && TP=\"./template/ts/server.ts\" HP=\"./template/ts/server_header.ts\" EXPORT=\"./packages/frontend/src/api/server/\" cargo run --features export_ts_type  -- generate",
     "export-ts": "pnpm run export-core-type && pnpm run export-client-function && pnpm run export-server-function"

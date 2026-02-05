@@ -51,8 +51,8 @@ interface TrainingRightSidebarProps {
   hasEditPermission: boolean
   completedCount: number
   totalCount: number
-  viewMode?: "problems" | "submissions"
-  onViewModeChange?: (mode: "problems" | "submissions") => void
+  viewMode?: "problems" | "submissions" | "tracker"
+  onViewModeChange?: (mode: "problems" | "submissions" | "tracker") => void
   problems?: TrainingProblem[]
   statusMap?: Map<number, string>
   selectedProblemId?: string
@@ -230,7 +230,7 @@ export function TrainingRightSidebar({
           <SidebarSeparator />
         </>
       )}
-      {/* 导航区域 */}
+      {/* 切换视图 */}
       <SidebarGroup>
         <SidebarGroupLabel>导航</SidebarGroupLabel>
         <SidebarGroupContent>
@@ -276,7 +276,47 @@ export function TrainingRightSidebar({
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => onViewModeChange?.(viewMode === "tracker" ? "problems" : "tracker")}
+                className={`h-auto py-3 flex-col items-start gap-1 transition-all rounded-lg mx-1 border backdrop-blur-md ${
+                  viewMode === "tracker"
+                    ? "bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90 hover:text-white"
+                    : "bg-white/5 dark:bg-white/5 border-white/10 dark:border-white/10 hover:bg-white/10 dark:hover:bg-white/10 !text-sidebar-foreground"
+                }`}
+              >
+                <div className="flex items-center justify-between w-full px-1">
+                  <div className="flex items-center gap-2">
+                    <ListTree className={`size-4 ${viewMode === "tracker" ? "text-primary-foreground" : "text-primary/80"}`} />
+                    <span className="font-semibold text-xs">{viewMode === "tracker" ? "返回题目列表" : "查看Tracker"}</span>
+                  </div>
+                </div>
+                <div className={`text-[10px] pl-7 font-medium ${viewMode === "tracker" ? "text-primary-foreground/80" : "text-muted-foreground/80"}`}>
+                  {viewMode === "tracker" ? "点击返回" : "进入tracker模式"}
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
+
+      {hasEditPermission && (
+        <>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <Link href={`/training/manage/${userIden}/${trainingIden}`}>
+                    <SidebarMenuButton className="mx-1 h-auto py-3 flex-col items-start gap-1 transition-all rounded-lg border backdrop-blur-md bg-white/5 dark:bg-white/5 border-white/10 dark:border-white/10 hover:bg-white/10 dark:hover:bg-white/10 !text-sidebar-foreground">
+                      <div className="flex items-center gap-2 px-1">
+                        <Settings className="size-4 text-primary/80" />
+                        <span className="font-semibold text-xs">管理训练</span>
+                      </div>
+                      <div className="text-[10px] pl-7 font-medium text-muted-foreground/80">
+                        编辑题目和设置
+                      </div>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              </SidebarMenu>
+        </>
+      )}
         </SidebarGroupContent>
       </SidebarGroup>
 
@@ -321,37 +361,6 @@ export function TrainingRightSidebar({
         </SidebarGroupContent>
       </SidebarGroup>
 
-      <SidebarSeparator />
-
-      {/* 题目选择 - 仅在提交记录模式显示 */}
-      
-
-      {/* 管理操作 - 仅有权限时显示 */}
-      {hasEditPermission && (
-        <>
-          <SidebarSeparator />
-          <SidebarGroup>
-            <SidebarGroupLabel>管理</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <Link href={`/training/manage/${userIden}/${trainingIden}`}>
-                    <SidebarMenuButton className="h-auto py-3 flex-col items-start gap-1 transition-all rounded-lg border backdrop-blur-md bg-white/5 dark:bg-white/5 border-white/10 dark:border-white/10 hover:bg-white/10 dark:hover:bg-white/10 !text-sidebar-foreground">
-                      <div className="flex items-center gap-2 px-1">
-                        <Settings className="size-4 text-primary/80" />
-                        <span className="font-semibold text-xs">管理训练</span>
-                      </div>
-                      <div className="text-[10px] pl-7 font-medium text-muted-foreground/80">
-                        编辑题目和设置
-                      </div>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </>
-      )}
     </RightSidebar>
   )
 }

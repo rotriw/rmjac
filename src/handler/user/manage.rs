@@ -62,25 +62,20 @@ pub mod handler {
         pub old_password: Option<String>,
         pub new_password: Option<String>,
     }
-
-    #[export(user_model)]
-    async fn before_get_user_node(db: &DatabaseConnection, uid: i64) -> ResultHandler<User> {
-        let mut user = User::new(uid);
-        Ok(user)
-    }
-
     #[handler]
+    #[perm(perm)]
+    #[route("/nick_name")]
     #[export("user")]
     async fn post_manage_nickname(
         store: &mut impl ModelStore,
-        user_model: User,
-        new_username: &str,
+        user_name: &str,
+        user_id: i64,
     ) -> ResultHandler<UserNodePublic> {
-        let res = user_model
+        let res = User::new(user_id)
             .update_config(
                 store.get_db(),
                 UserUpdateProps {
-                    name: Some(new_username.to_string()),
+                    name: Some(user_name.to_string()),
                     ..Default::default()
                 },
             )
@@ -89,13 +84,15 @@ pub mod handler {
     }
 
     #[handler]
+    #[perm(perm)]
     #[export("user")]
+    #[route("/description")]
     async fn post_manage_description(
         store: &mut impl ModelStore,
-        user_model: User,
+        user_id: i64,
         new_description: &str,
     ) -> ResultHandler<UserNodePublic> {
-        let res = user_model
+        let res = User::new(user_id)
             .update_config(
                 store.get_db(),
                 UserUpdateProps {
@@ -108,8 +105,29 @@ pub mod handler {
     }
 
     #[handler]
+    #[perm(perm)]
+    #[export("user")]
+    #[route("/avatar")]
+    async fn post_manage_avatar(
+        store: &mut impl ModelStore,
+        user_id: i64,
+        new_avatar: &str,
+    ) -> ResultHandler<UserNodePublic> {
+        let res = User::new(user_id)
+            .update_config(
+                store.get_db(),
+                UserUpdateProps {
+                    avatar: Some(new_avatar.to_string()),
+                    ..Default::default()
+                },
+            )
+            .await?;
+        Ok(res.public)
+    }
+
+    #[handler]
     #[route("/logout/{user_iden}")]
-    #[perm(check_logout_perm)]
+    #[perm(perm)]
     #[export("message")]
     async fn post_logout(store: &mut impl ModelStore, user_id: i64) -> ResultHandler<String> {
         let user = User::new(user_id);

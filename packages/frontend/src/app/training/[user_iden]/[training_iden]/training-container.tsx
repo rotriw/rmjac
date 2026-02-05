@@ -6,6 +6,7 @@ import { TitleCard } from "@/components/card/card"
 import { TrainingRightSidebar } from "./training-right-sidebar"
 import { Badge } from "@/components/ui/badge"
 import TrainingSubmissions from "./training-submissions"
+import TrainingTracker from "./training-tracker"
 import { TrainingProblem } from "@rmjac/api-declare"
 
 interface TrainingContainerProps {
@@ -41,7 +42,7 @@ export default function TrainingContainer({
   statusMap,
   children
 }: TrainingContainerProps) {
-  const [viewMode, setViewMode] = useState<"problems" | "submissions">("problems")
+  const [viewMode, setViewMode] = useState<"problems" | "submissions" | "tracker">("problems")
   const [selectedProblemId, setSelectedProblemId] = useState<string>("")
 
   return (
@@ -66,13 +67,17 @@ export default function TrainingContainer({
               {children}
             </div>
           </div>
-        ) : (
+        ) : viewMode === "submissions" ? (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-225 items-center">
             <TrainingSubmissions
               problems={problems}
               statusMap={statusMap}
               selectedProblemId={selectedProblemId}
             />
+          </div>
+        ) : (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <TrainingTracker problems={problems} statusMap={statusMap} trainingName={trainingName} />
           </div>
         )}
       </div>

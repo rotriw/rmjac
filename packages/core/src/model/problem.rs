@@ -1,4 +1,4 @@
-use sea_orm::QuerySelect;
+use sea_orm::{Condition, QuerySelect};
 use sea_orm::QueryFilter;
 use std::collections::HashMap;
 use crate::db::entity::node::problem_statement::ContentType;
@@ -9,7 +9,7 @@ use crate::graph::edge::problem_limit::{ProblemLimitEdgeQuery, ProblemLimitEdgeR
 use crate::graph::edge::problem_statement::{ProblemStatementEdgeQuery, ProblemStatementEdgeRaw};
 use crate::graph::edge::problem_tag::{ProblemTagEdgeQuery, ProblemTagEdgeRaw};
 use crate::graph::edge::testcase::TestcaseEdgeRaw;
-use crate::graph::edge::{EdgeQuery, EdgeRaw};
+use crate::graph::edge::{problem_statement, EdgeQuery, EdgeRaw};
 use crate::graph::node::problem::limit::{
     ProblemLimitNode, ProblemLimitNodePrivateRaw, ProblemLimitNodePublicRaw, ProblemLimitNodeRaw,
 };
@@ -424,18 +424,47 @@ impl ProblemSearch {
     }
 
     pub async fn by_name(store: &mut impl ModelStore, name: String, (per_page, page): (u64, u64)) -> Result<Vec<Problem>> {
-        use db::entity::node::problem::{Column, Entity};
-        let problems = Entity::find()
-            .filter(Column::Name.contains(&name))
+        use db::entity::node::problem_statement;
+        let idens: Vec<i64> = problem_statement::Entity::find()
+            .filter(
+                problem_statement::Column::Iden.contains(&name)
+            )
             .limit(per_page)
             .offset((page - 1) * per_page)
             .all(store.get_db())
             .await?
             .iter()
             .map(|f| {
-                Problem::new(f.node_id)
+                f.node_id
             }).collect();
-        Ok(problems)
+        let mut res = vec![];
+        for s in idens {
+            if !res.contains(&s) {
+                let p = ProblemImport::by_stmt(store, s).await?;
+                res.push(p);
+            }
+        }
+        use db::entity::node::problem::{Column, Entity};
+        let problems: Vec<i64> = Entity::find()
+            .filter(
+                Column::Name.contains(&name)
+            )
+            .limit(per_page)
+            .offset((page - 1) * per_page)
+            .all(store.get_db())
+            .await?
+            .iter()
+            .map(|f| {
+                f.node_id
+            }).collect();
+        for p in problems {
+            if !res.contains(&p) {
+                res.push(p);
+            }
+        }
+        Ok(res.iter().map(|f| {
+            Problem::new(*f)
+        }).collect())
     }
 
     pub async fn combine(

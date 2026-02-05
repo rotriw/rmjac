@@ -8,7 +8,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem
 } from "@/components/ui/sidebar"
-import { LogOut, User } from "lucide-react"
+import { LogOut, Settings, User } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { getUserInfo } from "@/api/server/api_user_info"
 import Link from "next/link"
@@ -115,6 +115,12 @@ export function UserAvatar() {
               align="end"
               sideOffset={4}
             >
+              <DropdownMenuItem asChild>
+                <Link href={`/user/${user.iden}/edit`} className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  设置
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/user/${user.iden}`} className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />

@@ -1,3 +1,4 @@
+import { TitleCard } from "@/components/card/card";
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import {
   Breadcrumb,
@@ -11,6 +12,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { Title } from "@radix-ui/react-dialog";
 
 import React from "react";
 
@@ -27,28 +29,8 @@ export default function RootLayout({
       >
             {<SidebarProvider>
       <AppSidebar />
-      <SidebarInset >
-        <header className="flex h-14 shrink-0 items-center gap-2">
-          <div className="flex flex-1 items-center gap-2 px-3">
-            <SidebarTrigger />
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
-            />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="line-clamp-1">
-                    用户详情
-                  </BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-          <div className="ml-auto px-3">
-            {/* <NavActions /> */}
-          </div>
-        </header>
+      <SidebarInset className="container mx-auto py-6 px-4 md:px-6">
+        <TitleCard title="用户中心" description="查看和编辑个人信息" className="w-full" />
         {children}
       </SidebarInset>
     </SidebarProvider>}

@@ -65,6 +65,17 @@ pub mod handler {
         Ok((user, pass))
     }
 
+    #[handler]
+    #[route("/get_user_id")]
+    #[export("user_id")]
+    async fn get_user_id(
+        store: &mut impl ModelStore,
+        iden: String,
+    ) -> ResultHandler<i64> {
+        let user_id = resolve_user_id(store, iden.as_str()).await?;
+        Ok(user_id)
+    }
+
 
     #[handler]
     #[route("/info")]

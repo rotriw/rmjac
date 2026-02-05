@@ -20,7 +20,7 @@ use crate::{
     utils::encrypt::encode_password,
 };
 use redis::TypedCommands;
-use sea_orm::DatabaseConnection;
+use sea_orm::{DatabaseConnection, Set};
 use serde::{Deserialize, Serialize};
 use tap::Conv;
 use crate::service::perm::provider::{PagesPermService, ProblemPermService, SystemPermService};
@@ -160,7 +160,9 @@ impl User {
         update_data: UserUpdateProps,
     ) -> Result<UserNode> {
         let user = UserNode::from_db(db, self.node_id).await?;
-        let active = update_data.into();
+        use db::entity::node::user::ActiveModel;
+        let mut active: ActiveModel = update_data.into();
+        active.node_id = Set(self.node_id);
         user.modify_from_active_model(db, active).await?;
         Ok(user)
     }

@@ -102,6 +102,7 @@ export default async function TrainingPage({ params }: PageProps) {
     let statusMap = new Map<number, string>()
     try {
       const statusResp = trainingDataResponse.user;
+      console.log(statusResp);
       if (statusResp) {
         statusMap = new Map(Object.entries(statusResp.data).map(([k, v]) => [
           +k,

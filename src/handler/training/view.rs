@@ -98,6 +98,20 @@ pub mod handler {
 
     #[handler]
     #[perm(check_view_perm)]
+    #[route("/get_user_passed")]
+    #[export("passed")]
+    async fn get_user_passed(
+        store: &mut impl ModelStore,
+        user_id: i64,
+        node_id: i64,
+    ) -> ResultHandler<Option<TrainingListStatus>> {
+        let pid = Training::root_id(store, node_id).await?;
+        let result = Training::status(store, user_id, pid).await.ok();
+        Ok(result)
+    }
+
+    #[handler]
+    #[perm(check_view_perm)]
     #[route("/normal")]
     #[export("data")]
     async fn post_view(

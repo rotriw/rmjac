@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { cn } from "@/lib/utils"
 import { TitleCard } from "@/components/card/card"
 import { toast } from "sonner"
@@ -11,7 +11,6 @@ import { ManageRightSidebar, ManageMode } from "./rightbar"
 import PermissionsEditor from "./permissions-editor"
 import { postView as getTrainingByIden } from "@/api/client/api_training_view"
 import { postSearch as searchProblem } from "@/api/client/api_problem_search"
-import { postCreate as createProblem } from "@/api/client/api_problem_create"
 import {
   postAddProblemForList,
   postAddProblemList,
@@ -19,27 +18,131 @@ import {
   postRemoveProblem,
   postUpdateOrder,
 } from "@/api/client/api_training_manage"
-import { ProblemListItem, ProblemListQuery, ProblemStatementProp, Training, TrainingProblem, TrainingList } from "@rmjac/api-declare";
+import { ProblemListItem, ProblemListQuery, Training, TrainingProblem, TrainingList } from "@rmjac/api-declare";
 import { TreeTable, TreeTableNode } from "@/components/table/treetable"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Trash2, ArrowUp, ArrowDown, Plus, FolderPlus } from "lucide-react"
+import { Trash2, ArrowUp, ArrowDown, Plus } from "lucide-react"
+import { TypstEditor } from "@/components/editor/typst-editor"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type * as monaco from "monaco-editor"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-interface TrainingData extends Training {}
-
 interface TrainingManageToolProps {
   user_iden: string
   training_iden: string
 }
 
+type TypstProblemItem =
+  | { type: "problem"; iden: string }
+  | { type: "submodule"; title: string; children: TypstProblemItem[] }
+
+const parseTypstProblems = (source: string) => {
+  const root: TypstProblemItem[] = []
+  const warnings: string[] = []
+  const stack: Array<{ level: number; items: TypstProblemItem[] }> = [
+    { level: 0, items: root },
+  ]
+
+  const lines = source.split(/\r?\n/)
+  for (const rawLine of lines) {
+    const line = rawLine.trim()
+    if (!line) continue
+
+    const headingMatch = line.match(/^(=+)\s+(.*)$/)
+    if (headingMatch) {
+      const level = headingMatch[1].length
+      const title = headingMatch[2].trim()
+      if (!title) {
+        warnings.push("检测到空标题，已跳过")
+        continue
+      }
+
+      while (stack.length > 1 && stack[stack.length - 1].level >= level) {
+        stack.pop()
+      }
+
+      const parentLevel = stack[stack.length - 1].level
+      if (level > parentLevel + 1) {
+        warnings.push(`标题层级跳跃: ${line}`)
+      }
+
+      const submodule: TypstProblemItem = { type: "submodule", title, children: [] }
+      stack[stack.length - 1].items.push(submodule)
+      stack.push({ level, items: submodule.children })
+      continue
+    }
+
+    const bracketRegex = /\[([^\]]+)\]/g
+    let match: RegExpExecArray | null = null
+    while ((match = bracketRegex.exec(line)) !== null) {
+      const iden = match[1]?.trim()
+      if (!iden) continue
+      stack[stack.length - 1].items.push({ type: "problem", iden })
+    }
+  }
+
+  return { items: root, warnings }
+}
+
+const serializeTrainingList = (list: TrainingList, depth = 1): string => {
+  const lines: string[] = []
+
+  list.own_problem.forEach((item) => {
+    if ("ProblemIden" in item) {
+      lines.push(`[${item.ProblemIden[1]}]`)
+      return
+    }
+
+    if ("ProblemTraining" in item) {
+      const sub = item.ProblemTraining[1]
+      if (lines.length > 0 && lines[lines.length - 1] !== "") {
+        lines.push("")
+      }
+      lines.push(`${"=".repeat(depth)} ${sub.description}`)
+      const childLines = serializeTrainingList(sub, depth + 1)
+      if (childLines.trim().length > 0) {
+        lines.push(...childLines.split("\n"))
+      }
+      lines.push("")
+    }
+  })
+
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()
+}
+
+const buildTypstTreeNodes = (
+  items: TypstProblemItem[],
+  path = "root"
+): TreeTableNode[] => {
+  return items.map((item, index) => {
+    const nodeId = `${path}-${index}-${item.type}`
+    if (item.type === "problem") {
+      return {
+        id: nodeId,
+        content_title: "题目",
+        content: <span className="font-mono text-xs">{item.iden}</span>,
+      }
+    }
+
+    return {
+      id: nodeId,
+      content_title: "子模块",
+      content: <span className="font-medium">{item.title}</span>,
+      children: buildTypstTreeNodes(item.children, nodeId),
+      defaultExpanded: true,
+      background: "#f3f4f6",
+    }
+  })
+}
+
 export function TrainingManageTool({ user_iden, training_iden }: TrainingManageToolProps) {
   const [mode, setMode] = useState<ManageMode>("info")
-  const [trainingData, setTrainingData] = useState<TrainingData | null>(null)
+  const [trainingData, setTrainingData] = useState<Training | null>(null)
   const [loading, setLoading] = useState(true)
   const [formValues, setFormValues] = useState<Record<string, string>>({})
   const [activeListNodeId, setActiveListNodeId] = useState<number | null>(null)
@@ -49,33 +152,69 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
   const [rootSearching, setRootSearching] = useState(false)
   const [rootSearchError, setRootSearchError] = useState<string | null>(null)
   const [rootSelectedIndex, setRootSelectedIndex] = useState(0)
+  const [rootCursorPos, setRootCursorPos] = useState<number | null>(null)
+  const [rootSubmoduleName, setRootSubmoduleName] = useState("")
   const [listSearchKeyword, setListSearchKeyword] = useState("")
   const [listSearchResults, setListSearchResults] = useState<ProblemListItem[]>([])
   const [listSearching, setListSearching] = useState(false)
   const [listSearchError, setListSearchError] = useState<string | null>(null)
   const [listSelectedIndex, setListSelectedIndex] = useState(0)
+  const [listCursorPos, setListCursorPos] = useState<number | null>(null)
+  const [listSubmoduleName, setListSubmoduleName] = useState("")
+  const [problemEditMode, setProblemEditMode] = useState<"tree" | "typst">("tree")
+  const [typstSource, setTypstSource] = useState("")
+  const [typstDirty, setTypstDirty] = useState(false)
+  const [typstSaving, setTypstSaving] = useState(false)
+
+  const rootInputRef = useRef<HTMLInputElement>(null)
+  const listInputRef = useRef<HTMLInputElement>(null)
+  const typstCompletionDisposableRef = useRef<monaco.IDisposable | null>(null)
+
+  const loadTraining = useCallback(async () => {
+    const response = await getTrainingByIden({ user_iden, training_iden })
+    const data = response.data
+    setTrainingData(data)
+    setFormValues({
+      title: data.training_node.public.name,
+      iden: data.training_node.public.iden,
+      description_public: data.training_node.public.description,
+      description_private: data.training_node.private.description,
+    })
+    return data
+  }, [user_iden, training_iden])
 
   const fetchData = useCallback(async () => {
     try {
-      const response = await getTrainingByIden({ user_iden, training_iden });
-      const data = response.data;
-      setTrainingData(data)
-      setFormValues({
-        title: data.training_node.public.name,
-        iden: data.training_node.public.iden,
-        description_public: data.training_node.public.description,
-        description_private: data.training_node.private.description,
-      })
+      await loadTraining()
     } catch (error) {
       console.error("Failed to fetch training data:", error)
     } finally {
       setLoading(false)
     }
-  }, [user_iden, training_iden])
+  }, [loadTraining])
 
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  const typstParsed = useMemo(() => parseTypstProblems(typstSource), [typstSource])
+  const typstTreeData = useMemo(
+    () => buildTypstTreeNodes(typstParsed.items),
+    [typstParsed.items]
+  )
+
+  useEffect(() => {
+    if (!trainingData) return
+    if (typstDirty) return
+    setTypstSource(serializeTrainingList(trainingData.problem_list))
+  }, [trainingData, typstDirty])
+
+  useEffect(() => {
+    return () => {
+      typstCompletionDisposableRef.current?.dispose()
+      typstCompletionDisposableRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
     if (activeListNodeId !== null) {
@@ -83,6 +222,8 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
       setListSearchResults([])
       setListSearchError(null)
       setListSelectedIndex(0)
+      setListCursorPos(null)
+      setListSubmoduleName("")
     }
   }, [activeListNodeId])
 
@@ -123,12 +264,108 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
     }
   }, [])
 
+  const fetchProblemSuggestions = useCallback(async (keyword: string) => {
+    const trimmed = keyword.trim()
+    if (!trimmed) return [] as ProblemListItem[]
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const query: any = {
+        page: 1,
+        per_page: 10,
+        name: trimmed,
+        tag: null,
+      }
+      const response = await searchProblem({ query: query as ProblemListQuery })
+      return response.problems
+    } catch {
+      return [] as ProblemListItem[]
+    }
+  }, [])
+
+  const handleTypstEditorMount = useCallback(
+    (editor: monaco.editor.IStandaloneCodeEditor, monacoInstance: typeof monaco) => {
+      typstCompletionDisposableRef.current?.dispose()
+
+      typstCompletionDisposableRef.current = monacoInstance.languages.registerCompletionItemProvider(
+        "typst",
+        {
+          triggerCharacters: ["["],
+          provideCompletionItems: async (model, position) => {
+            const lineContent = model.getLineContent(position.lineNumber)
+            const cursorIndex = position.column - 1
+            const before = lineContent.slice(0, cursorIndex)
+            const after = lineContent.slice(cursorIndex)
+
+            const lastLeft = before.lastIndexOf("[")
+            const lastRight = before.lastIndexOf("]")
+            if (lastLeft === -1 || lastRight > lastLeft) {
+              return { suggestions: [] }
+            }
+
+            const rawKeyword = before.slice(lastLeft + 1)
+            const keyword = rawKeyword.trim()
+            if (!keyword) {
+              return { suggestions: [] }
+            }
+
+            const problems = await fetchProblemSuggestions(keyword)
+            if (problems.length === 0) return { suggestions: [] }
+
+            const hasClosing = after.trimStart().startsWith("]")
+            const insertTextSuffix = hasClosing ? "" : "]"
+            const range = new monacoInstance.Range(
+              position.lineNumber,
+              lastLeft + 2,
+              position.lineNumber,
+              position.column
+            )
+
+            const suggestions = problems.map((item) => ({
+              label: `${getProblemName(item)} (${item.iden})`,
+              kind: monacoInstance.languages.CompletionItemKind.Reference,
+              insertText: `${item.iden}${insertTextSuffix}`,
+              range,
+              detail: item.iden,
+              filterText: `${item.iden} ${getProblemName(item)}`,
+            }))
+
+            return { suggestions }
+          },
+        }
+      )
+    },
+    [fetchProblemSuggestions]
+  )
+
+  const parseInputByCursor = (value: string, cursorPos: number | null) => {
+    const safeCursor = cursorPos ?? value.length
+    const prefix = value.slice(0, safeCursor)
+    const lastCommaIndex = prefix.lastIndexOf(",")
+    const segmentStart = lastCommaIndex === -1 ? 0 : lastCommaIndex + 1
+    const segmentEnd = safeCursor
+    const rawSegment = value.slice(segmentStart, segmentEnd)
+    const currentSegment = rawSegment.trim()
+    const tokens = value
+      .slice(0, segmentStart)
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+
+    return {
+      tokens,
+      currentSegment,
+      segmentStart,
+      segmentEnd,
+    }
+  }
+
   useEffect(() => {
     if (!rootPopoverOpen) return
     setRootSelectedIndex(0)
+    const { currentSegment } = parseInputByCursor(rootSearchKeyword, rootCursorPos)
     const timer = setTimeout(() => {
       handleProblemSearch(
-        rootSearchKeyword,
+        currentSegment,
         setRootSearchResults,
         setRootSearching,
         setRootSearchError,
@@ -136,13 +373,14 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
       )
     }, 300)
     return () => clearTimeout(timer)
-  }, [rootSearchKeyword, rootPopoverOpen, handleProblemSearch])
+  }, [rootSearchKeyword, rootCursorPos, rootPopoverOpen, handleProblemSearch])
 
   useEffect(() => {
     if (activeListNodeId === null) return
+    const { currentSegment } = parseInputByCursor(listSearchKeyword, listCursorPos)
     const timer = setTimeout(() => {
       handleProblemSearch(
-        listSearchKeyword,
+        currentSegment,
         setListSearchResults,
         setListSearching,
         setListSearchError,
@@ -150,7 +388,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
       )
     }, 300)
     return () => clearTimeout(timer)
-  }, [listSearchKeyword, activeListNodeId, handleProblemSearch])
+  }, [listSearchKeyword, listCursorPos, activeListNodeId, handleProblemSearch])
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -216,6 +454,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
           return
         }
         problem_list_data = {
+          node_id: null,
           description: data.description,
           own_problem: []
         };
@@ -225,20 +464,22 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
           return
         }
         problem_list_data = {
+          node_id: null,
           description: data.description || data.iden,
           own_problem: [],
           ProblemPresetTraining: [parseInt(data.node_id), data.iden]
-        };
+        } as TrainingList;
       } else {
         if (!data.node_id || !data.iden) {
           toast.error("请输入引用 ID 和标识，格式：ID,标识")
           return
         }
         problem_list_data = {
+          node_id: null,
           description: data.description || data.iden,
           own_problem: [],
           ExistTraining: [parseInt(data.node_id), data.iden]
-        };
+        } as TrainingList;
       }
 
       const res = await postAddProblemList({
@@ -247,7 +488,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
         lid: list_node_id,
         problem_list: problem_list_data
       })
-      toast.success(`成功创建: ${res.new.description || "新项"}`)
+      toast.success(`成功创建: ${res.new.public?.description || "新项"}`)
       fetchData()
     } catch(err) {
       toast.error(`操作失败: ${err instanceof Error ? err.message : String(err)}`)
@@ -270,6 +511,241 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
     }
   }
 
+  const getTrainingProblemNodeId = (problem: TrainingProblem) => {
+    if ("ProblemIden" in problem) return Number(problem.ProblemIden[0])
+    if ("ProblemTraining" in problem) return Number(problem.ProblemTraining[1].node_id)
+    if ("ProblemPresetTraining" in problem) return Number(problem.ProblemPresetTraining[0])
+    return Number(problem.ExistTraining[0])
+  }
+
+  const getTrainingProblemIden = (problem: TrainingProblem) => {
+    if ("ProblemIden" in problem) return problem.ProblemIden[1]
+    return null
+  }
+
+  const syncTrainingListStructure = useCallback(async (
+    listNodeId: number,
+    currentList: TrainingList,
+    desiredItems: TypstProblemItem[]
+  ) => {
+    const existingProblems = currentList.own_problem
+      .filter((item) => "ProblemIden" in item)
+      .map((item) => ({
+        item,
+        nodeId: getTrainingProblemNodeId(item),
+        iden: getTrainingProblemIden(item) || "",
+        matched: false,
+      }))
+
+    const existingSubmodules = currentList.own_problem
+      .filter((item) => "ProblemTraining" in item)
+      .map((item) => ({
+        item,
+        nodeId: getTrainingProblemNodeId(item),
+        title: item.ProblemTraining[1].description,
+        list: item.ProblemTraining[1],
+        matched: false,
+      }))
+
+    const missingProblems: string[] = []
+
+    for (const desired of desiredItems) {
+      if (desired.type === "problem") {
+        const match = existingProblems.find((p) => !p.matched && p.iden === desired.iden)
+        if (match) {
+          match.matched = true
+        } else {
+          missingProblems.push(desired.iden)
+        }
+        continue
+      }
+
+      const subMatch = existingSubmodules.find(
+        (s) => !s.matched && s.title === desired.title
+      )
+      if (subMatch) {
+        subMatch.matched = true
+        await syncTrainingListStructure(subMatch.nodeId, subMatch.list, desired.children)
+      } else {
+        const res = await postAddProblemList({
+          user_iden,
+          training_iden,
+          lid: listNodeId,
+          problem_list: {
+            node_id: null,
+            description: desired.title,
+            own_problem: [],
+          },
+        })
+        const newNodeId = Number(res.new.node_id)
+        await syncTrainingListStructure(
+          newNodeId,
+          { node_id: newNodeId as unknown as bigint, description: desired.title, own_problem: [] },
+          desired.children
+        )
+      }
+    }
+
+    if (missingProblems.length > 0) {
+      await postAddProblemForList({
+        user_iden,
+        training_iden,
+        lid: listNodeId,
+        problems: missingProblems,
+      })
+    }
+
+    const removeQueue: number[] = []
+    currentList.own_problem.forEach((item) => {
+      if ("ProblemIden" in item) {
+        const iden = getTrainingProblemIden(item)
+        const matched = existingProblems.find(
+          (p) => p.nodeId === getTrainingProblemNodeId(item) && p.matched && p.iden === iden
+        )
+        if (!matched) removeQueue.push(getTrainingProblemNodeId(item))
+        return
+      }
+
+      if ("ProblemTraining" in item) {
+        const matched = existingSubmodules.find(
+          (s) => s.nodeId === getTrainingProblemNodeId(item) && s.matched
+        )
+        if (!matched) removeQueue.push(getTrainingProblemNodeId(item))
+        return
+      }
+
+      removeQueue.push(getTrainingProblemNodeId(item))
+    })
+
+    for (const edgeId of removeQueue) {
+      await postRemoveProblem({
+        user_iden,
+        training_iden,
+        lid: listNodeId,
+        edge_id: edgeId,
+      })
+    }
+  }, [training_iden, user_iden])
+
+  const syncTrainingListOrder = useCallback(async (
+    listNodeId: number,
+    currentList: TrainingList,
+    desiredItems: TypstProblemItem[]
+  ) => {
+    const problemMap = new Map<string, number[]>()
+    const submoduleMap = new Map<string, { nodeId: number; list: TrainingList }[]>()
+
+    currentList.own_problem.forEach((item) => {
+      if ("ProblemIden" in item) {
+        const iden = getTrainingProblemIden(item)
+        if (!iden) return
+        const entry = problemMap.get(iden) || []
+        entry.push(getTrainingProblemNodeId(item))
+        problemMap.set(iden, entry)
+        return
+      }
+      if ("ProblemTraining" in item) {
+        const title = item.ProblemTraining[1].description
+        const entry = submoduleMap.get(title) || []
+        entry.push({ nodeId: getTrainingProblemNodeId(item), list: item.ProblemTraining[1] })
+        submoduleMap.set(title, entry)
+      }
+    })
+
+    const desiredNodeIds: number[] = []
+    for (const desired of desiredItems) {
+      if (desired.type === "problem") {
+        const entry = problemMap.get(desired.iden)
+        const nodeId = entry?.shift()
+        if (nodeId != null) desiredNodeIds.push(nodeId)
+        continue
+      }
+
+      const entry = submoduleMap.get(desired.title)
+      const nodeEntry = entry?.shift()
+      if (nodeEntry) {
+        desiredNodeIds.push(nodeEntry.nodeId)
+        await syncTrainingListOrder(nodeEntry.nodeId, nodeEntry.list, desired.children)
+      }
+    }
+
+    const currentOrder = currentList.own_problem.map((item) => getTrainingProblemNodeId(item))
+    if (
+      desiredNodeIds.length === currentOrder.length &&
+      desiredNodeIds.every((id, idx) => id === currentOrder[idx])
+    ) {
+      return
+    }
+
+    if (desiredNodeIds.length === 0) return
+
+    const orders: [number, number][] = desiredNodeIds.map((nodeId, idx) => [nodeId, idx])
+    await postUpdateOrder({
+      user_iden,
+      training_iden,
+      lid: listNodeId,
+      orders,
+    })
+  }, [training_iden, user_iden])
+
+  const handleSaveTypst = useCallback(async () => {
+    if (!trainingData) {
+      toast.error("训练数据未加载")
+      return
+    }
+    if (typstSaving) return
+
+    setTypstSaving(true)
+    try {
+      const rootListNodeId = trainingData.problem_list.node_id
+        ? Number(trainingData.problem_list.node_id)
+        : 0
+
+      const desiredItems = typstParsed.items
+
+      if (typstParsed.warnings.length > 0) {
+        toast.info(`Typst 解析提示：${typstParsed.warnings.join("；")}`)
+      }
+
+      await syncTrainingListStructure(rootListNodeId, trainingData.problem_list, desiredItems)
+
+      const latest = await loadTraining()
+      const latestRootId = latest.problem_list.node_id
+        ? Number(latest.problem_list.node_id)
+        : rootListNodeId
+
+      await syncTrainingListOrder(latestRootId, latest.problem_list, desiredItems)
+
+      await loadTraining()
+      setTypstDirty(false)
+      toast.success("题单已同步")
+    } catch (err) {
+      toast.error(`保存失败: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setTypstSaving(false)
+    }
+  }, [
+    loadTraining,
+    syncTrainingListOrder,
+    syncTrainingListStructure,
+    trainingData,
+    typstParsed.items,
+    typstParsed.warnings,
+    typstSaving,
+  ])
+
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (problemEditMode !== "typst") return
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault()
+        handleSaveTypst()
+      }
+    }
+    window.addEventListener("keydown", handleKeydown)
+    return () => window.removeEventListener("keydown", handleKeydown)
+  }, [handleSaveTypst, problemEditMode])
+
   const handleMove = async (list_node_id: number, currentIndex: number, direction: 'up' | 'down', own_problem: TrainingProblem[]) => {
     const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
     if (newIndex < 0 || newIndex >= own_problem.length) return
@@ -279,14 +755,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
     newProblems[currentIndex] = newProblems[newIndex]
     newProblems[newIndex] = temp
 
-    const orders: [number, number][] = newProblems.map((p, idx) => {
-      let nodeId = 0
-      if (p.ProblemIden) nodeId = p.ProblemIden[0]
-      else if (p.ProblemTraining) nodeId = p.ProblemTraining.node_id
-      else if (p.ProblemPresetTraining) nodeId = p.ProblemPresetTraining[0]
-      else if (p.ExistTraining) nodeId = p.ExistTraining[0]
-      return [nodeId, idx]
-    })
+    const orders: [number, number][] = newProblems.map((p, idx) => [getTrainingProblemNodeId(p), idx])
 
     try {
       const res = await postUpdateOrder({
@@ -341,7 +810,6 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
   }
 
   const getProblemName = (item: ProblemListItem) => item.model.problem_node.public.name
-  const getProblemTags = (item: ProblemListItem) => item.model.tag.map(t => t.public.tag_name)
 
   const renderInfoMode = () => (
     <div className="space-y-6">
@@ -378,155 +846,174 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
       listNodeId: number,
       keyword: string,
       setKeyword: React.Dispatch<React.SetStateAction<string>>,
+      cursorPos: number | null,
+      setCursorPos: React.Dispatch<React.SetStateAction<number | null>>,
       selectedIndex: number,
       setSelectedIndex: React.Dispatch<React.SetStateAction<number>>,
       results: ProblemListItem[],
       searching: boolean,
       error: string | null,
-      setResults: React.Dispatch<React.SetStateAction<ProblemListItem[]>>,
-      setSearching: React.Dispatch<React.SetStateAction<boolean>>,
-      setError: React.Dispatch<React.SetStateAction<string | null>>,
+      submoduleName: string,
+      setSubmoduleName: React.Dispatch<React.SetStateAction<string>>,
+      inputRef: React.RefObject<HTMLInputElement | null>,
       autoFocus = false
     ) => {
-      const optionItems = [
-        ...results.map((item) => ({ type: "problem" as const, item })),
-        { type: "submodule" as const, label: `创建子模块：${keyword || "（未输入）"}` },
-        { type: "placeholder" as const, label: "创建占位题面并加入当前列表" }
-      ]
+      const { tokens, currentSegment, segmentStart, segmentEnd } = parseInputByCursor(keyword, cursorPos)
+      const showSuggestions = currentSegment.length > 0 && (searching || results.length > 0 || !!error)
+      const safeIndex = Math.min(selectedIndex, Math.max(results.length - 1, 0))
 
-      const safeIndex = Math.min(selectedIndex, Math.max(optionItems.length - 1, 0))
       if (safeIndex !== selectedIndex) {
         setSelectedIndex(safeIndex)
       }
 
-      const handleExecute = () => {
-        if (keyword.includes(",")) {
-          handleBatchAddProblems(listNodeId, keyword)
+      const updateCursorFromEvent = (event: React.SyntheticEvent<HTMLInputElement>) => {
+        const nextPos = event.currentTarget.selectionStart
+        setCursorPos(typeof nextPos === "number" ? nextPos : null)
+      }
+
+      const insertProblemIden = (iden: string) => {
+        const before = keyword.slice(0, segmentStart)
+        const after = keyword.slice(segmentEnd)
+        const appendComma = after.trim().length === 0
+        const nextValue = `${before}${iden}${appendComma ? ", " : ""}${after}`
+        const nextCursor = before.length + iden.length + (appendComma ? 2 : 0)
+
+        setKeyword(nextValue)
+        setCursorPos(nextCursor)
+        requestAnimationFrame(() => {
+          inputRef.current?.focus()
+          inputRef.current?.setSelectionRange(nextCursor, nextCursor)
+        })
+      }
+
+      const handleSubmitProblems = () => {
+        if (!keyword.trim()) {
+          toast.info("请输入题目标识")
           return
         }
-        const selected = optionItems[safeIndex]
-        if (!selected) return
-        if (selected.type === "submodule") {
-          handleCreateSubmodule(keyword, listNodeId)
-        } else if (selected.type === "placeholder") {
-          handleCreatePlaceholderProblem(keyword, listNodeId)
-        } else {
-          handleAddProblem(listNodeId, selected.item.iden)
-        }
+        handleAddProblem(listNodeId, keyword)
       }
 
       return (
-      <div className="space-y-3">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="搜索题目名称或 ID"
-              value={keyword}
-              autoFocus={autoFocus}
-              maxLength={64}
-              onChange={(e) => setKeyword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault()
-                  handleExecute()
-                }
-                if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-                  e.preventDefault()
-                  setSelectedIndex((prev) => {
-                    if (e.key === "ArrowUp") return Math.max(prev - 1, 0)
-                    return Math.min(prev + 1, optionItems.length - 1)
-                  })
-                }
-                if (e.key === "Tab") {
-                  e.preventDefault()
-                  setSelectedIndex((prev) => (prev + 1) % Math.max(optionItems.length, 1))
-                }
-              }}
-              className="h-8"
-            />
-            <Button size="sm" onClick={() => handleProblemSearch(keyword, setResults, setSearching, setError, { silentOnEmpty: false })} disabled={searching}>
-              {searching ? "搜索中..." : "搜索"}
-            </Button>
-          </div>
-          {error && (
-            <div className="text-xs text-red-600">{error}</div>
-          )}
-          <div className="rounded-md border">
-            {searching ? (
-              <div className="text-xs text-muted-foreground py-4 text-center">搜索中...</div>
-            ) : (
-              <div className="divide-y">
-                {optionItems.map((option, index) => {
-                  const isSelected = index === safeIndex
-                  if (option.type === "problem") {
-                    const item = option.item
-                    return (
-                      <button
-                        key={item.iden}
-                        type="button"
-                        className={cn(
-                          "flex w-full items-center gap-2 px-3 py-2 text-left",
-                          isSelected ? "bg-primary/10" : "hover:bg-muted"
-                        )}
-                        onClick={() => setSelectedIndex(index)}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium">{getProblemName(item)}</div>
-                          <div className="text-xs text-muted-foreground">ID: {item.iden}</div>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {getProblemTags(item).slice(0, 3).map((tag) => (
-                              <span key={tag} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </button>
-                    )
-                  }
-
-                  return (
-                    <button
-                      key={option.type}
-                      type="button"
-                      className={cn(
-                        "flex w-full items-center px-3 py-2 text-left text-xs",
-                        isSelected ? "bg-primary/10" : "hover:bg-muted"
-                      )}
-                      onClick={() => setSelectedIndex(index)}
-                    >
-                      {option.label}
-                    </button>
-                  )
-                })}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Input
+                  ref={inputRef}
+                  placeholder="输入题目标识，逗号分隔"
+                  value={keyword}
+                  autoFocus={autoFocus}
+                  maxLength={256}
+                  onChange={(e) => {
+                    setKeyword(e.target.value)
+                    updateCursorFromEvent(e)
+                    setSelectedIndex(0)
+                  }}
+                  onClick={updateCursorFromEvent}
+                  onKeyUp={updateCursorFromEvent}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                      e.preventDefault()
+                      setSelectedIndex((prev) => {
+                        if (e.key === "ArrowUp") return Math.max(prev - 1, 0)
+                        return Math.min(prev + 1, Math.max(results.length - 1, 0))
+                      })
+                      return
+                    }
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      if (showSuggestions && results[safeIndex]) {
+                        insertProblemIden(results[safeIndex].iden)
+                        return
+                      }
+                      handleSubmitProblems()
+                    }
+                  }}
+                  className="h-8"
+                />
+                {showSuggestions && (
+                  <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border bg-background shadow">
+                    {searching && (
+                      <div className="px-3 py-2 text-xs text-muted-foreground">搜索中...</div>
+                    )}
+                    {!searching && error && (
+                      <div className="px-3 py-2 text-xs text-red-600">{error}</div>
+                    )}
+                    {!searching && !error && results.length === 0 && (
+                      <div className="px-3 py-2 text-xs text-muted-foreground">未找到匹配题目</div>
+                    )}
+                    {!searching && results.length > 0 && (
+                      <div className="max-h-48 overflow-auto">
+                        {results.map((item, index) => (
+                          <button
+                            key={item.iden}
+                            type="button"
+                            className={cn(
+                              "flex w-full items-center justify-between px-3 py-2 text-left text-xs",
+                              index === safeIndex ? "bg-primary/10" : "hover:bg-muted"
+                            )}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => insertProblemIden(item.iden)}
+                          >
+                            <span className="truncate">{getProblemName(item)}</span>
+                            <span className="ml-2 font-mono text-[10px] text-muted-foreground">{item.iden}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <Button size="sm" onClick={handleSubmitProblems} disabled={searching}>
+                添加题目
+              </Button>
+            </div>
+            {tokens.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {tokens.map((token, index) => (
+                  <span key={`${token}-${index}`} className="rounded bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+                    {token}
+                  </span>
+                ))}
               </div>
             )}
+            {currentSegment.length > 0 && results.length === 0 && !searching && !error && (
+              <div className="text-xs text-muted-foreground">未找到题目，仍可直接添加 ID。</div>
+            )}
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              variant={safeIndex === 1 ? "secondary" : "default"}
-              onClick={handleExecute}
-            >
-              回车可提交
-            </Button>
+          <div className="rounded-md border p-3 bg-muted/20">
+            <div className="text-sm font-medium mb-2">创建为子模块</div>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder={currentSegment ? `输入子模块名称（留空使用：${currentSegment}）` : "输入子模块名称"}
+                value={submoduleName}
+                maxLength={64}
+                onChange={(e) => setSubmoduleName(e.target.value)}
+                className="h-8"
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={async () => {
+                  const nameToUse = submoduleName.trim() || currentSegment.trim()
+                  await handleCreateSubmodule(nameToUse, listNodeId)
+                  setSubmoduleName("")
+                }}
+              >
+                创建
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-    )
-  }
+      )
+    }
 
     const transformToTreeNodes = (list: TrainingList, parentListNodeId: number): TreeTableNode[] => {
       return list.own_problem.map((p: TrainingProblem, index: number) => {
-        const isSubTraining = !!p.ProblemTraining
-        let nodeId = 0
-        if (p.ProblemIden) nodeId = p.ProblemIden[0]
-        else if (p.ProblemTraining) nodeId = p.ProblemTraining.node_id
-        else if (p.ProblemPresetTraining) nodeId = p.ProblemPresetTraining[0]
-        else if (p.ExistTraining) nodeId = p.ExistTraining[0]
+        const isSubTraining = "ProblemTraining" in p
+        const nodeId = getTrainingProblemNodeId(p)
 
         const id = `node-${nodeId}-${index}`
         
@@ -534,7 +1021,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
         let content: React.ReactNode = null
         let children: TreeTableNode[] = []
 
-        if (p.ProblemIden) {
+        if ("ProblemIden" in p) {
           const problemIden = p.ProblemIden
           content_title = "题目"
           content = (
@@ -543,11 +1030,11 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
               <div className="flex items-center gap-1">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleMove(parentListNodeId, index, 'up', list.own_problem) }} disabled={index === 0}><ArrowUp className="h-4 w-4" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleMove(parentListNodeId, index, 'down', list.own_problem) }} disabled={index === list.own_problem.length - 1}><ArrowDown className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveProblem(parentListNodeId, nodeId) }}><Trash2 className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveProblem(parentListNodeId, problemIden[0]) }}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </div>
           )
-        } else if (p.ProblemTraining) {
+        } else if ("ProblemTraining" in p) {
           const subTraining = p.ProblemTraining[1]
           content_title = "子模块"
           content = (
@@ -557,7 +1044,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
                 <Button variant="ghost" size="sm" className="h-8 px-2" onClick={(e) => { e.stopPropagation(); handleUpdateDescription(nodeId) }}>编辑描述</Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleMove(parentListNodeId, index, 'up', list.own_problem) }} disabled={index === 0}><ArrowUp className="h-4 w-4" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleMove(parentListNodeId, index, 'down', list.own_problem) }} disabled={index === list.own_problem.length - 1}><ArrowDown className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveProblem(parentListNodeId, p.ProblemTraining[0]) }}><Trash2 className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleRemoveProblem(parentListNodeId, Number(p.ProblemTraining[0])) }}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </div>
           )
@@ -574,20 +1061,22 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
               nodeId,
               listSearchKeyword,
               setListSearchKeyword,
+              listCursorPos,
+              setListCursorPos,
               listSelectedIndex,
               setListSelectedIndex,
               listSearchResults,
               listSearching,
               listSearchError,
-              setListSearchResults,
-              setListSearching,
-              setListSearchError,
+              listSubmoduleName,
+              setListSubmoduleName,
+              listInputRef,
               true
             ),
             addPopoverOpen: activeListNodeId === nodeId,
             onAddPopoverOpenChange: (open) => setActiveListNodeId(open ? nodeId : null)
           }
-        } else if (p.ProblemPresetTraining) {
+        } else if ("ProblemPresetTraining" in p) {
           const preset = p.ProblemPresetTraining
           content_title = "预设"
           content = (
@@ -600,7 +1089,7 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
               </div>
             </div>
           )
-        } else if (p.ExistTraining) {
+        } else if ("ExistTraining" in p) {
           const exist = p.ExistTraining
           content_title = "引用"
           content = (
@@ -626,81 +1115,11 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
       })
     }
 
-    const rootListNodeId = trainingData.problem_list.node_id
+    const rootListNodeId = trainingData.problem_list.node_id ? Number(trainingData.problem_list.node_id) : 0
     const treeData = transformToTreeNodes(trainingData.problem_list, rootListNodeId)
 
-    const renderAddTools = (listNodeId: number, isSheet = false) => (
-      <div className={cn("space-y-3", !isSheet && "mt-4 p-4 border rounded-lg bg-muted/30")}> 
-        <div className={cn("grid gap-3", !isSheet ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}> 
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium flex items-center gap-2"><Plus className="h-4 w-4" /> 快速添加题目</p>
-            <div className="flex gap-2">
-              <Input
-                id={`add-p-${listNodeId}`}
-                placeholder="P1000, P1001"
-                className="h-8"
-              />
-              <Button
-                size="sm"
-                onClick={() => {
-                  const input = document.getElementById(`add-p-${listNodeId}`) as HTMLInputElement
-                  if (input.value.trim()) {
-                    handleAddProblem(listNodeId, input.value)
-                    input.value = ""
-                    if (isSheet) setActiveListNodeId(null)
-                  }
-                }}
-              >
-                添加
-              </Button>
-            </div>
-          </div>
-          
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium flex items-center gap-2"><FolderPlus className="h-4 w-4" /> 创建子模块 / 引用</p>
-            <div className="flex gap-2">
-              <Input
-                id={`add-l-${listNodeId}`}
-                placeholder="名称 或 ID,标识"
-                className="h-8"
-              />
-              <select
-                id={`type-l-${listNodeId}`}
-                title="类型"
-                className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm"
-              >
-                <option value="ProblemTraining">子模块</option>
-                <option value="ProblemPresetTraining">预设</option>
-                <option value="ExistTraining">引用</option>
-              </select>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  const input = document.getElementById(`add-l-${listNodeId}`) as HTMLInputElement
-                  const type = (document.getElementById(`type-l-${listNodeId}`) as HTMLSelectElement).value as "ProblemTraining" | "ProblemPresetTraining" | "ExistTraining"
-                  if (input.value.trim()) {
-                    if (type === "ProblemTraining") {
-                      handleAddTrainingProblem(listNodeId, type, { description: input.value })
-                    } else {
-                      const [node_id, iden] = input.value.split(",").map(s => s.trim())
-                      handleAddTrainingProblem(listNodeId, type, { node_id, iden, description: iden })
-                    }
-                    input.value = ""
-                    if (isSheet) setActiveListNodeId(null)
-                  }
-                }}
-              >
-                执行
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-
-    const handleCreateSubmodule = async (keyword: string, listNodeId: number) => {
-      const trimmed = keyword.trim()
+    const handleCreateSubmodule = async (name: string, listNodeId: number) => {
+      const trimmed = name.trim()
       if (!trimmed) {
         toast.error("请输入关键词作为子模块名称")
         return
@@ -708,93 +1127,124 @@ export function TrainingManageTool({ user_iden, training_iden }: TrainingManageT
       await handleAddTrainingProblem(listNodeId, "ProblemTraining", { description: trimmed })
     }
 
-    const handleCreatePlaceholderProblem = async (keyword: string, listNodeId: number) => {
-      const trimmed = keyword.trim()
-      if (!trimmed) {
-        toast.error("请输入关键词作为题面名称")
-        return
-      }
-      const problemIden = trimmed.replace(/\s+/g, "_")
-      const problemStatements: ProblemStatementProp[] = [
-        {
-          statement_source: "",
-          iden: problemIden,
-          problem_statements: [
-            { iden: "description", content: "请在此处填写题目描述" }
-          ],
-          time_limit: 1000,
-          memory_limit: 256,
-          sample_group: [],
-          show_order: ["description"],
-          page_source: null,
-          page_rendered: null,
-          problem_difficulty: null,
-          judge_option: null,
-        }
-      ]
-      try {
-        await createProblem({
-          problem_iden: problemIden,
-          problem_name: trimmed,
-          problem_statement: problemStatements,
-          tags: [],
-        })
-        await handleAddProblem(listNodeId, problemIden)
-      } catch (error) {
-        toast.error(`创建占位题面失败: ${error instanceof Error ? error.message : String(error)}`)
-      }
-    }
-
-    const handleBatchAddProblems = async (listNodeId: number, keyword: string) => {
-      const parts = keyword.split(",").map((part) => part.trim()).filter(Boolean)
-      if (parts.length === 0) {
-        toast.error("请输入题目标识")
-        return
-      }
-      await handleAddProblem(listNodeId, parts.join(","))
-    }
-
     return (
       <div className="space-y-6">
-        <StandardCard title="题目列表管理">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              当前根列表: <span className="font-mono">{trainingData.problem_list.description}</span> (ID: {trainingData.problem_list.node_id})
+        <StandardCard title="编辑方式">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Tabs
+              value={problemEditMode}
+              onValueChange={(value) => setProblemEditMode(value as "tree" | "typst")}
+            >
+              <TabsList>
+                <TabsTrigger value="tree">树形管理</TabsTrigger>
+                <TabsTrigger value="typst">Typst 编辑</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <div className="text-xs text-muted-foreground">
+              Typst 模式支持标题生成子模块与 [题目id]
             </div>
-            <Popover open={rootPopoverOpen} onOpenChange={setRootPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-2" /> 管理根列表
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-90 p-3">
-                <div className="text-sm font-medium mb-2">根列表管理</div>
-                {renderManagePanel(
-                  rootListNodeId,
-                  rootSearchKeyword,
-                  setRootSearchKeyword,
-                  rootSelectedIndex,
-                  setRootSelectedIndex,
-                  rootSearchResults,
-                  rootSearching,
-                  rootSearchError,
-                  setRootSearchResults,
-                  setRootSearching,
-                  setRootSearchError,
-                  true
-                )}
-              </PopoverContent>
-            </Popover>
           </div>
-          <TreeTable
-            data={treeData}
-            enableReorder={true}
-            onReorder={(parentId, newOrder) => {
-              const listNodeId = parentId ? parseInt(parentId.toString().split('-')[1]) : rootListNodeId
-              handleReorder(listNodeId, newOrder)
-            }}
-          />
         </StandardCard>
+
+        {problemEditMode === "tree" ? (
+          <StandardCard title="题目列表管理">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                当前根列表: <span className="font-mono">{trainingData.problem_list.description}</span> (ID: {trainingData.problem_list.node_id})
+              </div>
+              <Popover open={rootPopoverOpen} onOpenChange={setRootPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Plus className="h-4 w-4 mr-2" /> 管理根列表
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-90 p-3">
+                  <div className="text-sm font-medium mb-2">根列表管理</div>
+                  {renderManagePanel(
+                    rootListNodeId,
+                    rootSearchKeyword,
+                    setRootSearchKeyword,
+                    rootCursorPos,
+                    setRootCursorPos,
+                    rootSelectedIndex,
+                    setRootSelectedIndex,
+                    rootSearchResults,
+                    rootSearching,
+                    rootSearchError,
+                    rootSubmoduleName,
+                    setRootSubmoduleName,
+                    rootInputRef,
+                    true
+                  )}
+                </PopoverContent>
+              </Popover>
+            </div>
+            <TreeTable
+              data={treeData}
+              enableReorder={true}
+              onReorder={(parentId, newOrder) => {
+                const listNodeId = parentId ? parseInt(parentId.toString().split('-')[1]) : rootListNodeId
+                handleReorder(listNodeId, newOrder)
+              }}
+            />
+          </StandardCard>
+        ) : (
+          <StandardCard title="Typst 题单编辑">
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                使用 “=” 标题创建子模块，使用 [题目id] 添加题目。支持 Ctrl/⌘ + S 保存。
+              </div>
+
+              {typstParsed.warnings.length > 0 && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  {typstParsed.warnings.join("；")}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">编辑器</div>
+                  <TypstEditor
+                    value={typstSource}
+                    onChange={(value) => {
+                      setTypstSource(value)
+                      setTypstDirty(true)
+                    }}
+                    height="520px"
+                    onMount={handleTypstEditorMount}
+                    onRender={() => {}}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">树形预览</div>
+                  <div className="border rounded-md p-3 bg-white min-h-130 overflow-auto">
+                    {typstTreeData.length === 0 ? (
+                      <div className="text-xs text-muted-foreground">暂无解析结果</div>
+                    ) : (
+                      <TreeTable data={typstTreeData} />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Button onClick={handleSaveTypst} disabled={typstSaving}>
+                  {typstSaving ? "保存中..." : "保存 (Ctrl/⌘ + S)"}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setTypstSource(serializeTrainingList(trainingData.problem_list))
+                    setTypstDirty(false)
+                  }}
+                >
+                  从当前题单重置
+                </Button>
+                {typstDirty && <span className="text-xs text-muted-foreground">未保存</span>}
+              </div>
+            </div>
+          </StandardCard>
+        )}
 
       </div>
     )
