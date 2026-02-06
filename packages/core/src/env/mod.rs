@@ -3,6 +3,7 @@ use crate::service::iden::ac_automaton::AcMachine;
 use lazy_static::lazy_static;
 use sea_orm::DatabaseConnection;
 use socketioxide::extract::SocketRef;
+use serde_json::Value;
 use std::sync::Arc;
 use std::{collections::HashMap, sync::Mutex};
 
@@ -35,6 +36,12 @@ lazy_static! {
     pub static ref EDGE_SOCKETS: Mutex<HashMap<String, SocketRef>> = Mutex::new(HashMap::new());
     pub static ref EDGE_VEC: Mutex<Vec<String>> = Mutex::new(vec![]);
     pub static ref EDGE_NUM: Mutex<i32> = Mutex::new(0);
+    pub static ref EDGE_SERVICE_REGISTRY: Mutex<HashMap<String, Vec<String>>> =
+        Mutex::new(HashMap::new());
+    pub static ref EDGE_SERVICE_INDEX: Mutex<HashMap<String, Vec<String>>> =
+        Mutex::new(HashMap::new());
+    pub static ref EDGE_PLATFORM_INFO: Mutex<HashMap<String, Value>> =
+        Mutex::new(HashMap::new());
     pub static ref SLICE_WORD_LIST: Mutex<Vec<String>> = Mutex::new(vec![]);
     pub static ref SLICE_WORD_ACMAC: Mutex<AcMachine> = Mutex::new(AcMachine::build(
         SLICE_WORD_LIST

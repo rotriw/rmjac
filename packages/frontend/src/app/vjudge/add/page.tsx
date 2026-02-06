@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { postBind } from "@/api/server/api_vjudge_bind" // Changed import
+import { getServices, AvailableService, PlatformInfo, PlatformMethodInfo } from "@/api/server/api_vjudge_services"
 import { BindAccountReq } from "@rmjac/api-declare" // New import for type
 import {
   Loader2,
@@ -42,157 +43,16 @@ interface AllowMethod {
   description: string;
   stable: number;
   require_fields: RequireField[];
-  calc_func: (fields: Record<string, string>) => string;
   tips?: string[];
   is_pwd?: boolean;
+  payload_template: string;
 }
 
 interface Platform {
+  name: string;
   url: string;
   color: string;
   allow_method: AllowMethod[];
-}
-
-const PlatformData: Record<string, Platform> = {
-  "Codeforces": {
-    "url": "codeforces.com",
-    "color": oklch2hex([0.86, 0.06, 259]), // TLE Blue style
-    "allow_method": [{
-      "name": "APIKEY",
-      "description": "使用 Codeforces API Key 进行绑定（推荐）",
-      "stable": 0,
-      "tips": ["https://codeforces.com/settings/api"],
-      "require_fields": [{
-        "id": "handle",
-        "name": "用户名",
-        "type": "text",
-        "placeholder": "your_handle"
-      }, {
-        "id": "api_key",
-        "name": "API Key",
-        "type": "text",
-        "placeholder": "your_api_key"
-      }, {
-        "id": "api_secret",
-        "name": "API Secret",
-        "type": "password",
-        "placeholder": "your_api_secret"
-      }],
-      "calc_func": (fields: Record<string, string>) => {
-        return JSON.stringify({
-          method: "apikey",
-          handle: fields["handle"],
-          auth: {
-            "Token": `${fields["api_key"]}:${fields["api_secret"]}`
-          }
-        })
-      }
-    }, {
-      "name": "Cookie",
-      "description": "使用 Cookie 进行绑定（推荐）",
-      "stable": 1,
-      "tips": ["请通过绑定教程，填入您的SESSIONID即可。"],
-      "require_fields": [{
-        "id": "handle",
-        "name": "用户名",
-        "type": "text",
-        "placeholder": "your_handle"
-      }, {
-        "id": "cookie",
-        "name": "Cookie",
-        "type": "text",
-        "placeholder": "your_cookie（SESSIONID）"
-      }],
-      "calc_func": (fields: Record<string, string>) => {
-        return JSON.stringify({
-          method: "token",
-          handle: fields["handle"],
-          auth: {
-            "Token": fields["cookie"]
-          }
-        })
-      }
-    }, {
-      "name": "Password",
-      "description": "使用用户名和密码进行绑定",
-      is_pwd: true,
-      "stable": 2,
-      "require_fields": [{
-        "id": "handle",
-        "name": "用户名",
-        "type": "text",
-        "placeholder": "your_handle"
-      }, {
-        "id": "password",
-        "name": "密码",
-        "type": "password",
-        "placeholder": "your_password"
-      }],
-      "calc_func": (fields: Record<string, string>) => {
-        return JSON.stringify({
-          method: "password",
-          handle: fields["handle"],
-          auth: {
-            "Password": fields["password"]
-          }
-        })
-      }
-    }],
-  },
-  "AtCoder": {
-    "url": "atcoder.jp",
-    "color": oklch2hex([0.86, 0.06, 100]), // Accepted Green style
-    "allow_method": [{
-      "name": "Cookie",
-      "description": "使用 Cookie 进行绑定",
-      "stable": 1,
-      "require_fields": [{
-        "id": "handle",
-        "name": "用户名",
-        "type": "text",
-        "placeholder": "your_handle"
-      }, {
-        "id": "cookie",
-        "name": "Cookie",
-        "type": "text",
-        "placeholder": "your_cookie"
-      }],
-      "calc_func": (fields: Record<string, string>) => {
-        return JSON.stringify({
-          method: "token",
-          handle: fields["handle"],
-          auth: { "Token": fields["cookie"] }
-        })
-      }
-    }]
-  },
-  "POJ": {
-    "url": "poj.org",
-    "color": oklch2hex([0.86, 0.06, 46]), // Compile Error Yellow style
-    "allow_method": [{
-      "name": "Password",
-      "description": "使用用户名和密码进行绑定",
-      "stable": 2,
-      "require_fields": [{
-        "id": "handle",
-        "name": "用户名",
-        "type": "text",
-        "placeholder": "your_handle"
-      }, {
-        "id": "password",
-        "name": "密码",
-        "type": "password",
-        "placeholder": "your_password"
-      }],
-      "calc_func": (fields: Record<string, string>) => {
-        return JSON.stringify({
-          method: "password",
-          handle: fields["handle"],
-          auth: { "Password": fields["password"] }
-        })
-      }
-    }]
-  }
 }
 
 function ShowStableStatus(stable: number) {
@@ -210,6 +70,20 @@ function ShowStableStatus(stable: number) {
   }
 }
 
+function resolveRemoteMethod(method: AllowMethod) {
+  const name = method.name.toLowerCase()
+  if (name === "cookie") return "token"
+  return name
+}
+
+function buildPayloadFromTemplate(template: string, fields: Record<string, string>) {
+  const escaped = template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+    const value = fields[key] ?? ""
+    return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"")
+  })
+  return JSON.parse(escaped)
+}
+
 export default function AddVJudgeAccountPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
@@ -220,6 +94,34 @@ export default function AddVJudgeAccountPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const [availableServices, setAvailableServices] = useState<AvailableService[]>([])
+  const [platforms, setPlatforms] = useState<Platform[]>([])
+  const [servicesLoaded, setServicesLoaded] = useState(false)
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const res = await getServices()
+        if (res?.data) {
+          setAvailableServices(res.data.services || [])
+          const platformData = (res.data.platforms || []) as PlatformInfo[]
+          const normalized = platformData.map((platform) => ({
+            name: platform.name,
+            url: platform.url,
+            color: platform.color || oklch2hex([0.86, 0.06, 259]),
+            allow_method: platform.allow_method as PlatformMethodInfo[],
+          }))
+          setPlatforms(normalized)
+        }
+      } catch (err) {
+        console.warn("Failed to fetch vjudge services", err)
+      } finally {
+        setServicesLoaded(true)
+      }
+    }
+
+    fetchServices()
+  }, [])
 
   const handleBind = async () => {
     if (!selectedPlatform || !selectedMethod) return
@@ -227,8 +129,7 @@ export default function AddVJudgeAccountPage() {
     setLoading(true)
     setError("")
     try {
-      const authPayload = selectedMethod.calc_func(fieldValues)
-      const payload = JSON.parse(authPayload)
+      const payload = buildPayloadFromTemplate(selectedMethod.payload_template, fieldValues)
 
       const bindAccountReq: BindAccountReq = {
         platform: selectedPlatform,
@@ -257,16 +158,51 @@ export default function AddVJudgeAccountPage() {
     }
   }
 
-  const treeData: TreeTableNode[] = Object.entries(PlatformData).map(([name, platform]) => ({
-    id: name,
-    content_title: name,
+  const availableSet = useMemo(() => {
+    if (!servicesLoaded || availableServices.length === 0) return null
+    return new Set(
+      availableServices.map((service) =>
+        `${service.platform.toLowerCase()}:${service.operation}:${(service.method || "").toLowerCase()}`
+      )
+    )
+  }, [availableServices, servicesLoaded])
+
+  const availablePlatforms = useMemo(() => {
+    if (!servicesLoaded || availableServices.length === 0) return null
+    return new Set(availableServices.map((service) => service.platform.toLowerCase()))
+  }, [availableServices, servicesLoaded])
+
+  useEffect(() => {
+    if (!availablePlatforms) return
+    if (selectedPlatform && !availablePlatforms.has(selectedPlatform.toLowerCase())) {
+      setSelectedPlatform(null)
+      setSelectedMethod(null)
+      setFieldValues({})
+      setStep(1)
+    }
+  }, [availablePlatforms, selectedPlatform])
+
+  const treeData: TreeTableNode[] = platforms
+    .filter((platform) => {
+      if (!availablePlatforms) return true
+      return availablePlatforms.has(platform.name.toLowerCase())
+    })
+    .map((platform) => ({
+    id: platform.name,
+    content_title: platform.name,
     content: <div className="text-xs font-bold">{platform.url}</div>,
     background: platform.color,
     defaultExpanded: true,
-    children: platform.allow_method.map((method) => {
-      const isSelected = selectedPlatform === name && selectedMethod?.name === method.name;
+    children: platform.allow_method
+      .filter((method) => {
+        if (!availableSet) return true
+        const methodKey = `${platform.name.toLowerCase()}:verify:${resolveRemoteMethod(method)}`
+        return availableSet.has(methodKey)
+      })
+      .map((method) => {
+      const isSelected = selectedPlatform === platform.name && selectedMethod?.name === method.name;
       return {
-        id: `${name}-${method.name}`,
+        id: `${platform.name}-${method.name}`,
         content_title: method.name,
         background: isSelected ? RECORD_STATUS_COLOR_MAP_INTER["Accepted"] : undefined,
         content: (
@@ -276,7 +212,7 @@ export default function AddVJudgeAccountPage() {
               isSelected ? "font-bold text-primary" : ""
             )}
             onClick={() => {
-              setSelectedPlatform(name)
+              setSelectedPlatform(platform.name)
               setSelectedMethod(method)
             }}
           >

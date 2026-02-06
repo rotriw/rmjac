@@ -46,3 +46,7 @@ export const password = async (task: any) => {
         status: s.result,
     }));
 }
+
+export const token = async (task: any) => password(task);
+
+export const only = async (task: any) => password(task);

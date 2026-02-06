@@ -5,6 +5,7 @@ pub mod assign_task;
 pub mod bind;
 pub mod list_by_ids;
 pub mod my_accounts;
+pub mod services;
 pub mod task;
 pub mod update;
 
@@ -17,4 +18,5 @@ pub fn service() -> Scope {
         .service(update::handler::export_http_service())
         .service(task::handler::export_http_service())
         .service(assign_task::handler::export_http_service())
+        .service(services::handler::export_http_service())
 }

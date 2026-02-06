@@ -47,3 +47,7 @@ export const password = async (task: any) => {
     const session = await loginWithPassword(handle, pwd);
     return session;
 }
+
+export const token = async (task: any) => password(task);
+
+export const only = async (task: any) => password(task);

@@ -14,6 +14,7 @@ use socketioxide::SocketIo;
 use socketioxide::extract::{Data, SocketRef};
 use std::fmt::Debug;
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use macro_socket_auth::auth_socket_connect;
 
 fn trust_auth(socket: &SocketRef) {
     log::info!("Socket {} authenticated successfully", socket.id);
@@ -28,6 +29,44 @@ fn trust_auth(socket: &SocketRef) {
         .entry(socket.id.to_string())
         .or_insert(socket.clone());
     env::EDGE_VEC.lock().unwrap().push(socket.id.to_string());
+}
+
+fn service_key(platform: &str, operation: &str, method: &str) -> String {
+    format!("{}:{}:{}", platform.to_lowercase(), operation, method.to_lowercase())
+}
+
+fn extract_service_key<T: ?Sized + Serialize>(task: &T) -> Option<String> {
+    let value = serde_json::to_value(task).ok()?;
+    let value = match value {
+        Value::String(text) => serde_json::from_str::<Value>(&text).ok()?,
+        other => other,
+    };
+    let obj = value.as_object()?;
+    let platform = obj.get("platform")?.as_str()?;
+    let operation = obj.get("operation")?.as_str()?;
+    let method = obj
+        .get("method")
+        .and_then(|value| value.as_str())
+        .unwrap_or("");
+    Some(service_key(platform, operation, method))
+}
+
+fn deregister_socket_services(socket_id: &str) {
+    let services = env::EDGE_SERVICE_REGISTRY
+        .lock()
+        .unwrap()
+        .remove(socket_id);
+    if let Some(services) = services {
+        let mut index = env::EDGE_SERVICE_INDEX.lock().unwrap();
+        for key in services {
+            if let Some(sockets) = index.get_mut(&key) {
+                sockets.retain(|id| id != socket_id);
+                if sockets.is_empty() {
+                    index.remove(&key);
+                }
+            }
+        }
+    }
 }
 
 async fn auth(socket: SocketRef, Data(key): Data<String>) {
@@ -84,23 +123,113 @@ fn erase_socket(id: &str) {
     env::EDGE_SOCKETS.lock().unwrap().remove(&id.to_string());
     log::trace!("Erase socket {id} from map.");
     env::EDGE_VEC.lock().unwrap().retain(|n_id| id != n_id);
+    deregister_socket_services(id);
     log::debug!("Socket {} erased.", id);
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
+pub struct EdgeServiceRegisterItem {
+    pub platform: String,
+    pub operation: String,
+    pub method: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
+pub struct EdgePlatformFieldInfo {
+    pub id: String,
+    pub name: String,
+    pub r#type: String,
+    pub placeholder: String,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
+pub struct EdgePlatformMethodInfo {
+    pub name: String,
+    pub description: String,
+    pub stable: i32,
+    pub require_fields: Vec<EdgePlatformFieldInfo>,
+    pub tips: Option<Vec<String>>,
+    pub is_pwd: Option<bool>,
+    pub payload_template: String,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
+pub struct EdgePlatformInfo {
+    pub name: String,
+    pub url: String,
+    pub color: String,
+    pub allow_method: Vec<EdgePlatformMethodInfo>,
+}
+
+#[auth_socket_connect]
+async fn handle_register_services(socket: SocketRef, Data(items): Data<Vec<EdgeServiceRegisterItem>>) {
+    let mut keys = vec![];
+    for item in items {
+        let method = item.method.unwrap_or_default();
+        keys.push(service_key(&item.platform, &item.operation, &method));
+    }
+
+    let socket_id = socket.id.to_string();
+    deregister_socket_services(&socket_id);
+
+    if !keys.is_empty() {
+        env::EDGE_SERVICE_REGISTRY
+            .lock()
+            .unwrap()
+            .insert(socket_id.clone(), keys.clone());
+        let mut index = env::EDGE_SERVICE_INDEX.lock().unwrap();
+        for key in keys {
+            let entry = index.entry(key).or_insert_with(Vec::new);
+            if !entry.contains(&socket_id) {
+                entry.push(socket_id.clone());
+            }
+        }
+    }
+    log::debug!("Registered services for socket {}", socket_id);
+}
+
+#[auth_socket_connect]
+async fn handle_register_platforms(socket: SocketRef, Data(items): Data<Vec<EdgePlatformInfo>>) {
+    let mut registry = env::EDGE_PLATFORM_INFO.lock().unwrap();
+    for item in items {
+        let key = item.name.to_lowercase();
+        if let Ok(value) = serde_json::to_value(item) {
+            registry.insert(key, value);
+        }
+    }
+    log::debug!("Registered platform metadata for socket {}", socket.id);
+}
+
 pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
-    let now_id = *env::EDGE_NUM.lock().unwrap();
-    if env::EDGE_SOCKETS.lock().unwrap().is_empty() {
-        log::error!("No edge sockets available to add task.");
+    let service_key = extract_service_key(task);
+    let candidate_ids = if let Some(key) = &service_key {
+        env::EDGE_SERVICE_INDEX
+            .lock()
+            .unwrap()
+            .get(key)
+            .cloned()
+            .unwrap_or_default()
+    } else {
+        env::EDGE_VEC.lock().unwrap().clone()
+    };
+
+    if candidate_ids.is_empty() {
+        if let Some(key) = &service_key {
+            log::error!("No edge sockets registered for service: {}", key);
+        } else {
+            log::error!("No edge sockets available to add task.");
+        }
         return false;
     }
-    let use_id = (now_id + 1) % (env::EDGE_SOCKETS.lock().unwrap().clone().len() as i32);
+
+    let now_id = *env::EDGE_NUM.lock().unwrap();
+    let use_id = (now_id + 1) % (candidate_ids.len() as i32);
     *env::EDGE_NUM.lock().unwrap() = use_id;
-    let use_id = env::EDGE_VEC
-        .lock()
-        .unwrap()
-        .get(use_id as usize)
-        .unwrap()
-        .clone();
+    let use_id = candidate_ids.get(use_id as usize).unwrap().clone();
     log::trace!("Adding task to socket: {}", use_id);
     let mut require_erase = false;
     if let Some(socket) = env::EDGE_SOCKETS.lock().unwrap().get(&use_id).cloned() {
@@ -128,6 +257,8 @@ pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
 async fn on_connect(socket: SocketRef, Data(_data): Data<Value>) {
     log::debug!("Socket io connected: {:?} {:?}", socket.ns(), socket.id);
     socket.on("auth", auth);
+    socket.on("register_services", handle_register_services);
+    socket.on("register_platforms", handle_register_platforms);
     socket.on("fetch_done_success", handle_problem_create);
     socket.on("sync_done_success", handle_update_vjudge_submission);
     socket.on("submit_done", handle_submit_done);
