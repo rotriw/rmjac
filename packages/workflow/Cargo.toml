@@ -1,0 +1,15 @@
+[package]
+name = "workflow"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-trait = "0.1.89"
+priority-queue = "2.7.0"
+queue = "0.3.1"
+serde = { version = "1.0.228", features = ["derive"] }
+
+[dev-dependencies]
+futures = "0.3"
+
+[lib]
