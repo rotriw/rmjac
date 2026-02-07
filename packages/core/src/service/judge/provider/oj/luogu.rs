@@ -1,9 +1,9 @@
-use crate::service::judge_option::service::{JudgeService, Language};
-use crate::service::judge_option::service::CompileOptionService;
+use crate::service::judge::service::{JudgeService, Language};
+use crate::service::judge::service::CompileOptionService;
 use std::collections::HashMap;
 use macro_node_iden::option_service;
-use crate::service::judge_option::provider::oj::codeforces::CodeforcesJudgeService;
-use crate::service::judge_option::service::{ChoiceOption, CompileOption, CompileOptionValue};
+use crate::service::judge::provider::oj::codeforces::CodeforcesJudgeService;
+use crate::service::judge::service::{ChoiceOption, CompileOption, CompileOptionValue};
 
 #[derive(PartialOrd, PartialEq)]
 pub struct PID;
