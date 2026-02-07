@@ -2,6 +2,7 @@
 pub enum Tool {
     Codeforces(CodeforcesJudgeService),
     Atcoder(AtcoderJudgeService),
+    Luogu(LuoguJudgeService)
 }
 
 type DJudgeService = dyn JudgeService;
@@ -28,6 +29,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::any::Any;
 use std::collections::HashMap;
+use crate::service::judge::provider::oj::luogu::LuoguJudgeService;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubmitContext {
