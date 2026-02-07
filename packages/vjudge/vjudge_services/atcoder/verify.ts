@@ -4,7 +4,7 @@ import { loginWithPassword } from "./syncOne.ts";
 
 async function checkTokenLogin(token: string | undefined): Promise<boolean> {
     if (!token) return false;
-    const browser = await getOnePage();
+    const browser = await getOnePage(`at-${token}`);
     const page = await browser.newPage();
     await browser.setCookie({
         name: "REVEL_SESSION",

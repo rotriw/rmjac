@@ -66,7 +66,7 @@ export const submit = async (task: {
         await problem_select.select(problem_id);
     }
     page.evaluate((language) => {
-        //@ts-ignore 这个他妈的查不到，肯定有啊所以一定要选。
+        //@ts-ignore 幽默ts
         document.querySelector(`option[value='${language}']`).selected = true;
     }, language);
 
