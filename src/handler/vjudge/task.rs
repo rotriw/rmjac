@@ -5,6 +5,7 @@ use rmjac_core::error::CoreError;
 use rmjac_core::model::ModelStore;
 use rmjac_core::graph::node::Node;
 use rmjac_core::model::vjudge::{VjudgeAccount, VjudgeTask};
+use rmjac_core::model::vjudge::task::VjudgeTaskListResult;
 
 #[generate_handler(route = "/tasks", real_path = "/api/vjudge/tasks")]
 pub mod handler {
@@ -46,6 +47,35 @@ pub mod handler {
             .owned_by(store.get_db(), uc.user_id)
             .await
             .unwrap_or(false)
+    }
+
+    /// 批量查询当前用户所有 VJudge 任务（工单列表）
+    #[handler]
+    #[perm(check_login)]
+    #[route("/list")]
+    #[export("data")]
+    async fn get_task_list(
+        store: &mut impl ModelStore,
+        user_context: Option<UserAuthCotext>,
+        status: Option<String>,
+        page: Option<u64>,
+        limit: Option<u64>,
+    ) -> ResultHandler<VjudgeTaskListResult> {
+        let uc = user_context.unwrap();
+        let page = page.unwrap_or(1);
+        let limit = limit.unwrap_or(20).min(100); // 最大 100 条
+        let status_filter = status.as_deref();
+
+        let result = VjudgeTask::list_by_user(
+            store.get_db(),
+            uc.user_id,
+            status_filter,
+            page,
+            limit,
+        )
+        .await?;
+
+        Ok(result)
     }
 
     #[handler]

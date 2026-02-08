@@ -1,236 +1,395 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
-import { StandardCard, TitleCard } from "@/components/card/card"
-import { ViewVjudgeMessage } from "./viewmessage"
-import { AddTaskCard } from "./add-task"
-import { VjudgeTaskNode } from "@rmjac/api-declare"
-import { getTasks } from "@/api/server/api_vjudge_tasks"
+import { useState, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
+import { getTaskList } from "@/api/server/api_vjudge_tasks"
 import { getMyAccounts } from "@/api/server/api_vjudge_my_accounts"
-import { Loader2, AlertCircle, CalendarClock, Clock, CheckCircle2, XCircle } from "lucide-react"
+import { VjudgeNode, VjudgeTaskWithAccount } from "@rmjac/api-declare"
+import {
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Circle,
+  ArrowUpCircle,
+  RefreshCw,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { formatRelativeTime } from "@/components/vjudge/workflow-timeline"
 
-/**
- * 状态映射配置
- */
-const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
-  "completed": { 
-    label: "已完成", 
-    color: "text-green-600", 
-    bgColor: "bg-green-500/10 border-green-500/20",
-    icon: <CheckCircle2 className="size-4" />
+// ==================== 状态配置 ====================
+
+type TicketStatus = "open" | "closed"
+
+interface TicketStatusConfig {
+  label: string
+  ticketStatus: TicketStatus
+  color: string
+  icon: React.ElementType
+}
+
+const TICKET_STATUS_MAP: Record<string, TicketStatusConfig> = {
+  pending: {
+    label: "已创建",
+    ticketStatus: "open",
+    color: "text-green-600",
+    icon: Circle,
   },
-  "failed": { 
-    label: "失败", 
-    color: "text-red-600", 
-    bgColor: "bg-red-500/10 border-red-500/20",
-    icon: <XCircle className="size-4" />
+  dispatching: {
+    label: "调度中",
+    ticketStatus: "open",
+    color: "text-blue-600",
+    icon: ArrowUpCircle,
   },
-  "cron_online": { 
-    label: "定时运行中", 
-    color: "text-emerald-600", 
-    bgColor: "bg-emerald-500/10 border-emerald-500/20",
-    icon: <CalendarClock className="size-4" />
+  running: {
+    label: "运行中",
+    ticketStatus: "open",
+    color: "text-yellow-600",
+    icon: Loader2,
   },
-  "waiting": { 
-    label: "等待中", 
-    color: "text-yellow-600", 
-    bgColor: "bg-yellow-500/10 border-yellow-500/20",
-    icon: <Clock className="size-4" />
+  waiting: {
+    label: "等待中",
+    ticketStatus: "open",
+    color: "text-yellow-600",
+    icon: Circle,
   },
-  "running": { 
-    label: "运行中", 
-    color: "text-blue-600", 
-    bgColor: "bg-blue-500/10 border-blue-500/20",
-    icon: <Loader2 className="size-4 animate-spin" />
+  completed: {
+    label: "完成",
+    ticketStatus: "closed",
+    color: "text-purple-600",
+    icon: CheckCircle2,
+  },
+  failed: {
+    label: "失败",
+    ticketStatus: "closed",
+    color: "text-red-600",
+    icon: XCircle,
+  },
+  cron_online: {
+    label: "定时运行中",
+    ticketStatus: "open",
+    color: "text-emerald-600",
+    icon: RefreshCw,
+  },
+  cron_error: {
+    label: "定时任务出错",
+    ticketStatus: "closed",
+    color: "text-red-600",
+    icon: AlertCircle,
   },
 }
 
-/**
- * 获取状态配置，带默认值
- */
-function getStatusConfig(status: string) {
-  return statusConfig[status] || {
-    label: status,
-    color: "text-gray-600",
-    bgColor: "bg-gray-500/10 border-gray-500/20",
-    icon: <Clock className="size-4" />
-  }
+function getTicketConfig(status: string): TicketStatusConfig {
+  return (
+    TICKET_STATUS_MAP[status] ?? {
+      label: status,
+      ticketStatus: "open" as TicketStatus,
+      color: "text-gray-500",
+      icon: Circle,
+    }
+  )
 }
+
+// ==================== 工单卡片 ====================
+
+function TicketCard({
+  ticket,
+  onClick,
+}: {
+  ticket: VjudgeTaskWithAccount
+  onClick: () => void
+}) {
+  const config = getTicketConfig(ticket.task.public.status)
+  const StatusIcon = config.icon
+  const isCron = ticket.task.public.status.startsWith("cron_")
+  const serviceName = ticket.task.public.service_name || "(legacy)"
+
+  // 从 service_name 解析出可读标题
+  const displayTitle =
+    serviceName !== "(legacy)"
+      ? serviceName.split(":").slice(0, 2).join(":")
+      : `${ticket.platform}:sync`
+
+  return (
+    <div
+      onClick={onClick}
+      className="flex items-start gap-3 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors group"
+    >
+      {/* 状态图标 */}
+      <div className="mt-0.5 shrink-0">
+        <StatusIcon
+          className={cn(
+            "h-5 w-5",
+            config.color,
+            config.icon === Loader2 && "animate-spin"
+          )}
+        />
+      </div>
+
+      {/* 主内容 */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm group-hover:text-primary transition-colors truncate">
+            {displayTitle}
+          </span>
+          <span className="text-xs text-muted-foreground font-mono">
+            #{ticket.task.node_id.toString()}
+          </span>
+          {isCron && (
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 border-emerald-200 text-emerald-600"
+            >
+              Cron
+            </Badge>
+          )}
+        </div>
+        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+          <span>@{ticket.handle}</span>
+          <span>·</span>
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+            {ticket.platform}
+          </Badge>
+          <span>·</span>
+          <span>{formatRelativeTime(ticket.task.public.created_at)}</span>
+        </div>
+      </div>
+
+      {/* 右侧状态 */}
+      <Badge
+        variant="outline"
+        className={cn("shrink-0 text-[10px] px-1.5 py-0.5", config.color)}
+      >
+        {config.label}
+      </Badge>
+    </div>
+  )
+}
+
+// ==================== 分页器 ====================
+
+function Pagination({
+  page,
+  totalPages,
+  onPageChange,
+}: {
+  page: number
+  totalPages: number
+  onPageChange: (p: number) => void
+}) {
+  if (totalPages <= 1) return null
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-4">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={page <= 1}
+        onClick={() => onPageChange(page - 1)}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <span className="text-sm text-muted-foreground">
+        {page} / {totalPages}
+      </span>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={page >= totalPages}
+        onClick={() => onPageChange(page + 1)}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
+
+// ==================== 主组件 ====================
+
+const PAGE_SIZE = 20
 
 export function VjudgePageContent() {
-  const searchParams = useSearchParams()
-  const taskId = searchParams?.get("id")
-  const [loading, setLoading] = useState(false)
-  const [task, setTask] = useState<VjudgeTaskNode | null>(null)
+  const router = useRouter()
+  const [filter, setFilter] = useState<"all" | "open" | "closed">("all")
+  const [accountFilter, setAccountFilter] = useState<string>("all")
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [tickets, setTickets] = useState<VjudgeTaskWithAccount[]>([])
+  const [total, setTotal] = useState(0)
+  const [accounts, setAccounts] = useState<VjudgeNode[]>([])
+
+  // 加载账号列表
+  useEffect(() => {
+    getMyAccounts()
+      .then((res) => setAccounts(res.data))
+      .catch(() => {})
+  }, [])
+
+  // 加载任务列表
+  const fetchTickets = useCallback(async () => {
+    setLoading(true)
+    setError("")
+    try {
+      const statusParam = filter === "all" ? undefined : filter
+      const result = await getTaskList({
+        status: statusParam as "open" | "closed" | undefined,
+        page,
+        limit: PAGE_SIZE,
+      })
+      const listResult = result.data
+      let data = listResult.data
+      // 前端额外过滤：按账号
+      if (accountFilter !== "all") {
+        data = data.filter(
+          (t) => t.account_node_id.toString() === accountFilter
+        )
+      }
+      setTickets(data)
+      setTotal(Number(listResult.total))
+    } catch (err) {
+      console.error(err)
+      setError("加载任务列表失败")
+    } finally {
+      setLoading(false)
+    }
+  }, [filter, page, accountFilter])
 
   useEffect(() => {
-    const fetchTaskDetail = async () => {
-      if (!taskId) {
-        setTask(null)
-        return
-      }
+    fetchTickets()
+  }, [fetchTickets])
 
-      setLoading(true)
-      setError("")
-      try {
-        const accountId = searchParams?.get("account_id");
-        let foundTask = null;
+  // 切换筛选时重置分页
+  useEffect(() => {
+    setPage(1)
+  }, [filter, accountFilter])
 
-        if (accountId) {
-          const tasksResponse = await getTasks({ node_id: accountId });
-          const tasks = tasksResponse.data;
-          // 使用字符串比较以避免 BigInt/Number 类型不匹配问题
-          foundTask = tasks.find(t => t.node_id.toString() === taskId) || null;
-        }
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
-        if (!foundTask) {
-          const accountsResponse = await getMyAccounts();
-          const accounts = accountsResponse.data;
-          for (const acc of accounts) {
-            // 使用字符串比较
-            if (acc.node_id.toString() === accountId) continue;
-            const tasksResponse = await getTasks({ node_id: acc.node_id.toString() });
-            const tasks = tasksResponse.data;
-            const t = tasks.find(t => t.node_id.toString() === taskId);
-            if (t) {
-              foundTask = t;
-              break;
-            }
-          }
-        }
-
-        if (foundTask) {
-          setTask(foundTask)
-        } else {
-          setError("找不到该任务详情")
-        }
-      } catch (err) {
-        console.error(err)
-        setError("获取任务详情失败")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchTaskDetail()
-  }, [taskId, searchParams])
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 className="size-8 animate-spin text-primary mb-4" />
-        <p className="text-sm text-muted-foreground">正在加载任务详情...</p>
+  return (
+    <div className="animate-in fade-in duration-300 space-y-4">
+      {/* 标题 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">工单列表</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            管理你的 VJudge 同步和提交任务
+          </p>
+        </div>
+        <Button size="sm" onClick={() => router.push("/vjudge/task?new=1")}>
+          <Plus className="h-4 w-4 mr-1" />
+          创建工单
+        </Button>
       </div>
-    )
-  }
 
-  if (error) {
-    return (
-      <div className="py-6">
+      {/* 工具栏 */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Tabs
+          value={filter}
+          onValueChange={(v) => setFilter(v as "all" | "open" | "closed")}
+        >
+          <TabsList>
+            <TabsTrigger value="all">
+              全部
+              <Badge
+                variant="secondary"
+                className="ml-1.5 text-[10px] px-1.5 py-0"
+              >
+                {total}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="open">
+              <Circle className="h-3 w-3 mr-1 text-green-600" />
+              Open
+            </TabsTrigger>
+            <TabsTrigger value="closed">
+              <CheckCircle2 className="h-3 w-3 mr-1 text-purple-600" />
+              Closed
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <Select value={accountFilter} onValueChange={setAccountFilter}>
+          <SelectTrigger className="w-[180px] h-8 text-xs">
+            <SelectValue placeholder="全部账号" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部账号</SelectItem>
+            {accounts.map((acc) => (
+              <SelectItem
+                key={acc.node_id.toString()}
+                value={acc.node_id.toString()}
+              >
+                {acc.public.platform} · @{acc.public.iden}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* 错误提示 */}
+      {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>错误</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-      </div>
-    )
-  }
+      )}
 
-  const isCronTask = task?.public.status === "cron_online"
-  const statusCfg = task ? getStatusConfig(task.public.status) : null
-
-  return (
-    <div className="animate-in fade-in duration-300">
-      {taskId && task ? (
-        <div className="space-y-4">
-          {/* 标题卡片 */}
-          <TitleCard 
-            title={isCronTask ? "定时任务详情" : "任务详情"} 
-            description={`TASKID: ${taskId}`} 
-          />
-          
-          {/* 任务消息展示 */}
-          <ViewVjudgeMessage initialLog={task.public.log} initialStatus={task.public.status} />
-          
-          {/* 任务元数据卡片 */}
-          <StandardCard title="任务元数据">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-              {/* 创建时间 */}
-              <div className="p-3 rounded-lg bg-muted/30 border">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <Clock className="size-3" />
-                  创建时间
-                </div>
-                <span className="font-semibold">
-                  {new Date(task.public.created_at).toLocaleString()}
-                </span>
-              </div>
-              
-              {/* 最后更新 */}
-              <div className="p-3 rounded-lg bg-muted/30 border">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <Clock className="size-3" />
-                  最后更新
-                </div>
-                <span className="font-semibold">
-                  {new Date(task.public.updated_at).toLocaleString()}
-                </span>
-              </div>
-              
-              {/* 当前状态 */}
-              <div className="p-3 rounded-lg bg-muted/30 border">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  任务状态
-                </div>
-                {statusCfg && (
-                  <Badge 
-                    variant="outline" 
-                    className={cn("mt-1", statusCfg.bgColor, statusCfg.color)}
-                  >
-                    {statusCfg.icon}
-                    <span className="ml-1">{statusCfg.label}</span>
-                  </Badge>
-                )}
-              </div>
-              
-              {/* 任务 ID */}
-              <div className="p-3 rounded-lg bg-muted/30 border">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  任务 ID
-                </div>
-                <code className="font-mono font-semibold bg-background px-2 py-0.5 rounded text-[11px]">
-                  {task.node_id.toString()}
-                </code>
-              </div>
-            </div>
-            
-            {/* Cron 任务额外信息 */}
-            {isCronTask && (
-              <div className="mt-4 p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-                <div className="flex items-center gap-2 text-emerald-600 mb-2">
-                  <CalendarClock className="size-4" />
-                  <span className="font-medium text-sm">定时任务信息</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  此任务为定时执行任务，系统会根据配置的 Cron 表达式周期性执行。
-                  执行历史和详细配置请查看上方的执行历史卡片。
-                </p>
-              </div>
-            )}
-          </StandardCard>
+      {/* 列表 */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+          <p className="text-sm text-muted-foreground">加载中...</p>
+        </div>
+      ) : tickets.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <Circle className="h-12 w-12 mb-4 opacity-30" />
+          <p className="text-sm">暂无工单</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-4"
+            onClick={() => router.push("/vjudge/task?new=1")}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            创建第一个工单
+          </Button>
         </div>
       ) : (
-        <div className="">
-          <TitleCard title={`Vjudge 任务`} description={`新增任务`} />
-          <div className="h-5" />
-          <AddTaskCard />
+        <div className="space-y-2">
+          {tickets.map((ticket) => (
+            <TicketCard
+              key={ticket.task.node_id.toString()}
+              ticket={ticket}
+              onClick={() =>
+                router.push(`/vjudge/task/${ticket.task.node_id}`)
+              }
+            />
+          ))}
         </div>
       )}
+
+      {/* 分页 */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+      />
     </div>
   )
 }

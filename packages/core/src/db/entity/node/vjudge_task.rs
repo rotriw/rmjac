@@ -11,6 +11,12 @@ pub struct Model {
     pub status: String,
     #[sea_orm(column_type = "Text")]
     pub log: String,
+    /// 执行的服务名 (platform:operation:method)
+    #[sea_orm(default_value = "")]
+    pub service_name: String,
+    /// 最终工作流状态 JSON 快照（持久化，避免服务重启后丢失）
+    #[sea_orm(column_type = "Text", nullable)]
+    pub workflow_snapshot: Option<String>,
     pub created_at: DateTime,
     pub updated_at: DateTime,
 }

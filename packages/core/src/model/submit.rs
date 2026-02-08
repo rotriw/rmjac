@@ -7,7 +7,7 @@ use crate::graph::node::user::remote_account::VjudgeNode;
 use crate::model::ModelStore;
 use crate::model::record::{Record, RecordFactory, RecordNewProp};
 use crate::service::judge::service::{CompileOptionValue, LanguageChoiceInformation, SubmitContext, get_tool, StringOption};
-use crate::service::socket::service::add_task;
+use crate::workflow::vjudge::VjudgeWorkflow;
 use std::collections::HashMap;
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
 use crate::graph::edge::misc::{MiscEdgeQuery, MiscEdgeRaw};
@@ -101,20 +101,37 @@ impl SubmissionService {
         .await?;
         let mut context = context;
         context.record_id = record_node.node_id;
+        let method = context.method.clone();
 
         let option = judge_service.get_option(language, judge_option);
         let task = judge_service.convert_to_json(option, vjudge_node, context);
+        let input: serde_json::Value = serde_json::from_str(&task).unwrap_or_else(|_| {
+            serde_json::json!({
+                "operation": "submit",
+                "platform": statement_node.public.source.clone(),
+                "method": method,
+                "payload": task,
+            })
+        });
 
-        let mut is_send = false;
-        for _ in 0..3 {
-            let result = add_task(&task).await;
-            if result {
-                is_send = true;
-                break;
-            }
-        }
-        if !is_send {
-            log::debug!("Send Submit Task Failed: {:?}", task);
+        let platform = statement_node.public.source.to_lowercase();
+        let service_name = format!("{}:submit:{}", platform, method);
+        let task_id = format!("vjudge-submit-{}", record_node.node_id);
+
+        let workflow = VjudgeWorkflow::global().await;
+        let response = workflow
+            .dispatch_task(
+                &task_id,
+                &service_name,
+                &platform,
+                "submit",
+                &method,
+                input,
+                None,
+            )
+            .await;
+        if !response.success {
+            log::debug!("Send Submit Task Failed: {:?}", response.error);
         }
 
         Ok(record_node)

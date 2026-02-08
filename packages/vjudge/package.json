@@ -7,7 +7,9 @@
     "fetch:cf:submissions": "deno run --allow-net --allow-read --allow-write --allow-env script/fetch_codeforces_submissions.ts your_handle $CODEFORCES_API_KEY $CODEFORCES_API_SECRET",
     "fetch:ac:problems": "deno run --allow-net --allow-read --allow-write script/fetch_atcoder_problems.ts",
     "fetch:ac:submissions": "deno run --allow-net --allow-read --allow-write --allow-env script/fetch_atcoder_submissions.ts",
-    "start": "deno --unstable-detect-cjs --allow-ffi --allow-env --allow-read --allow-net --allow-write --sloppy-imports --allow-sys --allow-run "
+    "start": "deno --unstable-detect-cjs --allow-ffi --allow-env --allow-read --allow-net --allow-write --sloppy-imports --allow-sys --allow-run src/index.ts",
+    "start:legacy": "deno --unstable-detect-cjs --allow-ffi --allow-env --allow-read --allow-net --allow-write --sloppy-imports --allow-sys --allow-run index.ts",
+    "start:workflow": "deno --unstable-detect-cjs --allow-ffi --allow-env --allow-read --allow-net --allow-write --sloppy-imports --allow-sys --allow-run src/index.ts"
   },
   "keywords": [],
   "author": "",

@@ -13,74 +13,56 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
-import { 
-  UserPlus, 
-  User, 
-  CheckCircle2, 
+import {
+  UserPlus,
+  User,
+  CheckCircle2,
   XCircle,
   LayoutDashboard,
   History,
   PlusCircle,
   Clock,
-  Filter
+  Workflow,
+  Zap,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { getMyAccounts } from "@/api/server/api_vjudge_my_accounts"
-import { getTasks } from "@/api/server/api_vjudge_tasks"
-import { VjudgeNode, VjudgeTaskNode } from "@rmjac/api-declare"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { getTaskList } from "@/api/server/api_vjudge_tasks"
+import { getWorkflowServices, type WorkflowServiceInfo } from "@/api/server/api_vjudge_workflow"
+import { VjudgeNode, VjudgeTaskWithAccount } from "@rmjac/api-declare"
 import { Button } from "@/components/ui/button"
 import { RightSidebar } from "@/components/layout/right-sidebar"
+import { cn } from "@/lib/utils"
+import { formatRelativeTime } from "@/components/vjudge/workflow-timeline"
 
 export function VJudgeRightSidebar() {
   const [accounts, setAccounts] = useState<VjudgeNode[]>([])
-  const [tasks, setTasks] = useState<VjudgeTaskNode[]>([])
+  const [recentTickets, setRecentTickets] = useState<VjudgeTaskWithAccount[]>([])
   const [loading, setLoading] = useState(true)
+  const [workflowServices, setWorkflowServices] = useState<WorkflowServiceInfo[]>([])
   const pathname = usePathname()
 
-  const fetchAccounts = useCallback(async () => {
+  const fetchData = useCallback(async () => {
+    setLoading(true)
     try {
-      const response = await getMyAccounts()
-      setAccounts(response.data)
-    } catch (error) {
-      console.error("Failed to fetch accounts:", error)
+      const [accountsResp, ticketsResp, servicesResp] = await Promise.all([
+        getMyAccounts().catch(() => ({ data: [] })),
+        getTaskList({ page: 1, limit: 3 }).catch(() => ({ data: { data: [], total: BigInt(0) } })),
+        getWorkflowServices().catch(() => ({ data: [] })),
+      ])
+      setAccounts(accountsResp.data || [])
+      setRecentTickets(ticketsResp.data?.data || [])
+      setWorkflowServices((servicesResp as any).data || [])
+    } catch (err) {
+      console.error("Sidebar data fetch error:", err)
+    } finally {
+      setLoading(false)
     }
   }, [])
 
-  const fetchTasks = useCallback(async () => {
-    console.log(accounts);
-    if (accounts.length > 0) {
-      try {
-        const allTasks: VjudgeTaskNode[] = []
-        for (const acc of accounts) {
-          const accTasksResponse = await getTasks({ node_id: acc.node_id.toString() })
-          allTasks.push(...accTasksResponse.data)
-        }
-        setTasks(allTasks.sort((a, b) => new Date(b.public.created_at).getTime() - new Date(a.public.created_at).getTime()))
-      } catch (error) {
-        console.error("Failed to fetch tasks:", error)
-      }
-    }
-    setLoading(false)
-  }, [accounts])
-
   useEffect(() => {
-    fetchAccounts()
-  }, [fetchAccounts])
-
-  useEffect(() => {
-    if (accounts.length > 0) {
-      fetchTasks()
-    } else if (!loading) {
-      setLoading(false)
-    }
-  }, [accounts, fetchTasks])
-
-  const getHandle = (account: VjudgeNode) => {
-    return account.public.iden;
-  }
+    fetchData()
+  }, [fetchData])
 
   return (
     <RightSidebar defaultWidth={300} minWidth={250} maxWidth={500}>
@@ -97,14 +79,26 @@ export function VJudgeRightSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton 
-                asChild 
+              <SidebarMenuButton
+                asChild
                 isActive={pathname === "/vjudge/add"}
                 className="text-primary hover:text-primary"
               >
                 <Link href="/vjudge/add">
                   <UserPlus className="size-4" />
                   <span className="font-semibold">添加新账号</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/vjudge/task"}
+                className="text-primary hover:text-primary"
+              >
+                <Link href="/vjudge/task?new=1">
+                  <PlusCircle className="size-4" />
+                  <span className="font-semibold">创建工单</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -126,21 +120,26 @@ export function VJudgeRightSidebar() {
               </div>
             ) : (
               accounts.map((account) => {
-                const handle = getHandle(account)
+                const handle = account.public.iden
                 const isActive = pathname === `/vjudge/manage/${account.node_id}`
-                
+
                 return (
                   <SidebarMenuItem key={account.node_id}>
-                    <SidebarMenuButton 
-                      asChild 
+                    <SidebarMenuButton
+                      asChild
                       isActive={isActive}
                       className="h-auto py-2"
                     >
-                      <Link href={`/vjudge/manage/${account.node_id}`} className="flex flex-col items-start gap-1">
+                      <Link
+                        href={`/vjudge/manage/${account.node_id}`}
+                        className="flex flex-col items-start gap-1"
+                      >
                         <div className="flex items-center justify-between w-full">
                           <div className="flex items-center gap-2">
                             <User className="size-3 text-muted-foreground" />
-                            <span className="font-medium text-sm truncate max-w-[120px]">{handle}</span>
+                            <span className="font-medium text-sm truncate max-w-[120px]">
+                              {handle}
+                            </span>
                           </div>
                           {account.public.verified ? (
                             <CheckCircle2 className="size-3 text-green-500" />
@@ -149,7 +148,10 @@ export function VJudgeRightSidebar() {
                           )}
                         </div>
                         <div className="flex items-center justify-between w-full">
-                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1 py-0 h-4"
+                          >
                             {account.public.platform}
                           </Badge>
                           <span className="text-[10px] text-muted-foreground">
@@ -168,88 +170,130 @@ export function VJudgeRightSidebar() {
 
       <SidebarSeparator />
 
+      {/* 最近工单预览 */}
       <SidebarGroup>
         <div className="flex items-center justify-between px-2 mb-2">
-          <SidebarGroupLabel className="p-0">同步任务</SidebarGroupLabel>
-          <div className="flex items-center gap-1">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-6">
-                  <Filter className="size-3 text-muted-foreground" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-60 p-3" align="end">
-                <div className="space-y-3">
-                  <h4 className="font-medium text-xs">筛选任务</h4>
-                  <div className="space-y-2">
-                    <Label className="text-[10px]">提交类型</Label>
-                    <Input placeholder="例如: recent, all" className="h-7 text-xs" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px]">时间范围</Label>
-                    <Input type="date" className="h-7 text-xs" />
-                  </div>
-                  <Button size="sm" className="w-full h-7 text-xs">应用筛选</Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-            <Button asChild variant="ghost" size="icon" className="size-6 text-primary">
-              <Link href="/vjudge/task">
-                <PlusCircle className="size-3" />
-              </Link>
-            </Button>
-          </div>
+          <SidebarGroupLabel className="p-0">最近工单</SidebarGroupLabel>
+          <Button asChild variant="ghost" size="icon" className="size-6 text-primary">
+            <Link href="/vjudge/task">
+              <History className="size-3" />
+            </Link>
+          </Button>
         </div>
         <SidebarGroupContent>
           <SidebarMenu>
-            {loading && tasks.length === 0 ? (
-              <div className="px-4 py-2 text-xs text-muted-foreground">加载中...</div>
-            ) : tasks.length === 0 ? (
+            {loading && recentTickets.length === 0 ? (
+              <div className="px-4 py-2 text-xs text-muted-foreground">
+                加载中...
+              </div>
+            ) : recentTickets.length === 0 ? (
               <div className="px-4 py-6 text-center text-xs text-muted-foreground">
-                暂无同步任务
+                暂无工单
               </div>
             ) : (
-              tasks.slice(0, 10).map((task) => (
-                <SidebarMenuItem key={task.node_id}>
-                  <SidebarMenuButton 
-                    asChild 
-                    className="h-auto py-2"
-                  >
-                    <Link href={`/vjudge/task?id=${task.node_id}`} className="flex flex-col items-start gap-1">
+              recentTickets.map((ticket) => (
+                <SidebarMenuItem key={ticket.task.node_id}>
+                  <SidebarMenuButton asChild className="h-auto py-2">
+                    <Link
+                      href={`/vjudge/task/${ticket.task.node_id}`}
+                      className="flex flex-col items-start gap-1"
+                    >
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center gap-2">
                           <History className="size-3 text-muted-foreground" />
-                          <span className="font-medium text-xs">任务 #{task.node_id}</span>
+                          <span className="font-medium text-xs">
+                            #{ticket.task.node_id.toString()}
+                          </span>
                         </div>
-                        <Badge 
-                          variant={task.public.status === "success" ? "default" : task.public.status === "running" ? "secondary" : "destructive"}
+                        <Badge
+                          variant={
+                            ticket.task.public.status === "completed"
+                              ? "default"
+                              : ticket.task.public.status === "failed"
+                                ? "destructive"
+                                : "secondary"
+                          }
                           className="text-[8px] px-1 py-0 h-3"
                         >
-                          {task.public.status}
+                          {ticket.task.public.status}
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between w-full text-[10px] text-muted-foreground">
+                        <span>@{ticket.handle}</span>
                         <div className="flex items-center gap-1">
                           <Clock className="size-2" />
-                          <span>{new Date(task.public.created_at).toLocaleDateString()}</span>
+                          <span>{formatRelativeTime(ticket.task.public.created_at)}</span>
                         </div>
-                        <span className="truncate max-w-[80px]">{task.public.log?.split('\n')[0] || "无日志"}</span>
                       </div>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))
             )}
-            {tasks.length > 10 && (
-              <SidebarMenuItem>
-                <SidebarMenuButton className="justify-center text-[10px] text-muted-foreground">
-                  查看更多任务
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild className="justify-center text-[10px] text-muted-foreground">
+                <Link href="/vjudge/task">查看全部工单</Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
+
+      {/* 工作流服务状态 */}
+      {workflowServices.length > 0 && (
+        <>
+          <SidebarSeparator />
+          <SidebarGroup>
+            <SidebarGroupLabel>
+              <div className="flex items-center gap-1.5">
+                <Workflow className="size-3" />
+                边缘服务
+              </div>
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <div className="px-2 space-y-1.5">
+                {workflowServices.map((svc) => {
+                  const isOnline = svc.available_sockets > 0
+                  return (
+                    <div
+                      key={svc.name}
+                      className={cn(
+                        "flex items-center justify-between px-2 py-1.5 rounded-md text-[10px] border",
+                        isOnline
+                          ? "bg-green-500/5 border-green-500/20"
+                          : "bg-muted/30 border-transparent"
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <div
+                          className={cn(
+                            "size-1.5 rounded-full",
+                            isOnline ? "bg-green-500" : "bg-gray-400"
+                          )}
+                        />
+                        <span className="font-mono truncate max-w-[140px]">
+                          {svc.platform}:{svc.operation}
+                          {svc.method ? `:${svc.method}` : ""}
+                        </span>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[8px] px-1 py-0 h-3",
+                          isOnline ? "text-green-600" : "text-gray-400"
+                        )}
+                      >
+                        <Zap className="size-2 mr-0.5" />
+                        {svc.available_sockets}
+                      </Badge>
+                    </div>
+                  )
+                })}
+              </div>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </>
+      )}
     </RightSidebar>
   )
 }

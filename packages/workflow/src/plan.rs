@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use log::log;
 use crate::workflow::Service;
 
 
@@ -27,9 +28,11 @@ pub async fn plan_method(services: Vec<Box<dyn Service>>, input: Box<dyn crate::
     }
     for service in map_service.values() {
         query_map.push(service);
+        log::debug!("Service available for planning: {}", service.get_info().name);
     }
     for service in action.values() {
         query_map.push(service);
+        log::debug!("Service available for planning: {}", service.get_info().name);
     }
     if let Some(target_idx) = action_number.get(target) {
         if dis[*target_idx] < MAX_PATH {
@@ -45,7 +48,9 @@ pub async fn plan_method(services: Vec<Box<dyn Service>>, input: Box<dyn crate::
         }
         if last == target {
             let mut res = Vec::new();
+            log::debug!("Plan going to {target}:");
             for name in path {
+                log::debug!("-> {}", &name);
                 if let Some(service) = action.remove(&name) {
                     res.push(service);
                 } else {
@@ -77,5 +82,6 @@ pub async fn plan_method(services: Vec<Box<dyn Service>>, input: Box<dyn crate::
             }
         }
     }
+    log::debug!("No plan found for target: {}", target);
     None
 }

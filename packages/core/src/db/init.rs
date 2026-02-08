@@ -227,6 +227,8 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             NodeId: big_integer not_null primary_key,
             Status: text not_null,
             Log: text not_null,
+            ServiceName: text not_null,
+            WorkflowSnapshot: text null,
             CreatedAt: date_time not_null,
             UpdatedAt: date_time not_null,
         }),

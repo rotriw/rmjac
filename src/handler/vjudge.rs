@@ -8,6 +8,7 @@ pub mod my_accounts;
 pub mod services;
 pub mod task;
 pub mod update;
+pub mod workflow;
 
 pub fn service() -> Scope {
     web::scope("/api/vjudge")
@@ -19,4 +20,5 @@ pub fn service() -> Scope {
         .service(task::handler::export_http_service())
         .service(assign_task::handler::export_http_service())
         .service(services::handler::export_http_service())
+        .service(workflow::handler::export_http_service())
 }

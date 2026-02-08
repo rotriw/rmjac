@@ -1,9 +1,10 @@
 "use client"
 import { RECORD_STATUS_COLOR_MAP } from "@/api-components/record/status-utils";
 import { socket } from "@/lib/socket";
-import { useEffect, useReducer, useState, useRef, useMemo } from "react";
+import { useWorkflowStatus, type WorkflowStatusUpdate } from "@/hooks/use-workflow-status";
+import { useEffect, useReducer, useState, useRef, useMemo, useCallback } from "react";
 import { StandardCard } from "@/components/card/card";
-import { Loader2, Clock, CheckCircle2, XCircle, CalendarClock, Info, Terminal, History } from "lucide-react";
+import { Loader2, Clock, CheckCircle2, XCircle, CalendarClock, Info, Terminal, History, Workflow, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,21 @@ const reflect: Record<string, string> = {
   "completed": "任务已完成",
   "failed": "任务失败",
   "cron_online": "定时任务运行中",
+  "pending": "任务已创建，等待调度...",
+  "dispatching": "正在调度到边缘服务...",
+}
+
+/** 工作流状态类型到展示信息的映射 */
+const workflowStatusTypeMap: Record<string, { label: string; color: string; icon: string }> = {
+  "Initial": { label: "初始化", color: "text-gray-500", icon: "⏳" },
+  "Dispatching": { label: "调度中", color: "text-blue-500", icon: "🔄" },
+  "AccountVerified": { label: "账号已验证", color: "text-green-500", icon: "✅" },
+  "ProblemFetched": { label: "题目已获取", color: "text-cyan-500", icon: "📥" },
+  "ProblemSynced": { label: "题目已同步", color: "text-indigo-500", icon: "🔗" },
+  "SubmissionCreated": { label: "提交已创建", color: "text-purple-500", icon: "📝" },
+  "SubmissionJudged": { label: "评测已完成", color: "text-emerald-500", icon: "⚖️" },
+  "Completed": { label: "已完成", color: "text-green-600", icon: "🎉" },
+  "Error": { label: "错误", color: "text-red-500", icon: "❌" },
 }
 
 interface CronInfo {
@@ -165,9 +181,11 @@ const taskTypeMap: Record<string, { label: string; color: string }> = {
 interface ViewVjudgeMessageProps {
   initialLog?: string;
   initialStatus?: string;
+  /** 工作流任务 ID，用于监听实时工作流状态更新 */
+  workflowTaskId?: string | null;
 }
 
-export const ViewVjudgeMessage = ({ initialLog, initialStatus }: ViewVjudgeMessageProps) => {
+export const ViewVjudgeMessage = ({ initialLog, initialStatus, workflowTaskId }: ViewVjudgeMessageProps) => {
   const logEndRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<string>(initialStatus || "waiting");
   const [currMessage, setCurrMessage] = useState<string>("");
@@ -194,10 +212,42 @@ export const ViewVjudgeMessage = ({ initialLog, initialStatus }: ViewVjudgeMessa
   const cronInfo = useMemo(() => parseCronLog(message), [message]);
   const isCronTask = initialStatus === "cron_online" || cronInfo !== null;
 
+  // 工作流状态追踪
+  const [workflowUpdates, setWorkflowUpdates] = useState<WorkflowStatusUpdate[]>([]);
+
   function add_step(msg: string) {
     setCurrentNumber(1);
     setMessage(msg);
   }
+
+  // 监听工作流状态更新
+  const handleWorkflowUpdate = useCallback((update: WorkflowStatusUpdate) => {
+    setWorkflowUpdates(prev => [...prev, update]);
+    const statusInfo = workflowStatusTypeMap[update.status_type];
+    const label = statusInfo?.label || update.status_type;
+    add_step(`[WORKFLOW] ${statusInfo?.icon || "📌"} ${label} (${update.timestamp})`);
+    setCurrMessage(label);
+
+    if (update.is_final) {
+      if (update.success) {
+        setStatus("completed");
+        setBackground(RECORD_STATUS_COLOR_MAP["Accepted"]);
+      } else {
+        setStatus("failed");
+        setBackground(RECORD_STATUS_COLOR_MAP["Wrong Answer"]);
+        if (update.error) {
+          add_step(`[ERROR] ${update.error}`);
+        }
+      }
+    } else {
+      setBackground(RECORD_STATUS_COLOR_MAP["Waiting"]);
+    }
+  }, []);
+
+  const { latestStatus: workflowLatest } = useWorkflowStatus({
+    taskId: workflowTaskId,
+    onUpdate: handleWorkflowUpdate,
+  });
 
   useEffect(() => {
     if (initialStatus === "completed") {
@@ -206,6 +256,12 @@ export const ViewVjudgeMessage = ({ initialLog, initialStatus }: ViewVjudgeMessa
     } else if (initialStatus === "cron_online") {
       setStatus("cron_online");
       setBackground(RECORD_STATUS_COLOR_MAP["Accepted"]);
+    } else if (initialStatus === "pending" || initialStatus === "dispatching") {
+      setStatus(initialStatus);
+      setBackground(RECORD_STATUS_COLOR_MAP["Waiting"]);
+    } else if (initialStatus === "failed") {
+      setStatus("failed");
+      setBackground(RECORD_STATUS_COLOR_MAP["Wrong Answer"]);
     }
   }, [initialStatus]);
 
@@ -459,6 +515,66 @@ export const ViewVjudgeMessage = ({ initialLog, initialStatus }: ViewVjudgeMessa
           )}
         </div>
       </div>
+
+      {/* 工作流状态时间线 */}
+      {workflowUpdates.length > 0 && (
+        <StandardCard title="工作流状态">
+          <div className="relative space-y-0">
+            {workflowUpdates.map((update, idx) => {
+              const statusInfo = workflowStatusTypeMap[update.status_type];
+              const isLast = idx === workflowUpdates.length - 1;
+              const isFinalSuccess = update.is_final && update.success;
+              const isFinalError = update.is_final && !update.success;
+
+              return (
+                <div key={idx} className="flex items-start gap-3 relative">
+                  {/* 时间线竖线 */}
+                  {!isLast && (
+                    <div className="absolute left-[11px] top-6 bottom-0 w-px bg-border" />
+                  )}
+                  {/* 节点圆点 */}
+                  <div className={cn(
+                    "mt-1.5 shrink-0 size-[22px] rounded-full flex items-center justify-center text-[10px] border-2",
+                    isFinalSuccess ? "border-green-500 bg-green-500/10" :
+                    isFinalError ? "border-red-500 bg-red-500/10" :
+                    isLast ? "border-blue-500 bg-blue-500/10 animate-pulse" :
+                    "border-muted-foreground/30 bg-muted"
+                  )}>
+                    {statusInfo?.icon || "📌"}
+                  </div>
+                  {/* 内容 */}
+                  <div className="flex-1 pb-4">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("text-sm font-medium", statusInfo?.color || "text-foreground")}>
+                        {statusInfo?.label || update.status_type}
+                      </span>
+                      {update.is_final && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[9px] px-1 h-4",
+                            update.success
+                              ? "bg-green-500/10 text-green-600 border-green-500/20"
+                              : "bg-red-500/10 text-red-600 border-red-500/20"
+                          )}
+                        >
+                          {update.success ? "最终 - 成功" : "最终 - 失败"}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {new Date(update.timestamp).toLocaleString()}
+                    </p>
+                    {update.error && (
+                      <p className="text-[10px] text-red-500 mt-1">错误: {update.error}</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </StandardCard>
+      )}
 
       <StandardCard title="执行日志">
         <div className="bg-neutral-950 rounded-sm p-4 font-mono text-xs text-neutral-400 min-h-[200px] max-h-[400px] overflow-y-auto border border-neutral-800">

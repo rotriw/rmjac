@@ -1,6 +1,7 @@
 use crate::handler::ResultHandler;
 use macro_handler::{generate_handler, handler, perm, route};
 use rmjac_core::env;
+use rmjac_core::workflow::vjudge::VjudgeWorkflow;
 use crate::utils::perm::UserAuthCotext;
 use rmjac_core::model::ModelStore;
 use serde::{Deserialize, Serialize};
@@ -33,7 +34,8 @@ pub mod handler {
     #[route("/get")]
     #[export("data")]
     async fn get_services() -> ResultHandler<ServiceRegistryResponse> {
-        let registry = env::EDGE_SERVICE_INDEX.lock().unwrap();
+        let workflow = VjudgeWorkflow::global().await;
+        let registry = workflow.get_service_index().await;
         let mut services = Vec::new();
         for key in registry.keys() {
             let mut parts = key.splitn(3, ':');

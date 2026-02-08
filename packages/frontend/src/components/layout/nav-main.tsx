@@ -55,7 +55,7 @@ export function NavMain({
               <span>{item.title}</span>
             </a>
           </SidebarMenuButton>
-        </SidebarMenuItem> : <></>
+        </SidebarMenuItem> : null
       ))}
     </SidebarMenu>
   )

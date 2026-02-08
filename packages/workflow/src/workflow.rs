@@ -8,26 +8,45 @@ pub struct ServiceInfo {
 }
 
 pub trait Value {
+    fn get_type(&self) -> String;
     fn to_string(&self) -> String;
+}
+
+impl Value for String {
+    fn get_type(&self) -> String {
+        "String".to_string()
+    }
+    fn to_string(&self) -> String {
+        self.clone()
+    }
 }
 
 
 #[async_trait::async_trait(?Send)]
 pub trait StatusRequire {
     async fn verify(&self, o: &Box<dyn StatusDescribe>) -> bool;
+    fn describe(&self) -> String { // 描述要求。
+        "No description".to_string()
+    }
 }
 
-pub enum ValueType {
+pub enum ValueType { // TODO: 实际上并没有被用到，基本上被bypass了。等有时间了要让他能用，
     Number,
     String,
+    Others(String),
 }
 
 // 对于一个值的描述。
 #[async_trait::async_trait(?Send)]
 pub trait ValueDescribe {
     fn get_type(&self) -> ValueType;
+    async fn maybe_eq(&self, o: &str) -> bool; // 是否可能相等。TODO: let o more general.
     async fn has_str(&self, s: &str) -> bool; // 指定字符串是否可能出现在当前值。
     async fn number(&self, x: i64) -> bool; // 要求的数字是否可能出现在当前值。
+
+    fn describe(&self) -> String {
+        "No description".to_string()
+    } // 描述当前值的特征, 供人类阅读。
 
 }
 
@@ -36,8 +55,27 @@ pub trait StatusDescribe {
     async fn value(&self, key: &str) -> Option<Vec<Box<dyn ValueDescribe>>>;
 }
 
+pub trait ServiceClone {
+    fn clone_box(&self) -> Box<dyn Service>;
+}
+
+impl<T> ServiceClone for T
+where
+    T: 'static + Service + Clone,
+{
+    fn clone_box(&self) -> Box<dyn Service> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn Service> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
 #[async_trait::async_trait(?Send)]
-pub trait Service {
+pub trait Service: ServiceClone + Send + Sync {
     fn is_end(&self) -> bool; // 是否为结束服务
     fn get_info(&self) -> ServiceInfo; // 获取服务信息
     fn get_cost(&self) -> i32; // 获取服务预计消耗。
@@ -48,9 +86,8 @@ pub trait Service {
 }
 
 pub trait Status: StatusClone + 'static {
-    fn get_status(&self) -> String;
-    fn get_status_type(&self) -> String;
     fn get_value(&self, key: &str) -> Option<Box<dyn Value>>;
+    fn get_all_value(&self) -> Vec<(String, Box<dyn Value>)>;
 }
 
 pub trait StatusClone {
@@ -101,28 +138,58 @@ impl From<String> for TaskStatus {
     }
 }
 
+#[derive(Clone)]
 pub struct NowStatus {
-    pub status: TaskStatus,
+    pub done: bool, // 是否已完成。 如果已完成, 当前服务为结束服务。
     pub init_value: Box<dyn Status>,
     pub is_lazy: bool, // 是否为lazy执行。 如果为 lazy, 当前服务存在编号。
     pub task_id: Option<i64>, // 是否记录。
     pub history_value: Vec<HistoryStatus>,
 }
 
+#[async_trait::async_trait(?Send)]
 pub trait WorkflowSystem {
     const NAME: &'static str;
     const LINK: &'static str;
     const DESCRIPTION: &'static str;
-    fn get_all_services(&self) -> Vec<Box<dyn Service>>;
-    fn get_allow_service(&self, now_status: &NowStatus) -> Vec<Box<dyn Service>>;
+    async fn get_all_services(&self) -> Vec<Box<dyn Service>>;
+    async fn get_allow_service(&self, now_status: &NowStatus) -> Vec<Box<dyn Service>> {
+        let services = self.get_all_services().await;
+        let mut allow = Vec::new();
+        for service in services {
+            if service.verify(&now_status.init_value).await {
+                allow.push(service);
+            }
+        }
+        allow
+    }
 
-    fn register_service(&mut self, service: Box<dyn Service>) -> impl Future<Output = ()>;
+    async fn update_execute_status(&self, task_id: i64, status: &NowStatus) -> Option<()>;
 
-    fn deregister_service(&mut self, service_name: &str) -> impl Future<Output = ()>;
+    async fn get_service(&self, name: &str) -> Option<Box<dyn Service>>;
+    async fn register_service(&mut self, service: Box<dyn Service>);
+    async fn deregister_service(&mut self, service_name: &str);
+
+    async fn generate_task_id(&self, service: &str) -> i64;
+    async fn get_reachable_targets(&self, input: &Box<dyn Status>) -> Vec<Box<dyn Service>> {
+        let services = self.get_all_services().await;
+        let mut targets = Vec::new();
+        for service in services {
+            if !service.is_end() {
+                continue;
+            }
+            if service.verify(input).await {
+                targets.push(service);
+            }
+        }
+        targets
+    }
 }
 
 pub trait WorkflowAction {
     const MAX_STEP: usize = 100000;
     const MAX_DEPTH: usize = 32;
-    fn execute<G: AsyncFnOnce() -> i64 + Send>(&self, now_status: &NowStatus, target: &str, generate_func: G) -> impl Future<Output = Option<NowStatus>>;
+    fn execute(&self, now_status: &NowStatus, target: Box<dyn Service>) -> impl Future<Output = Option<NowStatus>>;
+    fn next(&self, now_status: &NowStatus, service: &Box<dyn Service>) -> impl Future<Output = Option<NowStatus>>; // next with used_service.
+    fn next_auto(&self, now_status: &NowStatus, service: &Box<dyn Service>) -> impl Future<Output = Option<NowStatus>>; // next with plan.
 }

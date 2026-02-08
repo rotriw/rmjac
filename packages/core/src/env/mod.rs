@@ -1,5 +1,7 @@
 use crate::graph::action::DefaultNodes;
 use crate::service::iden::ac_automaton::AcMachine;
+use crate::workflow::vjudge::VjudgeWorkflow;
+use chrono;
 use lazy_static::lazy_static;
 use sea_orm::DatabaseConnection;
 use socketioxide::extract::SocketRef;
@@ -36,10 +38,6 @@ lazy_static! {
     pub static ref EDGE_SOCKETS: Mutex<HashMap<String, SocketRef>> = Mutex::new(HashMap::new());
     pub static ref EDGE_VEC: Mutex<Vec<String>> = Mutex::new(vec![]);
     pub static ref EDGE_NUM: Mutex<i32> = Mutex::new(0);
-    pub static ref EDGE_SERVICE_REGISTRY: Mutex<HashMap<String, Vec<String>>> =
-        Mutex::new(HashMap::new());
-    pub static ref EDGE_SERVICE_INDEX: Mutex<HashMap<String, Vec<String>>> =
-        Mutex::new(HashMap::new());
     pub static ref EDGE_PLATFORM_INFO: Mutex<HashMap<String, Value>> =
         Mutex::new(HashMap::new());
     pub static ref SLICE_WORD_LIST: Mutex<Vec<String>> = Mutex::new(vec![]);
@@ -56,6 +54,9 @@ lazy_static! {
         Mutex::new(HashMap::new());
     pub static ref USER_WEBSOCKET_CONNECTIONS_ACCOUNT: Mutex<HashMap<String, i64>> =
         Mutex::new(HashMap::new());
+    /// 全局 VJudge 工作流
+    pub static ref VJUDGE_WORKFLOW: Mutex<Option<Arc<VjudgeWorkflow>>> =
+        Mutex::new(None);
 }
 
 pub mod db;

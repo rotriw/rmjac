@@ -10,6 +10,10 @@ pub enum VjudgeTask {
     Status,
     #[sea_orm(iden = "log")]
     Log,
+    #[sea_orm(iden = "service_name")]
+    ServiceName,
+    #[sea_orm(iden = "workflow_snapshot")]
+    WorkflowSnapshot,
     #[sea_orm(iden = "created_at")]
     CreatedAt,
     #[sea_orm(iden = "updated_at")]

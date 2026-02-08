@@ -10,6 +10,11 @@ use serde::{Deserialize, Serialize};
 pub struct VjudgeTaskNodePublic {
     pub status: String,
     pub log: String,
+    /// 执行的服务名 (platform:operation:method)
+    pub service_name: String,
+    /// 最终工作流状态 JSON 快照
+    #[ts(type = "string | null")]
+    pub workflow_snapshot: Option<String>,
     #[ts(type = "string")]
     pub created_at: NaiveDateTime,
     #[ts(type = "string")]
@@ -25,6 +30,10 @@ pub struct VjudgeTaskNodePrivate {}
 pub struct VjudgeTaskNodePublicRaw {
     pub status: String,
     pub log: String,
+    /// 执行的服务名 (platform:operation:method)
+    pub service_name: String,
+    /// 最终工作流状态 JSON 快照
+    pub workflow_snapshot: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
@@ -54,6 +63,8 @@ impl From<VjudgeTaskNodeRaw> for ActiveModel {
             node_id: NotSet,
             status: Set(value.public.status),
             log: Set(value.public.log),
+            service_name: Set(value.public.service_name),
+            workflow_snapshot: Set(value.public.workflow_snapshot),
             created_at: Set(chrono::Utc::now().naive_utc()),
             updated_at: Set(chrono::Utc::now().naive_utc()),
         }
@@ -67,6 +78,8 @@ impl From<Model> for VjudgeTaskNode {
             public: VjudgeTaskNodePublic {
                 status: model.status,
                 log: model.log,
+                service_name: model.service_name,
+                workflow_snapshot: model.workflow_snapshot,
                 created_at: model.created_at.and_utc().naive_utc(),
                 updated_at: model.updated_at.and_utc().naive_utc(),
             },

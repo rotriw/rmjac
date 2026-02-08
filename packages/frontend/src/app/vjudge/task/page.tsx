@@ -1,12 +1,17 @@
-import { TitleCard } from "@/components/card/card";
 import { VjudgePageContent } from "./client-page";
+import { AddTaskCard } from "./add-task";
 
+export default async function ViewVjudgePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ new?: string }>
+}) {
+  const params = await searchParams;
+  const isNew = params.new === "1";
 
-export default async function ViewVjudgePage() {
-  return (<>
+  return (
     <div className="container mx-auto py-6 px-4 md:px-6">
-        <VjudgePageContent />
+      {isNew ? <AddTaskCard /> : <VjudgePageContent />}
     </div>
-  </>
-  )
+  );
 }

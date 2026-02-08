@@ -14,10 +14,19 @@ use socketioxide::SocketIo;
 use socketioxide::extract::{Data, SocketRef};
 use std::fmt::Debug;
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use crate::service::socket::workflow::{
+    WorkflowServiceRegistrationMessage, WorkflowServiceUnregistrationMessage,
+    register_workflow_services, unregister_workflow_services,
+};
+use crate::workflow::vjudge::VjudgeWorkflow;
 use macro_socket_auth::auth_socket_connect;
 
 fn trust_auth(socket: &SocketRef) {
-    log::info!("Socket {} authenticated successfully", socket.id);
+    let edge_count = env::EDGE_SOCKETS.lock().unwrap().len();
+    log::info!(
+        "[VJudge:Socket] Socket {} authenticated successfully (total edge sockets: {})",
+        socket.id, edge_count + 1
+    );
     env::EDGE_AUTH_MAP
         .lock()
         .unwrap()
@@ -52,25 +61,12 @@ fn extract_service_key<T: ?Sized + Serialize>(task: &T) -> Option<String> {
 }
 
 fn deregister_socket_services(socket_id: &str) {
-    let services = env::EDGE_SERVICE_REGISTRY
-        .lock()
-        .unwrap()
-        .remove(socket_id);
-    if let Some(services) = services {
-        let mut index = env::EDGE_SERVICE_INDEX.lock().unwrap();
-        for key in services {
-            if let Some(sockets) = index.get_mut(&key) {
-                sockets.retain(|id| id != socket_id);
-                if sockets.is_empty() {
-                    index.remove(&key);
-                }
-            }
-        }
-    }
+    VjudgeWorkflow::try_global()
+        .map(|workflow| workflow.remove_socket_registration(socket_id));
 }
 
 async fn auth(socket: SocketRef, Data(key): Data<String>) {
-    log::trace!("{} auth", socket.id);
+    log::info!("[VJudge:Socket] Received 'auth' from socket {}", socket.id);
     log::trace!("auth key: {}", key);
     use crate::utils::encrypt::verify;
     let key = change_string_format(key);
@@ -177,19 +173,13 @@ async fn handle_register_services(socket: SocketRef, Data(items): Data<Vec<EdgeS
     deregister_socket_services(&socket_id);
 
     if !keys.is_empty() {
-        env::EDGE_SERVICE_REGISTRY
-            .lock()
-            .unwrap()
-            .insert(socket_id.clone(), keys.clone());
-        let mut index = env::EDGE_SERVICE_INDEX.lock().unwrap();
-        for key in keys {
-            let entry = index.entry(key).or_insert_with(Vec::new);
-            if !entry.contains(&socket_id) {
-                entry.push(socket_id.clone());
-            }
+        if let Some(workflow) = VjudgeWorkflow::try_global() {
+            workflow.register_remote_service_keys(&socket_id, keys.clone());
+        } else {
+            log::warn!("[VJudge:Socket] Workflow not initialized; skip register_services for {}", socket_id);
         }
     }
-    log::debug!("Registered services for socket {}", socket_id);
+    log::info!("[VJudge:Socket] Received 'register_services' from socket {}: registered keys", socket_id);
 }
 
 #[auth_socket_connect]
@@ -201,61 +191,48 @@ async fn handle_register_platforms(socket: SocketRef, Data(items): Data<Vec<Edge
             registry.insert(key, value);
         }
     }
-    log::debug!("Registered platform metadata for socket {}", socket.id);
+    log::info!("[VJudge:Socket] Received 'register_platforms' from socket {}: {} platforms", socket.id, registry.len());
 }
 
-pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
-    let service_key = extract_service_key(task);
-    let candidate_ids = if let Some(key) = &service_key {
-        env::EDGE_SERVICE_INDEX
-            .lock()
-            .unwrap()
-            .get(key)
-            .cloned()
-            .unwrap_or_default()
-    } else {
-        env::EDGE_VEC.lock().unwrap().clone()
-    };
+// ============================================================================
+// Workflow 事件处理器（新工作流架构）
+// ============================================================================
 
-    if candidate_ids.is_empty() {
-        if let Some(key) = &service_key {
-            log::error!("No edge sockets registered for service: {}", key);
-        } else {
-            log::error!("No edge sockets available to add task.");
-        }
-        return false;
-    }
+#[auth_socket_connect]
+async fn handle_workflow_service_register(
+    socket: SocketRef,
+    Data(message): Data<WorkflowServiceRegistrationMessage>,
+) {
+    let service_names: Vec<String> = message.services.iter().map(|s| {
+        format!("{}:{}:{}", s.platform, s.operation, s.method)
+    }).collect();
+    log::info!(
+        "[VJudge:Socket] Received 'workflow_service_register' from socket {}: {} services = {:?}",
+        socket.id,
+        message.services.len(),
+        service_names
+    );
+    register_workflow_services(&socket.id.to_string(), &message.services).await;
+}
 
-    let now_id = *env::EDGE_NUM.lock().unwrap();
-    let use_id = (now_id + 1) % (candidate_ids.len() as i32);
-    *env::EDGE_NUM.lock().unwrap() = use_id;
-    let use_id = candidate_ids.get(use_id as usize).unwrap().clone();
-    log::trace!("Adding task to socket: {}", use_id);
-    let mut require_erase = false;
-    if let Some(socket) = env::EDGE_SOCKETS.lock().unwrap().get(&use_id).cloned() {
-        if !socket.connected() {
-            log::error!("Socket {} is not connected, erasing", use_id);
-            require_erase = true;
-        } else if let Err(err) = socket.emit("task", task) {
-            log::error!("Failed to emit task: {}", err);
-            // erase this socket.
-            require_erase = true;
-        }
-    } else {
-        log::error!("Socket not found for id: {}", use_id);
-        require_erase = true;
-    }
-    if require_erase {
-        erase_socket(&use_id);
-        return false;
-    }
-    log::debug!("Successfully added task to socket: {use_id}");
-    log::trace!("Task detail: {task:?}");
-    true
+#[auth_socket_connect]
+async fn handle_workflow_service_unregister(
+    socket: SocketRef,
+    Data(message): Data<WorkflowServiceUnregistrationMessage>,
+) {
+    log::info!(
+        "[VJudge:Socket] Received 'workflow_service_unregister' from socket {}: {:?}",
+        socket.id,
+        message.service_names
+    );
+    unregister_workflow_services(&socket.id.to_string(), &message.service_names).await;
 }
 
 async fn on_connect(socket: SocketRef, Data(_data): Data<Value>) {
-    log::debug!("Socket io connected: {:?} {:?}", socket.ns(), socket.id);
+    log::info!(
+        "[VJudge:Socket] === NEW CONNECTION === ns={:?}, socket_id={:?}, transport={:?}",
+        socket.ns(), socket.id, socket.transport_type()
+    );
     socket.on("auth", auth);
     socket.on("register_services", handle_register_services);
     socket.on("register_platforms", handle_register_platforms);
@@ -263,9 +240,12 @@ async fn on_connect(socket: SocketRef, Data(_data): Data<Value>) {
     socket.on("sync_done_success", handle_update_vjudge_submission);
     socket.on("submit_done", handle_submit_done);
     socket.on("verified_done_success", handle_verified_result);
+    // 新工作流架构事件
+    socket.on("workflow_service_register", handle_workflow_service_register);
+    socket.on("workflow_service_unregister", handle_workflow_service_unregister);
 
     socket.on_disconnect(async |socket: SocketRef| {
-        log::debug!("Socket io disconnected: {:?} {:?}", socket.ns(), socket.id);
+        log::info!("[VJudge:Socket] === DISCONNECTED === ns={:?}, socket_id={:?}", socket.ns(), socket.id);
         erase_socket(socket.id.as_str());
     });
 }
