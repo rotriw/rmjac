@@ -14,7 +14,6 @@ import type {
   StatusRequire,
   StatusRequireData,
   ValueType,
-  VjudgeStatusType,
 } from "./types.ts";
 import { VjudgeStatus } from "./status.ts";
 
@@ -27,11 +26,9 @@ import { VjudgeStatus } from "./status.ts";
  */
 export class VjudgeStatusRequire implements StatusRequire {
   private requiredKeys: string[];
-  private requiredStatusTypes?: VjudgeStatusType[];
 
-  constructor(requiredKeys: string[] = [], requiredStatusTypes?: VjudgeStatusType[]) {
+  constructor(requiredKeys: string[] = []) {
     this.requiredKeys = requiredKeys;
-    this.requiredStatusTypes = requiredStatusTypes;
   }
 
   getRequiredKeys(): string[] {
@@ -39,13 +36,6 @@ export class VjudgeStatusRequire implements StatusRequire {
   }
 
   verify(status: Status): boolean {
-    // 检查状态类型
-    if (this.requiredStatusTypes && this.requiredStatusTypes.length > 0) {
-      if (!this.requiredStatusTypes.includes(status.getStatusType())) {
-        return false;
-      }
-    }
-    
     // 检查必需的 key
     for (const key of this.requiredKeys) {
       if (status.getValue(key) === undefined) {
@@ -59,7 +49,6 @@ export class VjudgeStatusRequire implements StatusRequire {
   toJSON(): StatusRequireData {
     return {
       requiredKeys: this.requiredKeys,
-      requiredStatusTypes: this.requiredStatusTypes,
     };
   }
 
@@ -74,13 +63,6 @@ export class VjudgeStatusRequire implements StatusRequire {
   /**
    * 添加必需的状态类型
    */
-  withRequiredStatusType(statusType: VjudgeStatusType): VjudgeStatusRequire {
-    if (!this.requiredStatusTypes) {
-      this.requiredStatusTypes = [];
-    }
-    this.requiredStatusTypes.push(statusType);
-    return this;
-  }
 }
 
 // ============================================================================
@@ -290,10 +272,9 @@ export abstract class EdgeService implements Service {
  * 创建 StatusRequire
  */
 export function statusRequire(
-  requiredKeys: string[] = [],
-  requiredStatusTypes?: VjudgeStatusType[]
+  requiredKeys: string[] = []
 ): VjudgeStatusRequire {
-  return new VjudgeStatusRequire(requiredKeys, requiredStatusTypes);
+  return new VjudgeStatusRequire(requiredKeys);
 }
 
 /**

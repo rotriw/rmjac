@@ -2,16 +2,18 @@
 //!
 //! These services persist workflow results to the local database.
 
-use std::collections::HashMap;
-use serde_json::Value::Object;
-use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire};
+use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire, Value};
+use workflow::value::{BaseValue, WorkflowValue};
+use workflow::status::{WorkflowValues, WorkflowStatus};
 
 use crate::env::db::get_connect;
 use crate::model::problem::CreateProblemProps;
 use crate::model::vjudge::{VjudgeAccount, VjudgeService};
 use crate::model::problem::ProblemImport;
 use crate::utils::get_redis_connection;
-use crate::workflow::vjudge::status::{VjudgeExportDescribeExpr, VjudgeRequire, VjudgeRequireExpr, VjudgeStatus};
+use crate::workflow::vjudge::status::{
+    VjudgeExportDescribe, VjudgeExportDescribeExpr, VjudgeRequire, VjudgeRequireExpr,
+};
 
 #[derive(Clone)]
 pub struct UpdateProblemService;
@@ -55,19 +57,19 @@ impl Service for UpdateProblemService {
     }
 
     async fn verify(&self, input: &Box<dyn Status>) -> bool {
-        input.get_value(format!("inner:problem_data").as_str()).is_some()
+        input.get_value("inner:problem_data").is_some()
     }
 
     async fn execute(&self, input: &Box<dyn Status>) -> Box<dyn Status> {
         let problem_raw = match input.get_value("problem_data") {
             Some(value) => value.to_string(),
-            None => return Box::new(VjudgeStatus::Error("Missing problem_data".to_string())),
+            None => return Box::new(WorkflowStatus::failed("Missing problem_data")),
         };
 
         let problem: CreateProblemProps = match serde_json::from_str(&problem_raw) {
             Ok(problem) => problem,
             Err(err) => {
-                return Box::new(VjudgeStatus::Error(format!(
+                return Box::new(WorkflowStatus::failed(format!(
                     "Invalid problem_data: {}",
                     err
                 )))
@@ -77,7 +79,7 @@ impl Service for UpdateProblemService {
         let db = match get_connect().await {
             Ok(db) => db,
             Err(err) => {
-                return Box::new(VjudgeStatus::Error(format!(
+                return Box::new(WorkflowStatus::failed(format!(
                     "DB connect failed: {}",
                     err
                 )))
@@ -87,7 +89,7 @@ impl Service for UpdateProblemService {
         let mut store = (&db, &mut redis);
 
         if let Err(err) = VjudgeService::import_problem(&mut store, &problem).await {
-            return Box::new(VjudgeStatus::Error(format!(
+            return Box::new(WorkflowStatus::failed(format!(
                 "Import problem failed: {}",
                 err
             )));
@@ -98,7 +100,7 @@ impl Service for UpdateProblemService {
             Err(_) => -1,
         };
 
-        Box::new(VjudgeStatus::TaskDone("Problem imported successfully".to_string()))
+        Box::new(WorkflowStatus::task_done("Problem imported successfully"))
     }
 }
 
@@ -130,48 +132,38 @@ impl Service for UpdateVerifiedService {
     }
 
     fn get_import_require(&self) -> Box<dyn StatusRequire> {
-        Box::new(
-            VjudgeStatusRequire::new()
-                .with_status_type(VjudgeStatusType::AccountVerified)
-                .with_required_key("account_id"),
-        )
+        let mut require = VjudgeRequire { inner: vec![] };
+        require.inner.push(VjudgeRequireExpr::Inner("vjudge_id".to_string()));
+        Box::new(require)
     }
 
     fn get_export_describe(&self) -> Vec<Box<dyn StatusDescribe>> {
-        vec![Box::new(
-            VjudgeStatusDescribe::new(VjudgeStatusType::Completed)
-                .with_key("account_id")
-                .with_key("verified"),
-        )]
+        vec![]
     }
 
     async fn verify(&self, input: &Box<dyn Status>) -> bool {
-        input.get_status_type() == VjudgeStatusType::AccountVerified.as_str()
-            && input.get_value("account_id").is_some()
+        input.get_value("inner:account_id").is_some()
     }
 
     async fn execute(&self, input: &Box<dyn Status>) -> Box<dyn Status> {
-        let account_id = match input
-            .get_value("account_id")
-            .and_then(|v| v.to_string().parse::<i64>().ok())
-        {
-            Some(id) => id,
-            None => return Box::new(VjudgeStatus::new_error("Invalid account_id")),
+        let account_id = match input.get_value("account_id") {
+            Some(value) => value_as_i64(value),
+            None => return Box::new(WorkflowStatus::failed("Invalid account_id")),
         };
 
         let verified = input
             .get_value("verified")
-            .map(|v| v.to_string() == "true")
+            .map(value_as_bool)
             .unwrap_or(true);
 
         if !verified {
-            return Box::new(VjudgeStatus::new_error("Verification failed"));
+            return Box::new(WorkflowStatus::failed("Verification failed"));
         }
 
         let db = match get_connect().await {
             Ok(db) => db,
             Err(err) => {
-                return Box::new(VjudgeStatus::new_error(&format!(
+                return Box::new(WorkflowStatus::failed(format!(
                     "DB connect failed: {}",
                     err
                 )))
@@ -179,16 +171,41 @@ impl Service for UpdateVerifiedService {
         };
 
         if let Err(err) = VjudgeAccount::new(account_id).set_verified(&db).await {
-            return Box::new(VjudgeStatus::new_error(&format!(
+            return Box::new(WorkflowStatus::failed(format!(
                 "Update verified failed: {}",
                 err
             )));
         }
 
-        Box::new(
-            VjudgeStatus::new(VjudgeStatusType::Completed)
-                .with_value("account_id", VjudgeValue::Number(account_id))
-                .with_value("verified", VjudgeValue::Bool(true)),
-        )
+        Box::new(WorkflowValues::from_json_trusted(serde_json::json!({
+            "account_id": account_id,
+            "verified": true,
+        }), "update_verified"))
     }
+}
+
+fn value_as_i64(value: Box<dyn Value>) -> i64 {
+    let raw = value.to_string();
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw) {
+        if let Some(n) = parsed.as_i64() {
+            return n;
+        }
+        if let Some(s) = parsed.as_str() {
+            return s.parse::<i64>().unwrap_or(0);
+        }
+    }
+    raw.parse::<i64>().unwrap_or(0)
+}
+
+fn value_as_bool(value: Box<dyn Value>) -> bool {
+    let raw = value.to_string();
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw) {
+        if let Some(b) = parsed.as_bool() {
+            return b;
+        }
+        if let Some(s) = parsed.as_str() {
+            return s == "true";
+        }
+    }
+    raw == "true"
 }

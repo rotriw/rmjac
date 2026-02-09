@@ -6,10 +6,6 @@ import type { WorkflowValueDTO } from "./WorkflowValueDTO";
  */
 export type WorkflowStatusDataDTO = { 
 /**
- * 状态类型
- */
-statusType: string, 
-/**
  * 键值对数据
  */
-values: { [key in string]?: WorkflowValueDTO }, };
+values: { [key in string]: WorkflowValueDTO }, };

@@ -7,7 +7,7 @@
 //! - 用户实时状态推送
 
 use crate::env;
-use crate::workflow::vjudge::VjudgeWorkflow;
+use crate::workflow::vjudge::{RemoteEdgeService, RemoteServiceInfo, VjudgeWorkflow};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use socketioxide::extract::SocketRef;
@@ -57,9 +57,6 @@ pub struct WorkflowTaskRequest {
     pub task_id: String,
     #[serde(rename = "serviceName")]
     pub service_name: String,
-    pub platform: String,
-    pub operation: String,
-    pub method: String,
     pub input: Value,
     pub timeout: Option<u64>,
 }
@@ -93,44 +90,21 @@ pub struct WorkflowStatusUpdate {
     pub timestamp: String,
 }
 
-// ============================================================================
-// 服务注册/注销管理
-// ============================================================================
-
-/// 构建工作流服务 key
-fn workflow_service_key(platform: &str, operation: &str, method: &str) -> String {
-    format!(
-        "{}:{}:{}",
-        platform.to_lowercase(),
-        operation,
-        method.to_lowercase()
-    )
-}
-
 /// 注册边缘服务的工作流服务
 pub async fn register_workflow_services(socket_id: &str, services: &[WorkflowServiceMetadata]) {
     let workflow = VjudgeWorkflow::global().await;
-    let mut keys = vec![];
-    for svc in services {
-        let key = workflow_service_key(&svc.platform, &svc.operation, &svc.method);
-        keys.push(key);
+    for service in services {
+        workflow.register_service(Box::new(RemoteEdgeService {
+            info: RemoteServiceInfo {
+                service_id: service.name.clone(),
+                description: service.description.clone(),
+                allow_description: service.allow_description.clone(),
+                cost: service.cost,
+                is_end: service.is_end,
+                socket_id: socket_id.to_string(),
+            }
+        }));
     }
-
-    workflow.register_remote_service_keys(socket_id, keys);
-
-    // 保存完整元数据
-    for svc in services {
-        let key = workflow_service_key(&svc.platform, &svc.operation, &svc.method);
-        if let Ok(val) = serde_json::to_value(svc) {
-            workflow.register_service_metadata(&key, val);
-        }
-    }
-
-    log::info!(
-        "[Workflow] Registered {} services for socket {}",
-        services.len(),
-        socket_id
-    );
 }
 
 /// 注销指定服务名列表
@@ -155,33 +129,6 @@ pub async fn deregister_workflow_socket(socket_id: &str) {
 // 工作流任务派发（使用 callback 模式）
 // ============================================================================
 
-/// 查找能处理指定服务 key 的边缘 socket
-fn find_workflow_socket(service_key: &str) -> Option<SocketRef> {
-    let workflow = VjudgeWorkflow::try_global()?;
-    let candidate_ids = workflow
-        .service_index()
-        .lock()
-        .unwrap()
-        .get(service_key)
-        .cloned()
-        .unwrap_or_default();
-
-    if candidate_ids.is_empty() {
-        return None;
-    }
-
-    // 轮询选择（简单取第一个已连接的 socket）
-    for id in &candidate_ids {
-        if let Some(socket) = env::EDGE_SOCKETS.lock().unwrap().get(id).cloned() {
-            if socket.connected() {
-                return Some(socket);
-            }
-        }
-    }
-
-    None
-}
-
 /// 向边缘服务发送工作流任务并等待 callback 响应
 ///
 /// 使用 Socket.IO 的 ack (callback) 模式进行同步请求/响应。
@@ -189,85 +136,19 @@ fn find_workflow_socket(service_key: &str) -> Option<SocketRef> {
 pub async fn dispatch_workflow_task(
     task_id: &str,
     service_name: &str,
-    platform: &str,
-    operation: &str,
-    method: &str,
+    socket_id: &str,
     input: Value,
     timeout_ms: Option<u64>,
 ) -> WorkflowTaskResponse {
-    let service_key = workflow_service_key(platform, operation, method);
-    log::info!(
-        "[Workflow:Dispatch] === dispatch_workflow_task START === task_id={}, service_key={}",
-        task_id, service_key
-    );
 
-    // 打印当前注册表状态，便于排查
-    {
-        if let Some(workflow) = VjudgeWorkflow::try_global() {
-            let wf_index = workflow.service_index().lock().unwrap();
-            let wf_registry = workflow.service_registry().lock().unwrap();
-            let edge_sockets = env::EDGE_SOCKETS.lock().unwrap();
-            log::info!(
-                "[Workflow:Dispatch] Registry state: WORKFLOW_SERVICE_INDEX={:?}, WORKFLOW_SERVICE_REGISTRY={:?}",
-                wf_index.keys().collect::<Vec<_>>(),
-                wf_registry.keys().collect::<Vec<_>>()
-            );
-            log::info!(
-                "[Workflow:Dispatch] Registry state: EDGE_SOCKETS ids={:?}",
-                edge_sockets.keys().collect::<Vec<_>>()
-            );
-            // 打印目标 service_key 的具体 socket 列表
-            if let Some(wf_sockets) = wf_index.get(&service_key) {
-                log::info!("[Workflow:Dispatch] WORKFLOW_SERVICE_INDEX[{}] = {:?}", service_key, wf_sockets);
-            }
-        } else {
-            log::warn!("[Workflow:Dispatch] VjudgeWorkflow not initialized; skipping registry dump.");
-        }
-    }
-
-    let socket = match find_workflow_socket(&service_key) {
-        Some(s) => {
-            log::info!(
-                "[Workflow:Dispatch] Found socket: id={}, connected={}, ns={}",
-                s.id, s.connected(), s.ns()
-            );
-            s
-        }
-        None => {
-            log::error!(
-                "[Workflow:Dispatch] No edge socket available for service: {}",
-                service_key
-            );
-            return WorkflowTaskResponse {
-                task_id: task_id.to_string(),
-                success: false,
-                output: None,
-                error: Some(format!(
-                    "No edge service available for: {}",
-                    service_key
-                )),
-            };
-        }
-    };
+    let socket = env::EDGE_SOCKETS.lock().unwrap().get(socket_id).unwrap().clone();
 
     let request = WorkflowTaskRequest {
         task_id: task_id.to_string(),
         service_name: service_name.to_string(),
-        platform: platform.to_string(),
-        operation: operation.to_string(),
-        method: method.to_string(),
         input,
         timeout: timeout_ms,
     };
-
-    log::info!(
-        "[Workflow:Dispatch] Request payload: task_id={}, service_name={}, platform={}, operation={}, method={}, timeout={:?}",
-        request.task_id, request.service_name, request.platform, request.operation, request.method, request.timeout
-    );
-    log::debug!(
-        "[Workflow:Dispatch] Request input JSON: {}",
-        serde_json::to_string(&request.input).unwrap_or_else(|e| format!("<serialize error: {}>", e))
-    );
 
     let timeout_ms_val = timeout_ms.unwrap_or(30_000);
     let timeout_duration = Duration::from_millis(timeout_ms_val);
@@ -361,81 +242,5 @@ pub async fn dispatch_workflow_task(
                 )),
             }
         }
-    }
-}
-
-// ============================================================================
-// 用户实时状态推送
-// ============================================================================
-
-/// 向指定用户 WebSocket 推送工作流状态更新
-pub fn notify_user_workflow_status(ws_id: &str, update: &WorkflowStatusUpdate) {
-    let user_socket = {
-        env::USER_WEBSOCKET_CONNECTIONS
-            .lock()
-            .unwrap()
-            .get(ws_id)
-            .cloned()
-    };
-
-    if let Some(socket) = user_socket {
-        if let Err(err) = socket.emit("vjudge_workflow_update", update) {
-            log::error!(
-                "[Workflow] Failed to push status update to user ws {}: {}",
-                ws_id,
-                err
-            );
-        } else {
-            log::debug!(
-                "[Workflow] Pushed status update for task {} to ws {}",
-                update.task_id,
-                ws_id
-            );
-        }
-    } else {
-        log::debug!(
-            "[Workflow] No user websocket found for ws_id: {}",
-            ws_id
-        );
-    }
-}
-
-/// 向指定用户 ID 推送工作流状态更新（查找所有该用户的 WebSocket 连接）
-pub fn notify_user_workflow_status_by_user_id(user_id: i64, update: &WorkflowStatusUpdate) {
-    let connections = env::USER_WEBSOCKET_CONNECTIONS_ACCOUNT.lock().unwrap();
-    let sockets = env::USER_WEBSOCKET_CONNECTIONS.lock().unwrap();
-
-    for (ws_id, uid) in connections.iter() {
-        if *uid == user_id {
-            if let Some(socket) = sockets.get(ws_id) {
-                if let Err(err) = socket.emit("vjudge_workflow_update", update) {
-                    log::error!(
-                        "[Workflow] Failed to push status to user {} ws {}: {}",
-                        user_id,
-                        ws_id,
-                        err
-                    );
-                }
-            }
-        }
-    }
-}
-
-/// 更新工作流任务缓存状态
-pub fn update_task_status_cache(task_id: &str, status_data: Value) {
-    if let Some(workflow) = VjudgeWorkflow::try_global() {
-        workflow.update_task_status_cache(task_id, status_data);
-    }
-}
-
-/// 获取工作流任务缓存状态
-pub fn get_task_status_cache(task_id: &str) -> Option<(Value, chrono::NaiveDateTime)> {
-    VjudgeWorkflow::try_global().and_then(|workflow| workflow.get_task_status_cache(task_id))
-}
-
-/// 清除工作流任务缓存状态
-pub fn remove_task_status_cache(task_id: &str) {
-    if let Some(workflow) = VjudgeWorkflow::try_global() {
-        workflow.remove_task_status_cache(task_id);
     }
 }

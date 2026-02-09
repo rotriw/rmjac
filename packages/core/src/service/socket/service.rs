@@ -3,9 +3,6 @@ use crate::env;
 use crate::env::db::get_connect;
 use crate::model::user::UserAuthService;
 use crate::model::vjudge::VjudgeAccount;
-use crate::service::socket::vjudge_service::problem::handle_problem_create;
-use crate::service::socket::vjudge_service::sync::handle_update_vjudge_submission;
-use crate::service::socket::vjudge_service::user::{handle_submit_done, handle_verified_result};
 use crate::utils::encrypt::change_string_format;
 use axum::routing::get;
 use serde::{Deserialize, Serialize};
@@ -183,22 +180,6 @@ async fn handle_register_services(socket: SocketRef, Data(items): Data<Vec<EdgeS
 }
 
 #[auth_socket_connect]
-async fn handle_register_platforms(socket: SocketRef, Data(items): Data<Vec<EdgePlatformInfo>>) {
-    let mut registry = env::EDGE_PLATFORM_INFO.lock().unwrap();
-    for item in items {
-        let key = item.name.to_lowercase();
-        if let Ok(value) = serde_json::to_value(item) {
-            registry.insert(key, value);
-        }
-    }
-    log::info!("[VJudge:Socket] Received 'register_platforms' from socket {}: {} platforms", socket.id, registry.len());
-}
-
-// ============================================================================
-// Workflow 事件处理器（新工作流架构）
-// ============================================================================
-
-#[auth_socket_connect]
 async fn handle_workflow_service_register(
     socket: SocketRef,
     Data(message): Data<WorkflowServiceRegistrationMessage>,
@@ -235,12 +216,6 @@ async fn on_connect(socket: SocketRef, Data(_data): Data<Value>) {
     );
     socket.on("auth", auth);
     socket.on("register_services", handle_register_services);
-    socket.on("register_platforms", handle_register_platforms);
-    socket.on("fetch_done_success", handle_problem_create);
-    socket.on("sync_done_success", handle_update_vjudge_submission);
-    socket.on("submit_done", handle_submit_done);
-    socket.on("verified_done_success", handle_verified_result);
-    // 新工作流架构事件
     socket.on("workflow_service_register", handle_workflow_service_register);
     socket.on("workflow_service_unregister", handle_workflow_service_unregister);
 

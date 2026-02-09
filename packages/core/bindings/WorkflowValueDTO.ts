@@ -3,4 +3,4 @@
 /**
  * 工作流值 DTO
  */
-export type WorkflowValueDTO = { "type": "String", "value": string } | { "type": "Number", "value": number } | { "type": "Bool", "value": boolean } | { "type": "List", "value": Array<WorkflowValueDTO> };
+export type WorkflowValueDTO = { "type": "Inner", "value": string } | { "type": "String", "value": string } | { "type": "Number", "value": number } | { "type": "Bool", "value": boolean } | { "type": "List", "value": Array<WorkflowValueDTO> };

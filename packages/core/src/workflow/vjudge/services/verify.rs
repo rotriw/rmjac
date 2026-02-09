@@ -2,9 +2,11 @@
 //!
 //! This service verifies that the remote account is valid and accessible.
 
-use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire};
+use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire, Value};
+use workflow::value::{BaseValue, WorkflowValue};
+use workflow::status::{WorkflowValues, WorkflowStatus};
 use crate::workflow::vjudge::status::{
-    VjudgeStatus, VjudgeStatusDescribe, VjudgeStatusRequire, VjudgeStatusType,
+    VjudgeExportDescribe, VjudgeExportDescribeExpr, VjudgeRequire, VjudgeRequireExpr,
 };
 
 /// Service to verify remote account credentials
@@ -42,33 +44,25 @@ impl Service for VerifyAccountService {
     }
 
     fn get_import_require(&self) -> Box<dyn StatusRequire> {
-        Box::new(
-            VjudgeStatusRequire::new()
-                .with_status_type(VjudgeStatusType::Initial)
-                .with_required_key("platform")
-                .with_required_key("account_id"),
-        )
+        let mut require = VjudgeRequire { inner: vec![] };
+        require.inner.push(VjudgeRequireExpr::HasKey("platform".to_string()));
+        require.inner.push(VjudgeRequireExpr::HasKey("account_id".to_string()));
+        require.inner.push(VjudgeRequireExpr::KeyEq("platform".to_string(), self.platform.clone()));
+        Box::new(require)
     }
 
     fn get_export_describe(&self) -> Vec<Box<dyn StatusDescribe>> {
-        vec![
-            Box::new(
-                VjudgeStatusDescribe::new(VjudgeStatusType::AccountVerified)
-                    .with_key("platform")
-                    .with_key("account_id")
-                    .with_key("account_verified"),
-            ),
-            Box::new(
-                VjudgeStatusDescribe::new(VjudgeStatusType::Error)
-                    .with_key("error"),
-            ),
-        ]
+        let mut describe = VjudgeExportDescribe { inner: vec![std::collections::HashMap::new()] };
+        describe.inner[0].insert("platform".to_string(), vec![VjudgeExportDescribeExpr::Has]);
+        describe.inner[0].insert("account_id".to_string(), vec![VjudgeExportDescribeExpr::Has]);
+        describe.inner[0].insert("account_verified".to_string(), vec![VjudgeExportDescribeExpr::Has]);
+        vec![Box::new(describe)]
     }
 
     async fn verify(&self, input: &Box<dyn Status>) -> bool {
         // Check if the input has the required platform and it matches our platform
         if let Some(platform_value) = input.get_value("platform") {
-            let platform = platform_value.to_string();
+            let platform = value_as_string(platform_value);
             if platform != self.platform {
                 return false;
             }
@@ -84,31 +78,63 @@ impl Service for VerifyAccountService {
         // Extract values from input
         let platform = input
             .get_value("platform")
-            .map(|v| v.to_string())
+            .map(value_as_string)
             .unwrap_or_default();
         let remote_problem_id = input
             .get_value("remote_problem_id")
-            .map(|v| v.to_string());
+            .map(value_as_string);
         let account_id = input
             .get_value("account_id")
-            .and_then(|v| v.to_string().parse::<i64>().ok());
+            .map(value_as_i64);
 
         // In a real implementation, this would call the edge service to verify
         // For now, we just transition the status
-        let mut status = VjudgeStatus::new_initial(
-            &platform,
-            remote_problem_id.as_deref().unwrap_or(""),
-        );
-
         if let Some(aid) = account_id {
-            // TODO: Actually verify the account via edge service
-            // For now, assume success
-            status = status.with_account_verified(aid);
-            Box::new(status)
+            let mut output = serde_json::json!({
+                "platform": platform,
+                "account_id": aid,
+                "account_verified": true,
+            });
+            if let Some(remote_problem_id) = remote_problem_id {
+                if let Some(obj) = output.as_object_mut() {
+                    obj.insert(
+                        "remote_problem_id".to_string(),
+                        serde_json::Value::String(remote_problem_id),
+                    );
+                }
+            }
+            Box::new(WorkflowValues::from_json_trusted(output, "verify_account"))
         } else {
-            Box::new(VjudgeStatus::new_error("No account_id provided"))
+            Box::new(WorkflowStatus::failed("No account_id provided"))
         }
     }
+}
+
+fn value_as_string(value: Box<dyn Value>) -> String {
+    let raw = value.to_string();
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw) {
+        match parsed {
+            serde_json::Value::String(s) => s,
+            serde_json::Value::Number(n) => n.to_string(),
+            serde_json::Value::Bool(b) => b.to_string(),
+            other => other.to_string(),
+        }
+    } else {
+        raw
+    }
+}
+
+fn value_as_i64(value: Box<dyn Value>) -> i64 {
+    let raw = value.to_string();
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw) {
+        if let Some(n) = parsed.as_i64() {
+            return n;
+        }
+        if let Some(s) = parsed.as_str() {
+            return s.parse::<i64>().unwrap_or(0);
+        }
+    }
+    raw.parse::<i64>().unwrap_or(0)
 }
 
 #[cfg(test)]

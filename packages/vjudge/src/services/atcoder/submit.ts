@@ -40,7 +40,7 @@ export class AtCoderSubmitTokenService extends EdgeService {
       "problem_id",
       "code",
       "language_id",
-    ], ["AccountVerified"]);
+    ]);
   }
 
   protected defineExportDescribe(): StatusDescribe[] {
@@ -83,20 +83,17 @@ export class AtCoderSubmitTokenService extends EdgeService {
       if (submissionId) {
         const submissionUrl = `https://atcoder.jp/contests/${contestId.value}/submissions/${submissionId}`;
         return VjudgeStatus.from(input)
-          .withStatusType("SubmissionCreated")
           .withBool("submit_success", true)
           .withString("submission_id", submissionId)
           .withString("submission_url", submissionUrl)
           .withString("message", "Code submitted successfully");
       } else {
         return VjudgeStatus.from(input)
-          .withStatusType("Error")
           .withBool("submit_success", false)
           .withString("error_message", "Submit failed: no submission ID returned");
       }
     } catch (error) {
       return VjudgeStatus.from(input)
-        .withStatusType("Error")
         .withBool("submit_success", false)
         .withString("error_message", `Submit failed: ${error}`);
     }

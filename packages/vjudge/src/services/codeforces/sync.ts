@@ -35,7 +35,7 @@ export class CodeforcesSyncListApiKeyService extends EdgeService {
   }
 
   protected defineImportRequire(): StatusRequire {
-    return statusRequire(["handle", "api_key", "api_secret"], ["AccountVerified"]);
+    return statusRequire(["handle", "api_key", "api_secret"]);
   }
 
   protected defineExportDescribe(): StatusDescribe[] {
@@ -74,7 +74,6 @@ export class CodeforcesSyncListApiKeyService extends EdgeService {
     if (result.event === "sync_done_success") {
       const submissions = result.data.map(sub => createValue(sub));
       return VjudgeStatus.from(input)
-        .withStatusType("ProblemSynced")
         .withList("submissions", submissions)
         .withNumber("sync_count", result.data.length);
     } else {
@@ -101,7 +100,7 @@ export class CodeforcesSyncOneTokenService extends EdgeService {
   }
 
   protected defineImportRequire(): StatusRequire {
-    return statusRequire(["handle", "token", "submission_url"], ["AccountVerified"]);
+    return statusRequire(["handle", "token", "submission_url"]);
   }
 
   protected defineExportDescribe(): StatusDescribe[] {
@@ -136,7 +135,6 @@ export class CodeforcesSyncOneTokenService extends EdgeService {
     if (result && result.event === "sync_done_success") {
       const submissions = result.data.map((sub: any) => createValue(sub));
       return VjudgeStatus.from(input)
-        .withStatusType("ProblemSynced")
         .withList("submissions", submissions)
         .withNumber("sync_count", result.data.length);
     } else {

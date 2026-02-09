@@ -5,7 +5,7 @@ pub enum VjudgeAuth {
     Token(String),
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, EnumIter)]
 pub enum RemoteMode {
     OnlyTrust = 0,
     Apikey = 1,
@@ -160,5 +160,6 @@ use crate::db::entity::node::user_remote::{ActiveModel, Column, Entity, Model};
 use crate::graph::node::{Node, NodeRaw};
 use chrono::NaiveDateTime;
 use macro_node_iden::{Node, NodeRaw};
-use sea_orm::EntityTrait;
+use sea_orm::{EntityTrait, EnumIter};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumCount;

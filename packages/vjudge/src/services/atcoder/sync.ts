@@ -35,7 +35,7 @@ export class AtCoderSyncOneService extends EdgeService {
       "handle",
       "token",
       "problem_url",
-    ], ["AccountVerified"]);
+    ]);
   }
 
   protected defineExportDescribe(): StatusDescribe[] {
@@ -70,7 +70,6 @@ export class AtCoderSyncOneService extends EdgeService {
       
       if (!urlMatch) {
         return VjudgeStatus.from(input)
-          .withStatusType("Error")
           .withBool("sync_success", false)
           .withString("error_message", "Invalid AtCoder problem URL format");
       }
@@ -87,7 +86,6 @@ export class AtCoderSyncOneService extends EdgeService {
 
       if (!response.ok) {
         return VjudgeStatus.from(input)
-          .withStatusType("Error")
           .withBool("sync_success", false)
           .withString("error_message", `Failed to fetch problem: HTTP ${response.status}`);
       }
@@ -103,7 +101,6 @@ export class AtCoderSyncOneService extends EdgeService {
       const memoryLimitMatch = html.match(/Memory Limit:\s*(\d+)\s*MB/i);
 
       return VjudgeStatus.from(input)
-        .withStatusType("ProblemSynced")
         .withBool("sync_success", true)
         .withString("problem_title", title)
         .withString("problem_content", html)
@@ -114,7 +111,6 @@ export class AtCoderSyncOneService extends EdgeService {
 
     } catch (error) {
       return VjudgeStatus.from(input)
-        .withStatusType("Error")
         .withBool("sync_success", false)
         .withString("error_message", `Sync failed: ${error}`);
     }

@@ -22,6 +22,7 @@ pub struct ServiceRegistryResponse {
 #[generate_handler(route = "/services", real_path = "/api/vjudge/services")]
 pub mod handler {
     use macro_handler::export;
+    use rmjac_core::workflow::vjudge::system::{get_require, WorkflowRequire};
     use super::*;
 
     #[perm]
@@ -58,5 +59,13 @@ pub mod handler {
             .cloned()
             .collect::<Vec<_>>();
         Ok(ServiceRegistryResponse { services, platforms })
+    }
+
+    #[handler]
+    #[perm(check_perm)]
+    #[route("/get_require")]
+    #[export("data")]
+    async fn post_service_require(service_name: &str) -> ResultHandler<Vec<WorkflowRequire>> {
+        Ok(get_require(service_name).await)
     }
 }

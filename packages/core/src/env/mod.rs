@@ -1,6 +1,6 @@
 use crate::graph::action::DefaultNodes;
 use crate::service::iden::ac_automaton::AcMachine;
-use crate::workflow::vjudge::VjudgeWorkflow;
+use crate::workflow::vjudge::{VjudgeWorkflow, VjudgeWorkflowSystem};
 use chrono;
 use lazy_static::lazy_static;
 use sea_orm::DatabaseConnection;
@@ -55,7 +55,7 @@ lazy_static! {
     pub static ref USER_WEBSOCKET_CONNECTIONS_ACCOUNT: Mutex<HashMap<String, i64>> =
         Mutex::new(HashMap::new());
     /// 全局 VJudge 工作流
-    pub static ref VJUDGE_WORKFLOW: Mutex<Option<Arc<VjudgeWorkflow>>> =
+    pub static ref VJUDGE_WORKFLOW: Mutex<Option<Arc<VjudgeWorkflowSystem>>> =
         Mutex::new(None);
 }
 

@@ -15,7 +15,7 @@ source: string,
 /**
  * 输入要求（requiredKeys 等）
  */
-import_require: { requiredKeys: string[], requiredStatusTypes?: string[] } | null, 
+import_require: any | null, 
 /**
  * 输出描述
  */

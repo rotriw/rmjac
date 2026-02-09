@@ -5,49 +5,37 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use std::collections::HashSet;
-use serde_json::to_string;
+use serde_json::Value as JsonValue;
 use uuid::Uuid;
-use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire};
+use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire, Value};
+use workflow::value::{BaseValue, WorkflowValue};
+use workflow::status::{WorkflowValues, WorkflowStatus};
+use crate::model::vjudge::Platform;
 use crate::service::socket::workflow::dispatch_workflow_task;
-use crate::model::vjudge::workflow_dto::WorkflowStatusDataDTO;
-use crate::workflow::vjudge::status::{VjudgeExportDescribe, VjudgeExportDescribeExpr, VjudgeRequire, VjudgeRequireExpr, VjudgeStatus, VjudgeStatusDescribe, VjudgeStatusRequire, VjudgeStatusType, VjudgeValue};
+use crate::workflow::vjudge::status::{VjudgeExportDescribe, VjudgeExportDescribeExpr, VjudgeRequire, VjudgeRequireExpr};
 use crate::workflow::vjudge::status::VjudgeExportDescribeExpr::Has;
 
 /// Information about a registered remote edge service
 #[derive(Clone, Debug)]
 pub struct RemoteServiceInfo {
     /// Unique identifier for this service instance
-    pub service_id: String,
-    /// Human-readable name
-    pub name: String,
+    pub service_name: String,
     /// Description of what this service does
     pub description: String,
+    pub platform: String,
     /// Allow description for UI hints
     pub allow_description: String,
-    /// Platform this service handles (e.g., "codeforces", "atcoder")
-    pub platform: String,
-    /// Operation (verify/sync/submit/etc.)
-    pub operation: String,
-    /// Method (optional)
-    pub method: String,
-    /// Capabilities provided by this service
-    pub capabilities: Vec<String>,
     /// Estimated cost for using this service
     pub cost: i32,
     /// Whether this is an end service
     pub is_end: bool,
-    /// Required input status type
-    pub input_status_type: String,
-    /// Output status types
-    pub output_status_types: Vec<String>,
     /// Required keys in input
-    pub required_keys: Vec<String>,
-    /// Required status types in input
-    pub required_status_types: Vec<String>,
+    pub required: Vec<String>,
     /// Exported keys
-    pub export_keys: Vec<String>,
+    pub exported: Vec<String>,
+    pub socket_id: String,
 }
 
 /// Proxy service that forwards requests to remote TypeScript edge services
@@ -78,17 +66,9 @@ impl Service for RemoteEdgeService {
 
     fn get_info(&self) -> ServiceInfo {
         ServiceInfo {
-            name: self.info.name.clone(),
-            description: self.info.description.clone(),
-            allow_description: if self.info.allow_description.is_empty() {
-                format!(
-                    "Remote service for {} platform: {}",
-                    self.info.platform,
-                    self.info.capabilities.join(", ")
-                )
-            } else {
-                self.info.allow_description.clone()
-            },
+            name: self.info.service_name.clone(),
+            description: format!("{} {}", self.info.description.clone(), self.info.socket_id),
+            allow_description: self.info.allow_description.clone(),
         }
     }
 
@@ -100,7 +80,7 @@ impl Service for RemoteEdgeService {
         let mut require = VjudgeRequire {
             inner: vec![]
         };
-        for key in &self.info.required_keys {
+        for key in &self.info.required {
             require.inner.push(VjudgeRequireExpr::HasKey(key.clone()));
         }
         // 平台需要正确。
@@ -112,14 +92,14 @@ impl Service for RemoteEdgeService {
         let mut res = VjudgeExportDescribe {
             inner: vec![HashMap::new()],
         };
-        for key in &self.info.export_keys {
-            res.inner[0].insert(key.clone(), vec![VjudgeExportDescribeExpr::Has]);
+        for key in &self.info.exported {
+            res.inner[0].insert(format!("inner:{}", key.clone()), vec![VjudgeExportDescribeExpr::Has]);
         }
         vec![Box::new(res)] // 其实还有概率返回错误。但是有点懒了。
     }
 
     async fn verify(&self, input: &Box<dyn Status>) -> bool {
-        for key in &self.info.required_keys {
+        for key in &self.info.required {
             if input.get_value(key).is_none() {
                 return false;
             }
@@ -138,102 +118,113 @@ impl Service for RemoteEdgeService {
         let task_id = Uuid::new_v4().to_string();
         let input_json = match build_status_payload(input, &self.info) {
             Ok(payload) => payload,
-            Err(err) => return Box::new(VjudgeStatus::Error(err)),
+            Err(err) => return Box::new(WorkflowStatus::failed(err)),
         };
 
         let response = dispatch_workflow_task(
             &task_id,
-            &self.info.name,
+            &self.info.service_name,
             &self.info.platform,
-            &self.info.operation,
-            &self.info.method,
             input_json,
             None,
         )
-        .await;
+            .await;
 
         if !response.success {
-            let mut status = VjudgeStatus::Error(
-                response.error.as_deref().unwrap_or("Remote execution failed").to_string()
-            );
-            return Box::new(status);
+            return Box::new(WorkflowStatus::failed(
+                response.error.as_deref().unwrap_or("Remote execution failed").to_string(),
+            ));
         }
 
         if let Some(output) = response.output {
-            if let Ok(dto) = serde_json::from_value::<WorkflowStatusDataDTO>(output) {
-                let mut status = VjudgeStatus::new(map_status_type(&dto.status_type));
-                for (key, value) in dto.values {
-                    status = status.with_value(&key, value.into());
+            // 边缘服务器是受信任的来源，其输出应标记为 InnerFunction（可信）
+            let trusted_output = parse_edge_output_as_trusted(output, &task_id);
+            let result = trusted_output.concat(input);
+            return result;
+        }
+
+        input.clone_box()
+    }
+}
+
+
+/// 将边缘服务器返回的输出解析为受信任的 VjudgeStatus
+///
+/// 边缘服务器（TypeScript）返回的格式为 `{ values: { key: VjudgeValue } }`
+/// 其中 VjudgeValue = `{ type: "String", value: "..." }` 等。
+///
+/// 由于边缘服务器是受信任来源，所有输出值都应标记为 InnerFunction。
+fn parse_edge_output_as_trusted(output: JsonValue, task_id: &str) -> Box<dyn Status> {
+    let values_obj = if let Some(obj) = output.get("values").and_then(|v| v.as_object()) {
+        obj.clone()
+    } else if let Some(obj) = output.as_object() {
+        // 兜底：如果 output 本身就是一个扁平的 key-value 对象
+        obj.clone()
+    } else {
+        log::warn!(
+            "[RemoteEdge] Unexpected output format for task {}, wrapping as raw",
+            task_id
+        );
+        let mut m = serde_json::Map::new();
+        m.insert("output".to_string(), output);
+        m
+    };
+
+    // 将所有值解析并标记为 InnerFunction（可信）
+    let mut trusted_map = serde_json::Map::new();
+    for (key, value) in &values_obj {
+        // 边缘服务返回的 VjudgeValue 格式: { type: "String", value: "..." }
+        // 提取内部的实际值
+        let actual_value = extract_vjudge_value_payload(value);
+        trusted_map.insert(key.clone(), actual_value);
+    }
+
+    // 附加 task_id
+    trusted_map.insert("task_id".to_string(), JsonValue::String(task_id.to_string()));
+
+    // 使用 WorkflowValues 并标记为可信（来自边缘服务器）
+    Box::new(WorkflowValues::from_json_trusted(
+        JsonValue::Object(trusted_map),
+        "edge_server",
+    ))
+}
+
+/// 从 TypeScript VjudgeValue 格式中提取实际值
+///
+/// TS 端序列化格式: `{ type: "String", value: "hello" }` → `"hello"`
+/// 如果不是这种格式，直接返回原值
+fn extract_vjudge_value_payload(value: &JsonValue) -> JsonValue {
+    if let Some(obj) = value.as_object() {
+        if let Some(type_field) = obj.get("type").and_then(|t| t.as_str()) {
+            match type_field {
+                "String" | "Number" | "Bool" | "List" | "Object" => {
+                    if let Some(inner_val) = obj.get("value") {
+                        return inner_val.clone();
+                    }
                 }
-                status = status.with_value("task_id", VjudgeValue::String(task_id));
-                return Box::new(status);
+                "Inner" => {
+                    // { type: "Inner", value: ... } 也是来自内部的值
+                    if let Some(inner_val) = obj.get("value") {
+                        return inner_val.clone();
+                    }
+                }
+                _ => {}
             }
         }
-
-        let mut status = VjudgeStatus::new_error("Invalid remote response");
-        status = status.with_value("task_id", VjudgeValue::String(task_id));
-        Box::new(status)
     }
+    // 不是 VjudgeValue 格式，直接使用原始值
+    value.clone()
 }
 
-fn build_status_payload(
-    input: &Box<dyn Status>,
-    info: &RemoteServiceInfo,
-) -> Result<serde_json::Value, String> {
-    let mut values = serde_json::Map::new();
-    let mut keys: HashSet<String> = info.required_keys.iter().cloned().collect();
-    keys.insert("platform".to_string());
-
-    for key in keys {
-        if let Some(value) = input.get_value(&key) {
-            values.insert(key, value_to_json(value.to_string()));
-        } else {
-            return Err(format!("Missing required key: {}", key));
-        }
+fn attach_task_id(mut output: JsonValue, task_id: &str) -> JsonValue {
+    if let Some(obj) = output.as_object_mut() {
+        obj.insert("task_id".to_string(), JsonValue::String(task_id.to_string()));
+        return JsonValue::Object(obj.clone());
     }
-
-    Ok(serde_json::json!({
-        "statusType": to_ts_status_type(&input.get_status_type()),
-        "values": values,
-    }))
-}
-
-fn value_to_json(raw: String) -> serde_json::Value {
-    if raw == "true" || raw == "false" {
-        return serde_json::json!({ "type": "Bool", "value": raw == "true" });
-    }
-    if let Ok(num) = raw.parse::<i64>() {
-        return serde_json::json!({ "type": "Number", "value": num });
-    }
-    serde_json::json!({ "type": "String", "value": raw })
-}
-
-fn to_ts_status_type(status_type: &str) -> &'static str {
-    match status_type {
-        "initial" => "Initial",
-        "account_verified" => "AccountVerified",
-        "problem_fetched" => "ProblemFetched",
-        "problem_synced" => "ProblemSynced",
-        "submission_created" => "SubmissionCreated",
-        "submission_judged" => "SubmissionJudged",
-        "error" => "Error",
-        "completed" => "Completed",
-        _ => "Initial",
-    }
-}
-
-fn map_status_type(status_type: &str) -> VjudgeStatusType {
-    match status_type {
-        "Initial" => VjudgeStatusType::Initial,
-        "AccountVerified" => VjudgeStatusType::AccountVerified,
-        "ProblemFetched" => VjudgeStatusType::ProblemFetched,
-        "ProblemSynced" => VjudgeStatusType::ProblemSynced,
-        "SubmissionCreated" => VjudgeStatusType::SubmissionCreated,
-        "SubmissionJudged" => VjudgeStatusType::SubmissionJudged,
-        "Error" => VjudgeStatusType::Error,
-        "Completed" => VjudgeStatusType::Completed,
-        _ => VjudgeStatusType::Initial,
-    }
+    serde_json::json!({
+        "task_id": task_id,
+        "output": output,
+    })
 }
 
 /// Registry for managing remote edge services

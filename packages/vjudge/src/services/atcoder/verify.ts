@@ -33,7 +33,7 @@ export class AtCoderVerifyTokenService extends EdgeService {
   }
 
   protected defineImportRequire(): StatusRequire {
-    return statusRequire(["handle", "token"], ["Initial"]);
+    return statusRequire(["handle", "token"]);
   }
 
   protected defineExportDescribe(): StatusDescribe[] {
@@ -65,12 +65,10 @@ export class AtCoderVerifyTokenService extends EdgeService {
 
     if (result.data.result) {
       return VjudgeStatus.from(input)
-        .withStatusType("AccountVerified")
         .withBool("verified", true)
         .withString("message", "AtCoder account verified successfully");
     } else {
       return VjudgeStatus.from(input)
-        .withStatusType("Error")
         .withBool("verified", false)
         .withString("error_message", "Token verification failed");
     }
@@ -95,7 +93,7 @@ export class AtCoderVerifyPasswordService extends EdgeService {
   }
 
   protected defineImportRequire(): StatusRequire {
-    return statusRequire(["handle", "password"], ["Initial"]);
+    return statusRequire(["handle", "password"]);
   }
 
   protected defineExportDescribe(): StatusDescribe[] {
@@ -128,12 +126,10 @@ export class AtCoderVerifyPasswordService extends EdgeService {
 
     if (result.data.result) {
       return VjudgeStatus.from(input)
-        .withStatusType("AccountVerified")
         .withBool("verified", true)
         .withString("message", "AtCoder login successful");
     } else {
       return VjudgeStatus.from(input)
-        .withStatusType("Error")
         .withBool("verified", false)
         .withString("error_message", "Password login failed");
     }

@@ -232,29 +232,26 @@ export class ServiceRegistry {
       // 解析输入状态
       this.log("debug", `[handleTask] Parsing input status from JSON...`);
       const inputStatus = VjudgeStatus.fromJSON(input);
-      this.log("info", `[handleTask] Input parsed: statusType=${inputStatus.getStatusType()}, valueKeys=[${inputStatus.getKeys().join(", ")}]`);
+      this.log("info", `[handleTask] Input parsed: valueKeys=[${inputStatus.getKeys().join(", ")}]`);
 
       // 执行服务
       this.log("info", `[handleTask] Executing service: ${serviceName} (key=${key})...`);
       const execStart = Date.now();
       const outputStatus = await service.execute(inputStatus);
       const execElapsed = Date.now() - execStart;
-      this.log("info", `[handleTask] Service executed in ${execElapsed}ms, outputStatusType=${outputStatus.getStatusType()}`);
-
-      // 检查是否错误状态
-      if (outputStatus.getStatusType() === "Error") {
-        const errorMessage = outputStatus.getValue("error_message");
-        const errStr = errorMessage?.type === "String" ? errorMessage.value : "Unknown error";
-        this.log("warn", `[handleTask] Service returned Error status: ${errStr}`);
+      const errorValue = outputStatus.getValue("error_message") ?? outputStatus.getValue("error");
+      const errorMessage = errorValue?.type === "String" ? errorValue.value : undefined;
+      if (errorMessage) {
+        this.log("warn", `[handleTask] Service returned error: ${errorMessage}`);
         return {
           taskId,
           success: false,
-          error: errStr,
+          error: errorMessage,
         };
       }
 
       const output = outputStatus.toJSON();
-      this.log("info", `[handleTask] Task ${taskId} success, output statusType=${outputStatus.getStatusType()}`);
+      this.log("info", `[handleTask] Task ${taskId} success`);
       return {
         taskId,
         success: true,

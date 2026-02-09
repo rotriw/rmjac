@@ -40,7 +40,7 @@ export class CodeforcesSubmitTokenService extends EdgeService {
       "code",
       "language_id",
       "record_id",
-    ], ["AccountVerified"]);
+    ]);
   }
 
   protected defineExportDescribe(): StatusDescribe[] {
@@ -91,13 +91,11 @@ export class CodeforcesSubmitTokenService extends EdgeService {
 
     if (result.data.success) {
       return VjudgeStatus.from(input)
-        .withStatusType("SubmissionCreated")
         .withBool("submit_success", true)
         .withString("submission_url", result.data.remote_url)
         .withString("message", result.data.message);
     } else {
       return VjudgeStatus.from(input)
-        .withStatusType("Error")
         .withBool("submit_success", false)
         .withString("error_message", result.data.message);
     }

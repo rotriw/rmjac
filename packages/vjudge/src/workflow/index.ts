@@ -15,7 +15,6 @@ export type {
   ServiceInfo,
   ServiceMetadata,
   ServiceOperation,
-  VjudgeStatusType,
   VjudgeValue,
   ValueType,
   TaskRequest,
@@ -27,10 +26,18 @@ export type {
   VjudgeNode,
   VjudgeNodePublic,
   VjudgeNodePrivate,
+  // New workflow value types
+  BaseValue,
+  WorkflowValue,
+  WorkflowValuesData,
+  WorkflowStatusType,
 } from "./types.ts";
 
+// New workflow value utilities
+export { WorkflowValueUtils, BaseValueUtils } from "./types.ts";
+
 // Status 实现
-export { VjudgeStatus, createValue } from "./status.ts";
+export { VjudgeStatus, createValue, WorkflowValuesStore } from "./status.ts";
 
 // Service 基类和辅助类
 export {

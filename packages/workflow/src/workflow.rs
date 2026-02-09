@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -28,6 +29,13 @@ pub trait StatusRequire {
     fn describe(&self) -> String { // 描述要求。
         "No description".to_string()
     }
+}
+
+
+pub struct TaskRequire {
+    pub start_service_info: ServiceInfo, // 起始服务信息
+    pub require: Box<dyn StatusRequire>, // 输入要求
+    pub route_describe: String, // 路径描述
 }
 
 pub enum ValueType { // TODO: 实际上并没有被用到，基本上被bypass了。等有时间了要让他能用，
@@ -86,6 +94,14 @@ pub trait Service: ServiceClone + Send + Sync {
 }
 
 pub trait Status: StatusClone + 'static {
+    fn add_value(&self, key: &str, value: Box<dyn Value>) -> Box<dyn Status>;
+    fn concat(&self, values: &Box<dyn Status>) -> Box<dyn Status> {
+        let mut res = self.clone_box();
+        for (k, v) in values.get_all_value() {
+            res = res.add_value(&k, v);
+        }
+        res
+    }
     fn get_value(&self, key: &str) -> Option<Box<dyn Value>>;
     fn get_all_value(&self) -> Vec<(String, Box<dyn Value>)>;
 }
@@ -142,7 +158,7 @@ impl From<String> for TaskStatus {
 pub struct NowStatus {
     pub done: bool, // 是否已完成。 如果已完成, 当前服务为结束服务。
     pub init_value: Box<dyn Status>,
-    pub is_lazy: bool, // 是否为lazy执行。 如果为 lazy, 当前服务存在编号。
+    pub is_lazy: bool, // 是否为lazy执行。 如果为 lazy, 当前服务存在编号。（弃用：必然拥有）
     pub task_id: Option<i64>, // 是否记录。
     pub history_value: Vec<HistoryStatus>,
 }
@@ -192,4 +208,9 @@ pub trait WorkflowAction {
     fn execute(&self, now_status: &NowStatus, target: Box<dyn Service>) -> impl Future<Output = Option<NowStatus>>;
     fn next(&self, now_status: &NowStatus, service: &Box<dyn Service>) -> impl Future<Output = Option<NowStatus>>; // next with used_service.
     fn next_auto(&self, now_status: &NowStatus, service: &Box<dyn Service>) -> impl Future<Output = Option<NowStatus>>; // next with plan.
+}
+
+
+pub trait WorkflowPlanAction {
+    fn get_required_input(&self, target: &str) -> impl Future<Output = Vec<TaskRequire>>;
 }

@@ -36,7 +36,7 @@ export class CodeforcesQueryTokenService extends EdgeService {
   protected defineImportRequire(): StatusRequire {
     return statusRequire([
       "submission_url",
-    ], ["SubmissionCreated"]);
+    ]);
   }
 
   protected defineExportDescribe(): StatusDescribe[] {
@@ -71,14 +71,12 @@ export class CodeforcesQueryTokenService extends EdgeService {
       // 或者通过 submission_id 直接查询
       
       return VjudgeStatus.from(input)
-        .withStatusType("JudgePending")
         .withString("query_status", "pending")
         .withString("submission_id", submissionId)
         .withString("message", "Query initiated, use track service for real-time updates");
         
     } catch (error) {
       return VjudgeStatus.from(input)
-        .withStatusType("Error")
         .withString("error_message", `Query failed: ${error}`);
     }
   }

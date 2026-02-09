@@ -5,7 +5,8 @@
 pub mod remote;
 pub mod submit;
 pub mod db_update;
+pub mod from_node;
 
 pub use remote::{RemoteEdgeService, RemoteServiceInfo};
-pub use submit::{SubmitService, SubmitCompleteService, FetchResultService, JudgeOptionAdapter};
+pub use submit::{SubmitService, SubmitCompleteService, JudgeOptionAdapter};
 pub use db_update::{UpdateProblemService, UpdateVerifiedService};

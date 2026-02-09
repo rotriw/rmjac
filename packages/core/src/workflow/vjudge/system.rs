@@ -2,32 +2,22 @@
 //!
 //! This module implements the WorkflowSystem trait for VJudge operations.
 
-use sea_orm::{ActiveModelTrait, ColumnTrait, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, Iterable, Set};
 use std::collections::HashMap;
 use std::sync::Arc;
 use sea_orm::{EntityTrait, IntoActiveModel, QueryFilter};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use crate::env;
-use crate::workflow::vjudge::VjudgeWorkflow;
-use workflow::workflow::{NowStatus, Service, Status, WorkflowAction, WorkflowSystem};
+use workflow::workflow::{NowStatus, Service, Status, WorkflowAction, WorkflowPlanAction, WorkflowSystem};
 use crate::env::db::get_connect;
 use crate::graph::node::NodeRaw;
+use crate::graph::node::user::remote_account::RemoteMode;
 use crate::graph::node::vjudge_task::{VjudgeTaskNodePrivateRaw, VjudgeTaskNodePublicRaw, VjudgeTaskNodeRaw};
-use crate::workflow::vjudge::services::{
-    FetchResultService, RemoteEdgeService, RemoteServiceInfo, SubmitCompleteService, SubmitService,
-    UpdateProblemService, UpdateVerifiedService,
-};
-use crate::service::socket::workflow::WorkflowServiceMetadata;
-use crate::workflow::vjudge::status::VjudgeStatus;
-
-/// The VJudge Workflow System
-///
-/// This system manages all services available for VJudge operations,
-/// including local services and dynamically registered remote edge services.
+use crate::workflow::vjudge::services::{SubmitCompleteService, UpdateProblemService, UpdateVerifiedService, };
+use crate::workflow::vjudge::services::from_node::FromNodeService;
 pub struct VjudgeWorkflowSystem {
-    /// All registered services
-    services: Arc<RwLock<HashMap<String, Box<dyn Service>>>>,
+    pub services: Arc<RwLock<HashMap<String, Box<dyn Service>>>>,
 }
 
 impl Default for VjudgeWorkflowSystem {
@@ -36,37 +26,6 @@ impl Default for VjudgeWorkflowSystem {
             services: Arc::new(RwLock::new(HashMap::new())),
         }
     }
-}
-
-/// Create a new system with default services for all supported platforms
-pub async fn build_default_vjudge_workflow_system() -> VjudgeWorkflowSystem {
-    let system = VjudgeWorkflowSystem::default();
-    register_default_services(&system).await;
-    system
-}
-
-/// Register default local services for all supported platforms
-async fn register_default_services(system: &VjudgeWorkflowSystem) {
-    let mut services = system.services.write().await;
-    let update_problem = UpdateProblemService::new();
-    let name = update_problem.get_info().name.clone();
-    services.insert(name, Box::new(update_problem));
-    let update_verified = UpdateVerifiedService::new();
-    let name = update_verified.get_info().name.clone();
-    services.insert(name, Box::new(update_verified));
-    let submit_complete = SubmitCompleteService::new();
-    let name = submit_complete.get_info().name.clone();
-    services.insert(name, Box::new(submit_complete));
-}
-
-pub async fn get_local_services(system: &VjudgeWorkflowSystem) -> Vec<Box<dyn Service>> {
-    let services = system.services.read().await;
-    services.values().cloned().collect()
-}
-
-pub async fn service_count(system: &VjudgeWorkflowSystem) -> usize {
-    let services = system.services.read().await;
-    services.len()
 }
 
 pub async fn has_service(system: &VjudgeWorkflowSystem, name: &str) -> bool {
@@ -84,15 +43,6 @@ pub async fn get_services_for_platform(
         .filter(|name| name.contains(platform) || *name == "sync_list")
         .cloned()
         .collect()
-}
-
-pub async fn execute_service(
-    system: &VjudgeWorkflowSystem,
-    service_name: &str,
-    now_status: &NowStatus,
-    id: i64,
-) -> Option<NowStatus> {
-    system.execute(now_status, system.get_service(service_name).await?).await
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, ts_rs::TS)]
@@ -175,8 +125,6 @@ impl WorkflowSystem for VjudgeWorkflowSystem {
         let local = self.services.read().await;
         services.extend(local.values().cloned());
         drop(local);
-
-        services.extend(load_remote_services());
         services
     }
 
@@ -192,129 +140,11 @@ impl WorkflowSystem for VjudgeWorkflowSystem {
     }
 }
 
-fn load_remote_services() -> Vec<Box<dyn Service>> {
-    let workflow = match VjudgeWorkflow::try_global() {
-        Some(workflow) => workflow,
-        None => return vec![],
-    };
-    let metadata_map = workflow.service_metadata().lock().unwrap().clone();
-    metadata_map
-        .into_iter()
-        .filter_map(|(key, value)| {
-            let metadata: WorkflowServiceMetadata = serde_json::from_value(value).ok()?;
-            let (required_keys, required_status_types) = parse_import_require(&metadata.import_require);
-            let export_keys = parse_export_describe(&metadata.export_describe);
-
-            let input_status_type = required_status_types
-                .first()
-                .cloned()
-                .unwrap_or_else(|| "initial".to_string());
-            let output_status_types = if metadata.is_end {
-                vec!["completed".to_string(), "error".to_string()]
-            } else {
-                vec!["error".to_string()]
-            };
-
-            let capabilities = if metadata.method.is_empty() {
-                vec![metadata.operation.clone()]
-            } else {
-                vec![metadata.operation.clone(), metadata.method.clone()]
-            };
-
-            let info = RemoteServiceInfo {
-                service_id: key.clone(),
-                name: if metadata.name.is_empty() { key.clone() } else { metadata.name.clone() },
-                description: metadata.description.clone(),
-                allow_description: metadata.allow_description.clone(),
-                platform: metadata.platform.clone(),
-                operation: metadata.operation.clone(),
-                method: metadata.method.clone(),
-                capabilities,
-                cost: metadata.cost,
-                is_end: metadata.is_end,
-                input_status_type,
-                output_status_types,
-                required_keys,
-                required_status_types,
-                export_keys,
-            };
-
-            Some(Box::new(RemoteEdgeService::new(info, "")) as Box<dyn Service>)
-        })
-        .collect()
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
+pub struct WorkflowRequire {
+    pub start_require: String,
+    pub route_describe: String,
+    pub input_require: String,
 }
 
-fn parse_import_require(value: &serde_json::Value) -> (Vec<String>, Vec<String>) {
-    let required_keys = value
-        .get("requiredKeys")
-        .and_then(|v| v.as_array())
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                .collect()
-        })
-        .unwrap_or_default();
-
-    let required_status_types = value
-        .get("requiredStatusTypes")
-        .and_then(|v| v.as_array())
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_lowercase()))
-                .collect()
-        })
-        .unwrap_or_default();
-
-    (required_keys, required_status_types)
-}
-
-fn parse_export_describe(values: &[serde_json::Value]) -> Vec<String> {
-    values
-        .iter()
-        .filter_map(|value| value.get("key").and_then(|v| v.as_str()).map(|s| s.to_string()))
-        .collect()
-}
-
-
-/// Builder for VjudgeWorkflowSystem
-pub struct VjudgeWorkflowSystemBuilder {
-    extra_platforms: Vec<String>,
-    include_default_services: bool,
-}
-
-impl VjudgeWorkflowSystemBuilder {
-    /// Create a new builder
-    pub fn new() -> Self {
-        Self {
-            extra_platforms: vec![],
-            include_default_services: true,
-        }
-    }
-
-    /// Add a platform
-    pub fn with_platform(mut self, platform: &str) -> Self {
-        self.extra_platforms.push(platform.to_string());
-        self
-    }
-
-    /// Set whether to include default services
-    pub fn with_default_services(mut self, include: bool) -> Self {
-        self.include_default_services = include;
-        self
-    }
-
-    /// Build the workflow system
-    pub async fn build(self) -> VjudgeWorkflowSystem {
-        let system = VjudgeWorkflowSystem::default();
-        register_default_services(&system).await;
-        system
-    }
-}
-
-impl Default for VjudgeWorkflowSystemBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}

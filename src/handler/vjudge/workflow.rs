@@ -11,10 +11,8 @@ use crate::utils::perm::UserAuthCotext;
 use macro_handler::{export, generate_handler, handler, perm, route, require_login};
 use rmjac_core::error::CoreError;
 use rmjac_core::model::ModelStore;
-use rmjac_core::workflow::vjudge::{
-    VjudgeStatusType, VjudgeValue, VjudgeWorkflow, VjudgeWorkflowSystem,
-};
-use rmjac_core::workflow::WorkflowSystem;
+use rmjac_core::workflow::vjudge::{VjudgeWorkflow, VjudgeWorkflowSystem};
+use rmjac_core::workflow::{WorkflowSystem, WorkflowValues, BaseValue};
 use rmjac_core::service::socket::workflow::WorkflowServiceMetadata;
 use rmjac_core::service::socket::workflow::{
     dispatch_workflow_task, notify_user_workflow_status,
@@ -34,31 +32,10 @@ use rmjac_core::graph::node::vjudge_task::{
 use rmjac_core::graph::edge::EdgeRaw;
 use std::collections::HashMap;
 
-fn parse_status_type(s: &str) -> Result<VjudgeStatusType, HttpError> {
-    match s {
-        "Initial" => Ok(VjudgeStatusType::Initial),
-        "AccountVerified" => Ok(VjudgeStatusType::AccountVerified),
-        "ProblemFetched" => Ok(VjudgeStatusType::ProblemFetched),
-        "ProblemSynced" => Ok(VjudgeStatusType::ProblemSynced),
-        "SubmissionCreated" => Ok(VjudgeStatusType::SubmissionCreated),
-        "SubmissionJudged" => Ok(VjudgeStatusType::SubmissionJudged),
-        "Error" => Ok(VjudgeStatusType::Error),
-        "Completed" => Ok(VjudgeStatusType::Completed),
-        _ => Err(HttpError::CoreError(CoreError::StringError(format!(
-            "Invalid status type: {}",
-            s
-        )))),
-    }
-}
-
-fn build_status(dto: WorkflowStatusDataDTO) -> Result<rmjac_core::workflow::vjudge::VjudgeStatus, HttpError> {
-    let status_type = parse_status_type(&dto.status_type)?;
-    let mut status = rmjac_core::workflow::vjudge::VjudgeStatus::new(status_type);
-    for (key, value) in dto.values {
-        let v: VjudgeValue = value.into();
-        status = status.with_value(&key, v);
-    }
-    Ok(status)
+fn build_status(dto: WorkflowStatusDataDTO) -> Result<WorkflowValues, HttpError> {
+    // 使用新的 DTO 转换方法，直接得到 WorkflowValues
+    let workflow_values = dto.to_workflow_values();
+    Ok(workflow_values)
 }
 
 fn parse_service_name(name: &str) -> (String, String, Option<String>) {
@@ -297,10 +274,10 @@ pub mod handler {
         status_type: String,
         values: String,
     ) -> ResultHandler<Vec<WorkflowTargetInfo>> {
+        let _status_type = status_type;
         let values_map: HashMap<String, WorkflowValueDTO> = serde_json::from_str(&values)
             .map_err(|e| HttpError::CoreError(CoreError::StringError(e.to_string())))?;
         let dto = WorkflowStatusDataDTO {
-            status_type,
             values: values_map,
         };
         let status = build_status(dto)?;
@@ -439,7 +416,7 @@ pub mod handler {
                 platform,
                 operation,
                 method,
-                available_sockets: wf_index.get(&key).map(|v| v.len()).unwrap_or(0),
+                available_sockets: wf_index.get(&key).map(|v| v.len() as i32).unwrap_or(0),
                 source: "workflow".to_string(),
                 import_require: Some(metadata.import_require.clone()),
                 export_describe: Some(metadata.export_describe.clone()),

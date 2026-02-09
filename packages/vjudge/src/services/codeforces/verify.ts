@@ -6,8 +6,6 @@
 import {
   EdgeService,
   VjudgeStatus,
-  VjudgeStatusRequire,
-  VjudgeStatusDescribe,
   statusRequire,
   statusDescribe,
   type Status,
@@ -40,8 +38,9 @@ export class CodeforcesVerifyApiKeyService extends EdgeService {
 
   protected defineExportDescribe(): StatusDescribe[] {
     return [
-      statusDescribe("verified", "Bool"),
       statusDescribe("account_id", "String"),
+      statusDescribe("verified", "Bool"),
+      statusDescribe("vjudge_id", "String"),
     ];
   }
 
@@ -57,7 +56,6 @@ export class CodeforcesVerifyApiKeyService extends EdgeService {
     const verified = await verifyApiKey(handle.value, apiKey.value, apiSecret.value);
 
     return VjudgeStatus.from(input)
-      .withStatusType("AccountVerified")
       .withBool("verified", verified)
       .withString("account_id", handle.value);
   }
@@ -101,7 +99,6 @@ export class CodeforcesVerifyTokenService extends EdgeService {
     const verified = await checkLoginWithToken(handle.value, token.value);
 
     return VjudgeStatus.from(input)
-      .withStatusType("AccountVerified")
       .withBool("verified", verified)
       .withString("account_id", handle.value);
   }
@@ -147,7 +144,6 @@ export class CodeforcesVerifyPasswordService extends EdgeService {
     const verified = sessionToken !== "";
 
     const result = VjudgeStatus.from(input)
-      .withStatusType("AccountVerified")
       .withBool("verified", verified)
       .withString("account_id", handle.value);
 

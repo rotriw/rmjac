@@ -8,24 +8,10 @@
 // ============================================================================
 
 /**
- * 状态类型枚举（对应 Rust VjudgeStatusType）
- */
-export type VjudgeStatusType =
-  | "Initial"
-  | "AccountVerified"
-  | "ProblemFetched"
-  | "ProblemSynced"
-  | "SubmissionCreated"
-  | "SubmissionJudged"
-  | "JudgePending"
-  | "JudgeCompleted"
-  | "Error"
-  | "Completed";
-
-/**
  * 值类型（对应 Rust VjudgeValue）
  */
 export type VjudgeValue =
+  | { type: "Inner"; value: string }
   | { type: "String"; value: string }
   | { type: "Number"; value: number }
   | { type: "Bool"; value: boolean }
@@ -39,11 +25,6 @@ export interface Status {
    * 获取状态字符串表示
    */
   getStatus(): string;
-  
-  /**
-   * 获取状态类型
-   */
-  getStatusType(): VjudgeStatusType;
   
   /**
    * 获取指定 key 的值
@@ -65,7 +46,6 @@ export interface Status {
  * 状态数据的 JSON 表示
  */
 export interface StatusData {
-  statusType: VjudgeStatusType;
   values: Record<string, VjudgeValue>;
 }
 
@@ -98,7 +78,6 @@ export interface StatusRequire {
  */
 export interface StatusRequireData {
   requiredKeys: string[];
-  requiredStatusTypes?: VjudgeStatusType[];
 }
 
 // ============================================================================
@@ -275,6 +254,123 @@ export interface EdgeToServerEvents {
   workflow_service_register: (message: ServiceRegistrationMessage) => void;
   workflow_service_unregister: (message: ServiceUnregistrationMessage) => void;
 }
+
+// ============================================================================
+// 新 Workflow Value 类型系统 (与 Rust workflow::value / workflow::status 对齐)
+// ============================================================================
+
+/**
+ * 基础值类型（对应 Rust BaseValue）
+ */
+export type BaseValue =
+  | { type: "String"; value: string }
+  | { type: "Number"; value: number }
+  | { type: "Int"; value: number }
+  | { type: "Bool"; value: boolean }
+  | { type: "List"; value: BaseValue[] }
+  | { type: "Object"; value: Record<string, unknown> }
+  | { type: "Null" };
+
+/**
+ * 带信任标记的值（对应 Rust WorkflowValue）
+ */
+export type WorkflowValue =
+  | { trust: "Untrusted" } & BaseValue
+  | { trust: "Trusted"; source?: string } & BaseValue;
+
+/**
+ * WorkflowValue 工具函数
+ */
+export const WorkflowValueUtils = {
+  /** 创建不可信值 */
+  untrusted(value: BaseValue): WorkflowValue {
+    return { trust: "Untrusted", ...value };
+  },
+
+  /** 创建可信值 */
+  trusted(value: BaseValue, source?: string): WorkflowValue {
+    return { trust: "Trusted", source, ...value };
+  },
+
+  /** 检查是否为可信值 */
+  isTrusted(value: WorkflowValue): boolean {
+    return value.trust === "Trusted";
+  },
+
+  /** 获取内部基础值 */
+  inner(value: WorkflowValue): BaseValue {
+    const { trust: _, source: _s, ...base } = value as any;
+    return base as BaseValue;
+  },
+
+  /** 将不可信值提升为可信值 */
+  promote(value: WorkflowValue, source: string): WorkflowValue {
+    if (value.trust === "Trusted") return value;
+    const { trust: _, ...base } = value as any;
+    return { trust: "Trusted", source, ...base };
+  },
+} as const;
+
+/**
+ * BaseValue 工具函数
+ */
+export const BaseValueUtils = {
+  string(value: string): BaseValue {
+    return { type: "String", value };
+  },
+  number(value: number): BaseValue {
+    return { type: "Number", value };
+  },
+  int(value: number): BaseValue {
+    return { type: "Int", value: Math.floor(value) };
+  },
+  bool(value: boolean): BaseValue {
+    return { type: "Bool", value };
+  },
+  list(value: BaseValue[]): BaseValue {
+    return { type: "List", value };
+  },
+  object(value: Record<string, unknown>): BaseValue {
+    return { type: "Object", value };
+  },
+  null(): BaseValue {
+    return { type: "Null" };
+  },
+
+  /** 从原始 JS 值创建 BaseValue */
+  from(value: unknown): BaseValue {
+    if (value === null || value === undefined) return { type: "Null" };
+    if (typeof value === "string") return { type: "String", value };
+    if (typeof value === "number") {
+      return Number.isInteger(value)
+        ? { type: "Int", value }
+        : { type: "Number", value };
+    }
+    if (typeof value === "boolean") return { type: "Bool", value };
+    if (Array.isArray(value)) {
+      return { type: "List", value: value.map(BaseValueUtils.from) };
+    }
+    if (typeof value === "object") {
+      return { type: "Object", value: value as Record<string, unknown> };
+    }
+    return { type: "String", value: String(value) };
+  },
+} as const;
+
+/**
+ * 值集合（对应 Rust WorkflowValues）
+ */
+export interface WorkflowValuesData {
+  [key: string]: WorkflowValue;
+}
+
+/**
+ * Workflow 状态（对应 Rust WorkflowStatus）
+ */
+export type WorkflowStatusType =
+  | { status: "Running"; values: WorkflowValuesData }
+  | { status: "Completed"; values: WorkflowValuesData; message?: string }
+  | { status: "Failed"; error: string; context?: unknown };
 
 // ============================================================================
 // VjudgeNode 相关类型（来自现有 declare/node.ts）
