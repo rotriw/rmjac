@@ -8,6 +8,7 @@ import {
   VjudgeStatus,
   statusRequire,
   statusDescribe,
+  readStringValue,
   type Status,
   type StatusRequire,
   type StatusDescribe,
@@ -48,16 +49,16 @@ export class CodeforcesQueryTokenService extends EdgeService {
   }
 
   protected async doExecute(input: Status): Promise<Status> {
-    const submissionUrl = input.getValue("submission_url");
+    const submissionUrlValue = readStringValue(input.getValue("submission_url"));
 
-    if (submissionUrl?.type !== "String") {
+    if (!submissionUrlValue) {
       return VjudgeStatus.error("Invalid submission_url type");
     }
 
     try {
       // 从 submission URL 提取信息
       // 格式: https://codeforces.com/contest/{contestId}/submission/{submissionId}
-      const match = submissionUrl.value.match(/\/submission\/(\d+)/);
+      const match = submissionUrlValue.match(/\/submission\/(\d+)/);
       if (!match) {
         return VjudgeStatus.error("Invalid submission URL format");
       }

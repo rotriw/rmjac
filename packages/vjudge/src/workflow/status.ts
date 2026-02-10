@@ -5,19 +5,18 @@
 import type {
   Status,
   StatusData,
-  VjudgeValue,
   BaseValue,
-  WorkflowValue,
+  WorkflowTrustValue,
   WorkflowValuesData,
-  WorkflowStatusType,
 } from "./types.ts";
 import { WorkflowValueUtils, BaseValueUtils } from "./types.ts";
+import type { WorkflowValueDTO } from "@rmjac/api-declare/interface/WorkflowValueDTO.ts";
 
 /**
  * VjudgeStatus 具体实现
  */
 export class VjudgeStatus implements Status {
-  private values: Map<string, VjudgeValue>;
+  private values: Map<string, WorkflowValueDTO>;
 
   constructor() {
     this.values = new Map();
@@ -34,7 +33,7 @@ export class VjudgeStatus implements Status {
     return `Status(${entries})`;
   }
 
-  getValue(key: string): VjudgeValue | undefined {
+  getValue(key: string): WorkflowValueDTO | undefined {
     return this.values.get(key);
   }
 
@@ -43,7 +42,7 @@ export class VjudgeStatus implements Status {
   }
 
   toJSON(): StatusData {
-    const valuesObj: Record<string, VjudgeValue> = {};
+    const valuesObj: Record<string, WorkflowValueDTO> = {};
     for (const [key, value] of this.values) {
       valuesObj[key] = value;
     }
@@ -79,7 +78,6 @@ export class VjudgeStatus implements Status {
     this.values.set(key, { type: "Number", value: Math.floor(value) });
     return this;
   }
-
   /**
    * 设置布尔值
    */
@@ -91,7 +89,7 @@ export class VjudgeStatus implements Status {
   /**
    * 设置列表值
    */
-  withList(key: string, value: VjudgeValue[]): VjudgeStatus {
+  withList(key: string, value: WorkflowValueDTO[]): VjudgeStatus {
     this.values.set(key, { type: "List", value });
     return this;
   }
@@ -99,7 +97,7 @@ export class VjudgeStatus implements Status {
   /**
    * 设置任意值
    */
-  withValue(key: string, value: VjudgeValue): VjudgeStatus {
+  withValue(key: string, value: WorkflowValueDTO): VjudgeStatus {
     this.values.set(key, value);
     return this;
   }
@@ -144,7 +142,7 @@ export class VjudgeStatus implements Status {
   /**
    * 获取列表值
    */
-  getList(key: string): VjudgeValue[] | undefined {
+  getList(key: string): WorkflowValueDTO[] | undefined {
     const value = this.values.get(key);
     if (value?.type === "List") {
       return value.value;
@@ -162,6 +160,7 @@ export class VjudgeStatus implements Status {
   static fromJSON(data: StatusData): VjudgeStatus {
     const status = new VjudgeStatus();
     for (const [key, value] of Object.entries(data.values)) {
+      if (!value) continue;
       status.values.set(key, value);
     }
     return status;
@@ -210,7 +209,7 @@ export class VjudgeStatus implements Status {
 /**
  * 将 VjudgeValue 转换为字符串表示
  */
-function valueToString(value: VjudgeValue): string {
+function valueToString(value: WorkflowValueDTO): string {
   switch (value.type) {
     case "Inner":
       return `inner:${value.value}`;
@@ -222,15 +221,17 @@ function valueToString(value: VjudgeValue): string {
       return String(value.value);
     case "List":
       return `[${value.value.map(valueToString).join(", ")}]`;
+    default:
+      return "[unknown]";
   }
 }
 
 /**
  * 从原始值创建 VjudgeValue
  */
-export function createValue(value: unknown): VjudgeValue {
+export function createValue(value: unknown): WorkflowValueDTO {
   if (typeof value === "object" && value !== null && "type" in value && "value" in value) {
-    return value as VjudgeValue;
+    return value as WorkflowValueDTO;
   }
   if (typeof value === "string") {
     return { type: "String", value };
@@ -258,7 +259,7 @@ export function createValue(value: unknown): VjudgeValue {
  * 管理一组带信任标记的键值对，与 Rust 端 WorkflowValues 对齐。
  */
 export class WorkflowValuesStore {
-  private values: Map<string, WorkflowValue>;
+  private values: Map<string, WorkflowTrustValue>;
 
   constructor() {
     this.values = new Map();
@@ -274,13 +275,13 @@ export class WorkflowValuesStore {
     this.values.set(key, WorkflowValueUtils.trusted(value, source));
   }
 
-  /** 直接添加 WorkflowValue */
-  add(key: string, value: WorkflowValue): void {
+  /** 直接添加 WorkflowTrustValue */
+  add(key: string, value: WorkflowTrustValue): void {
     this.values.set(key, value);
   }
 
   /** 获取值（不检查信任级别） */
-  get(key: string): WorkflowValue | undefined {
+  get(key: string): WorkflowTrustValue | undefined {
     return this.values.get(key);
   }
 
@@ -323,9 +324,9 @@ export class WorkflowValuesStore {
 
   /** 转换为 JSON 序列化格式 */
   toJSON(): WorkflowValuesData {
-    const result: WorkflowValuesData = {};
+    const result: WorkflowValuesData = { inner: {} };
     for (const [key, value] of this.values) {
-      result[key] = value;
+      result.inner[key] = value;
     }
     return result;
   }
@@ -333,41 +334,39 @@ export class WorkflowValuesStore {
   /** 从 JSON 格式创建 */
   static fromJSON(data: WorkflowValuesData): WorkflowValuesStore {
     const store = new WorkflowValuesStore();
-    for (const [key, value] of Object.entries(data)) {
+    for (const [key, value] of Object.entries(data.inner)) {
+      if (!value) continue;
       store.values.set(key, value);
     }
     return store;
   }
 
-  /** 从旧的 VjudgeStatus 转换 */
-  static fromVjudgeStatus(status: VjudgeStatus): WorkflowValuesStore {
+  /** 从 WorkflowStatusDataDTO 转换 */
+  static fromStatusData(data: StatusData): WorkflowValuesStore {
     const store = new WorkflowValuesStore();
-    for (const key of status.getKeys()) {
-      const value = status.getValue(key);
-      if (value) {
-        if (value.type === "Inner") {
-          store.addTrusted(key, BaseValueUtils.string(value.value), "inner_function");
-        } else {
-          store.addUntrusted(key, vjudgeValueToBaseValue(value));
-        }
+    for (const [key, value] of Object.entries(data.values)) {
+      if (!value) continue;
+      if (value.type === "Inner") {
+        store.addTrusted(key, BaseValueUtils.string(value.value), "inner_function");
+      } else {
+        store.addUntrusted(key, workflowValueToBaseValue(value));
       }
     }
     return store;
   }
 
-  /** 转换为旧的 VjudgeStatus（兼容层） */
-  toVjudgeStatus(): VjudgeStatus {
+  /** 转换为 WorkflowStatusDataDTO */
+  toStatusData(): StatusData {
     const status = new VjudgeStatus();
     for (const [key, wv] of this.values) {
-      const baseValue = WorkflowValueUtils.inner(wv);
-      status.withValue(key, baseValueToVjudgeValue(baseValue));
+      status.withValue(key, trustValueToWorkflowValue(wv));
     }
-    return status;
+    return status.toJSON();
   }
 }
 
-/** 将旧 VjudgeValue 转换为 BaseValue */
-function vjudgeValueToBaseValue(value: VjudgeValue): BaseValue {
+/** 将 WorkflowValueDTO 转换为 BaseValue */
+function workflowValueToBaseValue(value: WorkflowValueDTO): BaseValue {
   switch (value.type) {
     case "Inner":
       return BaseValueUtils.string(value.value);
@@ -380,23 +379,34 @@ function vjudgeValueToBaseValue(value: VjudgeValue): BaseValue {
     case "Bool":
       return BaseValueUtils.bool(value.value);
     case "List":
-      return BaseValueUtils.list(value.value.map(vjudgeValueToBaseValue));
+      return BaseValueUtils.list(value.value.map(workflowValueToBaseValue));
+    default:
+      return BaseValueUtils.string("unknown");
   }
 }
 
-/** 将 BaseValue 转换为旧 VjudgeValue */
-function baseValueToVjudgeValue(value: BaseValue): VjudgeValue {
+/** 将 WorkflowTrustValue 转换为 WorkflowValueDTO */
+function trustValueToWorkflowValue(value: WorkflowTrustValue): WorkflowValueDTO {
+  const baseValue = WorkflowValueUtils.inner(value);
+  if (value.trust === "Trusted" && baseValue.type === "String") {
+    return { type: "Inner", value: baseValue.value };
+  }
+  return baseValueToWorkflowValue(baseValue);
+}
+
+/** 将 BaseValue 转换为 WorkflowValueDTO */
+function baseValueToWorkflowValue(value: BaseValue): WorkflowValueDTO {
   switch (value.type) {
     case "String":
       return { type: "String", value: value.value };
     case "Number":
       return { type: "Number", value: value.value };
     case "Int":
-      return { type: "Number", value: value.value };
+      return { type: "Number", value: Number(value.value) };
     case "Bool":
       return { type: "Bool", value: value.value };
     case "List":
-      return { type: "List", value: value.value.map(baseValueToVjudgeValue) };
+      return { type: "List", value: value.value.map(baseValueToWorkflowValue) };
     case "Object":
       return { type: "String", value: JSON.stringify(value.value) };
     case "Null":

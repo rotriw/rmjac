@@ -8,6 +8,7 @@ import {
   VjudgeStatus,
   statusRequire,
   statusDescribe,
+  readStringValue,
   type Status,
   type StatusRequire,
   type StatusDescribe,
@@ -44,10 +45,10 @@ export class AtCoderVerifyTokenService extends EdgeService {
   }
 
   protected async doExecute(input: Status): Promise<Status> {
-    const handle = input.getValue("handle");
-    const token = input.getValue("token");
+    const handleValue = readStringValue(input.getValue("handle"));
+    const tokenValue = readStringValue(input.getValue("token"));
 
-    if (handle?.type !== "String" || token?.type !== "String") {
+    if (!handleValue || !tokenValue) {
       return VjudgeStatus.error("Invalid input types");
     }
 
@@ -55,8 +56,8 @@ export class AtCoderVerifyTokenService extends EdgeService {
     const task = {
       vjudge_node: {
         node_id: 0,
-        public: { iden: handle.value, platform: "atcoder" },
-        private: { auth: { Token: token.value } },
+        public: { iden: handleValue, platform: "atcoder" },
+        private: { auth: { Token: tokenValue } },
       },
       ws_id: "",
     };
@@ -105,10 +106,10 @@ export class AtCoderVerifyPasswordService extends EdgeService {
   }
 
   protected async doExecute(input: Status): Promise<Status> {
-    const handle = input.getValue("handle");
-    const password = input.getValue("password");
+    const handleValue = readStringValue(input.getValue("handle"));
+    const passwordValue = readStringValue(input.getValue("password"));
 
-    if (handle?.type !== "String" || password?.type !== "String") {
+    if (!handleValue || !passwordValue) {
       return VjudgeStatus.error("Invalid input types");
     }
 
@@ -116,8 +117,8 @@ export class AtCoderVerifyPasswordService extends EdgeService {
     const task = {
       vjudge_node: {
         node_id: 0,
-        public: { iden: handle.value, platform: "atcoder" },
-        private: { auth: { Password: password.value } },
+        public: { iden: handleValue, platform: "atcoder" },
+        private: { auth: { Password: passwordValue } },
       },
       ws_id: "",
     };

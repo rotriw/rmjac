@@ -61,6 +61,9 @@ pub trait ValueDescribe {
 #[async_trait::async_trait(?Send)]
 pub trait StatusDescribe {
     async fn value(&self, key: &str) -> Option<Vec<Box<dyn ValueDescribe>>>;
+    async fn describe(&self) -> String {
+        "No description".to_string()
+    }
 }
 
 pub trait ServiceClone {

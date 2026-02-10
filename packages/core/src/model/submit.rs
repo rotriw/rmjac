@@ -7,7 +7,7 @@ use crate::graph::node::user::remote_account::VjudgeNode;
 use crate::model::ModelStore;
 use crate::model::record::{Record, RecordFactory, RecordNewProp};
 use crate::service::judge::service::{CompileOptionValue, LanguageChoiceInformation, SubmitContext, get_tool, StringOption};
-use crate::workflow::vjudge::VjudgeWorkflow;
+use crate::workflow::vjudge::VjudgeWorkflowRegistry;
 use std::collections::HashMap;
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
 use crate::graph::edge::misc::{MiscEdgeQuery, MiscEdgeRaw};
@@ -118,7 +118,7 @@ impl SubmissionService {
         let service_name = format!("{}:submit:{}", platform, method);
         let task_id = format!("vjudge-submit-{}", record_node.node_id);
 
-        let workflow = VjudgeWorkflow::global().await;
+        let workflow = VjudgeWorkflowRegistry::default();
         let response = workflow
             .dispatch_task(
                 &task_id,

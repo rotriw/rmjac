@@ -85,15 +85,9 @@ pub struct WorkflowServiceInfo {
     pub name: String,
     pub description: String,
     pub allow_description: Option<String>,
-    pub platform: String,
-    pub operation: String,
-    pub method: Option<String>,
-    pub available_sockets: i32,
     pub source: String,
-    #[ts(type = "any")]
-    pub import_require: Option<serde_json::Value>,
-    #[ts(type = "any[]")]
-    pub export_describe: Option<Vec<serde_json::Value>>,
+    pub import_require: String,
+    pub export_describe: String,
 }
 
 /// 终点参数信息

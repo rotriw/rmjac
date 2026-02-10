@@ -2,7 +2,7 @@ use crate::handler::ResultHandler;
 use actix_web::{HttpRequest, Scope, post, web};
 use rmjac_core::db::entity::edge::record::Column as RecordEdgeColumn;
 use rmjac_core::graph::node::record::RecordStatus;
-use rmjac_core::workflow::vjudge::VjudgeWorkflow;
+use rmjac_core::workflow::vjudge::VjudgeWorkflowRegistry;
 
 // Handler modules
 pub mod create;
@@ -63,7 +63,7 @@ pub async fn test_add_task(
         .cloned()
         .unwrap_or_else(|| task_value.clone());
 
-    let workflow = VjudgeWorkflow::global().await;
+    let workflow = VjudgeWorkflowRegistry::default();
     let response = workflow
         .dispatch_task(
             &task_id,

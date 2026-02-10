@@ -36,6 +36,9 @@ pub async fn service_start(
     tokio::spawn(async move {
         socket::service::service_start(vjudge_port).await.unwrap();
     });
+    // 先注册一次。
+    crate::workflow::vjudge::workflow::global().await.as_ref();
+    crate::workflow::vjudge::workflow::register_default_service().await;
     log::info!("Starting cron service");
     tokio::spawn(async {
         cron::service_start().await;

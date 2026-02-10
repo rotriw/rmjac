@@ -7,8 +7,10 @@
 //! - 用户实时状态推送
 
 use crate::env;
-use crate::workflow::vjudge::{RemoteEdgeService, RemoteServiceInfo, VjudgeWorkflow};
+use crate::workflow::vjudge::{RemoteEdgeService, RemoteServiceInfo, VjudgeWorkflowRegistry};
+use crate::workflow::vjudge::workflow;
 use serde::{Deserialize, Serialize};
+use ::workflow::workflow::WorkflowSystem;
 use serde_json::Value;
 use socketioxide::extract::SocketRef;
 use std::time::Duration;
@@ -92,24 +94,46 @@ pub struct WorkflowStatusUpdate {
 
 /// 注册边缘服务的工作流服务
 pub async fn register_workflow_services(socket_id: &str, services: &[WorkflowServiceMetadata]) {
-    let workflow = VjudgeWorkflow::global().await;
+    let workflow = workflow::global().await;
+    let registry = VjudgeWorkflowRegistry::default();
+    let mut keys = Vec::new();
     for service in services {
-        workflow.register_service(Box::new(RemoteEdgeService {
-            info: RemoteServiceInfo {
-                service_id: service.name.clone(),
-                description: service.description.clone(),
-                allow_description: service.allow_description.clone(),
-                cost: service.cost,
-                is_end: service.is_end,
-                socket_id: socket_id.to_string(),
-            }
-        }));
+        workflow::register_service(Box::new(RemoteEdgeService::new(RemoteServiceInfo {
+            service_name: service.name.clone(),
+            description: service.description.clone(),
+            allow_description: service.allow_description.clone(),
+            platform: service.platform.clone(),
+            operation: service.operation.clone(),
+            method: service.method.clone(),
+            cost: service.cost,
+            is_end: service.is_end,
+            required: service
+                .import_require
+                .get("requiredKeys")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect()
+                })
+                .unwrap_or_default(),
+            exported: service
+                .export_describe
+                .iter()
+                .filter_map(|v| v.get("key").and_then(|k| k.as_str()).map(|s| s.to_string()))
+                .collect(),
+            socket_id: socket_id.to_string(),
+        }))).await;
+        keys.push(service.name.clone());
+    }
+    if !keys.is_empty() {
+        registry.register_remote_service_keys(socket_id, keys);
     }
 }
 
 /// 注销指定服务名列表
 pub async fn unregister_workflow_services(socket_id: &str, service_names: &[String]) {
-    let workflow = VjudgeWorkflow::global().await;
+    let workflow = VjudgeWorkflowRegistry::default();
     workflow.unregister_remote_service_keys(socket_id, service_names);
 
     log::info!(
@@ -121,7 +145,7 @@ pub async fn unregister_workflow_services(socket_id: &str, service_names: &[Stri
 
 /// 清理某个 socket 的所有工作流服务注册信息（断线时调用）
 pub async fn deregister_workflow_socket(socket_id: &str) {
-    let workflow = VjudgeWorkflow::global().await;
+    let workflow = VjudgeWorkflowRegistry::default();
     workflow.deregister_socket(socket_id);
 }
 
@@ -243,4 +267,34 @@ pub async fn dispatch_workflow_task(
             }
         }
     }
+}
+
+// ============================================================================
+// 状态缓存与通知（stub 实现）
+// ============================================================================
+
+use std::collections::HashMap;
+use std::sync::Mutex;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref TASK_STATUS_CACHE: Mutex<HashMap<String, (Value, String)>> = Mutex::new(HashMap::new());
+}
+
+/// 更新任务状态缓存
+pub fn update_task_status_cache(task_id: &str, status: Value, timestamp: &str) {
+    let mut cache = TASK_STATUS_CACHE.lock().unwrap();
+    cache.insert(task_id.to_string(), (status, timestamp.to_string()));
+}
+
+/// 获取任务状态缓存
+pub fn get_task_status_cache(task_id: &str) -> Option<(Value, String)> {
+    let cache = TASK_STATUS_CACHE.lock().unwrap();
+    cache.get(task_id).cloned()
+}
+
+/// 向用户推送工作流状态更新
+pub async fn notify_user_workflow_status(_user_id: i64, _update: &WorkflowStatusUpdate) {
+    // TODO: 通过 user WebSocket 推送状态更新
+    log::debug!("[Workflow] notify_user_workflow_status: not yet implemented");
 }

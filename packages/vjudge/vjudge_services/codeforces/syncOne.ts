@@ -127,7 +127,8 @@ export const token = async (task: {
         const paths = url_obj.pathname.split("/");
         const contest_id = paths[2];
         const id = paths[paths.length - 1];
-        const result = await fetchSubmissionWithId(handle, auth.Token || "", url, contest_id, id);
+        const token = auth && "Token" in auth ? auth.Token : "";
+        const result = await fetchSubmissionWithId(handle, token, url, contest_id, id);
         return {
             event: "sync_done_success",
             data: [result],

@@ -8,6 +8,7 @@ import {
   VjudgeStatus,
   statusRequire,
   statusDescribe,
+  readStringValue,
   type Status,
   type StatusRequire,
   type StatusDescribe,
@@ -20,46 +21,48 @@ import { checkLoginWithToken, loginWithPassword } from "../../../vjudge_services
  * Codeforces API Key 验证服务
  */
 export class CodeforcesVerifyApiKeyService extends EdgeService {
-  constructor() {
-    super({
-      name: "codeforces:verify:apikey",
-      description: "Verify Codeforces account using API Key and Secret",
-      platform: "codeforces",
-      operation: "verify",
-      method: "apikey",
-      cost: 5,
-      isEnd: false,
-    });
-  }
-
-  protected defineImportRequire(): StatusRequire {
-    return statusRequire(["handle", "api_key", "api_secret"]);
-  }
-
-  protected defineExportDescribe(): StatusDescribe[] {
-    return [
-      statusDescribe("account_id", "String"),
-      statusDescribe("verified", "Bool"),
-      statusDescribe("vjudge_id", "String"),
-    ];
-  }
-
-  protected async doExecute(input: Status): Promise<Status> {
-    const handle = input.getValue("handle");
-    const apiKey = input.getValue("api_key");
-    const apiSecret = input.getValue("api_secret");
-
-    if (handle?.type !== "String" || apiKey?.type !== "String" || apiSecret?.type !== "String") {
-      return VjudgeStatus.error("Invalid input types");
+    constructor() {
+        super({
+        name: "codeforces:verify:apikey",
+        description: "Verify Codeforces account using API Key and Secret",
+        platform: "codeforces",
+        operation: "verify",
+        method: "apikey",
+        cost: 5,
+        isEnd: false,
+        });
     }
 
-    const verified = await verifyApiKey(handle.value, apiKey.value, apiSecret.value);
+    protected defineImportRequire(): StatusRequire {
+        return statusRequire(["handle", "api_key", "api_secret"]);
+    }
 
-    return VjudgeStatus.from(input)
-      .withBool("verified", verified)
-      .withString("account_id", handle.value);
-  }
-}
+    protected defineExportDescribe(): StatusDescribe[] {
+        return [
+        statusDescribe("account_id", "String"),
+        statusDescribe("verified", "Bool"),
+        statusDescribe("vjudge_id", "String"),
+        ];
+    }
+
+    protected async doExecute(input: Status): Promise<Status> {
+        const handleValue = readStringValue(input.getValue("handle"));
+        const apiKeyValue = readStringValue(input.getValue("api_key"));
+        const apiSecretValue = readStringValue(input.getValue("api_secret"));
+        console.log(handleValue);
+        console.log(apiKeyValue);
+        console.log(apiSecretValue);
+        if (!handleValue || !apiKeyValue || !apiSecretValue) {
+        return VjudgeStatus.error("Invalid input types");
+        }
+
+        const verified = await verifyApiKey(handleValue, apiKeyValue, apiSecretValue);
+
+        return VjudgeStatus.from(input)
+        .withBool("verified", verified)
+        .withString("account_id", handleValue);
+    }
+    }
 
 /**
  * Codeforces Token 验证服务
@@ -89,18 +92,18 @@ export class CodeforcesVerifyTokenService extends EdgeService {
   }
 
   protected async doExecute(input: Status): Promise<Status> {
-    const handle = input.getValue("handle");
-    const token = input.getValue("token");
+    const handleValue = readStringValue(input.getValue("handle"));
+    const tokenValue = readStringValue(input.getValue("token"));
 
-    if (handle?.type !== "String" || token?.type !== "String") {
+    if (!handleValue || !tokenValue) {
       return VjudgeStatus.error("Invalid input types");
     }
 
-    const verified = await checkLoginWithToken(handle.value, token.value);
+    const verified = await checkLoginWithToken(handleValue, tokenValue);
 
     return VjudgeStatus.from(input)
       .withBool("verified", verified)
-      .withString("account_id", handle.value);
+      .withString("account_id", handleValue);
   }
 }
 
@@ -115,7 +118,7 @@ export class CodeforcesVerifyPasswordService extends EdgeService {
       platform: "codeforces",
       operation: "verify",
       method: "password",
-      cost: 20, // 更高成本因为需要完整登录流程
+      cost: 100, // not recommended due to security and reliability issues
       isEnd: false,
     });
   }
@@ -133,19 +136,19 @@ export class CodeforcesVerifyPasswordService extends EdgeService {
   }
 
   protected async doExecute(input: Status): Promise<Status> {
-    const handle = input.getValue("handle");
-    const password = input.getValue("password");
+    const handleValue = readStringValue(input.getValue("handle"));
+    const passwordValue = readStringValue(input.getValue("password"));
 
-    if (handle?.type !== "String" || password?.type !== "String") {
+    if (!handleValue || !passwordValue) {
       return VjudgeStatus.error("Invalid input types");
     }
 
-    const sessionToken = await loginWithPassword(handle.value, password.value);
+    const sessionToken = await loginWithPassword(handleValue, passwordValue);
     const verified = sessionToken !== "";
 
     const result = VjudgeStatus.from(input)
       .withBool("verified", verified)
-      .withString("account_id", handle.value);
+      .withString("account_id", handleValue);
 
     if (verified) {
       result.withString("session_token", sessionToken);

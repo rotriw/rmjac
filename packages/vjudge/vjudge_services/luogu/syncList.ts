@@ -156,7 +156,10 @@ function mapSubmissionToUniversal(s: z.infer<typeof submissionSchema>): Universa
 
 export const token = async (task: SyncTaskData): Promise<{ event: string; data: UniversalSubmission[] }> => {
     const handle = task.vjudge_node.public.iden;
-    const auth = parseAuthToken(task.vjudge_node.private.auth.Token);
+    const authToken = task.vjudge_node.private.auth && "Token" in task.vjudge_node.private.auth
+        ? task.vjudge_node.private.auth.Token
+        : "";
+    const auth = parseAuthToken(authToken);
     
     try {
         let submissions: z.infer<typeof submissionSchema>[];

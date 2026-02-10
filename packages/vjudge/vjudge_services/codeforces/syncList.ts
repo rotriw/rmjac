@@ -20,7 +20,8 @@ export const apikey = async (task: SyncTaskData): Promise<{ event: string, data:
         count = parseInt(parts[1]) || 20;
     }
     try {
-        const [key, secret] = (auth.Token || ":").split(":");
+        const token = auth && "Token" in auth ? auth.Token : "";
+        const [key, secret] = (token || ":").split(":");
         const submissions = await fetchUserSubmissions(handle, key, secret, from, count);
         const mappedSubmissions = submissions.map(submission => {
             const code = submission.sourceBase64 ? atob(submission.sourceBase64) : "[archive]";

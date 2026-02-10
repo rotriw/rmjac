@@ -1,6 +1,17 @@
 import { VerifyTaskData } from "../../declare/task.ts";
+import { VjudgeAuth } from "../../declare/node.ts";
 import { getOnePage } from "../../service/browser.ts";
 import { loginWithPassword } from "./syncOne.ts";
+
+const getAuthToken = (auth: VjudgeAuth | null): string => {
+    if (!auth) {
+        return "";
+    }
+    if ("Token" in auth) {
+        return auth.Token;
+    }
+    return "";
+};
 
 async function checkTokenLogin(token: string | undefined): Promise<boolean> {
     if (!token) return false;
@@ -24,7 +35,7 @@ async function checkTokenLogin(token: string | undefined): Promise<boolean> {
 }
 
 export const token = async (task: VerifyTaskData) => {
-    const token = task.vjudge_node.private.auth.Token;
+    const token = getAuthToken(task.vjudge_node.private.auth);
     const verified = await checkTokenLogin(token);
     return {
         event: "verified_done_success",
@@ -37,7 +48,8 @@ export const token = async (task: VerifyTaskData) => {
 };
 
 export const password = async (task: VerifyTaskData) => {
-    const password = task.vjudge_node.private.auth.Password;
+    const auth = task.vjudge_node.private.auth;
+    const password = auth && "Password" in auth ? auth.Password : "";
     const res = await loginWithPassword(task.vjudge_node.public.iden, password || "");
     const verified = res !== false && res !== "";
     return {

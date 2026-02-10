@@ -8,6 +8,7 @@ import {
   VjudgeStatus,
   statusRequire,
   statusDescribe,
+  readStringValue,
   type Status,
   type StatusRequire,
   type StatusDescribe,
@@ -49,22 +50,18 @@ export class AtCoderSyncOneService extends EdgeService {
   }
 
   protected async doExecute(input: Status): Promise<Status> {
-    const handle = input.getValue("handle");
-    const token = input.getValue("token");
-    const problemUrl = input.getValue("problem_url");
+    const handleValue = readStringValue(input.getValue("handle"));
+    const tokenValue = readStringValue(input.getValue("token"));
+    const problemUrlValue = readStringValue(input.getValue("problem_url"));
 
-    if (
-      handle?.type !== "String" ||
-      token?.type !== "String" ||
-      problemUrl?.type !== "String"
-    ) {
+    if (!handleValue || !tokenValue || !problemUrlValue) {
       return VjudgeStatus.error("Invalid input types");
     }
 
     try {
       // 解析 AtCoder URL
       // 格式: https://atcoder.jp/contests/{contest_id}/tasks/{problem_id}
-      const urlMatch = problemUrl.value.match(
+      const urlMatch = problemUrlValue.match(
         /atcoder\.jp\/contests\/([^/]+)\/tasks\/([^/?]+)/
       );
       
@@ -77,9 +74,9 @@ export class AtCoderSyncOneService extends EdgeService {
       const [, contestId, problemId] = urlMatch;
       
       // 获取题目页面
-      const response = await fetch(problemUrl.value, {
+      const response = await fetch(problemUrlValue, {
         headers: {
-          "Cookie": `REVEL_SESSION=${token.value}`,
+          "Cookie": `REVEL_SESSION=${tokenValue}`,
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         },
       });

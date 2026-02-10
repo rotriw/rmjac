@@ -15,7 +15,6 @@ export type {
   ServiceInfo,
   ServiceMetadata,
   ServiceOperation,
-  VjudgeValue,
   ValueType,
   TaskRequest,
   TaskResponse,
@@ -23,15 +22,14 @@ export type {
   ServiceUnregistrationMessage,
   ServerToEdgeEvents,
   EdgeToServerEvents,
-  VjudgeNode,
-  VjudgeNodePublic,
-  VjudgeNodePrivate,
   // New workflow value types
   BaseValue,
-  WorkflowValue,
+  WorkflowTrustValue,
   WorkflowValuesData,
   WorkflowStatusType,
 } from "./types.ts";
+
+export { readStringValue } from "./types.ts";
 
 // New workflow value utilities
 export { WorkflowValueUtils, BaseValueUtils } from "./types.ts";

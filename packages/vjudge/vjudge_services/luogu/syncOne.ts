@@ -255,15 +255,16 @@ export const token = async (task: {
 }): Promise<{ event: string; data: UniversalSubmission[] } | null> => {
     const handle = task.vjudge_node.public.iden;
     const auth = task.vjudge_node.private.auth;
-    
+
     if (task?.url) {
         try {
             // 从 URL 中提取记录 ID
             const urlObj = new URL(task.url);
             const paths = urlObj.pathname.split("/");
             const recordId = paths[paths.length - 1];
-            
-            const result = await fetchSubmissionWithBrowser(handle, auth.Token || "", recordId);
+            const token = auth && "Token" in auth ? auth.Token : "";
+
+            const result = await fetchSubmissionWithBrowser(handle, token, recordId);
             return {
                 event: "sync_done_success",
                 data: [result],

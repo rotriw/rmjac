@@ -4,7 +4,9 @@ import { checkLoginWithToken, loginWithPassword } from "./service/submission.ts"
 import { resolve6 } from "node:dns";
 
 export const apikey = async (task: VerifyTaskData) => {
-    const [apiKey, apiSecret] = (task.vjudge_node.private.auth.Token || ":").split(":");
+    const auth = task.vjudge_node.private.auth;
+    const tokenStr = auth && "Token" in auth ? auth.Token : "";
+    const [apiKey, apiSecret] = (tokenStr || ":").split(":");
     const res = await verifyApiKey(task.vjudge_node.public.iden, apiKey, apiSecret);
     return {
         event: "verified_done_success",
@@ -17,7 +19,8 @@ export const apikey = async (task: VerifyTaskData) => {
 }
 
 export const password = async (task: VerifyTaskData) => {
-    const password = task.vjudge_node.private.auth.Password;
+    const auth = task.vjudge_node.private.auth;
+    const password = auth && "Password" in auth ? auth.Password : "";
     const res = await loginWithPassword(task.vjudge_node.public.iden, password || "");
     let verified = false;
     if (res !== "") {
@@ -34,7 +37,8 @@ export const password = async (task: VerifyTaskData) => {
 }
 
 export const token = async (task: VerifyTaskData) => {
-    const token = task.vjudge_node.private.auth.Token;
+    const auth = task.vjudge_node.private.auth;
+    const token = auth && "Token" in auth ? auth.Token : "";
     const res = await checkLoginWithToken(task.vjudge_node.public.iden, token || "");
     return {
         event: "verified_done_success",

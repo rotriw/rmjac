@@ -94,7 +94,8 @@ export const loginWithPassword = async (handle: string, password: string): Promi
 };
 
 export const token = async (task: VerifyTaskData) => {
-    const tokenStr = task.vjudge_node.private.auth.Token || "";
+    const auth = task.vjudge_node.private.auth;
+    const tokenStr = auth && "Token" in auth ? auth.Token : "";
     const [uid, clientId] = tokenStr.split(":");
     const verified = await checkTokenLogin(uid, clientId);
     return {
@@ -108,7 +109,8 @@ export const token = async (task: VerifyTaskData) => {
 };
 
 export const password = async (task: VerifyTaskData) => {
-    const password = task.vjudge_node.private.auth.Password;
+    const auth = task.vjudge_node.private.auth;
+    const password = auth && "Password" in auth ? auth.Password : "";
     const res = await loginWithPassword(task.vjudge_node.public.iden, password || "");
     const verified = res !== false && res !== "";
     return {

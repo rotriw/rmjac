@@ -15,7 +15,8 @@ export const submit = async (task: {
     bypass_cf: boolean
 }) => { try {
     const handle = task.vjudge_node.public.iden;
-    const token = task.vjudge_node.private.auth.Token;
+    const auth = task.vjudge_node.private.auth;
+    const token = auth && "Token" in auth ? auth.Token : "";
     const url = task.url;
     const [contest_id, problem_id] = url.split(":");
     const code = task.context.code;

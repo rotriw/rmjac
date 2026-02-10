@@ -60,7 +60,11 @@ pub async fn plan_method(services: Vec<Box<dyn Service>>, input: Box<dyn crate::
             return Some(res);
         }
         vis.insert(last.clone());
-        let service = &action[last];
+        let service = if !action.contains_key(last) {
+            &map_service[last]
+        } else {
+            &action[last]
+        };
         let output_describe = service.get_export_describe();
         for next_service in &query_map {
             let require = next_service.get_import_require();

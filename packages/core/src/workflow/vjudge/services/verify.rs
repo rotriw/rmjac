@@ -2,12 +2,10 @@
 //!
 //! This service verifies that the remote account is valid and accessible.
 
+use workflow::description::{WorkflowExportDescribe, WorkflowRequire};
 use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire, Value};
 use workflow::value::{BaseValue, WorkflowValue};
 use workflow::status::{WorkflowValues, WorkflowStatus};
-use crate::workflow::vjudge::status::{
-    VjudgeExportDescribe, VjudgeExportDescribeExpr, VjudgeRequire, VjudgeRequireExpr,
-};
 
 /// Service to verify remote account credentials
 #[derive(Clone)]
@@ -44,19 +42,21 @@ impl Service for VerifyAccountService {
     }
 
     fn get_import_require(&self) -> Box<dyn StatusRequire> {
-        let mut require = VjudgeRequire { inner: vec![] };
-        require.inner.push(VjudgeRequireExpr::HasKey("platform".to_string()));
-        require.inner.push(VjudgeRequireExpr::HasKey("account_id".to_string()));
-        require.inner.push(VjudgeRequireExpr::KeyEq("platform".to_string(), self.platform.clone()));
-        Box::new(require)
+        Box::new(
+            WorkflowRequire::new()
+                .with_key("platform")
+                .with_key("account_id")
+                .with_value("platform", self.platform.clone()),
+        )
     }
 
     fn get_export_describe(&self) -> Vec<Box<dyn StatusDescribe>> {
-        let mut describe = VjudgeExportDescribe { inner: vec![std::collections::HashMap::new()] };
-        describe.inner[0].insert("platform".to_string(), vec![VjudgeExportDescribeExpr::Has]);
-        describe.inner[0].insert("account_id".to_string(), vec![VjudgeExportDescribeExpr::Has]);
-        describe.inner[0].insert("account_verified".to_string(), vec![VjudgeExportDescribeExpr::Has]);
-        vec![Box::new(describe)]
+        vec![Box::new(
+            WorkflowExportDescribe::new()
+                .add_has("platform")
+                .add_has("account_id")
+                .add_has("account_verified"),
+        )]
     }
 
     async fn verify(&self, input: &Box<dyn Status>) -> bool {

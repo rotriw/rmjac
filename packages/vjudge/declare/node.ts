@@ -1,17 +1,4 @@
-export interface VjudgeNode {
-    node_id: number;
-    public: {
-        platform: string;
-        iden: string;
-        verified_code: string;
-        remote_mode: "PublicAccount" | "SyncCode" | "All";
-    };
-    private: {
-        auth: VjudgeAuth;
-    }
-}
+import type { VjudgeAuth } from "@rmjac/api-declare/interface/VjudgeAuth.ts";
+import type { VjudgeNode } from "@rmjac/api-declare/interface/VjudgeNode.ts";
 
-export interface VjudgeAuth {
-    Password?: string;
-    Token?: string;
-}
+export type { VjudgeAuth, VjudgeNode };

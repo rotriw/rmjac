@@ -5,10 +5,8 @@
 //! This module defines the status types used in the VJudge workflow system.
 //! These types implement the workflow::Status trait and related traits.
 
-use std::collections::HashMap;
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use workflow::workflow::{Status, StatusClone, StatusDescribe, StatusRequire, Value, ValueDescribe, ValueType};
+use workflow::workflow::{Status, Value};
 use workflow::value::{BaseValue, WorkflowValue};
 use workflow::status::{WorkflowValues, WorkflowStatus};
 
@@ -241,133 +239,5 @@ pub fn vjudge_value_to_workflow_value(old: &VjudgeValue) -> Option<WorkflowValue
         VjudgeValue::Normal(v) => Some(WorkflowValue::untrusted(BaseValue::from(v.clone()))),
         VjudgeValue::InnerFunction(v) => Some(WorkflowValue::trusted(BaseValue::from(v.clone()))),
         VjudgeValue::Error(_) | VjudgeValue::TaskDone(_) => None, // 状态不是值
-    }
-}
-
-pub enum VjudgeRequireExpr {
-    HasKey(String),
-    KeyEq(String, String),
-    KeyInFunction(String, Box<dyn Fn(&Box<dyn StatusDescribe>) -> bool>, String), // (key, function, description)
-    Inner(String),
-}
-
-pub struct VjudgeRequire {
-    pub inner: Vec<VjudgeRequireExpr>,
-}
-
-#[async_trait::async_trait(?Send)]
-impl StatusRequire for VjudgeRequire {
-    async fn verify(&self, o: &Box<dyn StatusDescribe>) -> bool {
-        if self.inner.is_empty() {
-            return false;
-        }
-        for expr in &self.inner {
-            match expr {
-                VjudgeRequireExpr::KeyEq(key, value) => {
-                    if let Some(v) = o.value(&key).await {
-                        let mut maybe_eq =  false;
-                        for vd in v {
-                            if vd.maybe_eq(value).await {
-                                maybe_eq = false;
-                                break;
-                            }
-                        }
-                        if maybe_eq == false {
-                            return false;
-                        }
-                    } else {
-                        return false;
-                    }
-                }
-                VjudgeRequireExpr::HasKey(key) => {
-                    if o.value(&key).await.is_none() {
-                        return false;
-                    }
-                }
-                VjudgeRequireExpr::KeyInFunction(key, func, _) => {
-                    if !func(o) {
-                        return false;
-                    }
-                }
-                VjudgeRequireExpr::Inner(k) => {
-                    if o.value(format!("inner:{}", k).as_str()).await.is_none() {
-                        return false;
-                    }
-                }
-            }
-        }
-        true
-    }
-
-    fn describe(&self) -> String {
-        let mut descriptions = Vec::new();
-        for expr in &self.inner {
-            match expr {
-                    VjudgeRequireExpr::KeyEq(key, value) => descriptions.push(format!("Import must have '{}', and it should be '{}'", key, value)),
-                VjudgeRequireExpr::HasKey(key) => descriptions.push(format!("Import must have '{}'", key)),
-                VjudgeRequireExpr::KeyInFunction(_, _, desc) => descriptions.push(desc.clone()),
-                VjudgeRequireExpr::Inner(desc) => descriptions.push(format!("Inner Function Should export key:{}", desc)),
-            }
-        }
-        descriptions.join("; \n")
-    }
-}
-
-// TODO: let specific value into V.
-#[derive(Clone)]
-pub enum VjudgeExportDescribeExpr {
-    SpecificValue(String), // 知道准确的多种可能的值
-    OnlyType(String), // 只知道类型。
-    Has,// 只知道具体类型。
-}
-
-#[async_trait::async_trait(?Send)]
-impl ValueDescribe for VjudgeExportDescribeExpr {
-    fn get_type(&self) -> ValueType {
-        ValueType::Others("any".to_string()) // TODO: let it right.
-    }
-
-    async fn maybe_eq(&self, o: &str) -> bool {
-        if let VjudgeExportDescribeExpr::SpecificValue(v) = self {
-            return v == o;
-        }
-        true // TODO: 这里也很幽默啊！没匹配类型。累了。这个可以分布处理的。
-    }
-
-    async fn has_str(&self, s: &str) -> bool {
-        if let VjudgeExportDescribeExpr::SpecificValue(v) = self {
-            return v == s;
-        }
-        true
-    }
-
-    async fn number(&self, _x: i64) -> bool {
-        if let VjudgeExportDescribeExpr::OnlyType(t) = self {
-            return t == "number";
-        }
-        true
-    }
-}
-
-// 函数可能导出的描述。
-pub struct VjudgeExportDescribe {
-    pub inner: Vec<HashMap<String, Vec<VjudgeExportDescribeExpr>>>,
-}
-
-#[async_trait::async_trait(?Send)]
-impl StatusDescribe for VjudgeExportDescribe {
-    async fn value(&self, key: &str) -> Option<Vec<Box<dyn ValueDescribe>>> {
-        let mut res: Vec<Box<dyn ValueDescribe>>  = Vec::new();
-        for map in &self.inner {
-            if let Some(exprs) = map.get(key) {
-                for expr in exprs {
-                    res.push(Box::new(expr.clone()));
-                }
-            }
-        }
-        if res.is_empty() {
-            return None;
-        }
-        Some(res)
     }
 }

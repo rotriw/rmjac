@@ -45,7 +45,8 @@ export const submit = async (task: {
 }> => {
     try {
         const handle = task.vjudge_node.public.iden;
-        const token = task.vjudge_node.private.auth.Token;
+        const auth = task.vjudge_node.private.auth;
+        const token = auth && "Token" in auth ? auth.Token : "";
         const problemId = task.url;
         const code = task.context.code;
         const languageId = LanguageToLuoguId[task.language_id] || 0;

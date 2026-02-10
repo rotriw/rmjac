@@ -6,7 +6,7 @@ use crate::db::entity::node::problem_statement::ContentType;
 use crate::declare::UniversalSubmission;
 use crate::env;
 use crate::error::CoreError;
-use crate::workflow::vjudge::VjudgeWorkflow;
+use crate::workflow::vjudge::VjudgeWorkflowRegistry;
 use crate::graph::edge::problem_statement::ProblemStatementEdgeQuery;
 use crate::graph::edge::problem_tag::ProblemTagEdgeRaw;
 use crate::graph::edge::{EdgeQuery, EdgeRaw};
@@ -57,7 +57,7 @@ impl VjudgeService {
             vjudge_node.node_id,
             chrono::Utc::now().timestamp()
         );
-        let workflow = VjudgeWorkflow::global().await;
+        let workflow = VjudgeWorkflowRegistry::default();
         let _ = workflow
             .dispatch_task(
                 &task_id,

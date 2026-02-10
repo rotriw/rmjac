@@ -1,6 +1,16 @@
 import { Socket } from "socket.io-client";
-import { VjudgeNode } from "@/declare/node.ts";
+import { VjudgeAuth, VjudgeNode } from "@/declare/node.ts";
 import { VjudgeVerifiedFunction } from "@/declare/modules.ts";
+
+const getAuthToken = (auth: VjudgeAuth | null): string => {
+    if (!auth) {
+        return "";
+    }
+    if ("Token" in auth) {
+        return auth.Token;
+    }
+    return "";
+};
 
 interface VerifyAccountData {
     vjudge_node: VjudgeNode;
@@ -12,7 +22,8 @@ export const run = async (data: VerifyAccountData, socket: Socket) => {
     const platform = vjudge_node.public.platform.toLowerCase();
     try {
         const vjudge_mode = vjudge_node.public.remote_mode;
-        const vjudge_method = vjudge_mode === "PublicAccount" ? "PUBLIC" : vjudge_mode === "SyncCode" ? "APIKEY" :  vjudge_node.private.auth.token ? "TOKEN" : "PASSWORD";
+        const authToken = getAuthToken(vjudge_node.private.auth);
+        const vjudge_method = vjudge_mode === "PublicAccount" ? "PUBLIC" : vjudge_mode === "SyncCode" ? "APIKEY" : authToken ? "TOKEN" : "PASSWORD";
         LOG.info(`Verifying ${vjudge_node.public.iden} with ${vjudge_method} platform: ${platform}`);
         if (!VJUDGE_USER[platform][`verified${vjudge_method}`]) {
             throw new Error("Verification method not found");

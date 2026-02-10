@@ -3,7 +3,7 @@ import { get_loc } from "../../utils/cf_click.ts";
 
 export const loginWithPassword = async (handle: string, password: string): Promise<string | false> => {
     const url = "https://atcoder.jp/login";
-    const browser = await getOnePage();
+    const browser = await getOnePage(handle);
     const page = await browser.newPage();
     await page.goto(url);
     await page.setViewport({

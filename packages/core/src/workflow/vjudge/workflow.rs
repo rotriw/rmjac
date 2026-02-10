@@ -5,10 +5,12 @@ use crate::env;
 use crate::graph::node::user::remote_account::RemoteMode;
 use crate::workflow::vjudge::services::{UpdateProblemService, UpdateVerifiedService};
 use crate::workflow::vjudge::services::from_node::FromNodeService;
+use crate::workflow::vjudge::services::register_user::RegisterUserService;
 use crate::workflow::vjudge::system::{VjudgeWorkflowSystem, WorkflowRequire};
 
 pub async fn global() -> Arc<VjudgeWorkflowSystem> {
-    if let Some(workflow) = env::VJUDGE_WORKFLOW
+    let workflow_ref = &*env::VJUDGE_WORKFLOW;
+    if let Some(workflow) = workflow_ref
         .lock()
         .unwrap()
         .as_ref()
@@ -17,12 +19,21 @@ pub async fn global() -> Arc<VjudgeWorkflowSystem> {
         return workflow;
     }
     let workflow = Arc::new(VjudgeWorkflowSystem::default());
-    let mut guard = env::VJUDGE_WORKFLOW.lock().unwrap();
+    let mut guard = workflow_ref.lock().unwrap();
     if let Some(existing) = guard.as_ref() {
         return Arc::clone(existing);
     }
     *guard = Some(Arc::clone(&workflow));
     workflow
+}
+
+pub fn try_global() -> Option<Arc<VjudgeWorkflowSystem>> {
+    let workflow_ref = &*env::VJUDGE_WORKFLOW;
+    workflow_ref
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(Arc::clone)
 }
 
 pub async fn get_require(service_name: &str) -> Vec<WorkflowRequire> {
@@ -38,13 +49,22 @@ pub async fn get_require(service_name: &str) -> Vec<WorkflowRequire> {
 }
 
 pub async fn register_service(service: Box<dyn Service>) {
-    let workflow = env::VJUDGE_WORKFLOW.lock().unwrap();
-    workflow.as_ref().unwrap().services.write().await.insert(service.get_info().name, service);
+    let workflow_ref = &*env::VJUDGE_WORKFLOW;
+    let workflow = {
+        let guard = workflow_ref.lock().unwrap();
+        Arc::clone(guard.as_ref().unwrap())
+    };
+    workflow
+        .services
+        .write()
+        .await
+        .insert(service.get_info().name, service);
 }
 
 pub async fn register_default_service() {
     register_service(Box::new(UpdateProblemService::new())).await;
     register_service(Box::new(UpdateVerifiedService::new())).await;
+    register_service(Box::new(RegisterUserService::new())).await;
     for mode in RemoteMode::iter() {
         register_service(Box::new(FromNodeService::new(mode))).await;
     }

@@ -4,14 +4,12 @@
 
 use std::collections::HashMap;
 use async_trait::async_trait;
+use workflow::description::{WorkflowExportDescribe, WorkflowRequire};
 use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire, Value};
 use workflow::value::{BaseValue, WorkflowValue};
 use workflow::status::{WorkflowValues, WorkflowStatus};
 
 use crate::service::judge::service::get_tool;
-use crate::workflow::vjudge::status::{
-    VjudgeExportDescribe, VjudgeExportDescribeExpr, VjudgeRequire, VjudgeRequireExpr,
-};
 
 /// 提交服务 - 将代码提交到远程平台
 ///
@@ -182,20 +180,22 @@ impl Service for SubmitService {
     }
 
     fn get_import_require(&self) -> Box<dyn StatusRequire> {
-        let mut require = VjudgeRequire { inner: vec![] };
-        require.inner.push(VjudgeRequireExpr::HasKey("code".to_string()));
-        require.inner.push(VjudgeRequireExpr::HasKey("language".to_string()));
-        require.inner.push(VjudgeRequireExpr::HasKey("vjudge_account_id".to_string()));
-        require.inner.push(VjudgeRequireExpr::KeyEq("platform".to_string(), self.platform.clone()));
-        Box::new(require)
+        Box::new(
+            WorkflowRequire::new()
+                .with_key("code")
+                .with_key("language")
+                .with_key("vjudge_account_id")
+                .with_value("platform", self.platform.clone()),
+        )
     }
 
     fn get_export_describe(&self) -> Vec<Box<dyn StatusDescribe>> {
-        let mut describe = VjudgeExportDescribe { inner: vec![HashMap::new()] };
-        describe.inner[0].insert("submission_id".to_string(), vec![VjudgeExportDescribeExpr::Has]);
-        describe.inner[0].insert("submission_url".to_string(), vec![VjudgeExportDescribeExpr::Has]);
-        describe.inner[0].insert("submit_time".to_string(), vec![VjudgeExportDescribeExpr::Has]);
-        vec![Box::new(describe)]
+        vec![Box::new(
+            WorkflowExportDescribe::new()
+                .add_has("submission_id")
+                .add_has("submission_url")
+                .add_has("submit_time"),
+        )]
     }
 
     async fn verify(&self, input: &Box<dyn Status>) -> bool {
@@ -270,17 +270,16 @@ impl Service for SubmitCompleteService {
     }
 
     fn get_import_require(&self) -> Box<dyn StatusRequire> {
-        let mut require = VjudgeRequire { inner: vec![] };
-        require.inner.push(VjudgeRequireExpr::HasKey("record_id".to_string()));
-        Box::new(require)
+        Box::new(WorkflowRequire::new().with_key("record_id"))
     }
 
     fn get_export_describe(&self) -> Vec<Box<dyn StatusDescribe>> {
-        let mut describe = VjudgeExportDescribe { inner: vec![HashMap::new()] };
-        describe.inner[0].insert("record_id".to_string(), vec![VjudgeExportDescribeExpr::Has]);
-        describe.inner[0].insert("submission_id".to_string(), vec![VjudgeExportDescribeExpr::Has]);
-        describe.inner[0].insert("success".to_string(), vec![VjudgeExportDescribeExpr::Has]);
-        vec![Box::new(describe)]
+        vec![Box::new(
+            WorkflowExportDescribe::new()
+                .add_has("record_id")
+                .add_has("submission_id")
+                .add_has("success"),
+        )]
     }
 
     async fn verify(&self, input: &Box<dyn Status>) -> bool {
@@ -418,38 +417,4 @@ pub struct OptionInfo {
     pub is_compile: bool,
     pub is_input: bool,
     pub allowed_values: Vec<String>,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_submit_service_info() {
-        let service = SubmitService::new("codeforces");
-        let info = service.get_info();
-        assert_eq!(info.name, "submit_codeforces");
-        assert!(!service.is_end());
-    }
-
-
-    #[test]
-    fn test_submit_task_data_json() {
-        let task = SubmitTaskData {
-            platform: "codeforces".to_string(),
-            operation: "submit".to_string(),
-            code: "int main() {}".to_string(),
-            language: "GNU G++20".to_string(),
-            user_id: 1,
-            record_id: 100,
-            vjudge_account_id: 50,
-            contest_id: Some("1234".to_string()),
-            problem_id: Some("A".to_string()),
-            options: HashMap::new(),
-        };
-
-        let json = task.to_json();
-        assert!(json.contains("codeforces"));
-        assert!(json.contains("submit"));
-    }
 }

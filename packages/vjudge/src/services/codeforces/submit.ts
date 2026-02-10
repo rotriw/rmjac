@@ -8,6 +8,7 @@ import {
   VjudgeStatus,
   statusRequire,
   statusDescribe,
+  readStringValue,
   type Status,
   type StatusRequire,
   type StatusDescribe,
@@ -52,21 +53,21 @@ export class CodeforcesSubmitTokenService extends EdgeService {
   }
 
   protected async doExecute(input: Status): Promise<Status> {
-    const handle = input.getValue("handle");
-    const token = input.getValue("token");
-    const problemUrl = input.getValue("problem_url");
-    const code = input.getValue("code");
-    const languageId = input.getValue("language_id");
-    const recordId = input.getValue("record_id");
+    const handleValue = readStringValue(input.getValue("handle"));
+    const tokenValue = readStringValue(input.getValue("token"));
+    const problemUrlValue = readStringValue(input.getValue("problem_url"));
+    const codeValue = readStringValue(input.getValue("code"));
+    const languageIdValue = readStringValue(input.getValue("language_id"));
+    const recordIdValue = readStringValue(input.getValue("record_id"));
     const bypassCf = input.getValue("bypass_cf");
 
     if (
-      handle?.type !== "String" ||
-      token?.type !== "String" ||
-      problemUrl?.type !== "String" ||
-      code?.type !== "String" ||
-      languageId?.type !== "String" ||
-      recordId?.type !== "String"
+      !handleValue ||
+      !tokenValue ||
+      !problemUrlValue ||
+      !codeValue ||
+      !languageIdValue ||
+      !recordIdValue
     ) {
       return VjudgeStatus.error("Invalid input types");
     }
@@ -75,15 +76,15 @@ export class CodeforcesSubmitTokenService extends EdgeService {
     const task = {
       vjudge_node: {
         node_id: 0,
-        public: { iden: handle.value, platform: "codeforces" },
-        private: { auth: { Token: token.value } },
+        public: { iden: handleValue, platform: "codeforces" },
+        private: { auth: { Token: tokenValue } },
       },
       context: {
-        code: code.value,
-        record_id: recordId.value,
+        code: codeValue,
+        record_id: recordIdValue,
       },
-      url: problemUrl.value,
-      language_id: languageId.value,
+      url: problemUrlValue,
+      language_id: languageIdValue,
       bypass_cf: bypassCf?.type === "Bool" ? bypassCf.value : false,
     };
 

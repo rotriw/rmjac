@@ -8,6 +8,7 @@ import {
   VjudgeStatus,
   statusRequire,
   statusDescribe,
+  readStringValue,
   type Status,
   type StatusRequire,
   type StatusDescribe,
@@ -52,18 +53,18 @@ export class AtCoderSubmitTokenService extends EdgeService {
   }
 
   protected async doExecute(input: Status): Promise<Status> {
-    const token = input.getValue("token");
-    const contestId = input.getValue("contest_id");
-    const problemId = input.getValue("problem_id");
-    const code = input.getValue("code");
-    const languageId = input.getValue("language_id");
+    const tokenValue = readStringValue(input.getValue("token"));
+    const contestIdValue = readStringValue(input.getValue("contest_id"));
+    const problemIdValue = readStringValue(input.getValue("problem_id"));
+    const codeValue = readStringValue(input.getValue("code"));
+    const languageIdValue = readStringValue(input.getValue("language_id"));
 
     if (
-      token?.type !== "String" ||
-      contestId?.type !== "String" ||
-      problemId?.type !== "String" ||
-      code?.type !== "String" ||
-      languageId?.type !== "String"
+      !tokenValue ||
+      !contestIdValue ||
+      !problemIdValue ||
+      !codeValue ||
+      !languageIdValue
     ) {
       return VjudgeStatus.error("Invalid input types");
     }
@@ -71,17 +72,17 @@ export class AtCoderSubmitTokenService extends EdgeService {
     try {
       // 构造兼容旧接口的任务数据
       const task = {
-        token: token.value,
-        contest_id: contestId.value,
-        problem_id: problemId.value,
-        code: code.value,
-        language: languageId.value,
+        token: tokenValue,
+        contest_id: contestIdValue,
+        problem_id: problemIdValue,
+        code: codeValue,
+        language: languageIdValue,
       };
 
       const submissionId = await submitService.submit(task);
 
       if (submissionId) {
-        const submissionUrl = `https://atcoder.jp/contests/${contestId.value}/submissions/${submissionId}`;
+        const submissionUrl = `https://atcoder.jp/contests/${contestIdValue}/submissions/${submissionId}`;
         return VjudgeStatus.from(input)
           .withBool("submit_success", true)
           .withString("submission_id", submissionId)

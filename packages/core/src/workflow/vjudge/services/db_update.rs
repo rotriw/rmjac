@@ -2,6 +2,7 @@
 //!
 //! These services persist workflow results to the local database.
 
+use workflow::description::WorkflowRequire;
 use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire, Value};
 use workflow::value::{BaseValue, WorkflowValue};
 use workflow::status::{WorkflowValues, WorkflowStatus};
@@ -11,9 +12,6 @@ use crate::model::problem::CreateProblemProps;
 use crate::model::vjudge::{VjudgeAccount, VjudgeService};
 use crate::model::problem::ProblemImport;
 use crate::utils::get_redis_connection;
-use crate::workflow::vjudge::status::{
-    VjudgeExportDescribe, VjudgeExportDescribeExpr, VjudgeRequire, VjudgeRequireExpr,
-};
 
 #[derive(Clone)]
 pub struct UpdateProblemService;
@@ -43,13 +41,7 @@ impl Service for UpdateProblemService {
     }
 
     fn get_import_require(&self) -> Box<dyn StatusRequire> {
-        Box::new(
-            VjudgeRequire {
-                inner: vec![
-                    VjudgeRequireExpr::Inner("problem_data".to_string()),
-                ]
-            }
-        )
+        Box::new(WorkflowRequire::new().with_inner_key("problem_data"))
     }
 
     fn get_export_describe(&self) -> Vec<Box<dyn StatusDescribe>> { // 对于结束值，不需要导出描述。
@@ -132,9 +124,7 @@ impl Service for UpdateVerifiedService {
     }
 
     fn get_import_require(&self) -> Box<dyn StatusRequire> {
-        let mut require = VjudgeRequire { inner: vec![] };
-        require.inner.push(VjudgeRequireExpr::Inner("vjudge_id".to_string()));
-        Box::new(require)
+        Box::new(WorkflowRequire::new().with_inner_key("vjudge_id"))
     }
 
     fn get_export_describe(&self) -> Vec<Box<dyn StatusDescribe>> {

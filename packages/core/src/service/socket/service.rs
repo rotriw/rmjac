@@ -11,11 +11,8 @@ use socketioxide::SocketIo;
 use socketioxide::extract::{Data, SocketRef};
 use std::fmt::Debug;
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use crate::service::socket::workflow::{
-    WorkflowServiceRegistrationMessage, WorkflowServiceUnregistrationMessage,
-    register_workflow_services, unregister_workflow_services,
-};
-use crate::workflow::vjudge::VjudgeWorkflow;
+use crate::service::socket::workflow::{WorkflowServiceRegistrationMessage, WorkflowServiceUnregistrationMessage, register_workflow_services, unregister_workflow_services, deregister_workflow_socket};
+use crate::workflow::vjudge::VjudgeWorkflowRegistry;
 use macro_socket_auth::auth_socket_connect;
 
 fn trust_auth(socket: &SocketRef) {
@@ -58,8 +55,8 @@ fn extract_service_key<T: ?Sized + Serialize>(task: &T) -> Option<String> {
 }
 
 fn deregister_socket_services(socket_id: &str) {
-    VjudgeWorkflow::try_global()
-        .map(|workflow| workflow.remove_socket_registration(socket_id));
+    let workflow = VjudgeWorkflowRegistry::default();
+    workflow.remove_socket_registration(socket_id);
 }
 
 async fn auth(socket: SocketRef, Data(key): Data<String>) {
@@ -120,43 +117,9 @@ fn erase_socket(id: &str) {
     log::debug!("Socket {} erased.", id);
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
-#[ts(export)]
-pub struct EdgeServiceRegisterItem {
-    pub platform: String,
-    pub operation: String,
-    pub method: Option<String>,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
-#[ts(export)]
-pub struct EdgePlatformFieldInfo {
-    pub id: String,
-    pub name: String,
-    pub r#type: String,
-    pub placeholder: String,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
-#[ts(export)]
-pub struct EdgePlatformMethodInfo {
-    pub name: String,
-    pub description: String,
-    pub stable: i32,
-    pub require_fields: Vec<EdgePlatformFieldInfo>,
-    pub tips: Option<Vec<String>>,
-    pub is_pwd: Option<bool>,
-    pub payload_template: String,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
-#[ts(export)]
-pub struct EdgePlatformInfo {
-    pub name: String,
-    pub url: String,
-    pub color: String,
-    pub allow_method: Vec<EdgePlatformMethodInfo>,
-}
+use crate::model::vjudge::platform::{
+    EdgePlatformFieldInfo, EdgePlatformInfo, EdgePlatformMethodInfo, EdgeServiceRegisterItem,
+};
 
 #[auth_socket_connect]
 async fn handle_register_services(socket: SocketRef, Data(items): Data<Vec<EdgeServiceRegisterItem>>) {
@@ -170,11 +133,8 @@ async fn handle_register_services(socket: SocketRef, Data(items): Data<Vec<EdgeS
     deregister_socket_services(&socket_id);
 
     if !keys.is_empty() {
-        if let Some(workflow) = VjudgeWorkflow::try_global() {
-            workflow.register_remote_service_keys(&socket_id, keys.clone());
-        } else {
-            log::warn!("[VJudge:Socket] Workflow not initialized; skip register_services for {}", socket_id);
-        }
+        let workflow = VjudgeWorkflowRegistry::default();
+        workflow.register_remote_service_keys(&socket_id, keys.clone());
     }
     log::info!("[VJudge:Socket] Received 'register_services' from socket {}: registered keys", socket_id);
 }
@@ -221,6 +181,7 @@ async fn on_connect(socket: SocketRef, Data(_data): Data<Value>) {
 
     socket.on_disconnect(async |socket: SocketRef| {
         log::info!("[VJudge:Socket] === DISCONNECTED === ns={:?}, socket_id={:?}", socket.ns(), socket.id);
+        deregister_workflow_socket(socket.ns()).await;
         erase_socket(socket.id.as_str());
     });
 }

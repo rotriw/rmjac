@@ -8,6 +8,7 @@ import {
   VjudgeStatus,
   statusRequire,
   statusDescribe,
+  readStringValue,
   type Status,
   type StatusRequire,
   type StatusDescribe,
@@ -46,12 +47,12 @@ export class CodeforcesSyncListApiKeyService extends EdgeService {
   }
 
   protected async doExecute(input: Status): Promise<Status> {
-    const handle = input.getValue("handle");
-    const apiKey = input.getValue("api_key");
-    const apiSecret = input.getValue("api_secret");
+    const handleValue = readStringValue(input.getValue("handle"));
+    const apiKeyValue = readStringValue(input.getValue("api_key"));
+    const apiSecretValue = readStringValue(input.getValue("api_secret"));
     const rangeValue = input.getValue("range");
 
-    if (handle?.type !== "String" || apiKey?.type !== "String" || apiSecret?.type !== "String") {
+    if (!handleValue || !apiKeyValue || !apiSecretValue) {
       return VjudgeStatus.error("Invalid input types");
     }
 
@@ -59,8 +60,8 @@ export class CodeforcesSyncListApiKeyService extends EdgeService {
     const task = {
       vjudge_node: {
         node_id: "",
-        public: { iden: handle.value, platform: "codeforces" },
-        private: { auth: { Token: `${apiKey.value}:${apiSecret.value}` } },
+        public: { iden: handleValue, platform: "codeforces" },
+        private: { auth: { Token: `${apiKeyValue}:${apiSecretValue}` } },
       },
       ws_id: null,
       operation: "syncList",
@@ -111,11 +112,11 @@ export class CodeforcesSyncOneTokenService extends EdgeService {
   }
 
   protected async doExecute(input: Status): Promise<Status> {
-    const handle = input.getValue("handle");
-    const token = input.getValue("token");
-    const submissionUrl = input.getValue("submission_url");
+    const handleValue = readStringValue(input.getValue("handle"));
+    const tokenValue = readStringValue(input.getValue("token"));
+    const submissionUrlValue = readStringValue(input.getValue("submission_url"));
 
-    if (handle?.type !== "String" || token?.type !== "String" || submissionUrl?.type !== "String") {
+    if (!handleValue || !tokenValue || !submissionUrlValue) {
       return VjudgeStatus.error("Invalid input types");
     }
 
@@ -123,11 +124,11 @@ export class CodeforcesSyncOneTokenService extends EdgeService {
     const task = {
       vjudge_node: {
         node_id: 0, // 兼容 VjudgeNode 类型
-        public: { iden: handle.value, platform: "codeforces" },
-        private: { auth: { Token: token.value } },
+        public: { iden: handleValue, platform: "codeforces" },
+        private: { auth: { Token: tokenValue } },
       },
       info: "",
-      url: submissionUrl.value,
+      url: submissionUrlValue,
     };
 
     const result = await syncOneService.token(task as any);

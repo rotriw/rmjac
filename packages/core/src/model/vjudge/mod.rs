@@ -26,6 +26,7 @@
 
 pub mod account;
 pub mod error;
+pub mod platform;
 pub mod service;
 pub mod task;
 pub mod types;

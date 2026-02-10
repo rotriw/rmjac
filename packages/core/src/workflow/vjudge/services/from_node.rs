@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use async_trait::async_trait;
 use tap::Conv;
+use workflow::description::{WorkflowExportDescribe, WorkflowRequire};
 use workflow::status::{WorkflowStatus, WorkflowValues};
 use workflow::value::WorkflowValue;
 use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire};
@@ -12,7 +13,6 @@ use crate::graph::node::Node;
 use crate::graph::node::user::remote_account::{RemoteMode, VjudgeAuth, VjudgeNode};
 use crate::model::user::UserAuthService;
 use crate::model::vjudge::VjudgeAccount;
-use crate::workflow::vjudge::status::{VjudgeExportDescribe, VjudgeExportDescribeExpr, VjudgeRequire, VjudgeRequireExpr};
 
 #[derive(Clone)]
 pub struct FromNodeService {
@@ -44,7 +44,7 @@ impl Service for FromNodeService {
 
     fn get_info(&self) -> ServiceInfo {
         ServiceInfo {
-            name: "from_node".to_string(),
+            name: format!("vjudge_from_node_{}", self.mode.clone().conv::<String>()),
             description: format!("Start from Node with mode {}", self.mode.clone().conv::<String>()),
             allow_description: "No input required".to_string(),
         }
@@ -56,57 +56,58 @@ impl Service for FromNodeService {
 
     fn get_import_require(&self) -> Box<dyn StatusRequire> {
         Box::new(
-            VjudgeRequire {
-                inner: vec![
-                    VjudgeRequireExpr::HasKey("vjudge_id".to_string()),
-                    VjudgeRequireExpr::HasKey("user_id".to_string()),
-                    VjudgeRequireExpr::HasKey("token".to_string())
-                ]
-            }
+            WorkflowRequire::new()
+                .with_key("vjudge_id")
+                .with_key("user_id")
+                .with_key("token"),
         )
     }
 
     fn get_export_describe(&self) -> Vec<Box<dyn StatusDescribe>> {
-        let mut inner = HashMap::new();
-        inner.insert("node_id".to_string(), vec![VjudgeExportDescribeExpr::Has]);
-        inner.insert("handle".to_string(), vec![VjudgeExportDescribeExpr::Has]);
-        inner.insert("platform".to_string(), vec![VjudgeExportDescribeExpr::Has]);
+        let mut describe = WorkflowExportDescribe::new()
+            .add_has("node_id")
+            .add_has("handle")
+            .add_has("platform");
         match &self.mode {
             RemoteMode::Apikey => {
-                inner.insert("api_key".to_string(), vec![VjudgeExportDescribeExpr::Has]);
-                inner.insert("api_secret".to_string(), vec![VjudgeExportDescribeExpr::Has]);
+                describe = describe.add_has("api_key").add_has("api_secret");
             }
             RemoteMode::Token => {
-                inner.insert("token".to_string(), vec![VjudgeExportDescribeExpr::Has]);
+                describe = describe.add_has("token");
             }
             RemoteMode::OnlyTrust => {
-                inner.insert("verified_code".to_string(), vec![VjudgeExportDescribeExpr::Has]);
+                describe = describe.add_has("verified_code");
             }
             _ => {}
         }
-        vec![Box::new(
-            VjudgeExportDescribe {
-                inner: vec![inner]
-            }
-        )]
+        vec![Box::new(describe)]
     }
 
     async fn verify(&self, input: &Box<dyn Status>) -> bool {
+        log::info!("Verifying FromNodeService with mode {:?}", self.mode);
+        let ls = input.get_all_value();
+        for (k, v) in &ls {
+            log::info!("Input key: {}, value: {:?}", k, v.to_string());
+        }
         let id = input.get_value("vjudge_id");
         if id.is_none() {
+            log::info!("No vjudge_id given");
             return false;
         }
         let id = id.unwrap().to_string().parse::<i64>();
         if id.is_err() {
+            log::info!("Unable to parse vjudge_id");
             return false;
         }
         let vjudge_id = id.unwrap();
         let id = input.get_value("user_id");
         if id.is_none() {
+            log::info!("No user_id given");
             return false;
         }
         let id = id.unwrap().to_string().parse::<i64>();
         if id.is_err() {
+            log::info!("Unable to parse user_id");
             return false;
         }
         let user_id = id.unwrap();
@@ -115,6 +116,7 @@ impl Service for FromNodeService {
             return false;
         }
         let token = token.unwrap().to_string();
+        log::info!("Verifying FromNodeService with token {:?}", token);
         if !UserAuthService::check_token(user_id, &token).await {
             return false;
         }
@@ -139,6 +141,7 @@ impl Service for FromNodeService {
         let mut res = WorkflowValues::new();
         res.add_trusted("node_id", vjudge_node.node_id.into(), "from_node");
         res.add_trusted("handle", vjudge_node.public.iden.clone().into(), "from_node");
+        res.add_trusted("platform", vjudge_node.public.platform.to_lowercase().clone().into(), "from_node");
         match &self.mode {
             RemoteMode::Apikey => {
                 use crate::graph::node::user::remote_account::VjudgeAuth;
@@ -167,6 +170,6 @@ impl Service for FromNodeService {
             }
         };
 
-        Box::new(WorkflowStatus::running(res))
+        Box::new(res)
     }
 }

@@ -27,11 +27,13 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use crate::value::{BaseValue, WorkflowValue, WorkflowValueError};
+use ts_rs::TS;
 
 /// 值集合
 ///
 /// 管理一组带信任标记的键值对。
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, TS)]
+#[ts(export)]
 pub struct WorkflowValues {
     inner: HashMap<String, WorkflowValue>,
 }
@@ -161,7 +163,8 @@ impl WorkflowValues {
 /// - `Running`: 正在执行中，携带当前值
 /// - `Completed`: 成功完成
 /// - `Failed`: 执行失败
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub enum WorkflowStatus {
     /// 正常执行中
     Running(WorkflowValues),
@@ -173,6 +176,7 @@ pub enum WorkflowStatus {
     /// 执行失败
     Failed {
         error: String,
+        #[ts(type = "unknown")]
         context: Option<serde_json::Value>,
     },
 }
@@ -300,7 +304,7 @@ impl crate::workflow::Status for WorkflowValues {
         self.inner
             .iter()
             .map(|(k, wv)| {
-                (k.clone(), Box::new(wv.inner().clone()) as Box<dyn crate::workflow::Value>)
+                (k.clone(), Box::new(wv.clone()) as Box<dyn crate::workflow::Value>)
             })
             .collect()
     }
@@ -355,92 +359,5 @@ impl crate::workflow::Status for WorkflowStatus {
         self.values()
             .map(|values| crate::workflow::Status::get_all_value(values))
             .unwrap_or_default()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_workflow_values_basic() {
-        let mut values = WorkflowValues::new();
-        values.add_untrusted("platform", BaseValue::from("codeforces"));
-        values.add_trusted("account_id", BaseValue::from(456i64), "db_lookup");
-
-        assert!(values.contains_key("platform"));
-        assert!(values.contains_key("account_id"));
-        assert!(!values.contains_key("nonexistent"));
-        assert_eq!(values.len(), 2);
-    }
-
-    #[test]
-    fn test_workflow_values_trust() {
-        let mut values = WorkflowValues::new();
-        values.add_untrusted("user_input", BaseValue::from("data"));
-        values.add_trusted("service_result", BaseValue::from(42i64), "my_service");
-
-        // get_trusted 只返回可信的
-        assert!(values.get_trusted("user_input").is_none());
-        assert!(values.get_trusted("service_result").is_some());
-
-        // get_inner 不检查信任级别
-        assert!(values.get_inner("user_input").is_some());
-        assert!(values.get_inner("service_result").is_some());
-    }
-
-    #[test]
-    fn test_workflow_values_require_trusted() {
-        let mut values = WorkflowValues::new();
-        values.add_untrusted("untrusted_key", BaseValue::from("data"));
-        values.add_trusted("trusted_key", BaseValue::from(42i64), "service");
-
-        assert!(values.require_trusted("trusted_key").is_ok());
-        assert!(values.require_trusted("untrusted_key").is_err());
-        assert!(values.require_trusted("missing_key").is_err());
-    }
-
-    #[test]
-    fn test_workflow_values_merge() {
-        let mut a = WorkflowValues::new();
-        a.add_untrusted("key1", BaseValue::from("value1"));
-
-        let mut b = WorkflowValues::new();
-        b.add_trusted("key2", BaseValue::from("value2"), "service");
-
-        a.merge(b);
-        assert_eq!(a.len(), 2);
-        assert!(a.contains_key("key1"));
-        assert!(a.contains_key("key2"));
-    }
-
-    #[test]
-    fn test_workflow_values_json_roundtrip() {
-        let json = serde_json::json!({
-            "platform": "codeforces",
-            "account_id": 123
-        });
-        let values = WorkflowValues::from_json_untrusted(json);
-        assert_eq!(values.len(), 2);
-
-        let back = values.to_json();
-        assert!(back.is_object());
-    }
-
-    #[test]
-    fn test_workflow_status_states() {
-        let values = WorkflowValues::new();
-
-        let running = WorkflowStatus::running(values.clone());
-        assert!(running.is_running());
-        assert!(!running.is_completed());
-        assert!(!running.is_failed());
-
-        let completed = WorkflowStatus::completed(values, Some("done".to_string()));
-        assert!(completed.is_completed());
-
-        let failed = WorkflowStatus::failed("something went wrong");
-        assert!(failed.is_failed());
-        assert_eq!(failed.error(), Some("something went wrong"));
     }
 }

@@ -1,5 +1,15 @@
 import { Socket } from "socket.io-client";
-import { VjudgeNode } from "@/declare/node.ts";
+import { VjudgeAuth, VjudgeNode } from "@/declare/node.ts";
+
+const getAuthToken = (auth: VjudgeAuth | null): string => {
+    if (!auth) {
+        return "";
+    }
+    if ("Token" in auth) {
+        return auth.Token;
+    }
+    return "";
+};
 import { VjudgeSyncAllFunction, VjudgeSyncOneFunction, VjudgeSyncListFunction } from "@/declare/modules.ts";
 import { UniversalSubmission } from "../declare/submission.ts";
 import { verifyMethod } from "../declare/verified.ts";
@@ -81,7 +91,8 @@ export const run = async (data: SyncData, socket: Socket) => {
         const platform = vjudge_node.public.platform.toLowerCase();
         const iden = data.vjudge_node.public.iden;
         const vjudge_mode = vjudge_node.public.remote_mode;
-        const vjudge_method = reflectVjudgeMethod[vjudge_mode] || "TOKEN";    
+        const authToken = getAuthToken(vjudge_node.private.auth);
+        const vjudge_method = reflectVjudgeMethod[vjudge_mode] || (authToken ? "TOKEN" : "PASSWORD");
         const range = convertRange(data.range);
         let result: UniversalSubmission[] | UniversalSubmission | undefined = undefined;
         if (range.all) {

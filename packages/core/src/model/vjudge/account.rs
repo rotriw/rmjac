@@ -21,7 +21,7 @@ use crate::utils::encrypt::gen_random_string;
 use crate::Result;
 use sea_orm::{ColumnTrait, DatabaseConnection};
 use workflow::workflow::{NowStatus, TaskStatus};
-use crate::workflow::vjudge::VjudgeWorkflow;
+use crate::workflow::vjudge::VjudgeWorkflowRegistry;
 use super::error::AddErrorResult;
 use super::task::VjudgeTask;
 use super::types::VjudgeOperation;
@@ -124,7 +124,7 @@ impl VjudgeAccount {
         let method = Self::method(&vjudge_node);
         let task_id = format!("vjudge-verify-{}-{}", self.node_id, chrono::Utc::now().timestamp());
 
-        let workflow = VjudgeWorkflow::global().await;
+        let workflow = VjudgeWorkflowRegistry::default();
         let response = workflow
             .dispatch_task(
                 &task_id,
@@ -189,7 +189,7 @@ impl VjudgeAccount {
             chrono::Utc::now().timestamp()
         );
 
-        let workflow = VjudgeWorkflow::global().await;
+        let workflow = VjudgeWorkflowRegistry::default();
         let response = workflow
             .dispatch_task(
                 &task_id,
@@ -291,7 +291,7 @@ impl VjudgeAccount {
         let service_key = format!("{}:{}:{}", platform, operation_str, method);
         let task_id = task.node_id.to_string();
 
-        let workflow = VjudgeWorkflow::global().await;
+        let workflow = VjudgeWorkflowRegistry::default();
         let response = workflow
             .dispatch_task(
                 &task_id,

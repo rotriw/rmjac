@@ -85,15 +85,19 @@ impl WorkflowSystem for VjudgeWorkflowSystem {
 
     async fn update_execute_status(&self, task_id: i64, status: &NowStatus) -> Option<()> {
         use crate::db::entity::node::vjudge_task::{Entity, Column};
+        log::info!("1Updating VJudge task {} status log", task_id);
+        let db = get_connect().await.unwrap();
         let x = Entity::find()
             .filter(Column::NodeId.eq(task_id))
-            .one(&get_connect().await.unwrap())
+            .one(&db)
             .await.unwrap()?;
+        log::info!("2Updating VJudge task {} status log", task_id);
         let now_data = &status.init_value.get_all_value();
         let mut now_value = HashMap::new();
         for (k, v) in now_data {
             now_value.insert(k.clone(), v.to_string());
         }
+        log::info!("3Updating VJudge task {} status log", task_id);
         let mut history_step = Vec::new();
         for history in &status.history_value {
             let data = history.output_data.get_all_value();
@@ -108,15 +112,17 @@ impl WorkflowSystem for VjudgeWorkflowSystem {
                 }
             );
         }
+        log::info!("4Updating VJudge task {} status log", task_id);
         let convert = VjudgeWorkflowSystemMessage {
             final_service: x.service_name.clone(),
             now_value,
             history_step
         };
         let mut x = x.into_active_model();
+        log::info!("5Updating VJudge task {} status log", task_id);
         x.log = Set(serde_json::to_string(&convert).unwrap());
-        let db = get_connect().await.unwrap();
         let _ = x.update(&db).await;
+        log::info!("6Updating VJudge task {} status log", task_id);
         Some(())
     }
 

@@ -28,12 +28,14 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// 基础值类型
 ///
 /// 表示 workflow 中传递的各种基本数据类型。
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
 #[serde(tag = "type", content = "value")]
+#[ts(export)]
 pub enum BaseValue {
     /// 字符串值
     String(std::string::String),
@@ -46,7 +48,8 @@ pub enum BaseValue {
     /// 列表值
     List(Vec<BaseValue>),
     /// 对象值（保留 JSON 兼容性）
-    Object(serde_json::Map<std::string::String, serde_json::Value>),
+    #[ts(type = "Record<string, unknown>")]
+    Object(#[ts(type = "Record<string, unknown>")] serde_json::Map<std::string::String, serde_json::Value>),
     /// 空值
     Null,
 }
@@ -131,6 +134,12 @@ impl From<BaseValue> for serde_json::Value {
     }
 }
 
+impl From<&serde_json::Value> for BaseValue {
+    fn from(v: &serde_json::Value) -> Self {
+        v.clone().into()
+    }
+}
+
 // 便捷构造方法
 
 impl From<std::string::String> for BaseValue {
@@ -205,8 +214,9 @@ impl std::fmt::Display for BaseValue {
 /// 所有通过 workflow 传递的值都带有信任标记。
 /// - `Untrusted`: 来自外部输入（前端用户请求等）
 /// - `Trusted`: 来自后端服务内部生成
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "trust")]
+#[ts(export)]
 pub enum WorkflowValue {
     /// 不可信值 - 来自外部输入（前端、用户请求等）
     Untrusted {
@@ -302,7 +312,8 @@ impl std::fmt::Display for WorkflowValue {
 }
 
 /// Workflow 值错误
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(export)]
 pub enum WorkflowValueError {
     /// 值不可信
     UntrustedValue(std::string::String),
@@ -355,8 +366,21 @@ impl crate::workflow::Value for BaseValue {
 
     fn to_string(&self) -> std::string::String {
         // 使用 serde_json 序列化以保证与 serde_json::Value 行为一致
-        let json_val: serde_json::Value = self.clone().into();
-        serde_json::to_string(&json_val).unwrap_or_else(|_| format!("{}", self))
+        match self {
+            BaseValue::Object(_) => {
+                let json_val: serde_json::Value = self.clone().into();
+                serde_json::to_string(&json_val).unwrap_or_else(|_| format!("{}", self))
+            }
+            BaseValue::String(value) => value.clone(),
+            BaseValue::Null => "Null".to_string(),
+            BaseValue::Bool(value) => value.to_string(),
+            BaseValue::Int(value) => value.to_string(),
+            BaseValue::Number(value) => value.to_string(),
+            BaseValue::List(_) => {
+                let json_val: serde_json::Value = self.clone().into();
+                serde_json::to_string(&json_val).unwrap_or_else(|_| format!("{}", self))
+            }
+        }
     }
 }
 

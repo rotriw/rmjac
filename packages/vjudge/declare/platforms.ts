@@ -1,26 +1,10 @@
-export interface VjudgePlatformFieldInfo {
-    id: string;
-    name: string;
-    type: string;
-    placeholder: string;
-}
+import type { EdgePlatformFieldInfo } from "@rmjac/api-declare/interface/EdgePlatformFieldInfo.ts";
+import type { EdgePlatformInfo } from "@rmjac/api-declare/interface/EdgePlatformInfo.ts";
+import type { EdgePlatformMethodInfo } from "@rmjac/api-declare/interface/EdgePlatformMethodInfo.ts";
 
-export interface VjudgePlatformMethodInfo {
-    name: string;
-    description: string;
-    stable: number;
-    require_fields: VjudgePlatformFieldInfo[];
-    tips?: string[];
-    is_pwd?: boolean;
-    payload_template: string;
-}
-
-export interface VjudgePlatformInfo {
-    name: string;
-    url: string;
-    color: string;
-    allow_method: VjudgePlatformMethodInfo[];
-}
+export type VjudgePlatformFieldInfo = EdgePlatformFieldInfo;
+export type VjudgePlatformMethodInfo = EdgePlatformMethodInfo;
+export type VjudgePlatformInfo = EdgePlatformInfo;
 
 export const VJUDGE_PLATFORMS: VjudgePlatformInfo[] = [
     {

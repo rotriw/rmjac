@@ -1,6 +1,6 @@
 use crate::graph::action::DefaultNodes;
 use crate::service::iden::ac_automaton::AcMachine;
-use crate::workflow::vjudge::{VjudgeWorkflow, VjudgeWorkflowSystem};
+use crate::workflow::vjudge::VjudgeWorkflowSystem;
 use chrono;
 use lazy_static::lazy_static;
 use sea_orm::DatabaseConnection;

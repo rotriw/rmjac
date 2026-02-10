@@ -3,7 +3,7 @@ import { JSDOM } from "jsdom";
 
 export const submit = async (task: any) => {
     const { token, contest_id, problem_id, code, language } = task;
-    const browser = await getOnePage();
+    const browser = await getOnePage(token ? `at-${token}` : undefined);
     const page = await browser.newPage();
     
     await browser.setCookie({
