@@ -15,6 +15,7 @@ use serde_json::Value;
 use socketioxide::extract::SocketRef;
 use std::time::Duration;
 use tokio::time::timeout;
+use ::workflow::status::WorkflowValues;
 
 // ============================================================================
 // 类型定义（与 TypeScript 边缘服务对齐）
@@ -59,7 +60,7 @@ pub struct WorkflowTaskRequest {
     pub task_id: String,
     #[serde(rename = "serviceName")]
     pub service_name: String,
-    pub input: Value,
+    pub input: WorkflowValues,
     pub timeout: Option<u64>,
 }
 
@@ -69,7 +70,7 @@ pub struct WorkflowTaskResponse {
     #[serde(rename = "taskId")]
     pub task_id: String,
     pub success: bool,
-    pub output: Option<Value>,
+    pub output: Option<WorkflowValues>,
     pub error: Option<String>,
 }
 
@@ -161,7 +162,7 @@ pub async fn dispatch_workflow_task(
     task_id: &str,
     service_name: &str,
     socket_id: &str,
-    input: Value,
+    input: WorkflowValues,
     timeout_ms: Option<u64>,
 ) -> WorkflowTaskResponse {
 

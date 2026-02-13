@@ -355,6 +355,20 @@ export class WorkflowValuesStore {
     return store;
   }
 
+  /** 从 WorkflowStatusDataDTO 转换（全部标记为可信） */
+  static fromStatusDataTrusted(data: StatusData, source: string): WorkflowValuesStore {
+    const store = new WorkflowValuesStore();
+    for (const [key, value] of Object.entries(data.values)) {
+      if (!value) continue;
+      if (value.type === "Inner") {
+        store.addTrusted(key, BaseValueUtils.string(value.value), source);
+      } else {
+        store.addTrusted(key, workflowValueToBaseValue(value), source);
+      }
+    }
+    return store;
+  }
+
   /** 转换为 WorkflowStatusDataDTO */
   toStatusData(): StatusData {
     const status = new VjudgeStatus();

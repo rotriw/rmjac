@@ -89,7 +89,6 @@ impl VjudgeWorkflowRegistry {
     }
 }
 
-fn wrap_input_values(input: JsonValue) -> JsonValue {
-    let values = WorkflowValues::from_json_trusted(input, "api").to_json();
-    serde_json::json!({ "values": values })
+fn wrap_input_values(input: JsonValue) -> WorkflowValues {
+    WorkflowValues::from_json_trusted(input, "api")
 }

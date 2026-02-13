@@ -29,6 +29,7 @@
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
+use crate::status::WorkflowStatus;
 
 /// 基础值类型
 ///
@@ -231,6 +232,11 @@ pub enum WorkflowValue {
         #[serde(skip_serializing_if = "Option::is_none")]
         source: Option<std::string::String>,
     },
+    /// Final value.
+    Final {
+        #[serde(flatten)]
+        inner: BaseValue,
+    }
 }
 
 impl WorkflowValue {

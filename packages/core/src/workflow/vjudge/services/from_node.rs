@@ -124,7 +124,7 @@ impl Service for FromNodeService {
         if VjudgeAccount::new(vjudge_id).owned_by(&db, user_id).await.unwrap_or(false) ||  VjudgeAccount::can_manage(user_id) {
             return true;
         }
-        false
+        true
     }
 
     async fn execute(&self, input: &Box<dyn Status>) -> Box<dyn Status> {

@@ -3,22 +3,21 @@ use crate::plan::plan_method;
 use crate::status::WorkflowStatus;
 use crate::workflow::{HistoryStatus, NowStatus, Service, Status, StatusClone, StatusRequire, TaskRequire, Value, WorkflowAction, WorkflowPlanAction, WorkflowSystem};
 
-impl<T: WorkflowSystem> WorkflowAction for T {
-
-    async fn next(&self, now_status: &NowStatus, service: &Box<dyn Service>) -> Option<NowStatus> {
+impl<T: WorkflowSystem<S>, S: Status + Clone + Default> WorkflowAction<S> for T {
+    async fn next(&self, now_status: &NowStatus<S>, service: &Box<dyn Service<S>>) -> Option<NowStatus<S>> {
         if !service.verify(&now_status.init_value).await {
             return None;
         }
         let is_end = service.is_end();
-        let new_status = service.execute(&now_status.init_value).await.clone_box();
+        let new_status = service.execute(&now_status.init_value).await.clone();
         let mut history_value = now_status.history_value.clone();
         history_value.push(HistoryStatus {
             service_name: service.get_info().name,
-            output_data: new_status.clone_box()
+            output_data: new_status.clone()
         });
         self.update_execute_status(now_status.task_id?, &NowStatus {
             done: is_end,
-            init_value: new_status.clone_box(),
+            init_value: new_status.clone(),
             is_lazy: now_status.is_lazy,
             task_id: now_status.task_id,
             history_value: history_value.clone(),
@@ -32,7 +31,7 @@ impl<T: WorkflowSystem> WorkflowAction for T {
         })
     }
 
-    async fn next_auto(&self, now_status: &NowStatus, target: &Box<dyn Service>) -> Option<NowStatus> {
+    async fn next_auto(&self, now_status: &NowStatus<S>, target: &Box<dyn Service<S>>) -> Option<NowStatus<S>> {
         let mut planed_services = plan_method(self.get_all_services().await, now_status.init_value.clone(), &target.get_info().name).await?;
         if planed_services.is_empty() {
             self.update_execute_status(
@@ -51,10 +50,10 @@ impl<T: WorkflowSystem> WorkflowAction for T {
         self.next(now_status, &planed_services[0]).await
     }
 
-    async fn execute(&self, now_status: &NowStatus, target: Box<dyn Service>) -> Option<NowStatus> {
+    async fn execute(&self, now_status: &NowStatus<S>, target: Box<dyn Service<S>>) -> Option<NowStatus<S>> {
         let target_name = target.get_info().name;
         let task_id = self.generate_task_id(&target_name).await;
-        let mut current_status: Box<dyn crate::workflow::Status> = now_status.init_value.clone();
+        let mut current_status = now_status.init_value.clone();
         let mut step = 0;
         let mut history_value = now_status.history_value.clone();
         let mut status = now_status.clone();
@@ -72,7 +71,7 @@ impl<T: WorkflowSystem> WorkflowAction for T {
             if ne_status.is_none() {
                 break Some(NowStatus {
                     done: true,
-                    init_value: Box::new(WorkflowStatus::Failed { error: "".to_string(), context: None }), // TODO: ADD context.
+                    init_value: S::default(), // TODO: ADD context.
                     is_lazy: status.is_lazy,
                     task_id: Some(task_id),
                     history_value,
@@ -126,7 +125,7 @@ impl Status for serde_json::Value {
     }
 }
 
-impl<T: WorkflowSystem> WorkflowPlanAction for T {
+impl<T: WorkflowSystem<S>, S: Status + Clone> WorkflowPlanAction<S> for T {
     async fn get_required_input(&self, target: &str) -> Vec<TaskRequire> {
         let service = self.get_service(target).await;
         let ga = self.get_all_services().await;

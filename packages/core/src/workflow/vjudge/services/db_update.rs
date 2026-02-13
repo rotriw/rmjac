@@ -48,11 +48,11 @@ impl Service for UpdateProblemService {
         vec![]
     }
 
-    async fn verify(&self, input: &Box<dyn Status>) -> bool {
+    async fn verify(&self, input: &WorkflowValues) -> bool {
         input.get_value("inner:problem_data").is_some()
     }
 
-    async fn execute(&self, input: &Box<dyn Status>) -> Box<dyn Status> {
+    async fn execute(&self, input: &WorkflowValues) -> WorkflowValues {
         let problem_raw = match input.get_value("problem_data") {
             Some(value) => value.to_string(),
             None => return Box::new(WorkflowStatus::failed("Missing problem_data")),

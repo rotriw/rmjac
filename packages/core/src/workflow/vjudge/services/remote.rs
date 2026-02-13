@@ -4,10 +4,11 @@
 
 use std::collections::HashMap;
 
-use serde_json::{Map as JsonMap, Value as JsonValue};
+use serde_json::Value as JsonValue;
 use uuid::Uuid;
 use workflow::description::{WorkflowExportDescribe, WorkflowRequire};
 use workflow::status::{WorkflowStatus, WorkflowValues};
+use workflow::value::BaseValue;
 use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire, Value};
 
 use crate::service::socket::workflow::dispatch_workflow_task;
@@ -98,13 +99,13 @@ impl Service for RemoteEdgeService {
 
     async fn execute(&self, input: &Box<dyn Status>) -> Box<dyn Status> {
         let task_id = Uuid::new_v4().to_string();
-        let input_json = status_to_request(input);
+        let input_values = status_to_request(input);
 
         let response = dispatch_workflow_task(
             &task_id,
             &self.info.service_name,
             &self.info.socket_id,
-            input_json,
+            input_values,
             None,
         )
         .await;
@@ -126,52 +127,27 @@ impl Service for RemoteEdgeService {
     }
 }
 
-fn status_to_request(input: &Box<dyn Status>) -> JsonValue {
-    let mut values = JsonMap::new();
+fn status_to_request(input: &Box<dyn Status>) -> WorkflowValues {
+    let mut values = WorkflowValues::new();
     for (key, value) in input.get_all_value() {
-        values.insert(
-            key,
-            serde_json::json!({
-                "type": value.get_type().clone(),
-                "value": value_to_json(&value)
-            }),
-        );
+        let base_value = value_to_base_value(&value);
+        if value.get_type().starts_with("Trusted(") {
+            values.add_trusted(&key, base_value, "workflow");
+        } else {
+            values.add_untrusted(&key, base_value);
+        }
     }
-    JsonValue::Object(JsonMap::from_iter([(
-        "values".to_string(),
-        JsonValue::Object(values),
-    )]))
+    values
 }
 
-fn value_to_json(value: &Box<dyn Value>) -> JsonValue {
+fn value_to_base_value(value: &Box<dyn Value>) -> BaseValue {
     let raw = value.to_string();
-    serde_json::from_str(&raw).unwrap_or(JsonValue::String(raw))
+    let json_value = serde_json::from_str(&raw).unwrap_or(JsonValue::String(raw));
+    BaseValue::from(json_value)
 }
 
-fn edge_output_to_status(output: JsonValue, task_id: &str) -> Box<dyn Status> {
-    let values_obj = output
-        .get("values")
-        .and_then(|v| v.as_object())
-        .cloned()
-        .or_else(|| output.as_object().cloned())
-        .unwrap_or_else(|| {
-            let mut map = JsonMap::new();
-            map.insert("output".to_string(), output);
-            map
-        });
-
-    let mut trusted_map = JsonMap::new();
-    for (key, value) in values_obj {
-        let actual = value
-            .get("value")
-            .cloned()
-            .unwrap_or_else(|| value.clone());
-        trusted_map.insert(key, actual);
-    }
-    trusted_map.insert("task_id".to_string(), JsonValue::String(task_id.to_string()));
-
-    Box::new(WorkflowValues::from_json_trusted(
-        JsonValue::Object(trusted_map),
-        "edge_server",
-    ))
+fn edge_output_to_status(output: WorkflowValues, task_id: &str) -> Box<dyn Status> {
+    let mut values = output;
+    values.add_trusted("task_id", BaseValue::String(task_id.to_string()), "edge_server");
+    Box::new(values)
 }

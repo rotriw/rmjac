@@ -181,17 +181,19 @@ export interface Service {
 
 /**
  * 服务元数据的 JSON 表示（用于服务注册）
- * 注意：后端 API 已更新为 snake_case 并且要求 import_require/export_describe 为字符串描述
  */
 export interface ServiceMetadata {
   name: string;
   description: string;
-  allow_description: string;
+  allowDescription: string;
   source: string;
-  import_require: string;
-  export_describe: string;
-  // 保留旧字段用于内部逻辑或兼容性，或者如果后端不再需要则移除
-  // 这里根据用户提供的 JSON 样例，后端似乎不再关注 platform/operation/method 的细分，而是通过 name/allow_description 识别
+  importRequire: StatusRequireData;
+  exportDescribe: StatusDescribeData[];
+  platform: string;
+  operation: ServiceOperation;
+  method: string;
+  cost: number;
+  isEnd: boolean;
 }
 
 // ============================================================================
@@ -208,10 +210,10 @@ export interface TaskRequest {
   platform?: string;
   operation?: ServiceOperation;
   method?: string;
-  input: StatusData;
+  input: WorkflowValuesData;
   timeout?: number;
   /** 任务历史 (Workflow NowStatus.history_value) */
-  history?: unknown[]; 
+  history?: unknown[];
 }
 
 /**
@@ -220,7 +222,7 @@ export interface TaskRequest {
 export interface TaskResponse {
   taskId: string;
   success: boolean;
-  output?: StatusData;
+  output?: WorkflowValuesData;
   error?: string;
 }
 
@@ -324,7 +326,7 @@ export const BaseValueUtils = {
     return { type: "Number", value };
   },
   int(value: number): BaseValue {
-    return { type: "Int", value: BigInt(Math.floor(value)) };
+    return { type: "Int", value: Math.floor(value) };
   },
   bool(value: boolean): BaseValue {
     return { type: "Bool", value };
@@ -345,7 +347,7 @@ export const BaseValueUtils = {
     if (typeof value === "string") return { type: "String", value };
     if (typeof value === "number") {
       return Number.isInteger(value)
-        ? { type: "Int", value: BigInt(Math.floor(value)) }
+        ? { type: "Int", value: Math.floor(value) as unknown as bigint }
         : { type: "Number", value };
     }
     if (typeof value === "bigint") return { type: "Int", value };

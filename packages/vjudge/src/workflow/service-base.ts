@@ -230,10 +230,15 @@ export abstract class EdgeService implements Service {
         return {
             name: this.config.name,
             description: this.config.description,
-            allow_description: this.getInfo().allow_description,
+            allowDescription: this.getInfo().allow_description,
             source: "", // 可选：可以添加源代码链接或其他信息
-            import_require: JSON.stringify(this.getImportRequire().toJSON()),
-            export_describe: JSON.stringify(this.getExportDescribe().map(d => d.toJSON())),
+            importRequire: this.getImportRequire().toJSON(),
+            exportDescribe: this.getExportDescribe().map(d => d.toJSON()),
+            platform: this.config.platform,
+            operation: this.config.operation,
+            method: this.config.method ?? "",
+            cost: this.config.cost,
+            isEnd: this.config.isEnd,
         };
     }
 

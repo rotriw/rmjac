@@ -12,7 +12,7 @@ import type {
     TaskRequest,
     TaskResponse,
 } from "./types.ts";
-import { VjudgeStatus } from "./status.ts";
+import { VjudgeStatus, WorkflowValuesStore } from "./status.ts";
 import { EdgeService } from "./service-base.ts";
 
 /**
@@ -237,7 +237,9 @@ export class ServiceRegistry {
         try {
             // 解析输入状态
             this.log("debug", `[handleTask] Parsing input status from JSON...`);
-            const inputStatus = VjudgeStatus.fromJSON(input);
+            console.log(input);
+            const inputValues = WorkflowValuesStore.fromJSON(input);
+            const inputStatus = VjudgeStatus.fromJSON(inputValues.toStatusData());
             this.log("info", `[handleTask] Input parsed: valueKeys=[${inputStatus.getKeys().join(", ")}]`);
 
             // 执行服务
@@ -256,7 +258,7 @@ export class ServiceRegistry {
                 };
             }
 
-            const output = outputStatus.toJSON();
+            const output = WorkflowValuesStore.fromStatusDataTrusted(outputStatus.toJSON(), serviceInfo.name).toJSON();
             this.log("info", `[handleTask] Task ${taskId} success`);
             return {
                 taskId,
@@ -319,10 +321,15 @@ export class ServiceRegistry {
         return {
             name: info.name,
             description: info.description,
-            allow_description: info.allow_description,
+            allowDescription: info.allow_description,
             source: "",
-            import_require: JSON.stringify(service.getImportRequire().toJSON()),
-            export_describe: JSON.stringify(service.getExportDescribe().map(d => d.toJSON())),
+            importRequire: service.getImportRequire().toJSON(),
+            exportDescribe: service.getExportDescribe().map(d => d.toJSON()),
+            platform: "",
+            operation: "verify",
+            method: "",
+            cost: service.getCost(),
+            isEnd: service.isEnd(),
         };
     }
 

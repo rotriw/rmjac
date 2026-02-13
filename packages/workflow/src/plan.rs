@@ -1,11 +1,11 @@
 use std::collections::{HashMap, HashSet};
 use log::log;
-use crate::workflow::Service;
+use crate::workflow::{Service, Status};
 
 
 const MAX_PATH: i64 = 1 << 50;
 
-pub async fn plan_method(services: Vec<Box<dyn Service>>, input: Box<dyn crate::workflow::Status>, target: &str) -> Option<Vec<Box<dyn Service>>> {
+pub async fn plan_method<S: Status + Clone>(services: Vec<Box<dyn Service<S>>>, input: S, target: &str) -> Option<Vec<Box<dyn Service<S>>>> {
     let mut vis = HashSet::new();
     let mut action = HashMap::new();
     let mut action_number = HashMap::new();
