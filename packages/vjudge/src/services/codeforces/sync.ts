@@ -4,15 +4,15 @@
  */
 
 import {
-  EdgeService,
-  VjudgeStatus,
-  statusRequire,
-  statusDescribe,
-  readStringValue,
-  type Status,
-  type StatusRequire,
-  type StatusDescribe,
-  createValue,
+    EdgeService,
+    VjudgeStatus,
+    statusRequire,
+    statusDescribe,
+    readStringValue,
+    type Status,
+    type StatusRequire,
+    type StatusDescribe,
+    createValue,
 } from "../../workflow/index.ts";
 // 引用现有服务
 import * as syncListService from "../../../vjudge_services/codeforces/syncList.ts";
@@ -23,64 +23,64 @@ import * as syncOneService from "../../../vjudge_services/codeforces/syncOne.ts"
  * 使用 API Key 批量同步用户提交记录
  */
 export class CodeforcesSyncListApiKeyService extends EdgeService {
-  constructor() {
-    super({
-      name: "codeforces:syncList:apikey",
-      description: "Sync user submissions from Codeforces using API Key",
-      platform: "codeforces",
-      operation: "syncList",
-      method: "apikey",
-      cost: 15,
-      isEnd: false,
-    });
-  }
-
-  protected defineImportRequire(): StatusRequire {
-    return statusRequire(["handle", "api_key", "api_secret"]);
-  }
-
-  protected defineExportDescribe(): StatusDescribe[] {
-    return [
-      statusDescribe("submissions", "List"),
-      statusDescribe("sync_count", "Number"),
-    ];
-  }
-
-  protected async doExecute(input: Status): Promise<Status> {
-    const handleValue = readStringValue(input.getValue("handle"));
-    const apiKeyValue = readStringValue(input.getValue("api_key"));
-    const apiSecretValue = readStringValue(input.getValue("api_secret"));
-    const rangeValue = input.getValue("range");
-
-    if (!handleValue || !apiKeyValue || !apiSecretValue) {
-      return VjudgeStatus.error("Invalid input types");
+    constructor() {
+        super({
+            name: "codeforces:syncList:apikey",
+            description: "Sync user submissions from Codeforces using API Key",
+            platform: "codeforces",
+            operation: "syncList",
+            method: "apikey",
+            cost: 15,
+            isEnd: false,
+        });
     }
 
-    // 构造兼容旧接口的任务数据
-    const task = {
-      vjudge_node: {
-        node_id: "",
-        public: { iden: handleValue, platform: "codeforces" },
-        private: { auth: { Token: `${apiKeyValue}:${apiSecretValue}` } },
-      },
-      ws_id: null,
-      operation: "syncList",
-      platform: "codeforces",
-      method: "apikey",
-      range: rangeValue?.type === "String" ? rangeValue.value : undefined,
-    };
-
-    const result = await syncListService.apikey(task as any);
-
-    if (result.event === "sync_done_success") {
-      const submissions = result.data.map(sub => createValue(sub));
-      return VjudgeStatus.from(input)
-        .withList("submissions", submissions)
-        .withNumber("sync_count", result.data.length);
-    } else {
-      return VjudgeStatus.error("Failed to sync submissions");
+    protected defineImportRequire(): StatusRequire {
+        return statusRequire(["inner:handle", "inner:api_key", "inner:api_secret"]);
     }
-  }
+
+    protected defineExportDescribe(): StatusDescribe[] {
+        return [
+            statusDescribe("submissions", "List"),
+            statusDescribe("sync_count", "Number"),
+        ];
+    }
+
+    protected async doExecute(input: Status): Promise<Status> {
+        const handleValue = readStringValue(input.getValue("handle"));
+        const apiKeyValue = readStringValue(input.getValue("api_key"));
+        const apiSecretValue = readStringValue(input.getValue("api_secret"));
+        const rangeValue = input.getValue("range");
+
+        if (!handleValue || !apiKeyValue || !apiSecretValue) {
+            return VjudgeStatus.error("Invalid input types");
+        }
+
+        // 构造兼容旧接口的任务数据
+        const task = {
+            vjudge_node: {
+                node_id: "",
+                public: { iden: handleValue, platform: "codeforces" },
+                private: { auth: { Token: `${apiKeyValue}:${apiSecretValue}` } },
+            },
+            ws_id: null,
+            operation: "syncList",
+            platform: "codeforces",
+            method: "apikey",
+            range: rangeValue?.type === "String" ? rangeValue.value : undefined,
+        };
+
+        const result = await syncListService.apikey(task as any);
+
+        if (result.event === "sync_done_success") {
+            const submissions = result.data.map(sub => createValue(sub));
+            return VjudgeStatus.from(input)
+                .withList("submissions", submissions)
+                .withNumber("sync_count", result.data.length);
+        } else {
+            return VjudgeStatus.error("Failed to sync submissions");
+        }
+    }
 }
 
 /**
@@ -88,68 +88,68 @@ export class CodeforcesSyncListApiKeyService extends EdgeService {
  * 使用 Token 同步单个提交记录（需要浏览器）
  */
 export class CodeforcesSyncOneTokenService extends EdgeService {
-  constructor() {
-    super({
-      name: "codeforces:syncOne:token",
-      description: "Sync a single submission from Codeforces using session token",
-      platform: "codeforces",
-      operation: "syncOne",
-      method: "token",
-      cost: 30, // 更高成本因为需要浏览器
-      isEnd: false,
-    });
-  }
-
-  protected defineImportRequire(): StatusRequire {
-    return statusRequire(["handle", "token", "submission_url"]);
-  }
-
-  protected defineExportDescribe(): StatusDescribe[] {
-    return [
-      statusDescribe("submissions", "List"),
-      statusDescribe("sync_count", "Number"),
-    ];
-  }
-
-  protected async doExecute(input: Status): Promise<Status> {
-    const handleValue = readStringValue(input.getValue("handle"));
-    const tokenValue = readStringValue(input.getValue("token"));
-    const submissionUrlValue = readStringValue(input.getValue("submission_url"));
-
-    if (!handleValue || !tokenValue || !submissionUrlValue) {
-      return VjudgeStatus.error("Invalid input types");
+    constructor() {
+        super({
+            name: "codeforces:syncOne:token",
+            description: "Sync a single submission from Codeforces using session token",
+            platform: "codeforces",
+            operation: "syncOne",
+            method: "token",
+            cost: 30, // 更高成本因为需要浏览器
+            isEnd: false,
+        });
     }
 
-    // 构造兼容旧接口的任务数据
-    const task = {
-      vjudge_node: {
-        node_id: 0, // 兼容 VjudgeNode 类型
-        public: { iden: handleValue, platform: "codeforces" },
-        private: { auth: { Token: tokenValue } },
-      },
-      info: "",
-      url: submissionUrlValue,
-    };
-
-    const result = await syncOneService.token(task as any);
-
-    if (result && result.event === "sync_done_success") {
-      const submissions = result.data.map((sub: any) => createValue(sub));
-      return VjudgeStatus.from(input)
-        .withList("submissions", submissions)
-        .withNumber("sync_count", result.data.length);
-    } else {
-      return VjudgeStatus.error("Failed to sync single submission");
+    protected defineImportRequire(): StatusRequire {
+        return statusRequire(["handle", "token", "submission_url"]);
     }
-  }
+
+    protected defineExportDescribe(): StatusDescribe[] {
+        return [
+            statusDescribe("submissions", "List"),
+            statusDescribe("sync_count", "Number"),
+        ];
+    }
+
+    protected async doExecute(input: Status): Promise<Status> {
+        const handleValue = readStringValue(input.getValue("handle"));
+        const tokenValue = readStringValue(input.getValue("token"));
+        const submissionUrlValue = readStringValue(input.getValue("submission_url"));
+
+        if (!handleValue || !tokenValue || !submissionUrlValue) {
+            return VjudgeStatus.error("Invalid input types");
+        }
+
+        // 构造兼容旧接口的任务数据
+        const task = {
+            vjudge_node: {
+                node_id: 0, // 兼容 VjudgeNode 类型
+                public: { iden: handleValue, platform: "codeforces" },
+                private: { auth: { Token: tokenValue } },
+            },
+            info: "",
+            url: submissionUrlValue,
+        };
+
+        const result = await syncOneService.token(task as any);
+
+        if (result && result.event === "sync_done_success") {
+            const submissions = result.data.map((sub: any) => createValue(sub));
+            return VjudgeStatus.from(input)
+                .withList("submissions", submissions)
+                .withNumber("sync_count", result.data.length);
+        } else {
+            return VjudgeStatus.error("Failed to sync single submission");
+        }
+    }
 }
 
 /**
  * 获取所有 Codeforces 同步服务
  */
 export function getCodeforcesSyncServices(): EdgeService[] {
-  return [
-    new CodeforcesSyncListApiKeyService(),
-    new CodeforcesSyncOneTokenService(),
-  ];
+    return [
+        new CodeforcesSyncListApiKeyService(),
+        new CodeforcesSyncOneTokenService(),
+    ];
 }

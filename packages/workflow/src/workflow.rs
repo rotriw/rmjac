@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use std::any::Any;
 use crate::status::WorkflowValues;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -27,6 +28,7 @@ impl Value for String {
 #[async_trait::async_trait(?Send)]
 pub trait StatusRequire {
     async fn verify(&self, o: &Box<dyn StatusDescribe>) -> bool;
+    fn as_any(&self) -> &dyn Any;
     fn describe(&self) -> String { // 描述要求。
         "No description".to_string()
     }
@@ -62,6 +64,7 @@ pub trait ValueDescribe {
 #[async_trait::async_trait(?Send)]
 pub trait StatusDescribe {
     async fn value(&self, key: &str) -> Option<Vec<Box<dyn ValueDescribe>>>;
+    fn as_any(&self) -> &dyn Any;
     async fn describe(&self) -> String {
         "No description".to_string()
     }
@@ -94,11 +97,15 @@ pub trait Service<S: Status + Clone = WorkflowValues>: ServiceClone<S> + Send + 
     fn get_cost(&self) -> i32; // 获取服务预计消耗。
     fn get_import_require(&self) -> Box<dyn StatusRequire>; // 获取输入变量的描述。 for plan
     fn get_export_describe(&self) -> Vec<Box<dyn StatusDescribe>>; // 获取输出变量的描述。 for plan
+    /// 执行后是否继承上一状态的值（默认继承，merge 旧值与新输出）。
+    fn inherit_status(&self) -> bool {
+        true
+    }
     async fn verify(&self, input: &S) -> bool; // 实际 验证输入是否可用
     async fn execute(&self, input: &S) -> S; // 实际 执行服务
 }
 
-pub trait Status: StatusClone + 'static {
+pub trait Status: StatusClone + Any + 'static {
     fn add_value(&self, key: &str, value: Box<dyn Value>) -> Box<dyn Status>;
     fn concat(&self, values: &Box<dyn Status>) -> Box<dyn Status> {
         let mut res = self.clone_box();
@@ -107,8 +114,30 @@ pub trait Status: StatusClone + 'static {
         }
         res
     }
+    fn as_any(&self) -> &dyn Any;
     fn get_value(&self, key: &str) -> Option<Box<dyn Value>>;
     fn get_all_value(&self) -> Vec<(String, Box<dyn Value>)>;
+
+    /// 检查当前状态是否为终止失败状态
+    ///
+    /// 用于在执行过程中检测服务是否返回了失败信号，以便及时退出。
+    /// 默认返回 `false`。`WorkflowValues` 会在 `Final(Failed)` 时返回 `true`。
+    fn is_final_failed(&self) -> bool {
+        false
+    }
+
+    /// 导出任务执行状态
+    ///
+    /// 返回描述当前执行状态的字符串。
+    /// 默认返回 `"running"`。`WorkflowValues` 会根据 `Final` 变体返回对应状态。
+    fn export_task_status(&self) -> String {
+        "running".to_string()
+    }
+
+    /// 获取终止失败状态的错误信息
+    fn final_error_message(&self) -> Option<String> {
+        None
+    }
 }
 
 pub trait StatusClone {
@@ -161,11 +190,34 @@ impl From<String> for TaskStatus {
 
 #[derive(Clone)]
 pub struct NowStatus<S: Status + Clone = WorkflowValues> {
-    pub done: bool, // 是否已完成。 如果已完成, 当前服务为结束服务。
     pub init_value: S,
+    pub done: bool,
+    pub status: TaskStatus,
     pub is_lazy: bool, // 是否为lazy执行。 如果为 lazy, 当前服务存在编号。（弃用：必然拥有）
     pub task_id: Option<i64>, // 是否记录。
     pub history_value: Vec<HistoryStatus<S>>,
+}
+
+impl<S: Status + Clone> NowStatus<S> {
+    /// 检查任务是否已完成（成功、失败或无方法）
+    pub fn is_done(&self) -> bool {
+        self.done || matches!(self.status, TaskStatus::Success | TaskStatus::Failed | TaskStatus::NoMethod)
+    }
+
+    /// 检查任务是否正在运行
+    pub fn is_running(&self) -> bool {
+        matches!(self.status, TaskStatus::Running)
+    }
+
+    /// 检查任务是否失败
+    pub fn is_failed(&self) -> bool {
+        matches!(self.status, TaskStatus::Failed)
+    }
+
+    /// 检查任务是否被取消
+    pub fn is_cancelled(&self) -> bool {
+        matches!(self.status, TaskStatus::OtherStatus(ref s) if s == "Cancelled")
+    }
 }
 
 #[async_trait::async_trait(?Send)]
@@ -208,8 +260,10 @@ pub trait WorkflowSystem<S: Status + Clone = WorkflowValues> {
 }
 
 pub trait WorkflowAction<S: Status + Clone = WorkflowValues> {
-    const MAX_STEP: usize = 100000;
+    const MAX_STEP: usize = 1000;
     const MAX_DEPTH: usize = 32;
+    /// 同一服务连续执行的最大次数，超过此值视为死循环
+    const MAX_REPEAT_SAME_SERVICE: usize = 3;
     fn execute(&self, now_status: &NowStatus<S>, target: Box<dyn Service<S>>) -> impl Future<Output = Option<NowStatus<S>>>;
     fn next(&self, now_status: &NowStatus<S>, service: &Box<dyn Service<S>>) -> impl Future<Output = Option<NowStatus<S>>>; // next with used_service.
     fn next_auto(&self, now_status: &NowStatus<S>, service: &Box<dyn Service<S>>) -> impl Future<Output = Option<NowStatus<S>>>; // next with plan.

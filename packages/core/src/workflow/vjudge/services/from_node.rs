@@ -2,10 +2,11 @@
 
 use std::collections::HashMap;
 use async_trait::async_trait;
+use pgp::crypto::aes_kw::unwrap;
 use tap::Conv;
 use workflow::description::{WorkflowExportDescribe, WorkflowRequire};
 use workflow::status::{WorkflowStatus, WorkflowValues};
-use workflow::value::WorkflowValue;
+use workflow::value::{BaseValue, WorkflowValue};
 use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire};
 use crate::db::iden::node::user_remote::Vjudge;
 use crate::env::db::get_connect;
@@ -65,25 +66,25 @@ impl Service for FromNodeService {
 
     fn get_export_describe(&self) -> Vec<Box<dyn StatusDescribe>> {
         let mut describe = WorkflowExportDescribe::new()
-            .add_has("node_id")
-            .add_has("handle")
-            .add_has("platform");
+            .add_inner_has("node_id")
+            .add_inner_has("handle")
+            .add_inner_has("platform");
         match &self.mode {
             RemoteMode::Apikey => {
-                describe = describe.add_has("api_key").add_has("api_secret");
+                describe = describe.add_inner_has("api_key").add_inner_has("api_secret");
             }
             RemoteMode::Token => {
-                describe = describe.add_has("token");
+                describe = describe.add_inner_has("token");
             }
             RemoteMode::OnlyTrust => {
-                describe = describe.add_has("verified_code");
+                describe = describe.add_inner_has("verified_code");
             }
             _ => {}
         }
         vec![Box::new(describe)]
     }
 
-    async fn verify(&self, input: &Box<dyn Status>) -> bool {
+    async fn verify(&self, input: &WorkflowValues) -> bool {
         log::info!("Verifying FromNodeService with mode {:?}", self.mode);
         let ls = input.get_all_value();
         for (k, v) in &ls {
@@ -127,12 +128,12 @@ impl Service for FromNodeService {
         true
     }
 
-    async fn execute(&self, input: &Box<dyn Status>) -> Box<dyn Status> {
+    async fn execute(&self, input: &WorkflowValues) -> WorkflowValues {
         let db = get_connect().await.unwrap();
         let vjudge_id = input.get_value("vjudge_id").unwrap().to_string().parse::<i64>().unwrap();
         let data = VjudgeNode::from_db(&db, vjudge_id).await;
         if data.is_err() {
-            return Box::new(
+            return WorkflowValues::final_status(
                 WorkflowStatus::failed(format!("Failed to get VjudgeNode: {}", data.err().unwrap()))
             );
         }
@@ -170,6 +171,65 @@ impl Service for FromNodeService {
             }
         };
 
-        Box::new(res)
+        res
+    }
+}
+
+#[derive(Clone)]
+pub struct VerifiedUserIdService;
+
+#[async_trait(?Send)]
+
+impl Service for VerifiedUserIdService {
+    fn is_end(&self) -> bool {
+        false
+    }
+
+    fn get_info(&self) -> ServiceInfo {
+        ServiceInfo {
+            name: "verified_user_id".to_string(),
+            description: "Verify user_id".to_string(),
+            allow_description: "No input required".to_string(),
+        }
+    }
+
+    fn get_cost(&self) -> i32 {
+        1
+    }
+
+    fn get_import_require(&self) -> Box<dyn StatusRequire> {
+        Box::new(
+            WorkflowRequire::new()
+                .with_key("user_id")
+                .with_key("token"),
+        )
+    }
+
+    fn get_export_describe(&self) -> Vec<Box<dyn StatusDescribe>> {
+        vec![Box::new(
+            WorkflowExportDescribe::new()
+            .add_inner_has("user_id")
+        )]
+    }
+
+    async fn verify(&self, input: &WorkflowValues) -> bool {
+        // verify token.
+        true
+    }
+
+    async fn execute(&self, input: &WorkflowValues) -> WorkflowValues {
+        let mut res =  WorkflowValues::new();
+        res.add_trusted("user_id", BaseValue::Number(input.get_value("user_id").unwrap().to_string().parse::<f64>().unwrap()), "workflow");
+        res
+    }
+
+
+}
+
+
+impl VerifiedUserIdService {
+    pub fn new() -> Self {
+        Self {
+        }
     }
 }

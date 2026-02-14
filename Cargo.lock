@@ -6310,6 +6310,7 @@ dependencies = [
  "queue",
  "serde",
  "serde_json",
+ "tokio",
  "ts-rs",
 ]
 

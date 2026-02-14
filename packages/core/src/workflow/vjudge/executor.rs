@@ -30,7 +30,8 @@ pub async fn execute_vjudge_task(
     }
     let request = NowStatus {
         done: false,
-        init_value: Box::new(workflow_data.clone()),
+        status: workflow::workflow::TaskStatus::NotStart,
+        init_value: workflow_data.clone(),
         history_value: vec![],
         is_lazy: false,
         task_id: None,

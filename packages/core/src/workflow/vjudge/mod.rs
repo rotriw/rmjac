@@ -49,6 +49,7 @@ impl VjudgeWorkflowRegistry {
                 success: false,
                 output: None,
                 error: Some("No available socket for service".to_string()),
+                status: Some("Failed".to_string()),
             };
         }
         dispatch_workflow_task(

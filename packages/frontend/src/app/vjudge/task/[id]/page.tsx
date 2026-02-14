@@ -1,14 +1,17 @@
-import { TicketDetailContent } from "./client-page"
+import { notFound } from "next/navigation"
+import { TaskDetailClient } from "./client-page"
 
-export default async function TicketDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
-  return (
-    <div className="container mx-auto py-6 px-4 md:px-6">
-      <TicketDetailContent taskId={id} />
-    </div>
-  )
+interface TaskDetailPageProps {
+  params: { id: string }
+}
+
+export const revalidate = 0
+
+export default function TaskDetailPage({ params }: TaskDetailPageProps) {
+  const taskId = params.id
+  if (!taskId) {
+    notFound()
+  }
+
+  return <TaskDetailClient taskId={taskId} />
 }

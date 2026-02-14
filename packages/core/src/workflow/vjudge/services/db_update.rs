@@ -3,7 +3,7 @@
 //! These services persist workflow results to the local database.
 
 use workflow::description::WorkflowRequire;
-use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire, Value};
+use workflow::workflow::{Service, ServiceInfo, StatusDescribe, StatusRequire, Value};
 use workflow::value::{BaseValue, WorkflowValue};
 use workflow::status::{WorkflowValues, WorkflowStatus};
 
@@ -55,13 +55,13 @@ impl Service for UpdateProblemService {
     async fn execute(&self, input: &WorkflowValues) -> WorkflowValues {
         let problem_raw = match input.get_value("problem_data") {
             Some(value) => value.to_string(),
-            None => return Box::new(WorkflowStatus::failed("Missing problem_data")),
+            None => return WorkflowValues::final_status(WorkflowStatus::failed("Missing problem_data")),
         };
 
         let problem: CreateProblemProps = match serde_json::from_str(&problem_raw) {
             Ok(problem) => problem,
             Err(err) => {
-                return Box::new(WorkflowStatus::failed(format!(
+                return WorkflowValues::final_status(WorkflowStatus::failed(format!(
                     "Invalid problem_data: {}",
                     err
                 )))
@@ -71,7 +71,7 @@ impl Service for UpdateProblemService {
         let db = match get_connect().await {
             Ok(db) => db,
             Err(err) => {
-                return Box::new(WorkflowStatus::failed(format!(
+                return WorkflowValues::final_status(WorkflowStatus::failed(format!(
                     "DB connect failed: {}",
                     err
                 )))
@@ -81,7 +81,7 @@ impl Service for UpdateProblemService {
         let mut store = (&db, &mut redis);
 
         if let Err(err) = VjudgeService::import_problem(&mut store, &problem).await {
-            return Box::new(WorkflowStatus::failed(format!(
+            return WorkflowValues::final_status(WorkflowStatus::failed(format!(
                 "Import problem failed: {}",
                 err
             )));
@@ -92,7 +92,7 @@ impl Service for UpdateProblemService {
             Err(_) => -1,
         };
 
-        Box::new(WorkflowStatus::task_done("Problem imported successfully"))
+        WorkflowValues::final_status(WorkflowStatus::task_done("Problem imported successfully"))
     }
 }
 
@@ -131,14 +131,14 @@ impl Service for UpdateVerifiedService {
         vec![]
     }
 
-    async fn verify(&self, input: &Box<dyn Status>) -> bool {
+    async fn verify(&self, input: &WorkflowValues) -> bool {
         input.get_value("inner:account_id").is_some()
     }
 
-    async fn execute(&self, input: &Box<dyn Status>) -> Box<dyn Status> {
+    async fn execute(&self, input: &WorkflowValues) -> WorkflowValues {
         let account_id = match input.get_value("account_id") {
             Some(value) => value_as_i64(value),
-            None => return Box::new(WorkflowStatus::failed("Invalid account_id")),
+            None => return WorkflowValues::final_status(WorkflowStatus::failed("Invalid account_id")),
         };
 
         let verified = input
@@ -147,13 +147,13 @@ impl Service for UpdateVerifiedService {
             .unwrap_or(true);
 
         if !verified {
-            return Box::new(WorkflowStatus::failed("Verification failed"));
+            return WorkflowValues::final_status(WorkflowStatus::failed("Verification failed"));
         }
 
         let db = match get_connect().await {
             Ok(db) => db,
             Err(err) => {
-                return Box::new(WorkflowStatus::failed(format!(
+                return WorkflowValues::final_status(WorkflowStatus::failed(format!(
                     "DB connect failed: {}",
                     err
                 )))
@@ -161,16 +161,16 @@ impl Service for UpdateVerifiedService {
         };
 
         if let Err(err) = VjudgeAccount::new(account_id).set_verified(&db).await {
-            return Box::new(WorkflowStatus::failed(format!(
+            return WorkflowValues::final_status(WorkflowStatus::failed(format!(
                 "Update verified failed: {}",
                 err
             )));
         }
 
-        Box::new(WorkflowValues::from_json_trusted(serde_json::json!({
+        WorkflowValues::from_json_trusted(serde_json::json!({
             "account_id": account_id,
             "verified": true,
-        }), "update_verified"))
+        }), "update_verified")
     }
 }
 

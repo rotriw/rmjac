@@ -26,6 +26,22 @@ impl WorkflowRequire {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.requirements.is_empty()
+    }
+
+    pub fn required_keys(&self) -> Vec<String> {
+        let mut keys = Vec::new();
+        for req in &self.requirements {
+            match req {
+                WorkflowRequireExpr::HasKey(key) => keys.push(key.clone()),
+                WorkflowRequireExpr::KeyEq(key, _) => keys.push(key.clone()),
+                WorkflowRequireExpr::Custom { .. } => {}
+            }
+        }
+        keys
+    }
+
     pub fn with_key(mut self, key: impl Into<String>) -> Self {
         self.requirements
             .push(WorkflowRequireExpr::HasKey(key.into()));
@@ -100,6 +116,10 @@ impl StatusRequire for WorkflowRequire {
             }
         }
         true
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 
     fn describe(&self) -> String {
@@ -181,6 +201,20 @@ impl WorkflowExportDescribe {
         }
     }
 
+    pub fn keys(&self) -> Vec<String> {
+        self.outputs.keys().cloned().collect()
+    }
+
+    pub fn all_keys(&self) -> Vec<String> {
+        self.outputs.keys().cloned().collect()
+    }
+
+    pub fn merge(&mut self, other: WorkflowExportDescribe) {
+        for (key, values) in other.outputs {
+            self.outputs.entry(key).or_default().extend(values);
+        }
+    }
+
     pub fn add(mut self, key: impl Into<String>, desc: WorkflowValueDescribe) -> Self {
         self.outputs.entry(key.into()).or_default().push(desc);
         self
@@ -221,6 +255,10 @@ impl StatusDescribe for WorkflowExportDescribe {
         } else {
             None
         }
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 
     async fn describe(&self) -> String {

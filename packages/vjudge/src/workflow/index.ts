@@ -18,6 +18,7 @@ export type {
   ValueType,
   TaskRequest,
   TaskResponse,
+  TaskStatusType,
   ServiceRegistrationMessage,
   ServiceUnregistrationMessage,
   ServerToEdgeEvents,
@@ -32,7 +33,7 @@ export type {
 export { readStringValue } from "./types.ts";
 
 // New workflow value utilities
-export { WorkflowValueUtils, BaseValueUtils } from "./types.ts";
+export { WorkflowValueUtils, BaseValueUtils, WorkflowValuesUtils } from "./types.ts";
 
 // Status 实现
 export { VjudgeStatus, createValue, WorkflowValuesStore } from "./status.ts";

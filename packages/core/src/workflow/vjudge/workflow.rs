@@ -3,9 +3,8 @@ use sea_orm::Iterable;
 use workflow::workflow::{Service, WorkflowPlanAction, WorkflowSystem};
 use crate::env;
 use crate::graph::node::user::remote_account::RemoteMode;
-use crate::workflow::vjudge::services::{UpdateProblemService, UpdateVerifiedService};
+use crate::workflow::vjudge::services::{RegisterAccountFlow, SubmitProblemFlow, SyncProblemFlow, VerifiedUserIdService};
 use crate::workflow::vjudge::services::from_node::FromNodeService;
-use crate::workflow::vjudge::services::register_user::RegisterUserService;
 use crate::workflow::vjudge::system::{VjudgeWorkflowSystem, WorkflowRequire};
 
 pub async fn global() -> Arc<VjudgeWorkflowSystem> {
@@ -62,9 +61,10 @@ pub async fn register_service(service: Box<dyn Service>) {
 }
 
 pub async fn register_default_service() {
-    register_service(Box::new(UpdateProblemService::new())).await;
-    register_service(Box::new(UpdateVerifiedService::new())).await;
-    register_service(Box::new(RegisterUserService::new())).await;
+    register_service(Box::new(RegisterAccountFlow::new())).await;
+    register_service(Box::new(SubmitProblemFlow::new())).await;
+    register_service(Box::new(SyncProblemFlow::new())).await;
+    register_service(Box::new(VerifiedUserIdService::new())).await;
     for mode in RemoteMode::iter() {
         register_service(Box::new(FromNodeService::new(mode))).await;
     }

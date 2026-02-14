@@ -12,4 +12,7 @@ priority-queue = "2.3.1"
 queue = "0.3.1"
 ts-rs = { version = "11.1", features = ["serde-compat"] }
 
+[dev-dependencies]
+tokio = { version = "1.47.1", features = ["macros", "rt"] }
+
 [lib]

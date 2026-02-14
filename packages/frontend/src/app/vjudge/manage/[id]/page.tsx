@@ -1,64 +1,67 @@
-import { TitleCard, StandardCard } from "@/components/card/card";
-import { getDetail as getVJudgeAccountDetail } from "@/api/server/api_vjudge_account"; // Changed import
-import { notFound } from "next/navigation";
-import { ManageActions } from "@/components/vjudge/manage-actions";
-import { VjudgeNode } from "@rmjac/api-declare"; // Import VjudgeNode type
+import { notFound } from "next/navigation"
+import { getDetail } from "@/api/server/api_vjudge_account"
+import { StandardCard, TitleCard } from "@/components/card/card"
+import { ManageActions } from "@/components/vjudge/manage-actions"
+import { Badge } from "@/components/ui/badge"
+import { CheckCircle2, XCircle } from "lucide-react"
 
-export default async function ManageVjudgeAccountPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  let account: VjudgeNode | null = null; // Specify type as VjudgeNode
+interface ManageAccountPageProps {
+  params: { id: string }
+}
+
+export const revalidate = 0
+
+export default async function ManageAccountPage({ params }: ManageAccountPageProps) {
+  let account
   try {
-      const response = await getVJudgeAccountDetail({ node_id: id }); // Changed API call
-      account = response.data; // Access data property
-  } catch (_e) {
-    console.error(_e);
-      notFound();
+    const response = await getDetail({ node_id: params.id })
+    account = response.data
+  } catch (error) {
+    console.error(error)
+    notFound()
   }
 
   if (!account) {
-    notFound();
+    notFound()
   }
 
-  const handle = account.public.iden;
-
   return (
-    <div className="py-6 px-4 md:px-6 animate-in fade-in duration-300">
-        <div className="mb-6">
-            <TitleCard 
-                title={`管理 ${account.public.platform} 账号`} 
-                description={`管理 ${handle} 的设置与权限`} 
-            />
-        </div>
-        <div className="grid gap-6">
-            <StandardCard title="账号详情">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 text-xs">
-                    <div className="flex flex-col space-y-1">
-                        <span className="text-muted-foreground">平台</span>
-                        <span className="font-bold">{account.public.platform}</span>
-                    </div>
-                    <div className="flex flex-col space-y-1">
-                        <span className="text-muted-foreground">Handle</span>
-                        <span className="font-bold">{handle}</span>
-                    </div>
-                    <div className="flex flex-col space-y-1">
-                        <span className="text-muted-foreground">验证状态</span>
-                        <span className={account.public.verified ? "text-green-600 font-bold" : "text-red-600 font-bold"}>
-                            {account.public.verified ? "已验证" : "未验证"}
-                        </span>
-                    </div>
-                    <div className="flex flex-col space-y-1">
-                        <span className="text-muted-foreground">模式</span>
-                        <span className="font-bold">
-                            {account.public.remote_mode}
-                        </span>
-                    </div>
-                </div>
-            </StandardCard>
+    <div className="space-y-6">
+      <TitleCard
+        title="账号管理"
+        description="查看账号状态并触发同步或验证流程。"
+      />
 
-            <StandardCard title="操作">
-                <ManageActions nodeId={account.node_id} />
-            </StandardCard>
+      <StandardCard title="账号信息">
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">平台</span>
+            <span className="font-semibold">{account.public.platform}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">账号</span>
+            <span className="font-semibold">{account.public.iden}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">状态</span>
+            {account.public.verified ? (
+              <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                <CheckCircle2 className="mr-1 h-3 w-3" />
+                已验证
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50">
+                <XCircle className="mr-1 h-3 w-3" />
+                未验证
+              </Badge>
+            )}
+          </div>
         </div>
+      </StandardCard>
+
+      <StandardCard title="操作">
+        <ManageActions nodeId={Number(account.node_id)} />
+      </StandardCard>
     </div>
   )
 }

@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use async_trait::async_trait;
 use workflow::description::{WorkflowExportDescribe, WorkflowRequire};
-use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire, Value};
+use workflow::workflow::{Service, ServiceInfo, StatusDescribe, StatusRequire, Value};
 use workflow::value::{BaseValue, WorkflowValue};
 use workflow::status::{WorkflowValues, WorkflowStatus};
 
@@ -39,7 +39,7 @@ impl SubmitService {
     /// 构建提交任务数据
     ///
     /// 从 Status 中提取必要信息，构建发送给边缘服务的任务
-    fn build_submit_task(&self, input: &dyn Status) -> Result<SubmitTaskData, String> {
+    fn build_submit_task(&self, input: &WorkflowValues) -> Result<SubmitTaskData, String> {
         // 获取必要参数 - 使用 to_string() 因为 Value trait 只有这个方法
         let code = value_as_string(
             input
@@ -91,7 +91,7 @@ impl SubmitService {
     }
 
     /// 从 Status 中提取编译选项
-    fn extract_options(&self, input: &dyn Status) -> HashMap<String, String> {
+    fn extract_options(&self, input: &WorkflowValues) -> HashMap<String, String> {
         let mut options = HashMap::new();
 
         // 尝试获取 compile_options 字段
@@ -198,7 +198,7 @@ impl Service for SubmitService {
         )]
     }
 
-    async fn verify(&self, input: &Box<dyn Status>) -> bool {
+    async fn verify(&self, input: &WorkflowValues) -> bool {
         // 验证必要字段存在
         let has_code = input.get_value("code").is_some();
         let has_language = input.get_value("language").is_some();
@@ -211,12 +211,12 @@ impl Service for SubmitService {
         has_code && has_language && has_account && platform_ok
     }
 
-    async fn execute(&self, input: &Box<dyn Status>) -> Box<dyn Status> {
+    async fn execute(&self, input: &WorkflowValues) -> WorkflowValues {
         // 构建提交任务
-        let task_data = match self.build_submit_task(input.as_ref()) {
+        let task_data = match self.build_submit_task(input) {
             Ok(data) => data,
             Err(e) => {
-                return Box::new(WorkflowStatus::failed(format!(
+                return WorkflowValues::final_status(WorkflowStatus::failed(format!(
                     "Failed to build submit task: {}",
                     e
                 )));
@@ -225,11 +225,11 @@ impl Service for SubmitService {
 
         // TODO: 实际通过 RemoteEdgeService 发送任务
         // 这里返回一个占位状态
-        Box::new(WorkflowValues::from_json_trusted(serde_json::json!({
+        WorkflowValues::from_json_trusted(serde_json::json!({
             "platform": self.platform.clone(),
             "record_id": task_data.record_id,
             "submission_id": "pending"
-        }), "submit"))
+        }), "submit")
     }
 }
 
@@ -282,11 +282,11 @@ impl Service for SubmitCompleteService {
         )]
     }
 
-    async fn verify(&self, input: &Box<dyn Status>) -> bool {
+    async fn verify(&self, input: &WorkflowValues) -> bool {
         input.get_value("record_id").is_some()
     }
 
-    async fn execute(&self, input: &Box<dyn Status>) -> Box<dyn Status> {
+    async fn execute(&self, input: &WorkflowValues) -> WorkflowValues {
         let record_id = input
             .get_value("record_id")
             .map(value_as_i64)
@@ -302,7 +302,7 @@ impl Service for SubmitCompleteService {
                 obj.insert("submission_id".to_string(), serde_json::Value::String(submission_id));
             }
         }
-        Box::new(WorkflowStatus::completed(
+        WorkflowValues::final_status(WorkflowStatus::completed(
             WorkflowValues::from_json_trusted(output, "submit_complete"),
             Some("Submit complete".to_string()),
         ))

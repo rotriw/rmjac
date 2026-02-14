@@ -1,88 +1,130 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { StandardCard } from "@/components/card/card"
-import { Input } from "@/components/ui/input"
-import { getMyAccounts } from "@/api/server/api_vjudge_my_accounts"
-import { postExecuteTask, getWorkflowServices } from "@/api/server/api_vjudge_workflow"
-import {
-  VjudgeNode,
-  WorkflowServiceInfo,
-  WorkflowValueDTO,
-} from "@rmjac/api-declare"
-import { socket } from "@/lib/socket"
-import { Button } from "@/components/ui/button"
-import { toast } from "sonner"
-import Link from "next/link"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
-import { Loader2, ArrowLeft } from "lucide-react"
+import { toast } from "sonner"
+import { socket } from "@/lib/socket"
+import { getMyAccounts } from "@/api/server/api_vjudge_my_accounts"
+import { getWorkflowServices, postExecuteTask } from "@/api/server/api_vjudge_workflow"
+import { postServiceRequire } from "@/api/server/api_vjudge_services"
+import { Button } from "@/components/ui/button"
+import { StandardCard } from "@/components/card/card"
+import { Select, SelectItem } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { ArrowLeft, Loader2 } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import type { VjudgeNode, WorkflowRequire, WorkflowServiceInfo, WorkflowValueDTO } from "@rmjac/api-declare"
 
-/** 将 key 转为用户友好的标签 */
-function keyToLabel(key: string): string {
-  return key
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+interface RequireField {
+  key: string
+  fixedValue?: string
 }
 
-/** 判断 key 是否应该用密码输入框 */
-function isSecretKey(key: string): boolean {
-  const lower = key.toLowerCase()
-  return (
-    lower.includes("secret") ||
-    lower.includes("password") ||
-    lower.includes("token") ||
-    lower.includes("pwd")
-  )
+interface RequireParseResult {
+  fields: RequireField[]
+  notes: string[]
 }
 
-const AUTO_FILL_KEYS = new Set([
-  "platform",
-  "account_id",
-  "handle",
-  "iden",
-  "method",
-  "user_id",
-])
+const REQUIRE_KEY_REGEX = /Must have key '([^']+)'/
+const REQUIRE_EQ_REGEX = /Key '([^']+)' must be '([^']+)'/
 
-type WorkflowValueInput = WorkflowValueDTO
+function parseInputRequire(input: string): RequireParseResult {
+  if (!input) return { fields: [], notes: [] }
+
+  const fields = new Map<string, RequireField>()
+  const notes: string[] = []
+  const chunks = input
+    .split(/;\s*\n?/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+  chunks.forEach((chunk) => {
+    const eqMatch = chunk.match(REQUIRE_EQ_REGEX)
+    if (eqMatch) {
+      const key = eqMatch[1]
+      const value = eqMatch[2]
+      if (key.startsWith("inner:")) return
+      fields.set(key, { key, fixedValue: value })
+      return
+    }
+
+    const keyMatch = chunk.match(REQUIRE_KEY_REGEX)
+    if (keyMatch) {
+      const key = keyMatch[1]
+      if (key.startsWith("inner:")) return
+      if (!fields.has(key)) {
+        fields.set(key, { key })
+      }
+      return
+    }
+
+    // 复杂表达式无法自动解析，保留为说明
+    notes.push(chunk)
+  })
+
+  return { fields: Array.from(fields.values()), notes }
+}
+
+function toWorkflowValue(value: string): WorkflowValueDTO {
+  return { type: "String", value }
+}
 
 function getAutoFillValues(
   account: VjudgeNode | undefined,
-  serviceName: string | null
-): Record<string, WorkflowValueInput> {
-  if (!account || !serviceName) return {}
+  serviceName: string | null,
+  planStartRequire?: string | null,
+  userId?: number | null,
+  authToken?: string | null,
+): Record<string, WorkflowValueDTO> {
+  if (!serviceName) return {}
 
   const parts = serviceName.split(":")
   const method = parts[2] ?? ""
-  const values: Record<string, WorkflowValueInput> = {
-    platform: { type: "String", value: account.public.platform },
-    account_id: { type: "String", value: account.node_id.toString() },
-    handle: { type: "String", value: account.public.iden },
-    iden: { type: "String", value: account.public.iden },
-  }
+  const values: Record<string, WorkflowValueDTO> = {}
 
   if (method) {
-    values.method = { type: "String", value: method }
+    values.method = toWorkflowValue(method)
+  }
+
+  if (account) {
+    values.platform = toWorkflowValue(account.public.platform)
+    values.account_id = toWorkflowValue(account.node_id.toString())
+    values.handle = toWorkflowValue(account.public.iden)
+    values.iden = toWorkflowValue(account.public.iden)
+    values.username = toWorkflowValue(account.public.iden)
+  }
+
+  // 当方案起点是 vjudge_from_node_* 时，自动填充 vjudge_id / user_id / token
+  if (planStartRequire && planStartRequire.startsWith("vjudge_from_node_")) {
+    if (account) {
+      values.vjudge_id = toWorkflowValue(account.node_id.toString())
+    }
+    if (userId) {
+      values.user_id = toWorkflowValue(userId.toString())
+    }
+    if (authToken) {
+      values.token = toWorkflowValue(authToken)
+    }
   }
 
   return values
 }
 
-export function AddTaskCard() {
+export default function VJudgeAddTaskPage() {
   const router = useRouter()
+  const { user, token: authToken } = useAuth()
   const [accounts, setAccounts] = useState<VjudgeNode[]>([])
-  const [loading, setLoading] = useState(false)
-  const [selectedAccount, setSelectedAccount] = useState<string | null>(null)
-
-  // 工作流服务
   const [services, setServices] = useState<WorkflowServiceInfo[]>([])
   const [servicesLoading, setServicesLoading] = useState(true)
-  const [selectedService, setSelectedService] = useState<string | null>(null)
-
-  // 动态输入字段: key -> value
+  const [loading, setLoading] = useState(false)
+  const [selectedAccount, setSelectedAccount] = useState("")
+  const [selectedService, setSelectedService] = useState("")
+  const [requires, setRequires] = useState<WorkflowRequire[]>([])
+  const [requiresLoading, setRequiresLoading] = useState(false)
+  const [selectedPlanIndex, setSelectedPlanIndex] = useState(0)
   const [inputValues, setInputValues] = useState<Record<string, string>>({})
+  const [inputNotes, setInputNotes] = useState<string[]>([])
 
   useEffect(() => {
     getMyAccounts()
@@ -96,74 +138,107 @@ export function AddTaskCard() {
       .finally(() => setServicesLoading(false))
   }, [])
 
+  useEffect(() => {
+    if (!selectedService) {
+      setRequires([])
+      setInputValues({})
+      setInputNotes([])
+      return
+    }
+
+    setRequiresLoading(true)
+    postServiceRequire({ service_name: selectedService })
+      .then((resp) => {
+        setRequires(resp.data || [])
+        setSelectedPlanIndex(0)
+        setInputValues({})
+        setInputNotes([])
+      })
+      .catch((error) => {
+        console.error(error)
+        toast.error("获取服务方案失败")
+        setRequires([])
+      })
+      .finally(() => setRequiresLoading(false))
+  }, [selectedService])
+
   const account = accounts.find(
     (acc) => acc.node_id.toString() === selectedAccount
   )
-  const platform = account?.public.platform?.toLowerCase()
 
-  // 筛选与当前账号平台匹配的服务
-  const availableServices = services.filter(
-    (svc) => !platform || svc.platform.toLowerCase() === platform
+  const plan = requires[selectedPlanIndex]
+
+  const autoValues = useMemo(
+    () => getAutoFillValues(
+      account,
+      selectedService || null,
+      plan?.start_require ?? null,
+      user?.node_id ?? null,
+      authToken,
+    ),
+    [account, selectedService, plan, user, authToken]
   )
 
-  const selectedSvc = services.find((s) => s.name === selectedService)
+  const { fields: planFields, notes: planNotes } = useMemo(() => {
+    if (!plan) return { fields: [], notes: [] }
+    return parseInputRequire(plan.input_require)
+  }, [plan])
 
-  // 从 import_require 中获取 requiredKeys
-  const allRequiredKeys: string[] =
-    selectedSvc?.import_require?.requiredKeys ?? []
-  const userInputKeys = allRequiredKeys.filter((key) => !AUTO_FILL_KEYS.has(key))
+  useEffect(() => {
+    setInputNotes(planNotes)
+  }, [planNotes])
 
-  // 切换服务时重置输入
-  const handleSelectService = (name: string) => {
-    setSelectedService(name)
-    setInputValues({})
+  const handleValueChange = (key: string, value: string) => {
+    setInputValues((prev) => ({ ...prev, [key]: value }))
   }
 
-  // 检查所有必填项是否已填（仅用户需要输入的字段）
-  const allFilled =
-    userInputKeys.length === 0 ||
-    userInputKeys.every((k) => inputValues[k]?.trim())
-
   const handleSubmit = async () => {
-    if (!selectedAccount || !selectedService) {
-      toast.error("请选择账号和服务")
+    if (!selectedService) {
+      toast.error("请选择服务")
       return
     }
 
-    // 检查必填字段（仅用户输入字段）
-    const missing = userInputKeys.filter((k) => !inputValues[k]?.trim())
-    if (missing.length > 0) {
-      toast.error(`请填写: ${missing.map(keyToLabel).join(", ")}`)
+    if (!plan) {
+      toast.error("当前服务没有可用方案")
       return
-    }
-
-    // 构建 values 对象
-    const autoValues = getAutoFillValues(account, selectedService)
-    const userValues: Record<string, WorkflowValueInput> = {}
-    for (const key of userInputKeys) {
-      userValues[key] = { type: "String", value: inputValues[key]?.trim() || "" }
-    }
-    const values: Record<string, WorkflowValueInput> = {
-      ...autoValues,
-      ...userValues,
     }
 
     setLoading(true)
     try {
+      const values: Record<string, WorkflowValueDTO> = {}
+
+      // 用户输入的字段
+      Object.entries(inputValues).forEach(([key, value]) => {
+        if (value !== "") {
+          values[key] = toWorkflowValue(value)
+        }
+      })
+
+      // 自动填充字段（账号/方法）
+      Object.entries(autoValues).forEach(([key, value]) => {
+        values[key] = value
+      })
+
+      // 固定要求字段（如 Key 'x' must be 'y'）
+      planFields.forEach((field) => {
+        if (field.fixedValue !== undefined) {
+          values[field.key] = toWorkflowValue(field.fixedValue)
+        }
+      })
+
       const res = await postExecuteTask({
         body: {
           service_name: selectedService,
-          input: {
-            statusType: "Initial",
-            values,
-          },
+          input: { values },
           ws_id: socket.id ?? null,
-          vjudge_node_id: +(selectedAccount),
-          timeout_ms: +(60000),
+          vjudge_node_id: selectedAccount ? Number(selectedAccount) : null,
+          timeout_ms: Number(60000),
         },
       })
 
-      const taskId = res.data.task_id
+      const payload = res as unknown as Record<string, unknown>
+      const data = payload.data as { task_id?: number | null } | undefined
+      const taskId = data?.task_id ?? res.node_id
       if (taskId) {
         toast.success("工单已创建")
         router.push(`/vjudge/task/${taskId}`)
@@ -179,162 +254,140 @@ export function AddTaskCard() {
     }
   }
 
+  const planOptions = requires.map((item, index) => ({
+    label: `${item.start_require} → ${selectedService}`,
+    value: index.toString(),
+  }))
+
   return (
-    <div className="space-y-4">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => router.push("/vjudge/task")}
+    <div className="space-y-6">
+      <Button variant="ghost" size="sm" onClick={() => router.push("/vjudge/task")}
       >
         <ArrowLeft className="h-4 w-4 mr-1" />
         返回列表
       </Button>
 
-      <StandardCard title="创建工单">
-        <div className="space-y-6">
-          {accounts.length === 0 ? (
-            <div className="p-4 border rounded-lg bg-destructive/10 text-destructive text-sm">
-              暂无绑定的 VJudge 账号，无法创建工单。
-              <div className="mt-2">
-                <Link
-                  href="/vjudge/account"
-                  className="text-blue-600 hover:underline"
-                >
-                  前往管理账号绑定
-                </Link>
-              </div>
+      <StandardCard title="创建同步任务">
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <Label>选择账号（可选）</Label>
+            <Select
+              value={selectedAccount}
+              onValueChange={setSelectedAccount}
+              disabled={accounts.length === 0}
+            >
+              <SelectItem value="" disabled>
+                {accounts.length === 0 ? "暂无账号" : "请选择账号"}
+              </SelectItem>
+              {accounts.map((acc) => (
+                <SelectItem key={acc.node_id.toString()} value={acc.node_id.toString()}>
+                  {acc.public.platform} · {acc.public.iden}
+                </SelectItem>
+              ))}
+            </Select>
+            <div className="text-xs text-muted-foreground">
+              未选择账号时，仅提交手动输入字段。
             </div>
-          ) : (
-            <>
-              {/* 1. 选择账号 */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">1. 选择账号</label>
-                <div className="flex flex-wrap gap-2">
-                  {accounts.map((acc) => {
-                    const accountId = acc.node_id.toString()
-                    const isSelected = selectedAccount === accountId
-                    return (
-                      <Badge
-                        key={accountId}
-                        variant={isSelected ? "default" : "outline"}
-                        className={cn(
-                          "cursor-pointer py-1.5 px-3 text-xs transition-all",
-                          isSelected ? "shadow-sm" : "hover:bg-muted"
-                        )}
-                        onClick={() => {
-                          setSelectedAccount(accountId)
-                          setSelectedService(null)
-                          setInputValues({})
-                        }}
-                      >
-                        {acc.public.platform}: {acc.public.iden}
-                      </Badge>
-                    )
-                  })}
-                </div>
-              </div>
+        </div>
 
-              {/* 2. 选择工作流服务 */}
-              {selectedAccount && (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
-                  <label className="text-sm font-medium">2. 选择服务</label>
-                  {servicesLoading ? (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      加载服务列表...
-                    </div>
-                  ) : availableServices.length === 0 ? (
-                    <div className="text-xs text-yellow-600 p-2 border rounded bg-yellow-50">
-                      当前平台无可用服务
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {availableServices.map((svc) => {
-                        const isSelected = selectedService === svc.name
-                        return (
-                          <Badge
-                            key={svc.name}
-                            variant={isSelected ? "default" : "outline"}
-                            className={cn(
-                              "cursor-pointer py-1.5 px-3 text-xs transition-all",
-                              isSelected
-                                ? "shadow-sm bg-indigo-600 hover:bg-indigo-700"
-                                : "hover:bg-muted",
-                              svc.available_sockets === 0 && "opacity-50"
-                            )}
-                            onClick={() => handleSelectService(svc.name)}
-                          >
-                            {svc.operation}
-                            {svc.method ? `:${svc.method}` : ""}
-                            <span className="ml-1 opacity-60">
-                              ({svc.available_sockets})
-                            </span>
-                          </Badge>
-                        )
-                      })}
-                    </div>
-                  )}
-                  {selectedSvc && (
-                    <p className="text-[10px] text-muted-foreground ml-1">
-                      {selectedSvc.allow_description || selectedSvc.description || `${selectedSvc.platform}:${selectedSvc.operation}`}
-                    </p>
-                  )}
-                </div>
-              )}
+        <div className="space-y-1">
+          <Label>选择服务</Label>
+          <Select value={selectedService} onValueChange={setSelectedService}>
+            <SelectItem value="" disabled>
+              {servicesLoading ? "加载中..." : "请选择服务"}
+            </SelectItem>
+            {services.map((service) => (
+              <SelectItem key={service.name} value={service.name}>
+                {service.name}
+              </SelectItem>
+            ))}
+          </Select>
+        </div>
 
-              {/* 3. 动态输入字段 - 根据 import_require.requiredKeys 生成 */}
-              {selectedService && userInputKeys.length > 0 && (
-                <div className="space-y-3 animate-in fade-in slide-in-from-top-1 duration-300">
-                  <label className="text-sm font-medium">3. 填写参数</label>
-                  <div className="space-y-3">
-                    {userInputKeys.map((key) => (
-                      <div key={key} className="space-y-1">
-                        <span className="text-[11px] text-muted-foreground font-medium">
-                          {keyToLabel(key)}
-                          <span className="text-red-400 ml-0.5">*</span>
-                        </span>
-                        <Input
-                          type={isSecretKey(key) ? "password" : "text"}
-                          value={inputValues[key] || ""}
-                          onChange={(e) =>
-                            setInputValues((prev) => ({
-                              ...prev,
-                              [key]: e.target.value,
-                            }))
-                          }
-                          placeholder={key}
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 无需额外参数时的提示 */}
-              {selectedService && userInputKeys.length === 0 && (
-                <div className="text-xs text-muted-foreground p-2 border rounded bg-muted/30 animate-in fade-in slide-in-from-top-1 duration-300">
-                  该服务无需额外参数，直接提交即可。
-                </div>
-              )}
-
-              {/* 提交 */}
-              <Button
-                onClick={handleSubmit}
-                disabled={loading || !selectedAccount || !selectedService || !allFilled}
-                className="w-full bg-indigo-600 hover:bg-indigo-700"
+            <div className="space-y-1">
+              <Label>选择方案</Label>
+              <Select
+                value={selectedPlanIndex.toString()}
+                onValueChange={(value) => setSelectedPlanIndex(Number(value))}
+                disabled={!selectedService || requiresLoading || planOptions.length === 0}
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    提交中...
-                  </>
-                ) : (
-                  "创建工单"
+                <SelectItem value="" disabled>
+                  {requiresLoading ? "加载方案中..." : "请选择方案"}
+                </SelectItem>
+                {planOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </Select>
+              {plan && (
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div>起点服务：{plan.start_require}</div>
+                  <div>路径说明：{plan.route_describe}</div>
+                </div>
+              )}
+            </div>
+
+            {plan && (
+              <div className="space-y-3">
+                <div className="text-sm font-medium">输入要求</div>
+                {planFields.length === 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    该方案没有额外输入要求。
+                  </div>
                 )}
-              </Button>
-            </>
-          )}
+                {planFields.filter((field) => !field.key.startsWith("inner:")).map((field) => {
+                  const autoValue = autoValues[field.key]
+                  const fixedValue = field.fixedValue
+                  const rawValue = fixedValue ?? autoValue?.value ?? inputValues[field.key] ?? ""
+                  const value = typeof rawValue === "string" ? rawValue : String(rawValue)
+                  const isLocked = fixedValue !== undefined || autoValue !== undefined
+
+                  return (
+                    <div key={field.key} className="space-y-1">
+                      <Label>{field.key}</Label>
+                      <Input
+                        value={value}
+                        onChange={(e) => handleValueChange(field.key, e.target.value)}
+                        disabled={isLocked}
+                      />
+                      {fixedValue !== undefined && (
+                        <div className="text-xs text-muted-foreground">
+                          固定要求值：{fixedValue}
+                        </div>
+                      )}
+                      {fixedValue === undefined && autoValue !== undefined && (
+                        <div className="text-xs text-muted-foreground">
+                          已根据账号自动填充
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {inputNotes.length > 0 && (
+              <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground space-y-1">
+                <div className="font-medium text-foreground">附加要求</div>
+                {inputNotes.map((note, idx) => (
+                  <div key={`${note}-${idx}`}>{note}</div>
+                ))}
+              </div>
+            )}
+
+          <div className="pt-2">
+            <Button onClick={handleSubmit} disabled={loading || requiresLoading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  提交中...
+                </>
+              ) : (
+                "创建任务"
+              )}
+            </Button>
+          </div>
         </div>
       </StandardCard>
     </div>

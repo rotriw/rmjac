@@ -271,6 +271,7 @@ impl WorkflowValue {
         match self {
             Self::Untrusted { inner } => inner,
             Self::Trusted { inner, .. } => inner,
+            Self::Final { inner } => inner,
         }
     }
 
@@ -279,6 +280,7 @@ impl WorkflowValue {
         match self {
             Self::Untrusted { inner } => inner,
             Self::Trusted { inner, .. } => inner,
+            Self::Final { inner } => inner,
         }
     }
 
@@ -313,6 +315,7 @@ impl std::fmt::Display for WorkflowValue {
                     write!(f, "{}", inner)
                 }
             }
+            Self::Final { inner } => write!(f, "Final({})", inner),
         }
     }
 }
@@ -395,6 +398,7 @@ impl crate::workflow::Value for WorkflowValue {
         match self {
             WorkflowValue::Untrusted { inner } => format!("Untrusted({})", crate::workflow::Value::get_type(inner)),
             WorkflowValue::Trusted { inner, .. } => format!("Trusted({})", crate::workflow::Value::get_type(inner)),
+            WorkflowValue::Final { inner } => format!("Final({})", crate::workflow::Value::get_type(inner)),
         }
     }
 

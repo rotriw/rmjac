@@ -9,7 +9,7 @@ use uuid::Uuid;
 use workflow::description::{WorkflowExportDescribe, WorkflowRequire};
 use workflow::status::{WorkflowStatus, WorkflowValues};
 use workflow::value::BaseValue;
-use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire, Value};
+use workflow::workflow::{Service, ServiceInfo, StatusDescribe, StatusRequire, Value};
 
 use crate::service::socket::workflow::dispatch_workflow_task;
 
@@ -75,7 +75,7 @@ impl Service for RemoteEdgeService {
         vec![Box::new(describe)]
     }
 
-    async fn verify(&self, input: &Box<dyn Status>) -> bool {
+    async fn verify(&self, input: &WorkflowValues) -> bool {
         log::info!("RemoteEdgeService verifying required keys");
         for (k, v) in input.get_all_value() {
             log::info!("Input key: {}, value: {}", k, v.to_string());
@@ -94,10 +94,11 @@ impl Service for RemoteEdgeService {
         } else {
             return false;
         }
+        log::warn!("RemoteEdgeService verifying platform match!!!");
         true
     }
 
-    async fn execute(&self, input: &Box<dyn Status>) -> Box<dyn Status> {
+    async fn execute(&self, input: &WorkflowValues) -> WorkflowValues {
         let task_id = Uuid::new_v4().to_string();
         let input_values = status_to_request(input);
 
@@ -111,7 +112,7 @@ impl Service for RemoteEdgeService {
         .await;
 
         if !response.success {
-            return Box::new(WorkflowStatus::failed(
+            return WorkflowValues::final_status(WorkflowStatus::failed(
                 response
                     .error
                     .unwrap_or_else(|| "Remote execution failed".to_string()),
@@ -119,15 +120,19 @@ impl Service for RemoteEdgeService {
         }
 
         if let Some(output) = response.output {
-            let trusted_output = edge_output_to_status(output, &task_id);
-            return trusted_output.concat(input);
+            let mut trusted_output = output;
+            trusted_output.add_trusted("task_id", BaseValue::String(task_id), "edge_server");
+            // Merge with input
+            let mut result = input.clone();
+            result.merge(trusted_output);
+            return result;
         }
 
-        input.clone_box()
+        input.clone()
     }
 }
 
-fn status_to_request(input: &Box<dyn Status>) -> WorkflowValues {
+fn status_to_request(input: &WorkflowValues) -> WorkflowValues {
     let mut values = WorkflowValues::new();
     for (key, value) in input.get_all_value() {
         let base_value = value_to_base_value(&value);
@@ -144,10 +149,4 @@ fn value_to_base_value(value: &Box<dyn Value>) -> BaseValue {
     let raw = value.to_string();
     let json_value = serde_json::from_str(&raw).unwrap_or(JsonValue::String(raw));
     BaseValue::from(json_value)
-}
-
-fn edge_output_to_status(output: WorkflowValues, task_id: &str) -> Box<dyn Status> {
-    let mut values = output;
-    values.add_trusted("task_id", BaseValue::String(task_id.to_string()), "edge_server");
-    Box::new(values)
 }

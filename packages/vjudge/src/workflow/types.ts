@@ -201,6 +201,11 @@ export interface ServiceMetadata {
 // ============================================================================
 
 /**
+ * 任务状态（对应 Rust TaskStatus）
+ */
+export type TaskStatusType = "NotStart" | "Running" | "Success" | "Failed" | "NoMethod" | "Cancelled" | string;
+
+/**
  * 任务请求（从服务器发送到边缘服务）
  */
 export interface TaskRequest {
@@ -214,6 +219,8 @@ export interface TaskRequest {
   timeout?: number;
   /** 任务历史 (Workflow NowStatus.history_value) */
   history?: unknown[];
+  /** 任务当前状态 */
+  taskStatus?: TaskStatusType;
 }
 
 /**
@@ -224,6 +231,8 @@ export interface TaskResponse {
   success: boolean;
   output?: WorkflowValuesData;
   error?: string;
+  /** 任务状态 */
+  status?: TaskStatusType;
 }
 
 // ============================================================================
@@ -371,6 +380,73 @@ export type WorkflowValuesData = WorkflowValuesGenerated;
  * Workflow 状态（对应 Rust WorkflowStatus）
  */
 export type WorkflowStatusType = WorkflowStatusGenerated;
+
+/**
+ * WorkflowValues 工具函数
+ * 
+ * 提供与 Rust WorkflowValues 对齐的辅助方法
+ */
+export const WorkflowValuesUtils = {
+  /** 创建空的 Values 集合 */
+  empty(): WorkflowValuesData {
+    return { kind: "Values", inner: {} };
+  },
+
+  /** 创建 Final(Failed) 状态 */
+  finalFailed(error: string, context?: unknown): WorkflowValuesData {
+    return { kind: "Final", inner: { Failed: { error, context: context ?? null } } };
+  },
+
+  /** 创建 Final(Completed) 状态 */
+  finalCompleted(values: WorkflowValuesData, message?: string): WorkflowValuesData {
+    return { kind: "Final", inner: { Completed: { values, message: message ?? null } } };
+  },
+
+  /** 创建 Final(Running) 状态 */
+  finalRunning(values: WorkflowValuesData): WorkflowValuesData {
+    return { kind: "Final", inner: { Running: values } };
+  },
+
+  /** 判断是否为 Final 变体 */
+  isFinal(values: WorkflowValuesData): boolean {
+    return values.kind === "Final";
+  },
+
+  /** 判断是否为 Final(Failed) 状态 */
+  isFailedFinal(values: WorkflowValuesData): boolean {
+    return values.kind === "Final" && "Failed" in values.inner;
+  },
+
+  /** 判断是否为 Final(Completed) 状态 */
+  isCompletedFinal(values: WorkflowValuesData): boolean {
+    return values.kind === "Final" && "Completed" in values.inner;
+  },
+
+  /** 导出任务执行状态（对应 Rust Status::export_task_status） */
+  exportTaskStatus(values: WorkflowValuesData): string {
+    if (values.kind === "Values") return "running";
+    const inner = values.inner;
+    if ("Failed" in inner) return "failed";
+    if ("Completed" in inner) return "completed";
+    return "running";
+  },
+
+  /** 获取 Final(Failed) 的错误信息 */
+  finalError(values: WorkflowValuesData): string | undefined {
+    if (values.kind === "Final" && "Failed" in values.inner) {
+      return values.inner.Failed.error;
+    }
+    return undefined;
+  },
+
+  /** 获取 Final 状态 */
+  getFinalStatus(values: WorkflowValuesData): WorkflowStatusType | undefined {
+    if (values.kind === "Final") {
+      return values.inner;
+    }
+    return undefined;
+  },
+} as const;
 
 // ============================================================================
 // VjudgeNode 相关类型（迁移至 Rust 生成类型）

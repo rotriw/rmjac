@@ -14,7 +14,6 @@ use crate::env::db::get_connect;
 use crate::graph::node::NodeRaw;
 use crate::graph::node::user::remote_account::RemoteMode;
 use crate::graph::node::vjudge_task::{VjudgeTaskNodePrivateRaw, VjudgeTaskNodePublicRaw, VjudgeTaskNodeRaw};
-use crate::workflow::vjudge::services::{SubmitCompleteService, UpdateProblemService, UpdateVerifiedService, };
 use crate::workflow::vjudge::services::from_node::FromNodeService;
 pub struct VjudgeWorkflowSystem {
     pub services: Arc<RwLock<HashMap<String, Box<dyn Service>>>>,
@@ -121,6 +120,26 @@ impl WorkflowSystem for VjudgeWorkflowSystem {
         let mut x = x.into_active_model();
         log::info!("5Updating VJudge task {} status log", task_id);
         x.log = Set(serde_json::to_string(&convert).unwrap());
+        // Persist the task status - combine NowStatus.status with init_value's export_task_status
+        let status_str = {
+            // 优先使用 init_value 的 Final 状态（如果有的话）
+            let value_status = status.init_value.export_task_status();
+            if value_status != "running" {
+                // init_value 包含 Final 状态（failed/completed），优先使用
+                value_status
+            } else {
+                // 否则使用 NowStatus 的 TaskStatus
+                match &status.status {
+                    workflow::workflow::TaskStatus::NotStart => "init".to_string(),
+                    workflow::workflow::TaskStatus::Running => "running".to_string(),
+                    workflow::workflow::TaskStatus::Success => "success".to_string(),
+                    workflow::workflow::TaskStatus::Failed => "failed".to_string(),
+                    workflow::workflow::TaskStatus::NoMethod => "no_method".to_string(),
+                    workflow::workflow::TaskStatus::OtherStatus(s) => s.clone(),
+                }
+            }
+        };
+        x.status = Set(status_str);
         let _ = x.update(&db).await;
         log::info!("6Updating VJudge task {} status log", task_id);
         Some(())

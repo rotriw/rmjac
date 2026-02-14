@@ -11,7 +11,9 @@ import type {
     ServiceUnregistrationMessage,
     TaskRequest,
     TaskResponse,
+    TaskStatusType,
 } from "./types.ts";
+import { WorkflowValuesUtils } from "./types.ts";
 import { VjudgeStatus, WorkflowValuesStore } from "./status.ts";
 import { EdgeService } from "./service-base.ts";
 
@@ -37,6 +39,8 @@ export class ServiceRegistry {
     private socket: Socket | null = null;
     private config: ServiceRegistryConfig;
     private isConnected: boolean = false;
+    /** Track running tasks for cancellation support */
+    private runningTasks: Map<string, { abortController: AbortController; status: TaskStatusType }> = new Map();
 
     constructor(config: ServiceRegistryConfig = {}) {
         this.config = config;
@@ -75,8 +79,25 @@ export class ServiceRegistry {
             this.log("info", `[workflow_task] === RECEIVED === taskId=${request.taskId}, serviceName=${request.serviceName}`);
             this.log("debug", `[workflow_task] Input: ${JSON.stringify(request.input).substring(0, 500)}`);
             this.log("info", `[workflow_task] Registered services: [${Array.from(this.services.keys()).join(", ")}]`);
+
+            // Check if task is already cancelled before starting
+            if (request.taskStatus === "Cancelled" || request.taskStatus === "Failed") {
+                this.log("warn", `[workflow_task] Task ${request.taskId} received with status=${request.taskStatus}, skipping execution`);
+                callback({
+                    taskId: request.taskId,
+                    success: false,
+                    error: `Task ${request.taskStatus.toLowerCase()} before execution`,
+                    status: request.taskStatus,
+                });
+                return;
+            }
+
+            // Register task as running with abort controller
+            const abortController = new AbortController();
+            this.runningTasks.set(request.taskId, { abortController, status: "Running" });
+
             try {
-                const response = await this.handleTask(request);
+                const response = await this.handleTask(request, abortController.signal);
                 const elapsed = Date.now() - startTime;
                 this.log("info", `[workflow_task] handleTask completed: success=${response.success}, elapsed=${elapsed}ms, hasOutput=${!!response.output}, error=${response.error || "none"}`);
                 if (response.output) {
@@ -94,8 +115,25 @@ export class ServiceRegistry {
                     taskId: request.taskId,
                     success: false,
                     error: `Uncaught error: ${message}`,
+                    status: "Failed",
                 };
                 callback(errorResponse);
+            } finally {
+                this.runningTasks.delete(request.taskId);
+            }
+        });
+
+        // 监听任务取消请求
+        this.socket.on("workflow_task_cancel", (data: { taskId: string }) => {
+            const { taskId } = data;
+            this.log("info", `[workflow_task_cancel] Received cancel for task ${taskId}`);
+            const task = this.runningTasks.get(taskId);
+            if (task) {
+                task.status = "Cancelled";
+                task.abortController.abort();
+                this.log("info", `[workflow_task_cancel] Task ${taskId} marked for cancellation`);
+            } else {
+                this.log("warn", `[workflow_task_cancel] Task ${taskId} not found in running tasks`);
             }
         });
 
@@ -201,14 +239,56 @@ export class ServiceRegistry {
     }
 
     // ============================================================================
+    // 任务状态管理
+    // ============================================================================
+
+    /**
+     * 取消正在运行的任务
+     */
+    cancelTask(taskId: string): boolean {
+        const task = this.runningTasks.get(taskId);
+        if (task) {
+            task.status = "Cancelled";
+            task.abortController.abort();
+            this.log("info", `Task ${taskId} cancelled`);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 获取正在运行的任务列表
+     */
+    getRunningTasks(): string[] {
+        return Array.from(this.runningTasks.keys());
+    }
+
+    /**
+     * 检查任务是否正在运行
+     */
+    isTaskRunning(taskId: string): boolean {
+        return this.runningTasks.has(taskId);
+    }
+
+    // ============================================================================
     // 任务处理
     // ============================================================================
 
     /**
      * 处理任务请求
      */
-    async handleTask(request: TaskRequest): Promise<TaskResponse> {
+    async handleTask(request: TaskRequest, signal?: AbortSignal): Promise<TaskResponse> {
         const { taskId, serviceName, input } = request;
+
+        // Check if already cancelled
+        if (signal?.aborted) {
+            return {
+                taskId,
+                success: false,
+                error: "Task cancelled before execution",
+                status: "Cancelled",
+            };
+        }
 
         // 优先按 serviceName 精确匹配
         let service = this.services.get(serviceName);
@@ -228,6 +308,7 @@ export class ServiceRegistry {
                 taskId,
                 success: false,
                 error: `Service not found: ${serviceName}`,
+                status: "Failed",
             };
         }
 
@@ -242,10 +323,34 @@ export class ServiceRegistry {
             const inputStatus = VjudgeStatus.fromJSON(inputValues.toStatusData());
             this.log("info", `[handleTask] Input parsed: valueKeys=[${inputStatus.getKeys().join(", ")}]`);
 
+            // Check cancellation before execution
+            if (signal?.aborted) {
+                return {
+                    taskId,
+                    success: false,
+                    error: "Task cancelled before execution started",
+                    status: "Cancelled",
+                };
+            }
+
             // 执行服务
             this.log("info", `[handleTask] Executing service: ${serviceName}...`);
             const execStart = Date.now();
-            const outputStatus = await service.execute(inputStatus);
+
+            // Race between service execution and abort signal
+            const executePromise = service.execute(inputStatus);
+            const abortPromise = signal
+                ? new Promise<never>((_, reject) => {
+                    signal.addEventListener("abort", () => {
+                        reject(new Error("Task cancelled during execution"));
+                    }, { once: true });
+                })
+                : null;
+
+            const outputStatus = abortPromise
+                ? await Promise.race([executePromise, abortPromise])
+                : await executePromise;
+
             const execElapsed = Date.now() - execStart;
             const errorValue = outputStatus.getValue("error_message") ?? outputStatus.getValue("error");
             const errorMessage = errorValue?.type === "String" ? errorValue.value : undefined;
@@ -255,24 +360,50 @@ export class ServiceRegistry {
                     taskId,
                     success: false,
                     error: errorMessage,
+                    status: "Failed",
                 };
             }
 
             const output = WorkflowValuesStore.fromStatusDataTrusted(outputStatus.toJSON(), serviceInfo.name).toJSON();
-            this.log("info", `[handleTask] Task ${taskId} success`);
+
+            // 检查输出是否为 Final(Failed) 状态
+            if (WorkflowValuesUtils.isFailedFinal(output)) {
+                const finalError = WorkflowValuesUtils.finalError(output) ?? "Unknown error";
+                this.log("warn", `[handleTask] Service returned Final(Failed): ${finalError}`);
+                return {
+                    taskId,
+                    success: false,
+                    output,
+                    error: finalError,
+                    status: "Failed",
+                };
+            }
+
+            this.log("info", `[handleTask] Task ${taskId} success, status=${WorkflowValuesUtils.exportTaskStatus(output)}`);
             return {
                 taskId,
                 success: true,
                 output,
+                status: "Success",
             };
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
+            if (signal?.aborted || message.includes("cancelled")) {
+                this.log("warn", `[handleTask] Task ${taskId} cancelled: ${message}`);
+                return {
+                    taskId,
+                    success: false,
+                    error: `Task cancelled: ${message}`,
+                    status: "Cancelled",
+                };
+            }
             this.log("error", `[handleTask] Task ${taskId} execution failed: ${message}`);
             this.log("error", `[handleTask] Stack: ${error instanceof Error ? error.stack : "N/A"}`);
             return {
                 taskId,
                 success: false,
                 error: message,
+                status: "Failed",
             };
         }
     }

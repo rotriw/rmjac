@@ -3,7 +3,7 @@
 //! This service verifies that the remote account is valid and accessible.
 
 use workflow::description::{WorkflowExportDescribe, WorkflowRequire};
-use workflow::workflow::{Service, ServiceInfo, Status, StatusDescribe, StatusRequire, Value};
+use workflow::workflow::{Service, ServiceInfo, StatusDescribe, StatusRequire, Value};
 use workflow::value::{BaseValue, WorkflowValue};
 use workflow::status::{WorkflowValues, WorkflowStatus};
 
@@ -59,7 +59,7 @@ impl Service for VerifyAccountService {
         )]
     }
 
-    async fn verify(&self, input: &Box<dyn Status>) -> bool {
+    async fn verify(&self, input: &WorkflowValues) -> bool {
         // Check if the input has the required platform and it matches our platform
         if let Some(platform_value) = input.get_value("platform") {
             let platform = value_as_string(platform_value);
@@ -74,7 +74,7 @@ impl Service for VerifyAccountService {
         input.get_value("account_id").is_some()
     }
 
-    async fn execute(&self, input: &Box<dyn Status>) -> Box<dyn Status> {
+    async fn execute(&self, input: &WorkflowValues) -> WorkflowValues {
         // Extract values from input
         let platform = input
             .get_value("platform")
@@ -103,9 +103,9 @@ impl Service for VerifyAccountService {
                     );
                 }
             }
-            Box::new(WorkflowValues::from_json_trusted(output, "verify_account"))
+            WorkflowValues::from_json_trusted(output, "verify_account")
         } else {
-            Box::new(WorkflowStatus::failed("No account_id provided"))
+            WorkflowValues::final_status(WorkflowStatus::failed("No account_id provided"))
         }
     }
 }

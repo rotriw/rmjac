@@ -62,6 +62,10 @@ pub struct WorkflowTaskRequest {
     pub service_name: String,
     pub input: WorkflowValues,
     pub timeout: Option<u64>,
+    /// 任务当前状态（用于通知边缘服务及时退出）
+    #[serde(rename = "taskStatus")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub task_status: Option<String>,
 }
 
 /// 工作流任务响应（边缘服务回调返回）
@@ -72,6 +76,9 @@ pub struct WorkflowTaskResponse {
     pub success: bool,
     pub output: Option<WorkflowValues>,
     pub error: Option<String>,
+    /// 任务状态
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
 }
 
 /// 工作流状态推送消息（发送到前端用户 WebSocket）
@@ -173,6 +180,7 @@ pub async fn dispatch_workflow_task(
         service_name: service_name.to_string(),
         input,
         timeout: timeout_ms,
+        task_status: None,
     };
 
     let timeout_ms_val = timeout_ms.unwrap_or(30_000);
@@ -211,6 +219,7 @@ pub async fn dispatch_workflow_task(
                     success: false,
                     output: None,
                     error: Some(format!("Failed to send: {:?}", send_err)),
+                    status: Some("Failed".to_string()),
                 })
             }
         }
@@ -247,6 +256,7 @@ pub async fn dispatch_workflow_task(
                 success: false,
                 output: None,
                 error: Some(format!("Socket communication error: {:?}", err)),
+                status: Some("Failed".to_string()),
             }
         }
         Err(_) => {
@@ -265,6 +275,7 @@ pub async fn dispatch_workflow_task(
                     "Task timed out after {}ms",
                     timeout_duration.as_millis()
                 )),
+                status: Some("Failed".to_string()),
             }
         }
     }
