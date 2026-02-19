@@ -12,7 +12,7 @@ use rmjac_core::model::problem::{
 };
 use rmjac_core::service::perm::provider::{Problem, ProblemPermService, System, SystemPermService};
 
-#[generate_handler(route = "/manage", real_path = "/api/problem/manage")]
+#[generate_handler(route = "/user", real_path = "/api/problem/user")]
 pub mod handler {
     use super::*;
     #[from_path(iden)]

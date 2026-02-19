@@ -1,3 +1,4 @@
+use std::num::ParseIntError;
 use derive_more::Display;
 use enum_const::EnumConst;
 use pgp::errors::Error;
@@ -27,6 +28,8 @@ pub enum QueryNotFound {
 
 #[derive(Debug, Display, EnumConst)]
 pub enum CoreError {
+    #[display("Error Get Target {} in {}, Reason: {}", _0, _1, _2)]
+    GetTargetError(String, String, String),
     #[display("Std Error")]
     StdError,
     #[display("Db Error(seaorm::error::DbErr): {}", _0)]
@@ -57,10 +60,13 @@ pub enum CoreError {
     Guard(String),
     #[display("Vjudge Error: {}", _0)]
     VjudgeError(String),
+    #[display("Parse Int Error: {}", _0)]
+    ParseIntError(std::num::ParseIntError),
 }
 impl From<&CoreError> for i64 {
     fn from(value: &CoreError) -> Self {
         match value {
+            CoreError::GetTargetError(_, _, _) => 10404,
             CoreError::StdError => 10500,
             CoreError::IOError(_) => 10501,
             CoreError::DbError(_) => 20500,
@@ -92,7 +98,8 @@ impl From<&CoreError> for i64 {
                 } else {
                     99999
                 }
-            }
+            },
+            CoreError::ParseIntError(_) => 99999,
         }
     }
 }
@@ -142,5 +149,11 @@ impl From<sea_orm::error::DbErr> for CoreError {
 impl AsRef<str> for CoreError {
     fn as_ref(&self) -> &str {
         "error"
+    }
+}
+
+impl From<ParseIntError> for CoreError {
+    fn from(err: ParseIntError) -> Self {
+        CoreError::ParseIntError(err)
     }
 }

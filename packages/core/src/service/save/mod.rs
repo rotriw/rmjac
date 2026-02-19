@@ -1,0 +1,73 @@
+use redis::TypedCommands;
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Saved<T> {
+    pub id: i64,
+    #[serde(flatten)]
+    pub data: T,
+}
+
+
+// 为了防止对所有值进行修改，增设此标签，使得数据存储仅存在指定类型。
+pub trait Savable {}
+
+pub trait SaveService: Sized {
+    async fn save(&self) -> crate::Result<Saved<Self>>;
+}
+
+pub trait ManageService: Sized {
+    type DataType;
+    async fn get(id: i64) -> crate::Result<Self>;
+    async fn modify_all(&self, data: Self::DataType) -> crate::Result<Self>;
+    async fn modify<V: Serialize>(&self, k: &str, v: V) -> crate::Result<()>;
+    async fn delete(&self, id: i64) -> crate::Result<()>;
+}
+
+pub async fn gen_id(redis: &mut redis::Connection) -> crate::Result<i64> {
+    let id = redis.incr("global_id", 1)?;
+    Ok(id as i64)
+}
+
+impl<T: Serialize + Clone + Savable> SaveService for T {
+    async fn save(&self) -> crate::Result<Saved<Self>> {
+        let id = gen_id(&mut crate::env::REDIS_CLIENT.lock().unwrap().get_connection()?).await?;
+        let json_data = serde_json::to_string(&self.clone())?;
+        crate::env::REDIS_CLIENT.lock().unwrap().set(id, json_data)?;
+        Ok(Saved { id, data: self.clone() })
+    }
+
+}
+
+impl<T: Serialize + for<'de> Deserialize<'de> + Clone> ManageService for Saved<T> {
+    type DataType = T;
+    async fn get(id: i64) -> crate::Result<Self> {
+        let json_data: String = crate::env::REDIS_CLIENT.lock().unwrap().get(id)?.unwrap();
+        let data: T = serde_json::from_str(&json_data)?;
+        Ok(Saved { id, data })
+    }
+
+    async fn modify_all(&self, data: T) -> crate::Result<Saved<T>> {
+        let json_data = serde_json::to_string(&data)?;
+        crate::env::REDIS_CLIENT.lock().unwrap().set(self.id, json_data)?;
+        Ok(Saved { id: self.id, data })
+    }
+
+    async fn modify<V: Serialize>(&self, k: &str, v: V) -> crate::Result<()> {
+        let mut data_map: serde_json::Value = serde_json::to_value(&self.data)?;
+        if let Some(obj) = data_map.as_object_mut() {
+            obj.insert(k.to_string(), serde_json::to_value(v)?);
+            let json_data = serde_json::to_string(&data_map)?;
+            crate::env::REDIS_CLIENT.lock().unwrap().set(self.id, json_data)?;
+            Ok(())
+        } else {
+            Err(crate::error::CoreError::StringError("Data is not a JSON object".to_string()))
+        }
+
+    }
+
+    async fn delete(&self, id: i64) -> crate::Result<()> {
+        crate::env::REDIS_CLIENT.lock().unwrap().del(id)?;
+        Ok(())
+    }
+}

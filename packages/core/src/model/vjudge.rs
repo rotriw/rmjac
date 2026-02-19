@@ -129,7 +129,7 @@ impl VjudgeAccount {
     pub fn can_manage(user_id: i64) -> bool {
         let system_node = env::DEFAULT_NODES.lock().unwrap().default_system_node;
         if system_node == -1 {
-            log::warn!("System node not found when checking manage vjudge perm");
+            log::warn!("System node not found when checking user vjudge perm");
             return false;
         }
         SystemPermService::verify(user_id, system_node, System::ManageVjudge)

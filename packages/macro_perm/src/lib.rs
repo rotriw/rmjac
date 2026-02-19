@@ -55,7 +55,7 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
             impl perm_tool::SaveService for #db_struct_name {
                 async fn save_path(&mut self, u: i64, v: i64, perm: i64) {
                     use crate::db::entity::edge::#mod_ident::{Entity, ActiveModel, Column};
-                    use sea_orm::{EntityTrait, QueryFilter, ActiveModelTrait, Set, ColumnTrait, ActiveValue};
+                    use sea_orm::{EntityTrait, QueryFilter, ActiveModelTrait, Set, NotSet, ColumnTrait, ActiveValue};
 
                     let existing = Entity::find()
                         .filter(Column::UNodeId.eq(u))
@@ -70,18 +70,13 @@ pub fn derive_perm(input: TokenStream) -> TokenStream {
                             let _ = active.update(&self.db).await;
                         }
                         Ok(None) => {
-                            use crate::db::entity::edge::edge::create_edge;
-                            if let Ok(edge_info) = create_edge(&self.db, #s_name).await {
-                                 let active = ActiveModel {
-                                    edge_id: Set(edge_info.edge_id),
-                                    u_node_id: Set(u),
-                                    v_node_id: Set(v),
-                                    perm: Set(perm),
-                                };
-                                let _ = active.insert(&self.db).await;
-                            } else {
-                                log::error!("Failed to create edge info for {}", #s_name);
-                            }
+                             let active = ActiveModel {
+                                edge_id: NotSet,
+                                u_node_id: Set(u),
+                                v_node_id: Set(v),
+                                perm: Set(perm),
+                            };
+                            let _ = active.insert(&self.db).await;
                         }
                         Err(e) => {
                             log::error!("Failed to query {} edge: {:?}", #s_name, e);

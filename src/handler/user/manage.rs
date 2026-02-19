@@ -7,7 +7,7 @@ use rmjac_core::model::ModelStore;
 use rmjac_core::model::user::{User, UserUpdateProps};
 use serde::Deserialize;
 
-#[generate_handler(route = "/manage", real_path = "/api/user/manage")]
+#[generate_handler(route = "/user", real_path = "/api/user/user")]
 pub mod handler {
     use super::*;
     use rmjac_core::graph::node::Node;

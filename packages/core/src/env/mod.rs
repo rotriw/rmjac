@@ -1,10 +1,16 @@
-use crate::graph::action::DefaultNodes;
-use crate::service::iden::ac_automaton::AcMachine;
+// use crate::service::iden::ac_automaton::AcMachine;
 use lazy_static::lazy_static;
 use sea_orm::DatabaseConnection;
 use socketioxide::extract::SocketRef;
 use std::sync::Arc;
 use std::{collections::HashMap, sync::Mutex};
+
+pub struct DefaultNodes {
+    pub guest_user_node: i64,
+    pub default_strategy_node: i64,
+    pub default_iden_node: i64,
+    pub default_system_node: i64,
+}
 
 lazy_static! {
     pub static ref REDIS_URL: Mutex<String> = Mutex::new("redis://localhost:6379".to_string());
@@ -36,15 +42,15 @@ lazy_static! {
     pub static ref EDGE_VEC: Mutex<Vec<String>> = Mutex::new(vec![]);
     pub static ref EDGE_NUM: Mutex<i32> = Mutex::new(0);
     pub static ref SLICE_WORD_LIST: Mutex<Vec<String>> = Mutex::new(vec![]);
-    pub static ref SLICE_WORD_ACMAC: Mutex<AcMachine> = Mutex::new(AcMachine::build(
-        SLICE_WORD_LIST
-            .lock()
-            .unwrap()
-            .clone()
-            .iter()
-            .map(AsRef::as_ref)
-            .collect()
-    ));
+    // pub static ref SLICE_WORD_ACMAC: Mutex<AcMachine> = Mutex::new(AcMachine::build(
+    //     SLICE_WORD_LIST
+    //         .lock()
+    //         .unwrap()
+    //         .clone()
+    //         .iter()
+    //         .map(AsRef::as_ref)
+    //         .collect()
+    // ));
     pub static ref USER_WEBSOCKET_CONNECTIONS: Mutex<HashMap<String, SocketRef>> =
         Mutex::new(HashMap::new());
     pub static ref USER_WEBSOCKET_CONNECTIONS_ACCOUNT: Mutex<HashMap<String, i64>> =

@@ -7,7 +7,7 @@ use rmjac_core::model::ModelStore;
 use rmjac_core::model::training::{Training, TrainingList};
 use rmjac_core::service::perm::provider::{Pages, PagesPermService, System, SystemPermService};
 
-#[generate_handler(route = "/manage", real_path = "/api/training/manage")]
+#[generate_handler(route = "/user", real_path = "/api/training/user")]
 pub mod handler {
     use macro_handler::{export, require_login};
     use rmjac_core::{error::CoreError, graph::node::training::problem::TrainingProblemNode, model::training::TrainingRepo};

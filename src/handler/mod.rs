@@ -18,7 +18,6 @@ use actix_web::{
 use derive_more::derive::Display;
 use log::LevelFilter;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
-use rmjac_core::db::entity::edge::iden::Entity;
 
 #[derive(Debug, Display)]
 pub enum HandlerError {
@@ -148,12 +147,7 @@ pub async fn main(
             .supports_credentials();
         let auth = AuthTool {};
         App::new()
-            .service(user::service())
-            .service(problem::service())
-            .service(record::service())
-            .service(training::service())
-            .service(vjudge::service())
-            .service(submit::service())
+            .service(view::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {
                 error::InternalError::from_response(
                     "",
@@ -172,10 +166,4 @@ pub async fn main(
     .await
 }
 
-pub mod problem;
-pub mod record;
-pub mod training;
-pub mod user;
-
-pub mod submit;
-pub mod vjudge;
+pub mod view;
