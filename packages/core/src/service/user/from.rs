@@ -21,3 +21,19 @@ impl FromUserIden for Saved<User> {
         Saved::get(user.unwrap().user_id).await
     }
 }
+
+pub trait FromUserEmail: Sized {
+    fn from_user_email(db: &DatabaseConnection, email: &str) -> impl Future<Output = Result<Self>>;
+}
+
+impl FromUserEmail for Saved<User> {
+    async fn from_user_email(db: &DatabaseConnection, email: &str) -> Result<Saved<User>> {
+        let user = db_user::Entity::find()
+            .filter(db_user::Column::Email.eq(email.to_string()))
+            .one(db).await?;
+        if user.is_none() {
+            Err(CoreError::NotFound("user email not found".to_string()))?;
+        }
+        Saved::get(user.unwrap().user_id).await
+    }
+}

@@ -11,7 +11,7 @@ impl<T> IdenService for Saved<T> {
     fn set_iden(&self, iden: &str) {
         let mut redis = crate::utils::get_redis_connection();
         let iden_key = format!("iden:{}", iden);
-        redis.set(iden, self.id).unwrap();
+        redis.set(iden_key, self.id).unwrap();
     }
 }
 

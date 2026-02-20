@@ -16,7 +16,8 @@ pub struct User {
 }
 
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct Token {
     pub token: String,
     pub user_iden: String,

@@ -5,13 +5,16 @@ use serde::Serialize;
 use crate::action::default::ExistsCheck;
 use crate::Result;
 use crate::service::save::{Savable, SaveService, Saved};
-use crate::service::user::BasicUserInfo;
+use crate::service::user::{BasicUserInfo, verified_iden};
 use crate::db::entity::edge as entity;
 use crate::email::send_verify_email_with_user;
 use crate::error::{CoreError, QueryExists};
 use crate::service::iden::IdenService;
 
 pub async fn register_user<T: Savable + BasicUserInfo + Serialize + Clone>(db: &DatabaseConnection, user_data: T) -> Result<Saved<T>> {
+    if let Err(e) = verified_iden(user_data.get_iden()?.as_str(), db).await {
+        Err(CoreError::StringError(format!("Invalid iden, Reason: {:?}", e)))?;
+    }
     if entity::user::Model::exists_for_str(db, "email", user_data.get_email()?).await? {
         Err(CoreError::QueryExists(QueryExists::RegisterEmailExist))?;
     }

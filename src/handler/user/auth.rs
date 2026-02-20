@@ -24,14 +24,27 @@ pub struct LoginProp {
 #[generate_handler(route = "/auth", real_path = "/api/user/auth")]
 pub mod handler {
     use rmjac_core::email::send_verify_email_with_user;
+    use rmjac_core::service::user::from::FromUserEmail;
     use crate::handler::UserAuthCotext;
     use rmjac_core::error::CoreError::StringError;
     use rmjac_core::model::content::{Description, DescriptionType};
     use rmjac_core::model::user::{Token, User};
-    use rmjac_core::service::user::{Login, UserVerify, VerifyLogin};
+    use rmjac_core::service::user::{Login, UserVerify, VerifyLogin, verified_iden};
     use rmjac_core::utils::encrypt::encode_password;
     use crate::handler::HttpError::CoreError;
     use super::*;
+
+    #[handler]
+    #[export("message")]
+    #[route("/check_iden")]
+    async fn get_check_iden(db: &DatabaseConnection, iden: &str) -> ResultHandler<String> {
+        let user = verified_iden(iden, db).await;
+        if user.is_ok() {
+            Ok("success".to_string())
+        } else {
+            Ok(format!("{:?}", user.err().unwrap()))
+        }
+    }
 
     #[export(ensure_verify)]
     async fn before_verify(
@@ -97,8 +110,13 @@ pub mod handler {
         password: &str,
         ltoken: Option<bool>,
     ) -> ResultHandler<(i64, Saved<Token>)> {
-        let user: Saved<User> = Saved::from_user_iden(&db, user).await?;
-        if user.verify_password(&encode_password(password)) == false {
+        let user_data = Saved::from_user_iden(db, user).await;
+        let user = if let Ok(user_data) = user_data {
+            user_data
+        } else {
+            Saved::<User>::from_user_email(db, user).await?
+        };
+        if !user.verify_password(&encode_password(password)) {
             Err(CoreError(StringError("Invalid detail".to_string())))?;
         }
         let login_data = user.login(ltoken.unwrap_or(false)).await?;

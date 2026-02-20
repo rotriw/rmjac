@@ -2,6 +2,7 @@ pub mod impled;
 
 use redis::TypedCommands;
 use sea_orm::DatabaseConnection;
+use serde::{Deserialize, Serialize};
 use crate::model::content::Description;
 use crate::Result;
 use crate::model::user::{Token, User};
@@ -65,4 +66,42 @@ impl Verified for Saved<User> {
         ManagePermService::add(self.id, default_node!(default_strategy_node), Manage::All, db).await;
         Ok(())
     }
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub enum IdenError {
+    Short,
+    TooLong,
+    NotAllowedChar,
+    CanParseNumber,
+    Exist,
+    NoAscii,
+}
+use IdenError::*;
+use crate::service::user::from::FromUserIden;
+
+pub async fn verified_iden(iden: &str, db: &DatabaseConnection) -> Result<(), IdenError> {
+    if iden.len() < 3 {
+        Err(Short)?;
+    }
+    if iden.len() > 18 {
+        Err(TooLong)?;
+    }
+    if iden.parse::<i128>().is_ok() {
+        Err(CanParseNumber)?;
+    }
+    if iden.parse::<f64>().is_ok() {
+        Err(CanParseNumber)?;
+    }
+    if !iden.is_ascii() {
+        Err(NoAscii)?;
+    }
+    if iden.contains(":") {
+        Err(NotAllowedChar)?;
+    }
+    if Saved::<User>::from_user_iden(db, iden).await.is_ok() {
+        Err(Exist)?;
+    }
+    Ok(())
+
 }
