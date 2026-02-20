@@ -4,3 +4,7 @@ use serde::{Deserialize, Serialize};
 #[ts(export)]
 pub struct SettingsPage {
 }
+
+pub fn render() -> SettingsPage {
+    SettingsPage::default()
+}

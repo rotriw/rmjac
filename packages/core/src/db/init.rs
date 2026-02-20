@@ -53,6 +53,21 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             EdgeType: big_integer not_null,
         }),
     );
+    tables.insert(
+        "edge_record".to_string(),
+        table_create!(db::iden::edge::record::Enum, {
+            EdgeId: big_integer not_null primary_key auto_increment,
+            UserId: big_integer not_null,
+            ProblemId: big_integer not_null,
+            RecordId: big_integer not_null,
+            Time: big_integer not_null,
+            Memory: big_integer not_null,
+            Code: text not_null,
+            Language: text not_null,
+            Score: double not_null,
+            Status: big_integer not_null,
+        })
+    );
     tables
 }
 
@@ -83,6 +98,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         "edge_misc".to_string(),
         Table::drop()
             .table(db::iden::edge::misc::Enum::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        "edge_record".to_string(),
+        Table::drop()
+            .table(db::iden::edge::record::Enum::Table)
             .if_exists()
             .to_owned(),
     );
@@ -167,5 +189,6 @@ pub async fn init(
             }
         }
     }
+
     Ok(())
 }

@@ -27,7 +27,6 @@ pub fn run(
         .unwrap();
     let host = host.unwrap_or("127.0.0.1".to_string());
     let config = config.unwrap_or_else(|| "config.json".to_string());
-    rmjac_core::service::iden::create_words(vec!["LG", "CF", "AT", "lg", "cf", "at"]);
     let log_level: LevelFilter = log_level
         .unwrap_or_else(|| "info".to_string())
         .parse()

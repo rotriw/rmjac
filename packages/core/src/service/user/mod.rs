@@ -1,8 +1,12 @@
 pub mod impled;
 
 use redis::TypedCommands;
+use sea_orm::DatabaseConnection;
+use crate::model::content::Description;
 use crate::Result;
-use crate::model::user::Token;
+use crate::model::user::{Token, User};
+use crate::service::perm::provider::Manage;
+use crate::service::perm::provider::ManagePermService;
 use crate::service::save::{SaveService, Saved};
 use crate::utils::get_redis_connection;
 
@@ -10,7 +14,7 @@ pub trait BasicUserInfo {
     fn get_user_id(&self) -> Result<i64>;
     fn get_username(&self) -> Result<String>;
     fn get_email(&self) -> Result<String>;
-    fn get_description(&self) -> Result<String>;
+    fn get_description(&self) -> Result<Description>;
     fn get_iden(&self) -> Result<String>;
 }
 
@@ -46,4 +50,19 @@ impl<T: BasicUserInfo> Login for T {
 
 pub trait Logout {
     fn logout(&self) -> bool;
+}
+
+pub mod from;
+
+
+/// 账户是否已完成验证。
+pub trait Verified {
+    fn verified(&self, db: &DatabaseConnection) -> impl Future<Output = Result<()>>;
+}
+
+impl Verified for Saved<User> {
+    async fn verified(&self, db: &DatabaseConnection) -> Result<()> {
+        ManagePermService::add(self.id, default_node!(default_strategy_node), Manage::All, db).await;
+        Ok(())
+    }
 }

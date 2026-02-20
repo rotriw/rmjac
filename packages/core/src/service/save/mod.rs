@@ -1,7 +1,10 @@
 use redis::TypedCommands;
 use serde::{Deserialize, Serialize};
+use crate::error::CoreError;
+use crate::utils::get_redis_connection;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
 pub struct Saved<T> {
     pub id: i64,
     #[serde(flatten)]
@@ -42,14 +45,19 @@ impl<T: Serialize + Clone + Savable> SaveService for T {
 impl<T: Serialize + for<'de> Deserialize<'de> + Clone> ManageService for Saved<T> {
     type DataType = T;
     async fn get(id: i64) -> crate::Result<Self> {
-        let json_data: String = crate::env::REDIS_CLIENT.lock().unwrap().get(id)?.unwrap();
-        let data: T = serde_json::from_str(&json_data)?;
+        let mut redis = get_redis_connection();
+        let json_data = redis.get(id)?;
+        if json_data.is_none() {
+            Err(CoreError::NotFound(format!("not found id {}", id)))?;
+        }
+        let json_data = json_data.unwrap();
+        let data = serde_json::from_str(&json_data)?;
         Ok(Saved { id, data })
     }
 
     async fn modify_all(&self, data: T) -> crate::Result<Saved<T>> {
         let json_data = serde_json::to_string(&data)?;
-        crate::env::REDIS_CLIENT.lock().unwrap().set(self.id, json_data)?;
+        get_redis_connection().set(self.id, json_data)?;
         Ok(Saved { id: self.id, data })
     }
 
@@ -58,7 +66,7 @@ impl<T: Serialize + for<'de> Deserialize<'de> + Clone> ManageService for Saved<T
         if let Some(obj) = data_map.as_object_mut() {
             obj.insert(k.to_string(), serde_json::to_value(v)?);
             let json_data = serde_json::to_string(&data_map)?;
-            crate::env::REDIS_CLIENT.lock().unwrap().set(self.id, json_data)?;
+            get_redis_connection().set(self.id, json_data)?;
             Ok(())
         } else {
             Err(crate::error::CoreError::StringError("Data is not a JSON object".to_string()))
@@ -71,3 +79,17 @@ impl<T: Serialize + for<'de> Deserialize<'de> + Clone> ManageService for Saved<T
         Ok(())
     }
 }
+
+pub trait IdInfo {
+    fn get_id(&self) -> i64;
+}
+
+
+impl<T> IdInfo for Saved<T> {
+    fn get_id(&self) -> i64 {
+        self.id
+    }
+}
+
+pub mod temp;
+pub mod default;

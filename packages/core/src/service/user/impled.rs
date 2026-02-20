@@ -1,5 +1,6 @@
 use redis::TypedCommands;
 use crate::error::CoreError;
+use crate::model::content::Description;
 use crate::model::user::User;
 use crate::service::save::Saved;
 use crate::service::user::{BasicUserInfo, Login, UserVerify, VerifyLogin};
@@ -18,7 +19,7 @@ impl BasicUserInfo for User {
         Ok(self.email.clone())
     }
 
-    fn get_description(&self) -> Result<String> {
+    fn get_description(&self) -> Result<Description> {
         Ok(self.description.clone())
     }
 
@@ -40,7 +41,7 @@ impl<T: BasicUserInfo> BasicUserInfo for Saved<T> {
         self.data.get_email()
     }
 
-    fn get_description(&self) -> Result<String> {
+    fn get_description(&self) -> Result<Description> {
         self.data.get_description()
     }
 
@@ -52,6 +53,12 @@ impl<T: BasicUserInfo> BasicUserInfo for Saved<T> {
 impl UserVerify for User {
     fn verify_password(&self, password: &str) -> bool {
         self.password == password
+    }
+}
+
+impl<T: UserVerify> UserVerify for Saved<T> {
+    fn verify_password(&self, password: &str) -> bool {
+        self.data.verify_password(password)
     }
 }
 

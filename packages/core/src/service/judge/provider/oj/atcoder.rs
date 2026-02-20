@@ -1,4 +1,3 @@
-use crate::graph::node::user::remote_account::VjudgeNode;
 use crate::service::judge::service::{
     ChoiceOption, CompileOption, CompileOptionService, CompileOptionValue, JudgeService, Language,
     SubmitContext,

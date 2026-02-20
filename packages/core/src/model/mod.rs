@@ -1,8 +1,13 @@
 pub mod problem;
-// pub mod record;
+pub mod record;
 // pub mod training;
 // pub mod training_list;
 pub mod user;
+pub mod language;
+pub mod training;
+pub mod content;
+pub mod judge;
+pub mod vjudge;
 // pub mod vjudge;
 // pub mod submit;
 //

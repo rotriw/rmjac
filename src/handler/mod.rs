@@ -115,9 +115,6 @@ pub async fn main(
         .ok_or_else(|| {
             std::io::Error::new(std::io::ErrorKind::NotFound, "Postgres URL not found")
         })?;
-    let url = rmjac_core::env::REDIS_URL.lock().unwrap().clone();
-    log::info!("Connecting to Redis: {url}");
-    *rmjac_core::env::REDIS_CLIENT.lock().unwrap() = redis::Client::open(url).unwrap();
     log::info!("Connecting to database {}...", &database_url);
     let connection_options = ConnectOptions::new(database_url.clone())
         .sqlx_logging_level(LevelFilter::Trace)
@@ -148,6 +145,7 @@ pub async fn main(
         let auth = AuthTool {};
         App::new()
             .service(view::service())
+            .service(user::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {
                 error::InternalError::from_response(
                     "",
@@ -167,3 +165,4 @@ pub async fn main(
 }
 
 pub mod view;
+pub mod user;

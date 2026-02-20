@@ -2,12 +2,15 @@ use crate::handler::{HandlerError, HttpError, ResultHandler};
 use crate::utils::perm::UserAuthCotext;
 use macro_handler::{export, from_path, generate_handler, handler, perm, route};
 use rmjac_core::error::CoreError;
+use rmjac_core::pages::Page;
+use rmjac_core::service::iden::{get, only_get_id};
+use rmjac_core::service::perm::provider::Manage;
+use rmjac_core::service::perm::provider::ManagePermService;
+use sea_orm::DatabaseConnection;
+
 #[generate_handler(route = "/default", real_path = "/api/view/default")]
 pub mod handler {
-    use sea_orm::sea_query::ExprTrait;
-    use rmjac_core::service::iden::{get, only_get_id};
-    use rmjac_core::service::perm::provider::Manage;
-    use rmjac_core::service::perm::provider::ManagePermService;
+    use rmjac_core::pages::render_page;
     use super::*;
 
     #[export(s_node_id)]
@@ -19,47 +22,37 @@ pub mod handler {
         Ok(v.unwrap())
     }
 
-    #[perm]
-    async fn perm(user_context: Option<UserAuthCotext>, node_id: i64) -> bool {
-        if let Some(uc) = user_context
-            && uc.is_real
-        {
-            ManagePermService::verify(uc.user_id, node_id, Manage::View)
-        } else {
-            false
-        }
-    }
-
     #[handler]
-    #[perm(perm)]
     #[route("/with_iden")]
     #[export("data")]
     async fn get_with_iden(
+        db: &DatabaseConnection,
         user_context: Option<UserAuthCotext>,
-        iden: String,
+        s_node_id: i64,
+        view_page: String,
     ) -> ResultHandler<Page> {
-
+        let user_id = if let Some(uc) = user_context && uc.is_real {
+            Some(uc.user_id)
+        } else {
+            None
+        };
+        Ok(render_page(db, &view_page, s_node_id, user_id).await?)
     }
 
     #[handler]
-    #[perm(check_login)]
     #[route("/with_id")]
     #[export("data")]
     async fn get_with_node_id(
+        db: &DatabaseConnection,
         user_context: Option<UserAuthCotext>,
         node_id: i64,
+        view_page: String,
     ) -> ResultHandler<Page> {
-
-    }
-
-    #[handler]
-    #[perm(check_login)]
-    #[route("/delete/{node_id}")]
-    #[export("message")]
-    async fn post_delete_account(
-        user_context: Option<UserAuthCotext>,
-        account_node_id: i64,
-    ) -> ResultHandler<String> {
-
+        let user_id = if let Some(uc) = user_context && uc.is_real {
+            Some(uc.user_id)
+        } else {
+            None
+        };
+        Ok(render_page(db, &view_page, node_id, user_id).await?)
     }
 }

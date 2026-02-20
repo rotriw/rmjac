@@ -14,6 +14,7 @@ pub struct Model {
     pub author_id: i64,
 }
 
+
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {}
 

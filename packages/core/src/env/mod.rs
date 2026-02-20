@@ -5,6 +5,7 @@ use socketioxide::extract::SocketRef;
 use std::sync::Arc;
 use std::{collections::HashMap, sync::Mutex};
 
+#[derive(Debug, Clone, Copy)]
 pub struct DefaultNodes {
     pub guest_user_node: i64,
     pub default_strategy_node: i64,
@@ -55,6 +56,10 @@ lazy_static! {
         Mutex::new(HashMap::new());
     pub static ref USER_WEBSOCKET_CONNECTIONS_ACCOUNT: Mutex<HashMap<String, i64>> =
         Mutex::new(HashMap::new());
+
+    pub static ref RESEND_KEY: Mutex<String> = Mutex::new("".to_string());
+    pub static ref EMAIL_DOAMIN: Mutex<String> = Mutex::new("notification.rt.st".to_string());
+    pub static ref EMAIL_SEND_NAME: Mutex<String> = Mutex::new("Rotriw".to_string());
 }
 
 pub mod db;

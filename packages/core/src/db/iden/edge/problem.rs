@@ -1,7 +1,7 @@
 use sea_orm_migration::prelude::*;
 #[derive(DeriveIden)]
 pub enum Enum {
-    #[sea_orm(table_name = "edge_problem")]
+    #[sea_orm(iden = "edge_problem")]
     Table,
     EdgeId,
     TimeLimit,
@@ -11,5 +11,4 @@ pub enum Enum {
     Iden,
     Name,
     AuthorId
-    
 }

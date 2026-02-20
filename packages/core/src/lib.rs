@@ -19,3 +19,4 @@ pub mod service;
 pub mod utils;
 
 pub mod pages;
+pub mod email;

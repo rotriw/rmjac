@@ -6,6 +6,7 @@ use futures_util::future::LocalBoxFuture;
 use rmjac_core::model::user::User;
 use std::future::{Ready, ready};
 use std::rc::Rc;
+use rmjac_core::default_node;
 use rmjac_core::service::save::{ManageService, Saved};
 use rmjac_core::service::user::VerifyLogin;
 
@@ -70,6 +71,9 @@ where
                         is_real = true;
                     }
                 }
+            }
+            if user_id == -1 {
+                user_id = 3;
             }
             log::debug!("Auth Middleware: user_id={}, is_real={}", user_id, is_real);
             req.extensions_mut()

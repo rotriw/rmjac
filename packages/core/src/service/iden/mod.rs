@@ -20,8 +20,7 @@ T: for<'de> Deserialize<'de> + Clone + Serialize {
     let mut redis = crate::utils::get_redis_connection();
     let iden_key = format!("iden:{}", iden);
     if let Ok(id) = redis.get(iden_key) {
-        let v: Saved<T> = Saved::get(id.unwrap().parse::<i64>().unwrap()).await.unwrap();
-        Some(v)
+        Some(Saved::get(id.unwrap().parse::<i64>().unwrap()).await.unwrap())
     } else {
         None
     }
