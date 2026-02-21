@@ -49,14 +49,14 @@ pub async fn send_verify_email_with_user(email: &str, name: &str, ) -> Result<()
     let send_user = crate::env::EMAIL_SEND_NAME.lock().unwrap().to_string();
     let domain_name = crate::env::EMAIL_DOAMIN.lock().unwrap().clone();
     let resend = Resend::new(&crate::env::RESEND_KEY.lock().unwrap().to_string());
-    let domain = resend.domains
+    /* let domain = resend.domains
         .add(CreateDomainOptions::new(&domain_name).with_custom_return_path("verify"))
         .await;
     if let Err(e) = domain {
         log::error!("Failed to add domain: {}", e);
         return Err(CoreError::Guard("Failed to send email, please try again later.".to_string()));
     }
-    let domain = domain.unwrap();
+    let domain = domain.unwrap(); */
     let from = format!("{} <verify@{}>", send_user, domain_name);
     let to = vec![email.to_string()];
     let subject = "验证您的邮箱 Rmj.ac".to_string();

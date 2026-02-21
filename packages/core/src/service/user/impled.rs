@@ -65,7 +65,7 @@ impl<T: UserVerify> UserVerify for Saved<T> {
 impl VerifyLogin for Saved<User> {
     fn verify_login(&self, token: &str) -> Result<bool> {
         let mut redis = crate::utils::get_redis_connection();
-        let user_id = redis.get(format!("user_token:{}", token))?.ok_or_else(|| CoreError::StringError("Invalid token".to_string())).unwrap().parse::<i64>()?;
+        let user_id = redis.get(format!("user_token:{}", token))?.ok_or_else(|| CoreError::StringError("Invalid token".to_string()))?.parse::<i64>()?;
         Ok(self.id == user_id)
     }
 }

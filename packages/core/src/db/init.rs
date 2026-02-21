@@ -24,6 +24,15 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
+        "edge_perm_system".to_string(),
+        table_create!(db::iden::edge::perm_system::Enum, {
+            EdgeId: big_integer not_null primary_key auto_increment,
+            UNodeId: big_integer not_null,
+            VNodeId: big_integer not_null,
+            Perm: big_integer not_null,
+        }),
+    );
+    tables.insert(
         "edge_user".to_string(),
         table_create!(db::iden::edge::user::Enum, {
             EdgeId: big_integer not_null primary_key auto_increment,
@@ -105,6 +114,13 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         "edge_record".to_string(),
         Table::drop()
             .table(db::iden::edge::record::Enum::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        "edge_system".to_string(),
+        Table::drop()
+            .table(db::iden::edge::perm_system::Enum::Table)
             .if_exists()
             .to_owned(),
     );

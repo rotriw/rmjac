@@ -10,12 +10,9 @@ import {
 } from "@/components/ui/sidebar"
 import { LogOut, Settings, User } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { getUserInfo } from "@/api/server/api_user_info"
 import Link from "next/link"
 import { getGravatarUrl } from "@/lib/gravatar"
-import { SimplyUser } from "@rmjac/api-declare"
 
-type UserData = SimplyUser
 
 export function UserAvatar() {
   const [user, setUser] = useState<UserData | null>(null)
@@ -34,7 +31,6 @@ export function UserAvatar() {
         setIsLoading(false)
       }
     }
-    
     fetchUserInfo()
   }, [])
 
@@ -70,8 +66,6 @@ export function UserAvatar() {
 
   const handleLogout = async () => {
     try {
-      // TODO: 调用后端登出API
-      // await fetch(`${API_BASE_URL}/api/user/logout/${user.iden}`, { method: 'POST', credentials: 'include' })
       setUser(null)
       window.location.href = "/login"
     } catch (error) {
@@ -116,7 +110,7 @@ export function UserAvatar() {
               sideOffset={4}
             >
               <DropdownMenuItem asChild>
-                <Link href={`/user/${user.iden}/edit`} className="cursor-pointer">
+                <Link href={`/manage/${user.iden}`} className="cursor-pointer">
                   <Settings className="mr-2 h-4 w-4" />
                   设置
                 </Link>

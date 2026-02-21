@@ -34,7 +34,7 @@ pub async fn gen_id(redis: &mut redis::Connection) -> crate::Result<i64> {
 
 impl<T: Serialize + Clone + Savable> SaveService for T {
     async fn save(&self) -> crate::Result<Saved<Self>> {
-        let id = gen_id(&mut crate::env::REDIS_CLIENT.lock().unwrap().get_connection()?).await?;
+        let id = gen_id(&mut get_redis_connection()).await?;
         let json_data = serde_json::to_string(&self.clone())?;
         crate::env::REDIS_CLIENT.lock().unwrap().set(id, json_data)?;
         Ok(Saved { id, data: self.clone() })
@@ -75,7 +75,7 @@ impl<T: Serialize + for<'de> Deserialize<'de> + Clone> ManageService for Saved<T
     }
 
     async fn delete(&self, id: i64) -> crate::Result<()> {
-        crate::env::REDIS_CLIENT.lock().unwrap().del(id)?;
+        get_redis_connection().del(id)?;
         Ok(())
     }
 }

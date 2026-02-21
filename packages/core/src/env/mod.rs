@@ -59,7 +59,7 @@ lazy_static! {
 
     pub static ref RESEND_KEY: Mutex<String> = Mutex::new("".to_string());
     pub static ref EMAIL_DOAMIN: Mutex<String> = Mutex::new("notification.rt.st".to_string());
-    pub static ref EMAIL_SEND_NAME: Mutex<String> = Mutex::new("Rotriw".to_string());
+    pub static ref EMAIL_SEND_NAME: Mutex<String> = Mutex::new("Rmj.ac Verify".to_string());
 }
 
 pub mod db;

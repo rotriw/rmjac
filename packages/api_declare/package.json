@@ -6,6 +6,6 @@
     "generate_export": "EXPORT_PATH=./src node ./scripts/generate_export.js"
   },
   "devDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.9.3"
   }
 }

@@ -4473,6 +4473,7 @@ dependencies = [
  "tap",
  "tokio",
  "tower-http",
+ "uuid",
 ]
 
 [[package]]

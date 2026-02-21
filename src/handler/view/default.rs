@@ -2,15 +2,16 @@ use crate::handler::{HandlerError, HttpError, ResultHandler};
 use crate::utils::perm::UserAuthCotext;
 use macro_handler::{export, from_path, generate_handler, handler, perm, route};
 use rmjac_core::error::CoreError;
-use rmjac_core::pages::Page;
+use rmjac_core::pages::{Sidebar, get_sidebar as core_get_sidebar};
 use rmjac_core::service::iden::{get, only_get_id};
+use rmjac_core::service::save::ManageService;
 use rmjac_core::service::perm::provider::Manage;
 use rmjac_core::service::perm::provider::ManagePermService;
 use sea_orm::DatabaseConnection;
 
 #[generate_handler(route = "/default", real_path = "/api/view/default")]
 pub mod handler {
-    use rmjac_core::pages::render_page;
+    use rmjac_core::service::save::Saved;
     use super::*;
 
     #[export(s_node_id)]
@@ -23,36 +24,18 @@ pub mod handler {
     }
 
     #[handler]
-    #[route("/with_iden")]
+    #[route("/sidebar")]
     #[export("data")]
-    async fn get_with_iden(
+    async fn post_sidebar(
         db: &DatabaseConnection,
         user_context: Option<UserAuthCotext>,
-        s_node_id: i64,
-        view_page: String,
-    ) -> ResultHandler<Page> {
+        path: &str,
+    ) -> ResultHandler<Vec<Sidebar>> {
         let user_id = if let Some(uc) = user_context && uc.is_real {
-            Some(uc.user_id)
+            Some(Saved::get(uc.user_id).await?)
         } else {
             None
         };
-        Ok(render_page(db, &view_page, s_node_id, user_id).await?)
-    }
-
-    #[handler]
-    #[route("/with_id")]
-    #[export("data")]
-    async fn get_with_node_id(
-        db: &DatabaseConnection,
-        user_context: Option<UserAuthCotext>,
-        node_id: i64,
-        view_page: String,
-    ) -> ResultHandler<Page> {
-        let user_id = if let Some(uc) = user_context && uc.is_real {
-            Some(uc.user_id)
-        } else {
-            None
-        };
-        Ok(render_page(db, &view_page, node_id, user_id).await?)
+        Ok(core_get_sidebar(user_id, path))
     }
 }

@@ -39,6 +39,7 @@ ensure = { version = "0.3", optional = true}
 serde-reflection = { version = "0.5.1", optional = true}
 serde-generate = { version = "0.32.0", optional = true}
 ambassador = "0.5.0"
+uuid = { version = "1.19.0", features = ["v4"] }
 
 [features]
 export_ts_type = ["macro_handler/export_ts_type", "dep:ensure", "dep:serde-reflection", "dep:serde-generate"]
