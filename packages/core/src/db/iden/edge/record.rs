@@ -1,4 +1,5 @@
 use sea_orm_migration::prelude::*;
+
 #[derive(DeriveIden)]
 pub enum Enum {
     #[sea_orm(iden = "edge_record")]
@@ -8,9 +9,9 @@ pub enum Enum {
     Memory,
     UserId,
     ProblemId,
-    RecordId,
     Code,
-    Score,
+    RecordId,
     Status,
-    Language
+    Language,
+    Score,
 }

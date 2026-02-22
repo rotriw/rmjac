@@ -9,10 +9,14 @@ use crate::service::perm::View;
 use crate::service::save::{IdInfo, ManageService, SaveService, Saved};
 use crate::utils::get_redis_connection;
 
-pub async fn create_event(e: Event, db: &DatabaseConnection) -> Result<Saved<Event>> {
+pub async fn create_event(e: Event, db: &DatabaseConnection) -> Result<EventIden<Event>> {
     let event = e.save().await?;
-    create_event_iden(&event, &e.iden_list, e.owned_by, db, &e.sign.unwrap_or("*".to_string())).await?;
-    Ok(event)
+    create_event_iden(&event, &e.iden_list, e.owned_by.clone(), db, &e.sign.clone().unwrap_or("*".to_string())).await?;
+    Ok(EventIden {
+        iden: e.sign.clone().unwrap_or(e.iden_list[0].to_string()),
+        id: event.id,
+        data: e.clone()
+    })
 }
 
 pub async fn update_event_content(old: &Saved<Event>, new: &Event) -> Result<Saved<Event>> {

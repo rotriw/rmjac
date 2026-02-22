@@ -147,6 +147,7 @@ pub async fn main(
             .service(view::service())
             .service(user::service())
             .service(problem::service())
+            .service(search::service())
             .service(event::service())
             .service(manage::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {

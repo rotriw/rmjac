@@ -1,4 +1,5 @@
 use sea_orm_migration::prelude::*;
+
 #[derive(DeriveIden)]
 pub enum Enum {
     #[sea_orm(iden = "edge_problem")]
@@ -10,5 +11,5 @@ pub enum Enum {
     Platform,
     Iden,
     Name,
-    AuthorId
+    AuthorId,
 }

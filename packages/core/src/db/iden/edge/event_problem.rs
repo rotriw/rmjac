@@ -7,5 +7,5 @@ pub enum Enum {
     EdgeId,
     EventId,
     ProblemId,
-    Iden
+    Iden,
 }

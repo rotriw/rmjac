@@ -7,5 +7,5 @@ pub enum Enum {
     EdgeId,
     UserIden,
     Email,
-    UserId
+    UserId,
 }

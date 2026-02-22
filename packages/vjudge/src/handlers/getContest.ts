@@ -31,6 +31,7 @@ const handleCodeforces = async (is_gym: boolean): Promise<Event[]> => {
                 "owned_by": {
                     "String": "codeforces"
                 },
+                "sign": `CF${contest.id}`,
                 "iden_list": [contest.id.toString()],
                 "event_type": "OnlineContest",
                 "contest_type": convert(contest.type),
@@ -65,6 +66,7 @@ const handleAtcoderKenkou = async (): Promise<Event[]> => {
                 "owned_by": {
                     "String": "atcoder"
                 },
+                "sign": `AT${contest.id}`,
                 "iden_list": [contest.id.toString()],
                 "event_type": "OnlineContest",
                 "contest_type": "AT",

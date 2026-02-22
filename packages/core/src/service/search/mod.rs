@@ -1,4 +1,4 @@
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QuerySelect};
+use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, QueryFilter, QuerySelect};
 use serde::{Deserialize, Serialize};
 use crate::db::entity::edge::search::ActiveModel as SearchActiveModel;
 use crate::Result;
@@ -39,38 +39,38 @@ pub fn analyze_search_content(content: &str) -> SearchOption {
     };
     if content.contains("+event") {
         res.specific_type.push("event".to_string());
-        now_content.replace("+event", "");
+        now_content = now_content.replace("+event", "");
     }
     if content.contains("+problem") {
         res.specific_type.push("problem".to_string());
-        now_content.replace("+problem", "");
+        now_content = now_content.replace("+problem", "");
     }
     // find all @platform with regex.
     let re = regex::Regex::new(r"@(\w+)").unwrap();
     for cap in re.captures_iter(content) {
         res.specific_platform.push(cap[1].to_string());
-        now_content.replace(&format!("@{}", &cap[1]), "");
+        now_content = now_content.replace(&format!("@{}", &cap[1]), "");
     }
     if content.contains("+specific") {
         res.is_specific = true;
-        now_content.replace("+specific", "");
+        now_content = now_content.replace("+specific", "");
     }
     let re = regex::Regex::new(r"diff-number:(\d+)-(\d+)").unwrap();
     if let Some(cap) = re.captures(content) {
         res.difficulty_range = Some((cap[1].parse().unwrap_or(0), cap[2].parse().unwrap_or(0)));
-        now_content.replace(&format!("diff-number:{}-{}", &cap[1], &cap[2]), "");
+        now_content =  now_content.replace(&format!("diff-number:{}-{}", &cap[1], &cap[2]), "");
     }
     // 匹配难度 diff-number:<number>
     let re = regex::Regex::new(r"diff-number:(\d+)").unwrap();
     if let Some(cap) = re.captures(content) {
         res.difficulty_range = Some((cap[1].parse().unwrap_or(0), cap[1].parse().unwrap_or(0)));
-        now_content.replace(&format!("diff-number:{}", &cap[1]), "");
+        now_content = now_content.replace(&format!("diff-number:{}", &cap[1]), "");
     }
     // 匹配难度 *<难度>
     let re = regex::Regex::new(r"\*(\d+)").unwrap();
     if let Some(cap) = re.captures(content) {
         res.difficulty_range = Some((cap[1].parse().unwrap_or(0), cap[1].parse().unwrap_or(0)));
-        now_content.replace(&format!("*{}", &cap[1]), "");
+        now_content = now_content.replace(&format!("*{}", &cap[1]), "");
     }
     let content = now_content.trim().to_string();
     res.content = if content.is_empty() {
@@ -96,7 +96,14 @@ pub async fn analyze_search(db: &DatabaseConnection, content: &str, offset: u64,
         if option.is_specific {
             query = query.filter(Column::Content.eq(content));
         } else {
-            query = query.filter(Column::Content.contains(content));
+            query = query.filter(
+                Condition::any()
+                    .add(Column::Iden.contains(&content))
+                    .add(Column::Content.contains(&content))
+                    .add(Column::Platform.contains(&content))
+                    .add(Column::Typed.contains(&content))
+                    .add(Column::Name.contains(&content))
+            );
         }
     }
     if !option.specific_platform.is_empty() {
@@ -108,7 +115,8 @@ pub async fn analyze_search(db: &DatabaseConnection, content: &str, offset: u64,
     query = query.offset(offset).limit(number);
     option.offset = Some(offset);
     option.number = Some(number);
-    Ok((vec![], option))
+    let data = query.all(db).await?;
+    Ok((data, option))
 }
 
 pub mod impled;

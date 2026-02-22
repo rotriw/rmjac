@@ -7,5 +7,5 @@ pub enum Enum {
     EdgeId,
     UNodeId,
     VNodeId,
-    Perm
+    Perm,
 }
