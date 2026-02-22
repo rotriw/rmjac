@@ -6,7 +6,6 @@ use crate::action::default::MiscType;
 use crate::db::entity::edge::misc::Entity;
 
 pub trait BasicProblemInfo {
-    fn get_iden(&self) -> String;
     fn get_name(&self) -> String;
 
     fn get_time_limit(&self) -> i64;
@@ -17,9 +16,6 @@ pub trait BasicProblemInfo {
 
 
 impl BasicProblemInfo for Problem {
-    fn get_iden(&self) -> String {
-        self.iden.clone()
-    }
 
     fn get_name(&self) -> String {
         self.name.clone()

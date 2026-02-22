@@ -11,6 +11,7 @@ use crate::service::save::Savable;
 pub enum JudgeStatus {
     Accepted = 200,
     WrongAnswer = 300,
+
     TimeLimitExceeded = 400,
     MemoryLimitExceeded = 401,
     RuntimeError = 402,
@@ -57,6 +58,18 @@ pub enum ShowStyle {
     WaitingSync {
         url: String
     }, // 仅包含一个url
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct RemoteJudgeInfo {
+    pub is_passed: bool,
+    pub testcase_name: String,
+    pub status: JudgeStatus,
+    pub score: Option<f64>,
+    pub time: Option<i64>,
+    pub memory: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]

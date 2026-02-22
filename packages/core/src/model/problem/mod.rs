@@ -54,30 +54,12 @@ pub struct ProblemLimit {
 pub struct Problem {
     pub name: String,
     pub description: Description,
-    pub iden: String,
     pub platform: String,
     pub limit: ProblemLimit,
     pub difficulty: Difficulty,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
-#[ts(export)]
-pub enum CreateReason {
-    VjudgeCreate,
-    UserTraining,
-    Other(String)
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
-#[ts(export)]
-pub struct RemoteProblem {
-    pub name: String,
-    pub iden: String,
-    pub platform: String,
-    pub limit: ProblemLimit,
-    pub difficulty: i64,
-    pub create_reason: CreateReason,
-    pub url: String,
+    pub is_remote: bool,
+    pub is_sync: bool,
+    pub sync_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]

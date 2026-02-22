@@ -62,6 +62,8 @@ pub enum CoreError {
     VjudgeError(String),
     #[display("Parse Int Error: {}", _0)]
     ParseIntError(std::num::ParseIntError),
+    #[display("Conflict: {}", _0)]
+    Conflict(String),
 }
 impl From<&CoreError> for i64 {
     fn from(value: &CoreError) -> Self {
@@ -100,6 +102,7 @@ impl From<&CoreError> for i64 {
                 }
             },
             CoreError::ParseIntError(_) => 99999,
+            CoreError::Conflict(_) => 100403,
         }
     }
 }
@@ -155,5 +158,17 @@ impl AsRef<str> for CoreError {
 impl From<ParseIntError> for CoreError {
     fn from(err: ParseIntError) -> Self {
         CoreError::ParseIntError(err)
+    }
+}
+
+impl From<String> for CoreError {
+    fn from(err: String) -> Self {
+        CoreError::StringError(err)
+    }
+}
+
+impl From<&str> for CoreError {
+    fn from(err: &str) -> Self {
+        CoreError::StringError(err.to_string())
     }
 }

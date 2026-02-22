@@ -6,7 +6,8 @@ export default async function Handle({ params }: { params: Promise<{ view_method
     iden: ls.slug.join("/"),
     view_page: ls.view_method,
   });
-  console.log(get_Detail);
+  console.log(data);
+  if (data.data.title)
   return (
     <>
     {}

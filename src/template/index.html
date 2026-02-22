@@ -12,7 +12,7 @@
 
     <meta name="color-scheme" content="light">
     <meta name="supported-color-schemes" content="light">
-    <title></title>
+    <title>{{title}}</title>
 
     <!--[if gte mso 9]>
         <xml>
@@ -342,7 +342,7 @@
                                         <tr>
                                             <td class="email-text-content" style="font-family: Verdana,sans-serif;">
                                                 <h1 style="margin:0px 0px 2px 0px;"><span
-                                                        style="font-size: 18px"><strong>感谢注册</strong></span></h1>
+                                                        style="font-size: 18px"><strong>{{content_title}}</strong></span></h1>
                                             </td>
                                         </tr>
                                     </table>
@@ -357,8 +357,7 @@
                                         style="margin: auto;width: 100%;">
                                         <tr>
                                             <td class="email-text-content" style="font-family: Verdana,sans-serif">
-                                                <p style="margin:0px 0px 2px 0px;">您好 {{user}}，再次感谢您注册 Rmj.ac。</p>
-                                                <p style="margin:0px 0px 2px 0px;">您的帐号已经准备完毕。</p>
+                                                <p style="margin:0px 0px 2px 0px;">{{content}}</p>
                                             </td>
                                         </tr>
                                     </table>
@@ -385,8 +384,7 @@
                                                         style="font-size: 12px;color: rgb(140, 140, 140)">若需帮助，请通过
                                                         issue@rmj.ac 联系我们。</span></p>
                                                 <p style="margin:0px 0px 2px 0px;"><span
-                                                        style="font-size: 12px;color: rgb(140, 140, 140)"> 邮件:
-                                                        {{email}}, Time: {{time}}</span></p>
+                                                        style="font-size: 12px;color: rgb(140, 140, 140)"> {{footnote}} </span></p>
                                                 <p style="margin:0px 0px 2px 0px;"><span
                                                         style="font-size: 12px;color: rgb(140, 140, 140)">Rmj.ac
                                                         Project・oi.zone</span></p>
@@ -448,7 +446,7 @@
 
                         <p><strong><span
                                     style="font-family: Trebuchet MS;color: rgb(140, 140, 140);font-size: 12px">Rotriw
-                                    Team 2026</span></strong><br /><span
+                                    Team {{now_year}}</span></strong><br /><span
                                 style="color: rgb(140, 140, 140);font-size: 12px"><span>Stories that we achieve
                                     together・<strong>みんなで叶える物语</strong></span></p>
                         <!--[if mso]> 

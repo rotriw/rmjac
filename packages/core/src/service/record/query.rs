@@ -14,6 +14,11 @@ pub trait QueryRecord {
 
     fn get_max_score(&self, db: &DatabaseConnection, problem_id: i64) -> impl Future<Output=Result<f64>>;
 }
+
+pub trait QueryTraining {
+    fn get_training_submission(&self, db: &DatabaseConnection, training_id: i64) -> impl Future<Output=Result<Vec<Saved<Record>>>>;
+}
+
 impl QueryRecord for Saved<User> {
     async fn query_status_submission(&self, db: &DatabaseConnection, status: JudgeStatus) -> Result<Vec<Saved<Problem>>> {
         use crate::db::entity::edge::record::*;

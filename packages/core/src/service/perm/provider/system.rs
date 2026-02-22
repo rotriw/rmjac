@@ -9,4 +9,7 @@ use strum_macros::{EnumCount, EnumIter};
 pub enum System {
     All = -1,
     ViewAllPage = 1,
+    CreateProblem = 2,
+    ManageEvent = 4,
+    ManageInit = 8,
 }

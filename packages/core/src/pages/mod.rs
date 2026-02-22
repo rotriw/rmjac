@@ -61,7 +61,7 @@ pub fn get_sidebar(user: Option<Saved<User>>, path: &str) -> Vec<Sidebar> {
         "record" => result[3].active(),
         _ => {}
     }
-    if paths.len() > 1 && paths[1].len() > 0 {
+    if paths.len() > 1 && !paths[1].is_empty() {
         match paths[0] {
             "problem" => {
                 result[1].inactive();

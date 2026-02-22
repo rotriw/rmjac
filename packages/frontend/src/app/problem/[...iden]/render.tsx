@@ -30,7 +30,7 @@ function get_color_by_passed(passed: boolean | undefined) {
 
 async function ShowProblemCard({history_score, passed, problem, variant, styles, with_tag, ...props}: React.ComponentProps<"div"> & {
   styles: React.ClassAttributes<HTMLDivElement> | "",
-  problem: Saved<Problem>,
+  problem: Problem,
   variant: "inline" | "total",
   with_tag?: boolean,
   history_score?: number,
@@ -93,7 +93,7 @@ async function ShowProblemCard({history_score, passed, problem, variant, styles,
 }
 
 
-export async function ShowProblemPage({problem}: {problem: Saved<Problem>}) {
+export async function ShowProblemPage({problem}: {problem: Problem}) {
   return (
     <>
         <ShowProblemCard problem={problem} variant="total" passed={false} />

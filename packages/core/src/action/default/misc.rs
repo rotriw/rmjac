@@ -7,6 +7,8 @@ use crate::Result;
 pub enum MiscType {
     Statement = 1,
     Order = 2,
+    Event = 3,
+    EventProblem = 4,
 }
 
 impl MiscType {

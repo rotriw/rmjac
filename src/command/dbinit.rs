@@ -9,9 +9,11 @@
 //! --restart -R <restart>, Restart database
 //! --redis_url -r <redis_url>, Redis Url.
 
+use command_tool::run;
 use log::LevelFilter;
 use redis::TypedCommands;
 
+#[run]
 pub fn run(
     restart: Option<String>,
     url: Option<String>,

@@ -3,6 +3,16 @@ use redis::TypedCommands;
 use serde::{Deserialize, Serialize};
 use crate::service::save::Saved;
 
+
+#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
+#[ts(export)]
+pub struct WithIden<T> {
+    pub iden: String,
+    pub data: T,
+}
+
+// 应当考虑通过 event 赋予 iden !
+
 pub trait IdenService {
     fn set_iden(&self, iden: &str);
 }

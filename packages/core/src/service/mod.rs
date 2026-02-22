@@ -9,7 +9,7 @@ use crate::service::save::default::get_default_node;
 pub mod judge;
 pub mod perm;
 pub mod create;
-// pub mod socket;
+pub mod socket;
 // pub mod track;
 // pub mod cron;
 
@@ -19,6 +19,8 @@ pub mod problem;
 pub mod iden;
 pub mod edge;
 pub mod record;
+pub mod event;
+pub mod view;
 
 pub mod training;
 pub async fn service_start(
@@ -28,6 +30,7 @@ pub async fn service_start(
     vjudge_port: u16,
     vjudge_secret_path: &str,
 ) -> Result<(), CoreError> {
+    // Load redis pool.
     init_all_perms(db).await;
     log::info!("Permission graph loaded successfully!");
 
@@ -45,7 +48,7 @@ pub async fn service_start(
     *EDGE_AUTH_PUBLICKEY.lock().unwrap() = data.clone();
     log::info!("Starting socket service on port: {vjudge_port}");
     tokio::spawn(async move {
-        // socket::service::service_start(vjudge_port).await.unwrap();
+        socket::service::service_start(vjudge_port).await.unwrap();
     });
     log::info!("Starting cron service");
     tokio::spawn(async {

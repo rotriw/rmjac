@@ -710,21 +710,21 @@ fn generate_function_args(params: &[Parameter], analysis: &ParameterAnalysis) ->
             if is_ref_type {
                 args.push(quote! { &#param_name });
             } else {
-                args.push(quote! { #param_name });
+                args.push(quote! { #param_name.clone() });
             }
         } else if analysis.before_exports.contains_key(&param_str) {
             // before导出：根据目标类型决定是传引用还是值
             if is_ref_type {
                 args.push(quote! { &#param_name });
             } else {
-                args.push(quote! { #param_name });
+                args.push(quote! { #param_name.clone() });
             }
         } else {
             // Props字段：如果原始类型是引用，传递引用；否则直接传递（消耗 props）
             if is_ref_type {
                 args.push(quote! { &props.#param_name });
             } else {
-                args.push(quote! { props.#param_name });
+                args.push(quote! { props.#param_name.clone() });
             }
         }
     }

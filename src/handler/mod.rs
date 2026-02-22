@@ -146,6 +146,9 @@ pub async fn main(
         App::new()
             .service(view::service())
             .service(user::service())
+            .service(problem::service())
+            .service(event::service())
+            .service(manage::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {
                 error::InternalError::from_response(
                     "",
@@ -166,3 +169,6 @@ pub async fn main(
 
 pub mod view;
 pub mod user;
+pub mod problem;
+pub mod event;
+pub mod manage;

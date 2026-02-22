@@ -8,6 +8,7 @@ pub mod training;
 pub mod content;
 pub mod judge;
 pub mod vjudge;
+pub mod event;
 // pub mod vjudge;
 // pub mod submit;
 //

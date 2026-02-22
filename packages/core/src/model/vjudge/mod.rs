@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use crate::service::edge::support::EdgeTask;
 use crate::service::save::Savable;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
@@ -41,7 +40,6 @@ pub struct Vjudge {
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[ts(export)]
 pub struct VjudgeTask {
-    pub task_info: EdgeTask,
     pub task_result: Option<String>,
     pub task_status: Option<VjudgeSubmitOption>,
 }

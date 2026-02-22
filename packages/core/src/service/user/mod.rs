@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::model::content::Description;
 use crate::Result;
 use crate::model::user::{Token, User};
+use crate::service::event::get_event_with_id;
 use crate::service::perm::provider::Manage;
 use crate::service::perm::provider::ManagePermService;
 use crate::service::save::{SaveService, Saved};
@@ -76,6 +77,8 @@ pub enum IdenError {
     CanParseNumber,
     Exist,
     NoAscii,
+    IsEvent,
+    Reserved
 }
 use IdenError::*;
 use crate::service::user::from::FromUserIden;
@@ -101,6 +104,20 @@ pub async fn verified_iden(iden: &str, db: &DatabaseConnection) -> Result<(), Id
     }
     if Saved::<User>::from_user_iden(db, iden).await.is_ok() {
         Err(Exist)?;
+    }
+    if get_event_with_id(iden).await.is_ok() {
+        Err(IsEvent)?;
+    }
+    let reserved = [
+        "default_strategy_node",
+        "guest_user_node",
+        "admin_user_node",
+        "admin",
+        "guest",
+        "root",
+    ];
+    if reserved.contains(&iden) {
+        Err(Reserved)?;
     }
     Ok(())
 
