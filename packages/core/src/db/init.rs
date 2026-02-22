@@ -51,6 +51,8 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             AuthorId: big_integer not_null,
             TimeLimit: big_integer not_null,
             MemoryLimit: big_integer not_null,
+            Difficulty: big_integer not_null,
+            Platform: string not_null,
         }),
     );
     tables.insert(
@@ -76,6 +78,37 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
             Score: double not_null,
             Status: big_integer not_null,
         })
+    );
+    tables.insert(
+        "edge_judge".to_string(),
+        table_create!(db::iden::edge::judge::Enum, {
+            EdgeId: big_integer not_null primary_key auto_increment,
+            RecordId: big_integer not_null,
+            TestcaseId: big_integer not_null,
+            JudgeInfo: json_binary not_null,
+        }),
+    );
+    tables.insert(
+        "edge_search".to_string(),
+        table_create!(db::iden::edge::search::Enum, {
+            EdgeId: big_integer not_null primary_key auto_increment,
+            Difficulty: big_integer null,
+            Content: text not_null,
+            Id: big_integer not_null,
+            Name: string not_null,
+            Iden: string not_null,
+            Typed: string not_null,
+            Platform: string not_null,
+        }),
+    );
+    tables.insert(
+        "edge_event_problem".to_string(),
+        table_create!(db::iden::edge::event_problem::Enum, {
+            EdgeId: big_integer not_null primary_key auto_increment,
+            EventId: big_integer not_null,
+            ProblemId: big_integer not_null,
+            Iden: string not_null,
+        }),
     );
     tables
 }
@@ -121,6 +154,27 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
         "edge_system".to_string(),
         Table::drop()
             .table(db::iden::edge::perm_system::Enum::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        "edge_judge".to_string(),
+        Table::drop()
+            .table(db::iden::edge::judge::Enum::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        "edge_search".to_string(),
+        Table::drop()
+            .table(db::iden::edge::search::Enum::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        "edge_event_problem".to_string(),
+        Table::drop()
+            .table(db::iden::edge::event_problem::Enum::Table)
             .if_exists()
             .to_owned(),
     );

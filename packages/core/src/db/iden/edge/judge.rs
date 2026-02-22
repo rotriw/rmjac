@@ -6,5 +6,6 @@ pub enum Enum {
     Table,
     EdgeId,
     RecordId,
+    TestcaseId,
     JudgeInfo
 }
