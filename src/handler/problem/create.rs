@@ -5,9 +5,9 @@ use rmjac_core::service::perm::provider::{System, SystemPermService};
 
 #[generate_handler(route = "/create", real_path = "/api/problem/create")]
 pub mod handler {
-    use rmjac_core::{action::problem::{CreateOption, create_problem}, error::CoreError, model::{event::{Event, EventParent, EventType}, problem::Problem, user::User}, service::{event::{create_event_total, get_event_with_id}, iden::get, save::{ManageService, Saved}}};
+    use rmjac_core::{action::problem::{CreateOption, create_problem}, error::CoreError, model::{event::{Event, EventParent, EventType}, problem::Problem, user::User}, service::{event::{create_event_iden, get_event_with_id}, save::{ManageService, Saved}}};
     use sea_orm::DatabaseConnection;
-
+    use rmjac_core::service::search::AddToSearch;
     use super::*;
 
     #[perm]
@@ -34,6 +34,7 @@ pub mod handler {
         problem: Problem,
         iden: Vec<String>,
         with_myself: bool,
+        can_search: bool,
         with_event: Option<EventParent>,
     ) -> ResultHandler<String> {
         let count = with_myself as i8 + with_event.is_some() as i8;
@@ -60,7 +61,10 @@ pub mod handler {
             is_public: true,
         }).await?;
         path += &format!("/{}", iden[0].replace("/", "."));
-        create_event_total(&problem, &iden, event_parent, db).await?;
+        let event = create_event_iden(&problem, &iden, event_parent, db, &iden[0]).await?;
+        if can_search {
+            event.set_can_search(&db);
+        }
         Ok(format!("/problem/{path}"))
     }
 }

@@ -7,6 +7,7 @@
 use command_tool::run;
 use log::LevelFilter;
 use redis::Commands;
+use sea_orm::Iden;
 use rmjac_core::async_run;
 use rmjac_core::env::db::get_connect;
 use rmjac_core::model::content::{Description, DescriptionType};
@@ -45,6 +46,7 @@ pub async fn run(
     let x = create_event(Event {
         owned_by: EventParent::ID(0),
         name: new_event,
+        sign: None,
         iden_list,
         event_type: EventType::Other,
         description: Description {

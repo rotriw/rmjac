@@ -4,6 +4,8 @@ pub mod entity;
 pub mod init;
 pub mod iden;
 
+pub use entity::edge::search::ActiveModel as SearchEdgeActiveModel;
+
 pub struct EntityServer {
     pub name: &'static str,
     pub up: TableCreateStatement,

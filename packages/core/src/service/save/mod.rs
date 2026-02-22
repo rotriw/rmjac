@@ -19,6 +19,12 @@ pub trait SaveService: Sized {
     async fn save(&self) -> crate::Result<Saved<Self>>;
 }
 
+impl IdInfo for i64 {
+    fn get_id(&self) -> i64 {
+        *self
+    }
+}
+
 pub trait ManageService: Sized {
     type DataType;
     async fn get(id: i64) -> crate::Result<Self>;
@@ -71,8 +77,8 @@ impl<T: Serialize + for<'de> Deserialize<'de> + Clone> ManageService for Saved<T
         } else {
             Err(crate::error::CoreError::StringError("Data is not a JSON object".to_string()))
         }
-
     }
+
 
     async fn delete(&self, id: i64) -> crate::Result<()> {
         get_redis_connection().del(id)?;

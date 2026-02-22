@@ -35,7 +35,7 @@ impl TrainingItemTrait for Saved<Problem> {
 }
 
 pub trait TrainingManage {
-    fn add_training_item<T: TrainingItemTrait>(&self, db: &DatabaseConnection, problem: &T) -> impl Future<Output = Result<Saved<TrainingItem>>>;
+    fn add_training_item<T: TrainingItemTrait>(&self, db: &DatabaseConnection, sign: &str, problem: &T) -> impl Future<Output = Result<Saved<TrainingItem>>>;
     fn reorder_item(&self, db: &DatabaseConnection, new_order: Vec<String>) -> impl Future<Output = Result<()>>; // new_order with uuid.
     fn delete_item(&self, db: &DatabaseConnection, remove_items: Vec<String>) -> impl Future<Output = Result<()>>;
 }
@@ -46,7 +46,7 @@ struct Order {
 }
 
 impl<F> TrainingManage for Saved<F> {
-    async fn add_training_item<T: TrainingItemTrait>(&self, db: &DatabaseConnection, item: &T) -> Result<Saved<TrainingItem>> {
+    async fn add_training_item<T: TrainingItemTrait>(&self, db: &DatabaseConnection, sign: &str, item: &T) -> Result<Saved<TrainingItem>> {
         let now_list = MiscType::Order.get_next_list(db, self.id).await?;
         let mut now_max = -1i64;
         for item in now_list {
@@ -55,6 +55,7 @@ impl<F> TrainingManage for Saved<F> {
         let item = TrainingItem {
             uuid: uuid::Uuid::new_v4().to_string(),
             order: now_max + 1,
+            sign: sign.to_string(),
             content: item.get_content(),
             description: item.get_description(),
         };

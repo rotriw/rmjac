@@ -3,7 +3,6 @@ use crate::utils::perm::UserAuthCotext;
 use macro_handler::{export, from_path, generate_handler, handler, perm, route};
 use rmjac_core::error::CoreError;
 use rmjac_core::pages::{Sidebar, get_sidebar as core_get_sidebar};
-use rmjac_core::service::iden::{get, only_get_id};
 use rmjac_core::service::save::ManageService;
 use rmjac_core::service::perm::provider::Manage;
 use rmjac_core::service::perm::provider::ManagePermService;
@@ -11,16 +10,14 @@ use sea_orm::DatabaseConnection;
 
 #[generate_handler(route = "/default", real_path = "/api/view/default")]
 pub mod handler {
+    use rmjac_core::service::event::get_event_with_id;
     use rmjac_core::service::save::Saved;
     use super::*;
 
     #[export(s_node_id)]
     async fn before_resolve(iden: &str) -> ResultHandler<i64> {
-        let v = only_get_id(iden).await;
-        if v.is_none() {
-            Err(CoreError::NotFound("not found iden.".to_string()))?;
-        }
-        Ok(v.unwrap())
+        let v = get_event_with_id(iden).await?;
+        Ok(v)
     }
 
     #[handler]

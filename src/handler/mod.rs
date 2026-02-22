@@ -172,3 +172,4 @@ pub mod user;
 pub mod problem;
 pub mod event;
 pub mod manage;
+pub mod search;

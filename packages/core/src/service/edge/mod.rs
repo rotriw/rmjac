@@ -4,7 +4,6 @@ use crate::Result;
 use crate::model::problem::Problem;
 use crate::model::record::{Record, RemoteJudgeInfo};
 use crate::model::vjudge::VjudgeAuth;
-use crate::service::iden::WithIden;
 use crate::service::save::Saved;
 use crate::service::socket::service::exec_task;
 

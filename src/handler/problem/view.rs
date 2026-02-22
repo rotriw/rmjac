@@ -5,7 +5,7 @@ use rmjac_core::service::perm::provider::{System, SystemPermService};
 
 #[generate_handler(route = "/view", real_path = "/api/problem/view")]
 pub mod handler {
-    use rmjac_core::{action::problem::{CreateOption, create_problem}, error::CoreError, model::{event::{Event, EventParent, EventType}, problem::Problem, user::User}, service::{event::{create_event_total, get_event_with_id}, iden::get, perm::provider::Manage, save::{ManageService, Saved}}};
+    use rmjac_core::{action::problem::{CreateOption, create_problem}, error::CoreError, model::{event::{Event, EventParent, EventType}, problem::Problem, user::User}, service::{event::{create_event_iden, get_event_with_id}, perm::provider::Manage, save::{ManageService, Saved}}};
     use sea_orm::DatabaseConnection;
 
     use super::*;

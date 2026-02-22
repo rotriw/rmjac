@@ -4,14 +4,14 @@ use tokio::io::split;
 use crate::action::default::MiscType;
 use crate::error::CoreError;
 use crate::Result;
-use crate::model::event::{Event, EventParent};
+use crate::model::event::{Event, EventIden, EventParent};
 use crate::service::perm::View;
-use crate::service::save::{ManageService, SaveService, Saved};
+use crate::service::save::{IdInfo, ManageService, SaveService, Saved};
 use crate::utils::get_redis_connection;
 
 pub async fn create_event(e: Event, db: &DatabaseConnection) -> Result<Saved<Event>> {
     let event = e.save().await?;
-    create_event_total(&event, &e.iden_list, e.owned_by, db).await?;
+    create_event_iden(&event, &e.iden_list, e.owned_by, db, &e.sign.unwrap_or("*".to_string())).await?;
     Ok(event)
 }
 
@@ -20,7 +20,20 @@ pub async fn update_event_content(old: &Saved<Event>, new: &Event) -> Result<Sav
     Ok(event)
 }
 
-pub async fn create_event_total<T>(e: &Saved<T>, iden_list: &Vec<String>, parent: EventParent, db: &DatabaseConnection) -> Result<()> {
+pub fn concat(a: &str, b: &str) -> String {
+    if b.is_empty() {
+        return a.to_string();
+    }
+    let a_last: NowV = a.chars().last().unwrap_or('$').into();
+    let b_first: NowV = b.chars().next().unwrap_or('$').into();
+    if a_last != b_first && a_last != NowV::Rand && b_first != NowV::Rand {
+        format!("{a}{b}")
+    } else {
+        format!("{a}/{b}")
+    }
+}
+
+pub async fn create_event_iden<T: Clone>(e: &Saved<T>, iden_list: &Vec<String>, parent: EventParent, db: &DatabaseConnection, sign: &str) -> Result<EventIden<T>> {
     let parent_id = match parent {
         EventParent::String(owned_by) => {
             get_event_with_id(&owned_by).await?
@@ -39,9 +52,11 @@ pub async fn create_event_total<T>(e: &Saved<T>, iden_list: &Vec<String>, parent
         }
         redis.set(format!("event:{parent_id}:{i}"), e.id)?;
     }
-    e.set_public_view(db).await?;
-    e.set_guest_view(db).await?;
-    Ok(())
+    Ok(EventIden {
+        id: e.id,
+        iden: sign.to_string(),
+        data: e.data.clone(),
+    })
 }
 
 #[derive(PartialOrd, PartialEq, Debug, Clone, Copy)]
@@ -62,7 +77,6 @@ impl From<char> for NowV {
         }
     }
 }
-
 
 pub fn split_iden(iden: &str, force: bool) -> Vec<&str> {
     if iden.contains(".") {
@@ -133,3 +147,5 @@ pub async fn check_for_iden(p: i64, iden: &str) -> Result<bool> {
     let exist = redis.exists(format!("event:{p}:{iden}"))?;
     Ok(exist)
 }
+
+pub mod iden;

@@ -5,7 +5,7 @@ use rmjac_core::service::perm::provider::System;
 
 #[generate_handler(route = "/init", real_path = "/api/manage/init")]
 pub mod handler {
-    use rmjac_core::{action::{problem::{CreateOption, create_problem}, remotejudge::update_remotejudge_event}, error::CoreError, model::{event::{Event, EventParent, EventType}, problem::Problem, user::User}, service::{edge::get_contests, event::{create_event_total, get_event_with_id}, iden::get, perm::provider::Manage, save::{ManageService, Saved}}};
+    use rmjac_core::{action::{problem::{CreateOption, create_problem}, remotejudge::update_remotejudge_event}, error::CoreError, model::{event::{Event, EventParent, EventType}, problem::Problem, user::User}, service::{edge::get_contests, event::{create_event_iden, get_event_with_id}, perm::provider::Manage, save::{ManageService, Saved}}};
     use sea_orm::DatabaseConnection;
 
     use super::*;

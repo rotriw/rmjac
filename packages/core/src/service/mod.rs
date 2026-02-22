@@ -16,11 +16,11 @@ pub mod socket;
 pub mod save;
 pub mod user;
 pub mod problem;
-pub mod iden;
 pub mod edge;
 pub mod record;
 pub mod event;
 pub mod view;
+pub mod search;
 
 pub mod training;
 pub async fn service_start(

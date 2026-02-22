@@ -5,4 +5,5 @@ pub mod problem;
 pub mod misc;
 pub mod judge;
 pub mod record;
-pub mod event;
+pub mod search;
+pub mod event_problem;

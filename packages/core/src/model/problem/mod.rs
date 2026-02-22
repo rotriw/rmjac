@@ -1,5 +1,8 @@
+use sea_orm::{NotSet, Set};
 use serde::{Deserialize, Serialize};
+use crate::db::SearchEdgeActiveModel;
 use crate::model::content::Description;
+use crate::model::event::{Event, EventIden};
 use crate::model::language::Language;
 use crate::service::save::Savable;
 
@@ -82,3 +85,18 @@ pub enum ProblemStatementType {
 
 impl Savable for Problem {}
 impl Savable for ProblemStatement {}
+
+impl Into<SearchEdgeActiveModel> for EventIden<Problem> {
+    fn into(self) -> SearchEdgeActiveModel {
+        SearchEdgeActiveModel {
+            edge_id: NotSet,
+            id: Set(self.id),
+            difficulty: NotSet,
+            content: Set(self.data.description.content),
+            name: Set(self.data.name),
+            iden: Set(self.iden),
+            typed: Set("problem".to_string()),
+            platform: Set(self.data.platform.to_lowercase()),
+        }
+    }
+}

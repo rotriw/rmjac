@@ -17,6 +17,7 @@ pub struct Training {
 pub enum TrainingItemContent {
     Problem(i64), // problem id
     TrainingList(String), // Training uuid
+    // Event(String) // 引入训练。
     // PresetTraining TODO: PresetTraining
 }
 
@@ -26,6 +27,7 @@ pub struct TrainingItem {
     pub uuid: String, // the item only method.
     pub order: i64, // order in training.
     pub description: Description,
+    pub sign: String, // show the item data.
     pub content: TrainingItemContent,
 }
 
