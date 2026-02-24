@@ -36,4 +36,16 @@ pub mod handler {
     ) -> ResultHandler<Saved<Event>> {
         Ok(Saved::get(id).await?)
     }
+
+    #[handler]
+    #[route("/get_problems")]
+    #[perm(perm)]
+    #[export("event")]
+    async fn post_view_problems(
+        db: &DatabaseConnection,
+        id: i64,
+    ) -> ResultHandler<Vec<(Saved<Problem>, String)>> {
+        let event = Saved::<Event>::get(id).await?;
+        Ok(event.get_problems(db).await?)
+    }
 }

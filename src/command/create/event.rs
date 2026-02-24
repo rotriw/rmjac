@@ -59,6 +59,7 @@ pub async fn run(
         end_time: None,
         event_status: rmjac_core::model::event::EventStatus::NotStarted,
         event_url: None,
+        event_update: None,
     }, &db).await;
     if let Err(e) = x {
         log::error!("Failed to create event: {:?}", e);

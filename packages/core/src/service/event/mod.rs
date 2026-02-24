@@ -50,7 +50,8 @@ pub async fn create_event_iden<T: Clone>(e: &Saved<T>, iden_list: &Vec<String>, 
     MiscType::Event.add(db, parent_id, e.id).await?;
     let mut redis = get_redis_connection();
     for i in iden_list {
-        if check_for_iden(parent_id, i).await? {
+        let i = i.to_lowercase();
+        if check_for_iden(parent_id, &i).await? {
             log::info!("Event iden already exists: {}, parent_id: {}", i, parent_id);
             continue;
         }
@@ -153,3 +154,4 @@ pub async fn check_for_iden(p: i64, iden: &str) -> Result<bool> {
 }
 
 pub mod iden;
+pub mod attach;

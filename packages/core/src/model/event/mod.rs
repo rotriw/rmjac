@@ -62,6 +62,7 @@ pub struct Event {
     pub end_time: Option<DateTimeUtc>,
     pub event_status: EventStatus,
     pub event_url: Option<String>,
+    pub event_update: Option<bool> // 事件是否同步。
 }
 
 

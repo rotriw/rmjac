@@ -32,6 +32,29 @@ pub async fn get_problem(url: &str) -> Result<Problem> {
     }).await
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct GetProblemEventProp {
+    pub platform: String,
+    pub event: String
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct ProblemAttachDetail {
+    /// show the problem sign (search index)
+    pub sign: String,
+    /// iden
+    pub iden: Vec<String>
+}
+
+pub async fn get_problems_with_event(event: &str, platform: &str) -> Result<Vec<(Problem, ProblemAttachDetail)>> {
+    exec_task("get_problems_event", &GetProblemEventProp {
+        event: event.to_string(),
+        platform: platform.to_string(),
+    }).await
+}
+
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ts_rs::TS)]
 #[serde(tag = "type")]

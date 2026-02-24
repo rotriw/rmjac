@@ -5,7 +5,7 @@ use rmjac_core::service::perm::provider::System;
 
 #[generate_handler(route = "/init", real_path = "/api/manage/init")]
 pub mod handler {
-    use rmjac_core::{action::{problem::{CreateOption, create_problem}, remotejudge::update_remotejudge_event}, error::CoreError, model::{event::{Event, EventParent, EventType}, problem::Problem, user::User}, service::{edge::get_contests, event::{create_event_iden, get_event_with_id}, perm::provider::Manage, save::{ManageService, Saved}}};
+    use rmjac_core::{action::{problem::{CreateOption, create_problem}, remotejudge::{update_remotejudge_event, update_remotejudge_problem_all}}, error::CoreError, model::{event::{Event, EventParent, EventType}, problem::Problem, user::User}, service::{edge::get_contests, event::{create_event_iden, get_event_with_id}, perm::provider::Manage, save::{ManageService, Saved}}};
     use sea_orm::DatabaseConnection;
 
     use super::*;
@@ -31,5 +31,22 @@ pub mod handler {
     ) -> ResultHandler<String> {
         update_remotejudge_event(platform, db).await?;
         Ok("Initialization successful".to_string())
+    }
+
+    #[handler]
+    #[route("/update_platform_event")]
+    #[perm(init_action)]
+    #[export("message")]
+    async fn post_update_problem(
+        db: &DatabaseConnection,
+        platform: &str,
+        timeout: Option<u64>,
+    ) -> ResultHandler<String> {
+        let ndb = db.clone();
+        let platform = platform.to_string();
+        tokio::spawn(async move {
+            update_remotejudge_problem_all(&platform, timeout.unwrap_or(1000), &ndb).await
+        });
+        Ok("task add successful.".to_string())
     }
 }
