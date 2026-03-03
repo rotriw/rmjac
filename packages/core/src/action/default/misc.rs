@@ -9,6 +9,7 @@ pub enum MiscType {
     Order = 2,
     Event = 3,
     EventProblem = 4,
+    Subtask = 5,
 }
 
 impl MiscType {

@@ -10,7 +10,7 @@ const handleCodeforces = async (url: string): Promise<Problem> => {
             content: "",
             description_type: "Html",
         },
-        iden: "",
+        sign: "",
         limit: {
             time_limit: 1000,
             memory_limit: 256,
@@ -63,6 +63,7 @@ const getCodeforcesProblemWithContestID = async (id: number): Promise<[Problem, 
             is_remote: true,
             is_sync: true,
             sync_url: `https://codeforces.com/problemset/problem/${problem.contestId}/${problem.index}`,
+            sign: `CF${problem.contestId}${problem.index}`
         };
         const attach_detail: ProblemAttachDetail = {
             sign: `CF${problem.contestId}${problem.index}`,

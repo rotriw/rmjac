@@ -5,7 +5,20 @@ use rmjac_core::service::perm::provider::{System, SystemPermService};
 
 #[generate_handler(route = "/view", real_path = "/api/problem/view")]
 pub mod handler {
-    use rmjac_core::{action::problem::{CreateOption, create_problem}, error::CoreError, model::{event::{Event, EventParent, EventType}, problem::Problem, user::User}, service::{event::{create_event_iden, get_event_with_id}, perm::provider::Manage, save::{ManageService, Saved}}};
+    use rmjac_core::{
+        action::problem::{CreateOption, create_problem},
+        error::CoreError,
+        model::{
+            event::{Event, EventParent, EventType},
+            problem::Problem,
+            user::User,
+        },
+        service::{
+            event::{create_event_iden, get_event_with_id},
+            perm::provider::Manage,
+            save::{ManageService, Saved},
+        },
+    };
     use sea_orm::DatabaseConnection;
 
     use super::*;
@@ -18,7 +31,8 @@ pub mod handler {
             .lock()
             .unwrap()
             .default_system_node;
-        Manage::verify(user_id, id, Manage::View) || System::verify(user_id, system_id, System::ViewAllPage)
+        Manage::verify(user_id, id, Manage::View)
+            || System::verify(user_id, system_id, System::ViewAllPage)
     }
 
     #[export(id)]
@@ -30,10 +44,7 @@ pub mod handler {
     #[route("/get")]
     #[perm(perm)]
     #[export("problem")]
-    async fn post_view(
-        db: &DatabaseConnection,
-        id: i64,
-    ) -> ResultHandler<Saved<Problem>> {
+    async fn post_view(db: &DatabaseConnection, id: i64) -> ResultHandler<Saved<Problem>> {
         Ok(Saved::get(id).await?)
     }
 }

@@ -1,9 +1,11 @@
+import { ShowProblemCard } from "@/api-components/problem/show-problem";
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Difficulty, Event, Problem, Saved } from "@rmjac/api-declare";
 import { Check, ChevronRightIcon, Minus, X } from "lucide-react";
+import Link from "next/link";
 
 async function ShowEventCard({event, styles , ...props}: React.ComponentProps<"div"> & {
   styles: React.ClassAttributes<HTMLDivElement> | "",
@@ -20,8 +22,19 @@ async function ShowEventCard({event, styles , ...props}: React.ComponentProps<"d
   )
 }
 
+async function ShowProblems({now_iden, problems}: {problems: [Problem, string][], now_iden?: string}) {
+  return (
+    <div className="">
+      {problems.map(([problem, iden]) => (
+        <Link href={`/problem/${now_iden}${iden}`}>
+          <ShowProblemCard styles="" iden={iden} className="mb-2" key={problem.name} problem={problem} variant="inline" />
+        </Link>
+    ))}
+    </div>
+  );
 
-export async function ShowEventPage({event}: {event: Event}) {
+}
+export async function ShowEventPage({iden, event, problems}: {iden: string, event: Event, problems: [Problem, string][]}) {
   return (
     <>
       <Tabs className="mt-2" defaultValue="info">
@@ -30,9 +43,7 @@ export async function ShowEventPage({event}: {event: Event}) {
           <TabsTrigger value="problem">题目列表</TabsTrigger>
         </TabsList>
         <TabsContent value="problem">
-          <Card>
-            
-          </Card>
+          <ShowProblems now_iden={iden} problems={problems} />
         </TabsContent>
         <TabsContent value="info">
           <Card>

@@ -1,7 +1,7 @@
-use redis::TypedCommands;
-use serde::{Deserialize, Serialize};
 use crate::error::CoreError;
 use crate::utils::get_redis_connection;
+use redis::TypedCommands;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, ts_rs::TS)]
 #[ts(export)]
@@ -11,12 +11,11 @@ pub struct Saved<T> {
     pub data: T,
 }
 
-
 // 为了防止对所有值进行修改，增设此标签，使得数据存储仅存在指定类型。
 pub trait Savable {}
 
 pub trait SaveService: Sized {
-    async fn save(&self) -> crate::Result<Saved<Self>>;
+    fn save(&self) -> impl Future<Output = crate::Result<Saved<Self>>>;
 }
 
 impl IdInfo for i64 {
@@ -27,10 +26,10 @@ impl IdInfo for i64 {
 
 pub trait ManageService: Sized {
     type DataType;
-    async fn get(id: i64) -> crate::Result<Self>;
-    async fn modify_all(&self, data: Self::DataType) -> crate::Result<Self>;
-    async fn modify<V: Serialize>(&self, k: &str, v: V) -> crate::Result<()>;
-    async fn delete(&self, id: i64) -> crate::Result<()>;
+    fn get(id: i64) -> impl Future<Output = crate::Result<Self>>;
+    fn modify_all(&self, data: Self::DataType) -> impl Future<Output = crate::Result<Self>>;
+    fn modify<V: Serialize>(&self, k: &str, v: V) -> impl Future<Output = crate::Result<()>>;
+    fn delete(&self, id: i64) -> impl Future<Output = crate::Result<()>>;
 }
 
 pub async fn gen_id(redis: &mut redis::Connection) -> crate::Result<i64> {
@@ -42,10 +41,15 @@ impl<T: Serialize + Clone + Savable> SaveService for T {
     async fn save(&self) -> crate::Result<Saved<Self>> {
         let id = gen_id(&mut get_redis_connection()).await?;
         let json_data = serde_json::to_string(&self.clone())?;
-        crate::env::REDIS_CLIENT.lock().unwrap().set(id, json_data)?;
-        Ok(Saved { id, data: self.clone() })
+        crate::env::REDIS_CLIENT
+            .lock()
+            .unwrap()
+            .set(id, json_data)?;
+        Ok(Saved {
+            id,
+            data: self.clone(),
+        })
     }
-
 }
 
 impl<T: Serialize + for<'de> Deserialize<'de> + Clone> ManageService for Saved<T> {
@@ -75,10 +79,11 @@ impl<T: Serialize + for<'de> Deserialize<'de> + Clone> ManageService for Saved<T
             get_redis_connection().set(self.id, json_data)?;
             Ok(())
         } else {
-            Err(crate::error::CoreError::StringError("Data is not a JSON object".to_string()))
+            Err(crate::error::CoreError::StringError(
+                "Data is not a JSON object".to_string(),
+            ))
         }
     }
-
 
     async fn delete(&self, id: i64) -> crate::Result<()> {
         get_redis_connection().del(id)?;
@@ -90,12 +95,20 @@ pub trait IdInfo {
     fn get_id(&self) -> i64;
 }
 
-
 impl<T> IdInfo for Saved<T> {
     fn get_id(&self) -> i64 {
         self.id
     }
 }
 
-pub mod temp;
 pub mod default;
+pub mod temp;
+
+impl<T: Clone> Saved<T> {
+    pub fn map<E: From<T>>(&self) -> Saved<E> {
+        Saved {
+            id: self.id,
+            data: self.data.clone().into(),
+        }
+    }
+}

@@ -1,10 +1,10 @@
-use sea_orm::{NotSet, Set};
-use serde::{Deserialize, Serialize};
 use crate::db::SearchEdgeActiveModel;
 use crate::model::content::Description;
 use crate::model::event::{Event, EventIden};
 use crate::model::language::Language;
 use crate::service::save::Savable;
+use sea_orm::{NotSet, Set};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[ts(export)]
@@ -23,7 +23,7 @@ pub enum LuoguStyleDifficulty {
 #[ts(export)]
 pub enum Difficulty {
     NumberStyle(i64),
-    LuoguStyle(LuoguStyleDifficulty)
+    LuoguStyle(LuoguStyleDifficulty),
 }
 
 // 这并不是一个很好的做法，应该使用魔术数字。
@@ -40,10 +40,9 @@ impl From<Difficulty> for i64 {
                 LuoguStyleDifficulty::P5 => 5,
                 LuoguStyleDifficulty::P6 => 6,
                 LuoguStyleDifficulty::P7 => 7,
-            }
+            },
         }
     }
-
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
@@ -63,6 +62,7 @@ pub struct Problem {
     pub is_remote: bool,
     pub is_sync: bool,
     pub sync_url: Option<String>,
+    pub sign: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]

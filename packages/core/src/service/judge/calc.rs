@@ -4,7 +4,7 @@ use sea_orm::DatabaseConnection;
 use sea_orm::prelude::async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use crate::action::default::MiscType;
-use crate::model::judge::{JudgeInfo, Subtask};
+use crate::model::judge::{JudgeInfo, JudgeMethod, Subtask};
 use crate::model::record::{BasicRecord, DetailSubtask, DetailSubtaskChildren, DetailTestcase, JudgeStatus};
 use crate::Result;
 use crate::service::record::{BasicRecordInfo, BasicSubtaskInfo, BasicTestcaseInfo, RecordResult};
@@ -66,6 +66,9 @@ impl CalcSubtaskScore for (&HashMap<i64, JudgeInfo>, &HashMap<i64, Vec<NextJudge
             }
         }
         let next_steps = next_steps.unwrap();
+        if saved.get(&subtask.id).is_some() {
+            return saved.get(&subtask.id).unwrap().clone();
+        }
         let mut res = MixInfo {
             status: JudgeStatus::Accepted,
             total_testcase: 0,
@@ -107,14 +110,34 @@ impl CalcSubtaskScore for (&HashMap<i64, JudgeInfo>, &HashMap<i64, Vec<NextJudge
         for step in next_steps {
             match step {
                 NextJudge::Subtask(subtask) => {
-                    children.push(DetailSubtaskChildren::Subtask(self.build_tree(subtask, saved)));
+                    if saved.get(&subtask.id).is_some() {
+                        let data = saved.get(&subtask.id).unwrap();
+                        children.push(DetailSubtaskChildren::Subtask(DetailSubtask {
+                            status: data.status.clone(),
+                            name: subtask.data.get_name(),
+                            score: data.now_score,
+                            time: data.time as i64,
+                            memory: data.memory as i64,
+                            detail: vec![],
+                        }));
+                    } else {
+                        children.push(DetailSubtaskChildren::Subtask(self.build_tree(subtask, saved)));
+                    }
                 },
                 NextJudge::Testcase(testcase) => {
+                    let data = self.0.get(&testcase.id).unwrap_or(&JudgeInfo {
+                        judge_method: JudgeMethod::Unknown,
+                        status: JudgeStatus::Skipped,
+                        time: -1,
+                        memory: -1,
+                        score: 0f64,
+                        passed: false,
+                    });
                     children.push(DetailSubtaskChildren::Testcase(DetailTestcase {
-                        status: self.0.get(&testcase.id).unwrap().status.clone(),
-                        score: self.0.get(&testcase.id).unwrap().score,
-                        time: self.0.get(&testcase.id).unwrap().time,
-                        memory: self.0.get(&testcase.id).unwrap().memory,
+                        status: data.status.clone(),
+                        score: data.score,
+                        time: data.time,
+                        memory: data.memory,
                         detail: vec![],
                     }));
                 }
@@ -134,7 +157,7 @@ impl CalcSubtaskScore for (&HashMap<i64, JudgeInfo>, &HashMap<i64, Vec<NextJudge
 
 
 // record, root_subtask to refresh the score.
-impl<Record, Subtask> CalcScore for (Saved<Record>, Saved<Subtask>) where
+impl<Record, Subtask> CalcScore for (&Saved<Record>, &Saved<Subtask>) where
 Record: Send + BasicRecordInfo,
 Subtask: Send + BasicSubtaskInfo + Serialize + for<'de> Deserialize<'de> + Clone,
 {
@@ -156,6 +179,10 @@ Subtask: Send + BasicSubtaskInfo + Serialize + for<'de> Deserialize<'de> + Clone
                         }
                     },
                     NextJudge::Subtask(subtask) => {
+                        let data = self.0.on_testcase(db, subtask).await;
+                        if let Ok(data) = data {
+                            judge_info.insert(subtask.id, data);
+                        }
                         let _ = que.queue(subtask.id);
                     }
                 }
@@ -163,7 +190,7 @@ Subtask: Send + BasicSubtaskInfo + Serialize + for<'de> Deserialize<'de> + Clone
             subtask_data.insert(now_id, next_steps);
         }
         let mut result = HashMap::new();
-        let score = (&judge_info, &subtask_data).calc_subtask_score(root_subtask, &mut result);
+        let _ = (&judge_info, &subtask_data).calc_subtask_score(root_subtask, &mut result);
         Ok((&judge_info, &subtask_data).build_tree(root_subtask, &result))
     }
 }

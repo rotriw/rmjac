@@ -64,6 +64,8 @@ pub enum CoreError {
     ParseIntError(std::num::ParseIntError),
     #[display("Conflict: {}", _0)]
     Conflict(String),
+    #[display("No related subtask node for {}, Please retry another option.", _0)]
+    NoRelatedSubtask(i64)
 }
 impl From<&CoreError> for i64 {
     fn from(value: &CoreError) -> Self {
@@ -103,6 +105,7 @@ impl From<&CoreError> for i64 {
             },
             CoreError::ParseIntError(_) => 99999,
             CoreError::Conflict(_) => 100403,
+            CoreError::NoRelatedSubtask(_) => 100404
         }
     }
 }

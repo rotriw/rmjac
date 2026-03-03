@@ -169,6 +169,5 @@ pub struct DetailSubtask {
     pub detail: Vec<DetailSubtaskChildren>
 }
 
-
 impl Savable for BasicRecord {}
 impl Savable for Record {}

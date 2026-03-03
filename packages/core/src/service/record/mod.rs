@@ -4,11 +4,12 @@ use ambassador::{delegatable_trait, delegate_to_methods};
 use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter};
 use sea_orm::sea_query::ColumnRef::Column;
 use crate::error::CoreError;
-use crate::model::judge::{JudgeInfo, JudgeMethod, Subtask, Testcase, TestcaseDetail};
+use crate::model::judge::{JudgeInfo, JudgeMethod, JudgeResult, RootSubtask, Subtask, Testcase, TestcaseDetail};
 use crate::model::problem::Problem;
-use crate::model::record::{BasicRecord, JudgeStatus, JudgeTotal, Record};
+use crate::model::record::{BasicRecord, DetailTestcase, JudgeStatus, JudgeTotal, Record};
 use crate::model::user::User;
-use crate::service::save::{IdInfo, ManageService, Saved};
+use crate::service::record::subtask::{GetSubtask, SubtaskAction};
+use crate::service::save::{IdInfo, ManageService, SaveService, Saved};
 pub mod subtask;
 pub mod query;
 pub mod create;
@@ -139,11 +140,11 @@ impl<T: BasicRecordInfo> BasicRecordInfo for Saved<T> {
 }
 
 pub trait RecordResult {
-    fn on_testcase<T: BasicTestcaseInfo>(&self, db: &DatabaseConnection, testcase: &Saved<T>) -> impl Future<Output = Result<JudgeInfo>>;
+    fn on_testcase<T>(&self, db: &DatabaseConnection, testcase: &Saved<T>) -> impl Future<Output = Result<JudgeInfo>>;
 }
 
 impl<R: IdInfo + BasicRecordInfo> RecordResult for R {
-    async fn on_testcase<T: BasicTestcaseInfo>(&self, db: &DatabaseConnection, testcase: &Saved<T>) -> Result<JudgeInfo> {
+    async fn on_testcase<T>(&self, db: &DatabaseConnection, testcase: &Saved<T>) -> Result<JudgeInfo> {
         use crate::db::entity::edge::judge::*;
         let m = Entity::find()
             .filter(Column::TestcaseId.eq(testcase.id))
@@ -161,4 +162,12 @@ impl<R: IdInfo + BasicRecordInfo> RecordResult for R {
         }
         Ok(m.unwrap().judge_info)
     }
+}
+
+#[derive(Default)]
+pub struct ConnectOption {
+    // 如果此处为 Some, 并包含值，那么如果找不到测试点信息，将在此后面自动追加。
+    pub append_place: Option<i64>,
+    // 如果此项为真, 题目如果没有测试节点，则会强制创建一个默认节点。
+    pub force_create_root_subtask: bool,
 }

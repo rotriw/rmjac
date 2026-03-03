@@ -28,9 +28,10 @@ function get_color_by_passed(passed: boolean | undefined) {
   }
 }
 
-async function ShowProblemCard({history_score, passed, problem, variant, styles, with_tag, ...props}: React.ComponentProps<"div"> & {
+export async function ShowProblemCard({iden, history_score, passed, problem, variant, styles, with_tag, ...props}: React.ComponentProps<"div"> & {
   styles: React.ClassAttributes<HTMLDivElement> | "",
   problem: Problem,
+  iden: String,
   variant: "inline" | "total",
   with_tag?: boolean,
   history_score?: number,
@@ -38,7 +39,7 @@ async function ShowProblemCard({history_score, passed, problem, variant, styles,
 }) {
   if (variant === "inline") {
     return (
-      <Item variant={with_tag ? "default" : "outline"} size="sm">
+      <Item variant={with_tag ? "default" : "outline"} size="sm" {...props}>
         <ItemMedia>
           {
             passed === true ? <Check className="size-3 text-green-800" /> : passed === false ? <X className="size-3 text-red-800" /> : <Minus className="size-3" />
@@ -48,7 +49,7 @@ async function ShowProblemCard({history_score, passed, problem, variant, styles,
           }
         </ItemMedia>
         <ItemContent>
-          <ItemTitle><div><span className="font-bold">{problem.iden}</span> {problem.name}</div></ItemTitle>
+          <ItemTitle><div><span className="font-bold">{iden}</span> {problem.name}</div></ItemTitle>
         </ItemContent>
           <ItemActions>
             <ChevronRightIcon className="size-4" />
@@ -93,10 +94,10 @@ async function ShowProblemCard({history_score, passed, problem, variant, styles,
 }
 
 
-export async function ShowProblemPage({problem}: {problem: Problem}) {
+export async function ShowProblemPage({problem, iden}: {problem: Problem, iden: String}) {
   return (
     <>
-        <ShowProblemCard problem={problem} variant="total" passed={false} />
+        <ShowProblemCard iden={iden} problem={problem} variant="total" passed={false} />
     </>
   );
 }

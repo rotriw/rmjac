@@ -7,7 +7,7 @@ import { ShowEventPage } from "./render";
 import { platform } from "os";
 import { ActionMode } from "./action";
 import { Event } from "@rmjac/api-declare";
-import { postView as postEvent } from "@/api/server/api_event_view";
+import { postView as postEvent, postViewProblems } from "@/api/server/api_event_view";
 
 export default async function ProblemPage({ params }: { params: Promise<{ iden: string[] }> }) {
   const path = await params;
@@ -15,13 +15,17 @@ export default async function ProblemPage({ params }: { params: Promise<{ iden: 
   const event = await postEvent( {
     iden
   });
+  const problems = await postViewProblems({
+    iden
+  });
+
   return (
     <>
         <AppSidebar path={`event/${path.iden}`} />
         <div className="p-5 bg-white w-full">
           <TitleCard title={event.event.name} description="Event" />
           <ActionMode iden={iden} />
-          <ShowEventPage event={event.event} />
+          <ShowEventPage iden={iden} event={event.event} problems={problems.event} />
         </div>
     </>
   );

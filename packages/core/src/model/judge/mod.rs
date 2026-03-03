@@ -1,6 +1,7 @@
 use sea_orm::FromJsonQueryResult;
 use serde::{Deserialize, Serialize};
 use crate::model::record::JudgeStatus;
+// use crate::service::judge::Judge;
 use crate::service::save::Savable;
 
 #[derive(Debug, Clone, Deserialize, Serialize, ts_rs::TS)]
@@ -14,6 +15,9 @@ pub enum SubtaskDetail {
     ProblemOnly {
         problem: String,
     },
+    AutoCreate {
+        msg: String
+    }
     // LocalJudge { TODO: local judge. option.
     //
     // }
@@ -42,7 +46,7 @@ pub struct Subtask {
     pub name: String,
     pub uuid: String,
     pub limit: JudgeLimit,
-    pub option_platform: String, // judge 使用的平台。
+    pub option_platform: String, // judge 使用的平台。not in used, this is only for show.
     pub detail: SubtaskDetail,
 }
 
@@ -74,5 +78,46 @@ pub struct JudgeInfo {
     pub passed: bool,
 }
 
+impl JudgeInfo {
+    pub fn from_status(status: JudgeStatus) -> Self {
+        JudgeInfo {
+            judge_method: JudgeMethod::Unknown,
+            passed: status == JudgeStatus::Accepted,
+            score: ((status == JudgeStatus::Accepted) as i8) as f64 * 1f64,
+            status,
+            time: -1,
+            memory: -1,
+        }
+    }
+
+    pub fn with_method<T: Into<JudgeMethod>>(self, method: T) -> Self {
+        Self {
+            judge_method: method.into().clone(),
+            ..self
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ts_rs::TS)]
+#[ts(export)]
+pub struct RootSubtask {
+    // root subtask is based on subtask.
+    #[serde(flatten)]
+    pub subtask: Subtask,
+    pub platform: Option<String>,
+    pub can_judge: bool,
+
+    // pub language_server: Option<LanguageChoice> // TODO: 提供语言选项
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub enum JudgeResult {
+    PassedOnly(bool),
+    Result(JudgeInfo),
+    List(Vec<(String, JudgeInfo)>) // testcase_name, JudgeResult
+}
+
 impl Savable for Subtask {}
+impl Savable for RootSubtask {}
 impl Savable for Testcase {}

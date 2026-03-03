@@ -1,6 +1,6 @@
-use redis::TypedCommands;
 use crate::env::DefaultNodes;
 use crate::utils::get_redis_connection;
+use redis::TypedCommands;
 
 pub fn get_key(k: &str) -> i64 {
     let mut redis = get_redis_connection();

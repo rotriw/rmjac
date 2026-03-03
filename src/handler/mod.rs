@@ -150,6 +150,7 @@ pub async fn main(
             .service(search::service())
             .service(event::service())
             .service(manage::service())
+            .service(record::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {
                 error::InternalError::from_response(
                     "",
@@ -173,4 +174,5 @@ pub mod user;
 pub mod problem;
 pub mod event;
 pub mod manage;
+pub mod record;
 pub mod search;

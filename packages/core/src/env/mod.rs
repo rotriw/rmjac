@@ -1,8 +1,8 @@
 // use crate::service::iden::ac_automaton::AcMachine;
 use lazy_static::lazy_static;
 use sea_orm::DatabaseConnection;
-use socketioxide::extract::SocketRef;
 use socketioxide::SocketIo;
+use socketioxide::extract::SocketRef;
 use std::sync::Arc;
 use std::{collections::HashMap, sync::Mutex};
 
@@ -21,7 +21,7 @@ lazy_static! {
             .expect("Failed to create Redis client")
     );
     pub static ref REDIS_POOL: Mutex<r2d2::Pool<redis::Client>> = Mutex::new(
-        r2d2::Pool::builder().build(redis::Client::open(REDIS_URL.lock().unwrap().clone())
+        r2d2::Pool::builder().max_size(5000).build(redis::Client::open(REDIS_URL.lock().unwrap().clone())
             .expect("Failed to create Redis client")).unwrap()
     );
     pub static ref PATH_VIS: Mutex<HashMap<i32, HashMap<i64, bool>>> = Mutex::new(HashMap::new());

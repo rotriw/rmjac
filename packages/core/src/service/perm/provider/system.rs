@@ -10,6 +10,9 @@ pub enum System {
     All = -1,
     ViewAllPage = 1,
     CreateProblem = 2,
-    ManageEvent = 4,
-    ManageInit = 8,
+    UpdateEvent = 4,
+    CreateRecord = 8,
+    ViewAllRecord = 256,
+    ManageEvent = 512,
+    ManageInit = 1024,
 }

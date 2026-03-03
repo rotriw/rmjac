@@ -34,7 +34,12 @@ pub fn generate_handler_impl(
     let export_service = generate_export_service(handler_base_path, &service_registrations);
 
     #[cfg(feature = "export_ts_type")]
-    let value = crate::export::export_func_generate(_handler_real_path, handler_funcs, before_funcs, perm_funcs);
+    let value = crate::export::export_func_generate(
+        _handler_real_path,
+        handler_funcs,
+        before_funcs,
+        perm_funcs,
+    );
 
     Ok(quote! {
         #(#route_handlers)*
@@ -510,7 +515,7 @@ fn generate_route_function(
             use actix_web::HttpMessage;
 
             let __db = __db_actix.get_ref();
-            let mut __redis = rmjac_core::utils::get_redis_connection();
+            // let mut __redis = rmjac_core::utils::get_redis_connection();
 
             #login_check
 
