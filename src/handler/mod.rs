@@ -1,6 +1,6 @@
-use sea_orm::{ActiveModelTrait, ColumnTrait};
 pub use crate::utils::perm::{AuthTool, UserAuthCotext};
 use rmjac_core::error::CoreError;
+use sea_orm::{ActiveModelTrait, ColumnTrait};
 
 macro_rules! default_node {
     ($field:ident) => {
@@ -17,7 +17,9 @@ use actix_web::{
 };
 use derive_more::derive::Display;
 use log::LevelFilter;
-use sea_orm::{ConnectOptions, Database, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
+use sea_orm::{
+    ConnectOptions, Database, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, QuerySelect,
+};
 
 #[derive(Debug, Display)]
 pub enum HandlerError {
@@ -151,6 +153,9 @@ pub async fn main(
             .service(event::service())
             .service(manage::service())
             .service(record::service())
+            .service(training::service())
+            .service(sync::service())
+            .service(tracker::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {
                 error::InternalError::from_response(
                     "",
@@ -169,10 +174,13 @@ pub async fn main(
     .await
 }
 
-pub mod view;
-pub mod user;
-pub mod problem;
 pub mod event;
 pub mod manage;
+pub mod problem;
 pub mod record;
 pub mod search;
+pub mod sync;
+pub mod tracker;
+pub mod training;
+pub mod user;
+pub mod view;

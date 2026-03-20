@@ -101,12 +101,32 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         }),
     );
     tables.insert(
+        "edge_todo_list".to_string(),
+        table_create!(db::iden::edge::todolist_ownproblem::Enum, {
+            EdgeId: big_integer not_null primary_key auto_increment,
+            Order: big_integer not_null,
+            Description: text not_null,
+            ProblemIden: string not_null,
+        }),
+    );
+    tables.insert(
         "edge_user".to_string(),
         table_create!(db::iden::edge::user::Enum, {
             EdgeId: big_integer not_null primary_key auto_increment,
             UserIden: string not_null,
             Email: string not_null,
             UserId: big_integer not_null,
+        }),
+    );
+    tables.insert(
+        "edge_user_show".to_string(),
+        table_create!(db::iden::edge::user_own::Enum, {
+            EdgeId: big_integer not_null primary_key auto_increment,
+            UserId: big_integer not_null,
+            Data: json_binary not_null,
+            Order: big_integer not_null,
+            Description: text null,
+            PublicHide: boolean not_null,
         }),
     );
     tables
@@ -171,9 +191,23 @@ fn get_drop_tables() -> HashMap<String, TableDropStatement> {
             .to_owned(),
     );
     tables.insert(
+        "edge_todo_list".to_string(),
+        Table::drop()
+            .table(db::iden::edge::todolist_ownproblem::Enum::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
         "edge_user".to_string(),
         Table::drop()
             .table(db::iden::edge::user::Enum::Table)
+            .if_exists()
+            .to_owned(),
+    );
+    tables.insert(
+        "edge_user_show".to_string(),
+        Table::drop()
+            .table(db::iden::edge::user_own::Enum::Table)
             .if_exists()
             .to_owned(),
     );

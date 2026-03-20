@@ -1,10 +1,10 @@
-use sea_orm::{ActiveModelTrait, DatabaseConnection, NotSet, Set};
-use serde::{Deserialize, Serialize};
+use crate::Result;
 use crate::model::record::{BasicRecord, Record};
 use crate::service::create::CreateWithDB;
-use crate::Result;
 use crate::service::record::BasicRecordInfo;
 use crate::service::save::{Savable, SaveService, Saved};
+use sea_orm::{ActiveModelTrait, DatabaseConnection, NotSet, Set};
+use serde::{Deserialize, Serialize};
 
 impl<T: BasicRecordInfo + Serialize + Clone + Savable> CreateWithDB for T {
     async fn create(&self, db: &DatabaseConnection) -> Result<Saved<T>> {
@@ -21,8 +21,11 @@ impl<T: BasicRecordInfo + Serialize + Clone + Savable> CreateWithDB for T {
             record_id: Set(data.id),
             status: Set(total.status.clone()),
             language: Set(self.get_language()),
-            score: Set(total.into())
-        }.save(db).await?;
+            score: Set(total.into()),
+        }
+        .save(db)
+        .await?;
+        log::debug!("{} record created", data.id);
         Ok(data)
     }
 }

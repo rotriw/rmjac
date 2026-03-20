@@ -47,6 +47,7 @@ inventory = "0.3.21"
 ambassador = "0.5.0"
 resend-rs = "0.21.0"
 r2d2 = "0.8.10"
+hyperpolyglot = "0.1.7"
 
 [dependencies.sea-orm-migration]
 version = "1.0.0-rc.5"

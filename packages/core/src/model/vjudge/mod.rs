@@ -9,6 +9,7 @@ pub enum VjudgeAuth {
     Apikey {
         key: String,
         secret: String,
+        username: String,
     },
     Cookie {
         cookies: HashMap<String, String>

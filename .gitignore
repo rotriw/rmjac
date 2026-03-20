@@ -7,6 +7,9 @@ node_modules
 # redis cache
 
 dump.rdb
+appendonlydir/*
+packages/appendonlydir
+packages/appendonlydir/**/*
 
 *.out
 *.log

@@ -26,7 +26,7 @@ pub mod handler {
         },
     };
     use sea_orm::DatabaseConnection;
-
+    use rmjac_core::model::record::JudgeStatus;
     use super::*;
 
     #[perm]
@@ -46,7 +46,8 @@ pub mod handler {
         problem_iden: Option<String>,
         offset: u64,
         show_number: u64,
+        status: Option<JudgeStatus>
     ) -> ResultHandler<Vec<QueryResult>> {
-        Ok(query_global(db, problem_iden.as_deref(), user_id, offset, show_number).await?)
+        Ok(query_global(db, status, problem_iden.as_deref(), user_id, offset, show_number).await?)
     }
 }

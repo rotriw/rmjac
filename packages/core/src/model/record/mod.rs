@@ -1,11 +1,13 @@
+use crate::model::user::Token;
+use crate::service::save::Savable;
 use chrono::{DateTime, Utc};
 use sea_orm::FromJsonQueryResult;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumCount;
-use crate::model::user::Token;
-use crate::service::save::Savable;
 
-#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS, EnumCount, FromJsonQueryResult, PartialEq)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, ts_rs::TS, EnumCount, FromJsonQueryResult, PartialEq, Copy
+)]
 #[ts(export)]
 #[repr(i64)]
 pub enum JudgeStatus {
@@ -40,7 +42,7 @@ pub enum ShowStyle {
         score: f64,
         time: i64,
         memory: i64,
-        url: String
+        url: String,
     }, // 远程评测数据
     Archive {
         score: f64,
@@ -56,10 +58,9 @@ pub enum ShowStyle {
     #[default]
     OnlyPassed, // 只知道是否通过。
     WaitingSync {
-        url: String
+        url: String,
     }, // 仅包含一个url
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[ts(export)]
@@ -77,30 +78,29 @@ pub struct RemoteJudgeInfo {
 pub struct JudgeTotal {
     pub is_passed: bool,
     pub status: JudgeStatus,
-    pub detail: ShowStyle
+    pub detail: ShowStyle,
 }
 
 impl JudgeTotal {
     pub fn get_time(&self) -> i64 {
         match self.detail {
-            ShowStyle::CFSync { time, ..}
-            | ShowStyle::LocalJudge {time, ..}
-            | ShowStyle::RemoteJudge {time, ..}
-            | ShowStyle::Archive {time, ..} => { time }
-            _ => -1
+            ShowStyle::CFSync { time, .. }
+            | ShowStyle::LocalJudge { time, .. }
+            | ShowStyle::RemoteJudge { time, .. }
+            | ShowStyle::Archive { time, .. } => time,
+            _ => -1,
         }
     }
 
     pub fn get_memory(&self) -> i64 {
         match self.detail {
-            ShowStyle::CFSync { memory, ..}
-            | ShowStyle::LocalJudge { memory, ..}
-            | ShowStyle::RemoteJudge { memory, ..}
-            | ShowStyle::Archive { memory, ..} => { memory }
-            _ => -1
+            ShowStyle::CFSync { memory, .. }
+            | ShowStyle::LocalJudge { memory, .. }
+            | ShowStyle::RemoteJudge { memory, .. }
+            | ShowStyle::Archive { memory, .. } => memory,
+            _ => -1,
         }
     }
-
 }
 
 impl From<JudgeTotal> for f64 {
@@ -112,11 +112,12 @@ impl From<JudgeTotal> for f64 {
                 ShowStyle::RemoteJudge { score, .. }
                 | ShowStyle::LocalJudge { score, .. }
                 | ShowStyle::Archive { score, .. } => score,
-                ShowStyle::WaitingSync { .. } | ShowStyle::OnlyPassed | ShowStyle::CFSync {..} => 0f64,
+                ShowStyle::WaitingSync { .. }
+                | ShowStyle::OnlyPassed
+                | ShowStyle::CFSync { .. } => 0f64,
             }
         }
     }
-
 }
 
 /// Basic record is the most basic of record, it must contains the problem id and the score.
@@ -144,18 +145,19 @@ pub struct Record {
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[ts(export)]
 pub struct DetailTestcase {
+    pub name: String,
     pub status: JudgeStatus,
     pub score: f64,
     pub time: i64,
     pub memory: i64,
-    pub detail: Vec<DetailSubtask>
+    pub detail: Vec<DetailSubtask>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[ts(export)]
 pub enum DetailSubtaskChildren {
     Subtask(DetailSubtask),
-    Testcase(DetailTestcase)
+    Testcase(DetailTestcase),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
@@ -166,7 +168,7 @@ pub struct DetailSubtask {
     pub score: f64,
     pub time: i64,
     pub memory: i64,
-    pub detail: Vec<DetailSubtaskChildren>
+    pub detail: Vec<DetailSubtaskChildren>,
 }
 
 impl Savable for BasicRecord {}

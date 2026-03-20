@@ -1,8 +1,6 @@
 import { JSDOM } from "jsdom";
 import { Problem, ProblemStatement, ContentType } from "../../declare/problem.ts";
 import TurndownService from 'turndown';
-import { markdownToTypstCode } from "@mdpdf/mdpdf";
-import { convertTex2Typst } from "../../utils/texToTypst.ts";
 
 export const classNameReflect = {
     "tex-formula": ["<span>", "</span>"],
@@ -28,18 +26,19 @@ const convertCSS = (value: Element): Element => {
     return value;
 }
 
-const convertEasyHTMLToTypst = async(res: string): Promise<string> => {
+const convertEasyHTMLToMarkdown = async(res: string): Promise<string> => {
     const turndownService = new TurndownService({ option: 'value' });
-    turndownService.addRule('typstMath', {
+    turndownService.addRule('latexMath', {
         filter: ['typst'],
         replacement: function (_content: string, node: any, _options: any) {
-            return '%typststart%' + (node as any).innerHTML + '%typstend%'
+            // 保留原始 LaTeX，用 $...$ 包裹
+            return '%mathstart%' + (node as any).innerHTML + '%mathend%'
         }
     });
     turndownService.addRule('image', {
         filter: ['img'],
         replacement: function (_content: string, node: any, _options: any) {
-            return '%imgstart%' + (node as any).src + '%imgdone%'
+            return `![image](${(node as any).src})`
         }
     });
     turndownService.addRule('center', {
@@ -57,35 +56,34 @@ const convertEasyHTMLToTypst = async(res: string): Promise<string> => {
     turndownService.addRule('small', {
         filter: ['small'],
         replacement: function (content: string, _node: any, _options: any) {
-            return '%smallstart%' + content + '%smallend%'
+            return content
         }
     });
     res = turndownService.turndown(res);
-    res = await markdownToTypstCode(res);
-    res = res.split('\n').filter(line => !line.startsWith('#set ') && !line.startsWith('#let ') && !line.startsWith('#show') && line.replaceAll(" ", "").length > 0).join('\n');
+    // 不再调用 markdownToTypstCode，直接保留 Markdown
     res = res.replace(/<br>/g, '\n');
     res = res.replace(/&nbsp;/g, ' ');
     res = res.replace(/</g, '<');
     res = res.replace(/>/g, '>');
-    res = res.replaceAll(/%imgstart%(.*?)%imgdone%/g, (_match, p1) => {
-            return `#figure(image("${p1.replaceAll('\\/', '/')}", width: 60%))`
-    })
-    res = res.replaceAll(/%smallstart%(.*?)%smallend%/g, (_match, p1) => {
-            return `${p1}`
-    })
+    // epigraph 处理为 blockquote
     res = res.replaceAll(/%epigraph%(.*?)%endepigraph%/g, (_match, p1) => {
-        return `#(epigraph.wrapper)[${p1}]`
+        return `> ${p1}`
     })
     res = res.replaceAll(/%epigraphtext%(.*?)%endepigraphtext%/g, (_match, p1) => {
-        return `#(epigraph.text)[${p1}]`
+        return `> ${p1}`
     })
     res = res.replaceAll(/%epigraphsource%(.*?)%endepigraphsource%/g, (_match, p1) => {
-        return `#(epigraph.source)[${p1}]`
+        return `> — ${p1}`
     })
-    res = res.replaceAll(/%typststart%(.*?)%typstend%/g, (_match, p1) => {
-        return `$${p1.replaceAll('\\\\', '%xgg%').replaceAll('\\', '').replaceAll('%xgg%', '\\')}$`
-    })
-
+    // 反转义 Turndown 的转义字符（仅在 LaTeX 公式外部）
+    // 先把数学公式占位符中的内容保护起来
+    const mathSegments: string[] = [];
+    res = res.replaceAll(/%mathstart%(.*?)%mathend%/g, (_match, p1) => {
+        const idx = mathSegments.length;
+        mathSegments.push(p1);
+        return `%%MATH_PROTECTED_${idx}%%`;
+    });
+    // 在公式外部反转义
     res = res.replaceAll("\\_", "_");
     res = res.replaceAll("\\*", "*");
     res = res.replaceAll("\\#", "#");
@@ -94,6 +92,10 @@ const convertEasyHTMLToTypst = async(res: string): Promise<string> => {
     res = res.replaceAll("\\(", "(");
     res = res.replaceAll("\\)", ")");
     res = res.replaceAll("\\|", "|");
+    // 还原数学公式，保留原始 LaTeX 不受反转义影响
+    res = res.replaceAll(/%%MATH_PROTECTED_(\d+)%%/g, (_match, idx) => {
+        return `$${mathSegments[parseInt(idx)]}$`;
+    });
     return res;
 }
 
@@ -101,11 +103,13 @@ const convertToEasyHTML = (value: Element): string => {
     let res = value.innerHTML;
     res = res.replaceAll(/<br>/g, '\n');
     res = res.replaceAll(/&nbsp;/g, ' ');
-    res = res.replaceAll(/</g, '<');
-    res = res.replaceAll(/>/g, '>');
+    res = res.replaceAll(/&lt;/g, '<');
+    res = res.replaceAll(/&gt;/g, '>');
+    res = res.replaceAll(/&amp;/g, '&');
+    // 保留原始 LaTeX（不再转 Typst），用 <typst> 标签包裹以便 Turndown 规则处理
     const regex = /\$\$\$(.*?)\$\$\$/gs;
     res = res.replaceAll(regex, function(_match, p1) {
-        return `<typst>${convertTex2Typst(p1)}</typst>`;
+        return `<typst>${p1}</typst>`;
     });
     res = res.replaceAll(/<typst>#none\^"(.*?)"<\/typst>/g, (_match, p1) => {
         return `%footnote%${p1}%endfootnote%`;
@@ -118,10 +122,10 @@ export const convertHTML = async (value: Element): Promise<string> => {
     const lafootnote = value.querySelector('.statement-footnote');
     value.querySelector('.statement-footnote')?.remove();
     let res = convertToEasyHTML(value);
-    res = await convertEasyHTMLToTypst(res);
+    res = await convertEasyHTMLToMarkdown(res);
     if (lafootnote) {
         let footnote = convertToEasyHTML(lafootnote);
-        footnote = await convertEasyHTMLToTypst(footnote);
+        footnote = await convertEasyHTMLToMarkdown(footnote);
         footnote = footnote.replaceAll(/%footnote%(.*?)%endfootnote%/g, (_match, p1) => {
             return `<comment>${p1}:`
         });
@@ -129,16 +133,16 @@ export const convertHTML = async (value: Element): Promise<string> => {
         for (let i = 1; i < footnoteParts.length; i++) {
             const parts = footnoteParts[i].split(':');
             const content = parts.slice(1).join(':').trim();
-            res = res.replaceAll(`%footnote%${parts[0].trim()}%endfootnote%`, `#footnote[${content}]`);
+            res = res.replaceAll(`%footnote%${parts[0].trim()}%endfootnote%`, `[^${parts[0].trim()}]: ${content}`);
         }
     }
     res = res.replaceAll(/%footnote%(.*?)%endfootnote%/g, (_match, p1) => {
-        return `#footnote[Unknown footnote: ${p1}]`;
+        return `[^${p1}]`;
     });
     return res;
 }
 
-export const convertCodeforcesDomToTypst = async (dom: JSDOM): Promise<ContentType[]> => {
+export const convertCodeforcesDomToMarkdown = async (dom: JSDOM): Promise<ContentType[]> => {
     const content = dom.window.document.querySelector('.problem-statement');
     if (content == null) {
         return [];
@@ -226,7 +230,7 @@ export const parse = async (html: string, url: string): Promise<Problem | ""> =>
     let difficulty: number | null = null;
 
     const buildProblem = (problemStatement: ProblemStatement, name: string, tags: string[]): Problem => ({
-        problem_iden: `RmjCF${problemIden}`,
+        problem_iden: `CF${problemIden}`,
         problem_name: name,
         problem_statement: [problemStatement],
         creation_time: new Date().toISOString(),
@@ -265,7 +269,7 @@ export const parse = async (html: string, url: string): Promise<Problem | ""> =>
         });
         difficulty = diff === -1 ? null : diff;
 
-        const problemStatements = await convertCodeforcesDomToTypst(dom);
+        const problemStatements = await convertCodeforcesDomToMarkdown(dom);
         if (problemStatements.length === 0) throw new Error("Empty problem statements parsed");
 
         const problemStatement: ProblemStatement = {

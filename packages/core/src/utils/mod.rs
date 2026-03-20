@@ -2,6 +2,7 @@ use crate::env;
 use crate::env::db::refresh_redis;
 
 pub mod encrypt;
+pub mod select;
 
 pub fn get_redis_connection() -> r2d2::PooledConnection<redis::Client> {
     let locked = env::REDIS_POOL.lock();

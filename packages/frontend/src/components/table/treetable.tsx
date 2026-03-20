@@ -172,7 +172,7 @@ const TreeNode = ({
             {dragHandleProps && (
               <div
                 {...dragHandleProps}
-                className="shrink-0 mr-1 cursor-grab active:cursor-grabbing p-1 hover:bg-black/5 rounded"
+                className="shrink-0 mr-0.5 cursor-grab active:cursor-grabbing p-1 hover:bg-black/5 rounded"
                 onClick={(e) => e.stopPropagation()}
               >
                 <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
@@ -231,7 +231,7 @@ const TreeNode = ({
                 // Standard Rendering for non-root / non-special nodes
                 <div className="flex-1 flex items-center min-w-0">
                      {node.content_title && <div className="flex items-center">
-                        <Badge style={{background: darkerColor}} className="text-white mr-2">
+                        <Badge style={{background: darkerColor}} className="text-white mr-2 py-3 rounded-md">
                         {node.content_title}
                         </Badge>
                      </div>

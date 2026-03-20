@@ -86,6 +86,29 @@ pub enum ProblemStatementType {
 impl Savable for Problem {}
 impl Savable for ProblemStatement {}
 
+/// Tracker 等场景使用的轻量题目信息（不含 description 等大字段）
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct ProblemBrief {
+    pub id: i64,
+    pub name: String,
+    pub sign: Option<String>,
+    pub platform: String,
+    pub difficulty: Difficulty,
+}
+
+impl From<crate::service::save::Saved<Problem>> for ProblemBrief {
+    fn from(saved: crate::service::save::Saved<Problem>) -> Self {
+        ProblemBrief {
+            id: saved.id,
+            name: saved.data.name,
+            sign: saved.data.sign,
+            platform: saved.data.platform,
+            difficulty: saved.data.difficulty,
+        }
+    }
+}
+
 impl Into<SearchEdgeActiveModel> for EventIden<Problem> {
     fn into(self) -> SearchEdgeActiveModel {
         SearchEdgeActiveModel {

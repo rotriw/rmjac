@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::model::content::Description;
 use crate::service::save::Savable;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[ts(export)]
@@ -17,15 +17,15 @@ pub struct Training {
 pub enum TrainingItemContent {
     Problem(i64), // problem id
     TrainingList(String), // Training uuid
-    // Event(String) // 引入训练。
-    // PresetTraining TODO: PresetTraining
+                  // Event(String) // 引入训练。
+                  // PresetTraining TODO: PresetTraining
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[ts(export)]
 pub struct TrainingItem {
     pub uuid: String, // the item only method.
-    pub order: i64, // order in training.
+    pub order: i64,   // order in training.
     pub description: Description,
     pub sign: String, // show the item data.
     pub content: TrainingItemContent,
@@ -36,8 +36,16 @@ pub struct TrainingItem {
 pub enum TrainingItemRecursive {
     Problem(i64), // problem id
     TrainingList(String, Vec<TrainingItemRecursive>), // Training uuid and its items.
-    // PresetTraining TODO: PresetTraining
+                  // PresetTraining TODO: PresetTraining
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct TodoList {
+    pub color: String,       // todo list color.
+    pub description: String, // todo list description.
 }
 
 impl Savable for Training {}
 impl Savable for TrainingItem {}
+impl Savable for TodoList {}

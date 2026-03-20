@@ -12,6 +12,7 @@ pub enum System {
     CreateProblem = 2,
     UpdateEvent = 4,
     CreateRecord = 8,
+    ViewAllTraining = 128,
     ViewAllRecord = 256,
     ManageEvent = 512,
     ManageInit = 1024,

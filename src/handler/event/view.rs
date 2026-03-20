@@ -14,7 +14,7 @@ pub mod handler {
         error::CoreError,
         model::{
             event::{Event, EventParent, EventType},
-            problem::Problem,
+            problem::{Problem, ProblemBrief},
             user::User,
         },
         service::{
@@ -62,6 +62,57 @@ pub mod handler {
     ) -> ResultHandler<Vec<(Saved<Problem>, String)>> {
         let event = Saved::<Event>::get(id).await?;
         Ok(event.get_problems(db).await?)
+    }
+
+    #[handler]
+    #[route("/events_next")]
+    #[perm(perm)]
+    #[export("event")]
+    async fn post_view_next_level_event(
+        db: &DatabaseConnection,
+        id: i64,
+    ) -> ResultHandler<Vec<Saved<Event>>> {
+        let event = Saved::<Event>::get(id).await?;
+        Ok(event.get_next_events(db).await?)
+    }
+
+    #[handler]
+    #[route("/events_next_ordered")]
+    #[perm(perm)]
+    #[export("event")]
+    async fn post_view_next_level_event_ordered(
+        db: &DatabaseConnection,
+        id: i64,
+        desc: Option<bool>,
+        filter: Option<String>,
+    ) -> ResultHandler<Vec<Saved<Event>>> {
+        let event = Saved::<Event>::get(id).await?;
+        Ok(event.get_next_events_ordered(db, desc.unwrap_or(true), filter.as_deref()).await?)
+    }
+
+    /// 批量返回子事件及其 problems（精简版，支持分页）
+    /// 返回 { event: [...], total: N }
+    #[handler]
+    #[route("/events_next_ordered_full")]
+    #[perm(perm)]
+    #[export("event", "total")]
+    async fn post_view_next_level_event_ordered_full(
+        db: &DatabaseConnection,
+        id: i64,
+        desc: Option<bool>,
+        filter: Option<String>,
+        offset: Option<usize>,
+        limit: Option<usize>,
+    ) -> ResultHandler<(Vec<(Saved<Event>, Vec<(ProblemBrief, String)>)>, usize)> {
+        let event = Saved::<Event>::get(id).await?;
+        let (data, total) = event.get_next_events_ordered_with_problems_brief(
+            db,
+            desc.unwrap_or(true),
+            filter.as_deref(),
+            offset,
+            limit,
+        ).await?;
+        Ok((data, total))
     }
 
     #[perm]

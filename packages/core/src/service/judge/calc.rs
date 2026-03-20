@@ -134,6 +134,7 @@ impl CalcSubtaskScore for (&HashMap<i64, JudgeInfo>, &HashMap<i64, Vec<NextJudge
                         passed: false,
                     });
                     children.push(DetailSubtaskChildren::Testcase(DetailTestcase {
+                        name: testcase.data.name.clone(),
                         status: data.status.clone(),
                         score: data.score,
                         time: data.time,

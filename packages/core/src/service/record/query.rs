@@ -114,6 +114,7 @@ impl QueryResult {
 
 pub async fn query_global(
     db: &DatabaseConnection,
+    problem_status: Option<JudgeStatus>,
     problem_iden: Option<&str>,
     uid: Option<i64>,
     offset: u64,
@@ -127,6 +128,9 @@ pub async fn query_global(
     }
     if let Some(uid) = uid {
         query = query.filter(Column::UserId.eq(uid));
+    }
+    if let Some(status) = problem_status {
+        query = query.filter(Column::Status.eq(status));
     }
     let query_data = query
         .order_by(Column::EdgeId, Order::Desc)
@@ -156,4 +160,42 @@ pub async fn query_global(
         res.push(QueryResult::new(&user, &problem, &record));
     }
     Ok(res)
+}
+
+/// Batch query: for each (user_id, problem_id) pair, return (user_id, problem_id, passed, best_score).
+/// This avoids the N+1 query problem when building a tracker table.
+pub async fn query_batch_user_problem_status(
+    db: &DatabaseConnection,
+    user_ids: &[i64],
+    problem_ids: &[i64],
+) -> Result<Vec<(i64, i64, bool, f64)>> {
+    use crate::db::entity::edge::record::*;
+
+    if user_ids.is_empty() || problem_ids.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let records = Entity::find()
+        .filter(Column::UserId.is_in(user_ids.to_vec()))
+        .filter(Column::ProblemId.is_in(problem_ids.to_vec()))
+        .all(db)
+        .await?;
+
+    // Aggregate: group by (user_id, problem_id) → (passed, best_score)
+    use std::collections::HashMap;
+    let mut agg: HashMap<(i64, i64), (bool, f64)> = HashMap::new();
+    for r in records {
+        let entry = agg.entry((r.user_id, r.problem_id)).or_insert((false, -1.0));
+        if r.status == JudgeStatus::Accepted {
+            entry.0 = true;
+        }
+        if r.score > entry.1 {
+            entry.1 = r.score;
+        }
+    }
+
+    Ok(agg
+        .into_iter()
+        .map(|((uid, pid), (passed, score))| (uid, pid, passed, score))
+        .collect())
 }

@@ -112,3 +112,24 @@ impl<T: Clone> Saved<T> {
         }
     }
 }
+
+/// 批量从 Redis 获取多个 id 的数据（使用 pipeline 减少 RTT）
+/// 返回结果与输入 ids 顺序一致，找不到的 id 跳过
+pub async fn batch_get_raw(ids: &[i64]) -> crate::Result<Vec<(i64, String)>> {
+    if ids.is_empty() {
+        return Ok(vec![]);
+    }
+    let mut redis = get_redis_connection();
+    let mut pipe = redis::pipe();
+    for &id in ids {
+        pipe.cmd("GET").arg(id);
+    }
+    let results: Vec<Option<String>> = pipe.query(&mut *redis)?;
+    let mut out = Vec::with_capacity(ids.len());
+    for (i, json_opt) in results.into_iter().enumerate() {
+        if let Some(json) = json_opt {
+            out.push((ids[i], json));
+        }
+    }
+    Ok(out)
+}

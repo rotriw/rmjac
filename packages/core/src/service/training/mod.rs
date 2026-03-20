@@ -1,14 +1,14 @@
-use std::cmp::max;
-use std::collections::HashMap;
-use sea_orm::DatabaseConnection;
-use serde::{Deserialize, Serialize};
+use crate::Result;
 use crate::action::default::MiscType;
 use crate::model::content::Description;
 use crate::model::problem::Problem;
 use crate::model::training::{Training, TrainingItem, TrainingItemContent};
-use crate::Result;
 use crate::service::problem::BasicProblemInfo;
 use crate::service::save::{ManageService, SaveService, Saved};
+use sea_orm::DatabaseConnection;
+use serde::{Deserialize, Serialize};
+use std::cmp::max;
+use std::collections::HashMap;
 
 pub trait TrainingItemTrait {
     fn get_content(&self) -> TrainingItemContent;
@@ -35,18 +35,36 @@ impl TrainingItemTrait for Saved<Problem> {
 }
 
 pub trait TrainingManage {
-    fn add_training_item<T: TrainingItemTrait>(&self, db: &DatabaseConnection, sign: &str, problem: &T) -> impl Future<Output = Result<Saved<TrainingItem>>>;
-    fn reorder_item(&self, db: &DatabaseConnection, new_order: Vec<String>) -> impl Future<Output = Result<()>>; // new_order with uuid.
-    fn delete_item(&self, db: &DatabaseConnection, remove_items: Vec<String>) -> impl Future<Output = Result<()>>;
+    fn add_training_item<T: TrainingItemTrait>(
+        &self,
+        db: &DatabaseConnection,
+        sign: &str,
+        problem: &T,
+    ) -> impl Future<Output = Result<Saved<TrainingItem>>>;
+    fn reorder_item(
+        &self,
+        db: &DatabaseConnection,
+        new_order: Vec<String>,
+    ) -> impl Future<Output = Result<()>>; // new_order with uuid.
+    fn delete_item(
+        &self,
+        db: &DatabaseConnection,
+        remove_items: Vec<String>,
+    ) -> impl Future<Output = Result<()>>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Order {
-    order: i64
+    order: i64,
 }
 
 impl<F> TrainingManage for Saved<F> {
-    async fn add_training_item<T: TrainingItemTrait>(&self, db: &DatabaseConnection, sign: &str, item: &T) -> Result<Saved<TrainingItem>> {
+    async fn add_training_item<T: TrainingItemTrait>(
+        &self,
+        db: &DatabaseConnection,
+        sign: &str,
+        item: &T,
+    ) -> Result<Saved<TrainingItem>> {
         let now_list = MiscType::Order.get_next_list(db, self.id).await?;
         let mut now_max = -1i64;
         for item in now_list {
@@ -98,9 +116,11 @@ impl<F> TrainingManage for Saved<F> {
                 remove.push(item);
             }
         }
-        MiscType::Order.remove_with_fn(db, self.id, |_from, to| {
-            remove.contains(&to)
-        }).await?;
+        MiscType::Order
+            .remove_with_fn(db, self.id, |_from, to| remove.contains(&to))
+            .await?;
         Ok(())
     }
 }
+
+pub mod todo;

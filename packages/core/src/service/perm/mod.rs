@@ -18,12 +18,14 @@ pub trait View {
 
 impl<T> View for Saved<T> {
     async fn set_public_view(&self, db: &DatabaseConnection) -> Result<()> {
-        ManagePermService::add(default_node!(default_strategy_node), self.id, Manage::View, db).await;
+        let default_strategy_node = default_node!(default_strategy_node);
+        ManagePermService::add(default_strategy_node, self.id, Manage::View, db).await;
         Ok(())
     }
 
     async fn set_guest_view(&self, db: &DatabaseConnection) -> Result<()> {
-        ManagePermService::add(default_node!(guest_user_node), self.id, Manage::View, db).await;
+        let guest_user_node = default_node!(guest_user_node);
+        ManagePermService::add(guest_user_node, self.id, Manage::View, db).await;
         Ok(())
     }
 
