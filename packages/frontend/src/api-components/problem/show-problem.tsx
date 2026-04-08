@@ -76,7 +76,7 @@ export async function ShowProblemCard({iden, history_score, passed, problem, var
           </CardTitle>
           <CardDescription>
             <span className="inline-flex items-center gap-2">
-              {problem.iden}
+              {problem.sign}
               <DifficultyBadge difficulty={problem.difficulty} size="sm" />
             </span>
           </CardDescription>

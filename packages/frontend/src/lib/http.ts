@@ -33,7 +33,7 @@ async function request<TRequest, TResponse>(
       // Handle API errors or non-2xx HTTP status codes
       console.log(jsonResponse);
       console.error(`API Error: ${jsonResponse || response.statusText}`);
-      throw new Error(jsonResponse?.error || JSON.stringify(jsonResponse) || "An unknown API error occurred.");
+      throw new Error((jsonResponse as any)?.error || JSON.stringify(jsonResponse) || "An unknown API error occurred.");
     }
     console.log(jsonResponse);
 
@@ -68,16 +68,16 @@ export function get<TResponse>(
   return request<undefined, TResponse>("GET", `${url}${buildQueryString(params)}`);
 }
 
-export function post<TRequest, TResponse>(
+export function post<TResponse, TRequest=any>(
   url: string,
-  body: TRequest
+  body?: TRequest
 ): Promise<ApiResponse<TResponse>> {
   return request<TRequest, TResponse>("POST", url, body);
 }
 
-export function put<TRequest, TResponse>(
+export function put<TResponse, TRequest=any>(
   url: string,
-  body: TRequest
+  body?: TRequest
 ): Promise<ApiResponse<TResponse>> {
   return request<TRequest, TResponse>("PUT", url, body);
 }

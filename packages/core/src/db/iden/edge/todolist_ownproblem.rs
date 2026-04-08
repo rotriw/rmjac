@@ -6,6 +6,8 @@ pub enum Enum {
     Table,
     EdgeId,
     Order,
+    TodoListId,
+    ProblemId,
     Description,
     ProblemIden,
 }

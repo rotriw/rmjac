@@ -5,6 +5,8 @@ interface ApiResponse<T> {
   code: number;
   msg?: string;
   data?: T;
+  error?: string;
+  message?: string;
 }
 
 async function request<TRequest, TResponse>(
@@ -75,16 +77,16 @@ export function get<TResponse>(
   return request<undefined, TResponse>("GET", `${url}${buildQueryString(params)}`);
 }
 
-export function post<TRequest, TResponse>(
+export function post<TResponse, TRequest=any>(
   url: string,
-  body: TRequest
+  body?: TRequest
 ): Promise<ApiResponse<TResponse>> {
   return request<TRequest, TResponse>("POST", url, body);
 }
 
-export function put<TRequest, TResponse>(
+export function put<TResponse, TRequest=any>(
   url: string,
-  body: TRequest
+  body?: TRequest
 ): Promise<ApiResponse<TResponse>> {
   return request<TRequest, TResponse>("PUT", url, body);
 }

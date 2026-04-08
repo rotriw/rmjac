@@ -7,4 +7,5 @@ pub enum Language {
     English,
     Japanese,
     Russian,
+    Formal,
 }

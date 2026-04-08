@@ -28,7 +28,7 @@ pub mod handler {
     use crate::handler::UserAuthCotext;
     use rmjac_core::error::CoreError::StringError;
     use rmjac_core::model::content::{Description, DescriptionType};
-    use rmjac_core::model::user::{Token, User};
+    use rmjac_core::model::user::{DisplayUser, Token, User};
     use rmjac_core::service::user::{Login, UserVerify, VerifyLogin, verified_iden};
     use rmjac_core::utils::encrypt::encode_password;
     use crate::handler::HttpError::CoreError;
@@ -85,7 +85,7 @@ pub mod handler {
         avatar: &str,
         password: &str,
         ensure_verify: bool,
-    ) -> ResultHandler<Saved<User>> {
+    ) -> ResultHandler<Saved<DisplayUser>> {
         let data = rmjac_core::action::user::register::register_user(db, User {
             iden: iden.to_string(),
             name: name.to_string(),
@@ -98,7 +98,7 @@ pub mod handler {
             avatar: avatar.to_string(),
             creation_time: chrono::Utc::now(),
         }).await?;
-        Ok(data)
+        Ok(data.map())
     }
 
     #[handler]

@@ -46,6 +46,25 @@ pub struct TodoList {
     pub description: String, // todo list description.
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct TodoProblemItem {
+    pub edge_id: i64,
+    pub order: i64,
+    pub problem_id: i64,
+    pub problem_iden: String,
+    pub description: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct TodoListItem {
+    pub id: i64,
+    pub color: String,
+    pub description: String,
+    pub problems: Vec<TodoProblemItem>,
+}
+
 impl Savable for Training {}
 impl Savable for TrainingItem {}
 impl Savable for TodoList {}

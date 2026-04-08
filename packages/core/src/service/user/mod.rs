@@ -55,6 +55,7 @@ pub trait Logout {
 }
 
 pub mod from;
+pub mod profile;
 
 
 /// 账户是否已完成验证。

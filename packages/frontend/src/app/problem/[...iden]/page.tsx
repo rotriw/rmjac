@@ -21,7 +21,7 @@ export default async function ProblemPage({ params }: { params: Promise<{ iden: 
           <ActionMode iden={path.iden.join("/")} sign={problem.problem.sign ?? undefined} />
           <ShowProblemPage iden={problemIden} problem={problem.problem} />
           <ProblemStatementViewer
-            problemIden={problem.problem.sign}
+            problemIden={problem.problem.sign || ""}
             sign={problem.problem.sign ?? undefined}
           />
         </div>

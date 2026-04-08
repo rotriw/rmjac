@@ -184,6 +184,9 @@ fn rust_type_to_ts_name(ty: &syn::Type) -> String {
                 }
                 // 其他类型：如果带泛型则保持泛型结构，否则直接类型名
                 _ => {
+                    if type_name == "Record" {
+                        return "ApiRecord".to_string();
+                    }
                     if let Some(last_segment) = last_segment {
                         if let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments {
                             let generic_args: Vec<String> = args
@@ -213,6 +216,13 @@ fn rust_type_to_ts_name(ty: &syn::Type) -> String {
             }
         }
         _ => "unknown".to_string(),
+    }
+}
+
+fn to_import_item(ty: &str) -> String {
+    match ty {
+        "ApiRecord" => "Record as ApiRecord".to_string(),
+        _ => ty.to_string(),
     }
 }
 
@@ -597,7 +607,8 @@ fn update_type_imports(content: &str, used_types: &[String], _header_template: &
     let type_imports_str = if used_types.is_empty() {
         String::new()
     } else {
-        used_types.join(", ")
+        let mapped: Vec<String> = used_types.iter().map(|ty| to_import_item(ty)).collect();
+        mapped.join(", ")
     };
 
     // 查找并替换 {{type_imports}} 模板变量（用于新文件）
@@ -714,7 +725,11 @@ fn extract_imported_types(content: &str) -> Vec<String> {
                     for ty in types_str.split(',') {
                         let ty = ty.trim();
                         if !ty.is_empty() {
-                            types.push(ty.to_string());
+                            if let Some((_, alias)) = ty.split_once(" as ") {
+                                types.push(alias.trim().to_string());
+                            } else {
+                                types.push(ty.to_string());
+                            }
                         }
                     }
                 }

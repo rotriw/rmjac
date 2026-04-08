@@ -1,6 +1,6 @@
 "use client"
 
-import { type LucideIcon } from "lucide-react"
+import { type ComponentType } from "react"
 
 import * as Icon from "lucide-react";
 
@@ -14,7 +14,8 @@ export function ShowIcon({
 }: {
   icon: string
 }) {
-  const IconC = Icon[icon];
+  const iconMap = Icon as unknown as Record<string, ComponentType>
+  const IconC = iconMap[icon] ?? Icon.Circle;
   return (<IconC />);
 }
 

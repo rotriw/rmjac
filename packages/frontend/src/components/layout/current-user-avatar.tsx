@@ -12,6 +12,34 @@ import { LogOut, Settings, User } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { getGravatarUrl } from "@/lib/gravatar"
+import { postSidebar } from "@/api/client/api_view_default"
+
+type UserData = {
+  iden: string
+  name: string
+  avatar?: string
+  email?: string
+}
+
+async function getUserInfo(): Promise<{ is_login: boolean; user: UserData | null }> {
+  try {
+    const sidebar = await postSidebar({ path: "problem" })
+    const userLink = sidebar.data?.find((item) => item.path?.startsWith("/user/"))?.path
+    if (!userLink) {
+      return { is_login: false, user: null }
+    }
+    const iden = userLink.replace(/^\/user\//, "")
+    return {
+      is_login: true,
+      user: {
+        iden,
+        name: iden,
+      },
+    }
+  } catch {
+    return { is_login: false, user: null }
+  }
+}
 
 
 export function UserAvatar() {

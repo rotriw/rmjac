@@ -105,6 +105,8 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         table_create!(db::iden::edge::todolist_ownproblem::Enum, {
             EdgeId: big_integer not_null primary_key auto_increment,
             Order: big_integer not_null,
+            TodoListId: big_integer not_null,
+            ProblemId: big_integer not_null,
             Description: text not_null,
             ProblemIden: string not_null,
         }),
@@ -123,7 +125,8 @@ fn get_tables() -> HashMap<String, TableCreateStatement> {
         table_create!(db::iden::edge::user_own::Enum, {
             EdgeId: big_integer not_null primary_key auto_increment,
             UserId: big_integer not_null,
-            Data: json_binary not_null,
+            TaskId: big_integer not_null,
+            Data: string not_null,
             Order: big_integer not_null,
             Description: text null,
             PublicHide: boolean not_null,

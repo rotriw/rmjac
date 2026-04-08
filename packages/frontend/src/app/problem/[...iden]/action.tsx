@@ -22,7 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Languages, Loader2, RefreshCw, AlertCircle, Download, CheckCircle2, Sigma } from "lucide-react";import { generateCandidates } from "@/components/problem/problem-statement-viewer";
+import { Languages, Loader2, RefreshCw, AlertCircle, Download, CheckCircle2, Sigma } from "lucide-react";
+import { postAddProblem, postCreate, postList } from "@/api/client/api_training_todo";
+import type { TodoListItem } from "@rmjac/api-declare";
+import { toast } from "sonner";
 
 // ===== 翻译对话框 =====
 
@@ -735,11 +738,140 @@ export function generateCandidates(key: string): string[] {
       return candidates
 }
 
+function AddToTodoDialog({
+  open,
+  onOpenChange,
+  problemIden,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  problemIden: string
+}) {
+  const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [todos, setTodos] = useState<TodoListItem[]>([])
+  const [selectedTodoId, setSelectedTodoId] = useState<string>("")
+  const [newTodoDescription, setNewTodoDescription] = useState("")
+
+  useEffect(() => {
+    if (!open) return
+    setLoading(true)
+    postList()
+      .then((resp) => {
+        const items = resp.todos || []
+        setTodos(items)
+        if (items.length > 0) {
+          setSelectedTodoId(String(items[0].id))
+        }
+      })
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : "获取题单失败")
+      })
+      .finally(() => setLoading(false))
+  }, [open])
+
+  const handleCreateTodo = async () => {
+    if (!newTodoDescription.trim()) {
+      toast.error("请输入新题单描述")
+      return
+    }
+    setSubmitting(true)
+    try {
+      await postCreate({ color: "#3b82f6", description: newTodoDescription.trim() })
+      const resp = await postList()
+      const items = resp.todos || []
+      setTodos(items)
+      if (items.length > 0) {
+        setSelectedTodoId(String(items[items.length - 1].id))
+      }
+      setNewTodoDescription("")
+      toast.success("题单创建成功")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "创建题单失败")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleAdd = async () => {
+    if (!selectedTodoId) {
+      toast.error("请先选择题单")
+      return
+    }
+    setSubmitting(true)
+    try {
+      await postAddProblem({
+        todo_id: Number(selectedTodoId),
+        problem_iden: problemIden,
+        description: "",
+      })
+      toast.success("已加入题单")
+      onOpenChange(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "加入题单失败")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>加入题单</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">选择已有题单</label>
+            <Select value={selectedTodoId} onValueChange={setSelectedTodoId}>
+              <SelectTrigger>
+                <SelectValue placeholder={loading ? "加载中..." : "请选择题单"} />
+              </SelectTrigger>
+              <SelectContent>
+                {todos.map((todo) => (
+                  <SelectItem key={todo.id} value={String(todo.id)}>
+                    #{todo.id} · {todo.description}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">或创建新题单</label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="新题单描述"
+                value={newTodoDescription}
+                onChange={(e) => setNewTodoDescription(e.target.value)}
+              />
+              <Button variant="outline" onClick={handleCreateTodo} disabled={submitting}>
+                创建
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
+            取消
+          </Button>
+          <Button onClick={handleAdd} disabled={submitting || !selectedTodoId}>
+            加入
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ===== ActionMode 主组件 =====
 
 export function ActionMode({ iden, sign }: { iden: string; sign?: string }) {
   const router = useRouter();
   const [showMark, setShowMark] = useState(false);
+  const [showTodo, setShowTodo] = useState(false);
   const [showTranslate, setShowTranslate] = useState(false);
   const [showFormalize, setShowFormalize] = useState(false);
   const [showFetch, setShowFetch] = useState(false);
@@ -753,7 +885,7 @@ export function ActionMode({ iden, sign }: { iden: string; sign?: string }) {
         <Button variant="outline" asChild>
           <Link href={`/record?problemIden=${encodeURIComponent(problemIden)}`}>历史提交</Link>
         </Button>
-        <Button variant="outline">加入题单</Button>
+        <Button variant="outline" onClick={() => setShowTodo(true)}>加入题单</Button>
         <Button variant="outline" onClick={() => setShowFetch(true)}>
           <Download className="h-3.5 w-3.5 mr-1" />
           更新/获取题面
@@ -774,6 +906,12 @@ export function ActionMode({ iden, sign }: { iden: string; sign?: string }) {
       open={showMark}
       onOpenChange={setShowMark}
       onSuccess={() => router.refresh()}
+    />
+
+    <AddToTodoDialog
+      open={showTodo}
+      onOpenChange={setShowTodo}
+      problemIden={problemIden}
     />
 
     <TranslateDialog

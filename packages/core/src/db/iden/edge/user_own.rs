@@ -6,6 +6,7 @@ pub enum Enum {
     Table,
     EdgeId,
     UserId,
+    TaskId,
     Data,
     Order,
     Description,

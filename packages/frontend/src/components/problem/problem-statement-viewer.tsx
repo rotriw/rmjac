@@ -458,10 +458,11 @@ export function ProblemStatementViewer({
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="mb-3">
                 {data.statements.map((s, i) => {
-                  const tabValue = s.language === "Formal" ? "formal" : s.is_translate ? "translated" : "original"
+                  const isFormal = (s.language as string) === "Formal"
+                  const tabValue = isFormal ? "formal" : s.is_translate ? "translated" : "original"
                   return (
                     <TabsTrigger key={i} value={tabValue}>
-                      {s.language === "Formal" ? (
+                      {isFormal ? (
                         <><Sigma className="h-3 w-3 mr-1" />形式化</>
                       ) : (
                         <><Languages className="h-3 w-3 mr-1" />{s.is_translate ? "中文翻译" : languageLabel(s.language)}</>
@@ -471,7 +472,8 @@ export function ProblemStatementViewer({
                 })}
               </TabsList>
               {data.statements.map((s, i) => {
-                const tabValue = s.language === "Formal" ? "formal" : s.is_translate ? "translated" : "original"
+                const isFormal = (s.language as string) === "Formal"
+                const tabValue = isFormal ? "formal" : s.is_translate ? "translated" : "original"
                 return (
                   <TabsContent key={i} value={tabValue}>
                     <StatementRenderer statement={s} sampleGroup={data.meta.sample_group} fontSize={fontSize} />

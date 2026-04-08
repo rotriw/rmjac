@@ -20,7 +20,6 @@ import {postUpdateProblems} from "@/api/client/api_event_view";
 export function UpdateEvent({iden, open, on}: {iden: string, open: any, on: any}) {
   const [platform, setPlatform] = useState("")
   const handleUpdate = async (platform: string, iden: string) => {
-    console.log(123);
     await postUpdateProblems({
       platform,
       iden,
@@ -48,7 +47,7 @@ export function UpdateEvent({iden, open, on}: {iden: string, open: any, on: any}
          </div>
          <DialogFooter className="sm:justify-start">
            <DialogClose asChild>
-             <Button type="button" onClick={() => handleUpdate(document.getElementById("platform")?.value, iden)}>更新</Button>
+             <Button type="button" onClick={() => handleUpdate((document.getElementById("platform") as any)?.value, iden)}>更新</Button>
            </DialogClose>
          </DialogFooter>
        </DialogContent>
