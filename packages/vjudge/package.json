@@ -14,31 +14,32 @@
   "license": "ISC",
   "dependencies": {
     "@mdpdf/mdpdf": "^0.1.4",
-    "@techstark/opencv-js": "^4.12.0-release.1",
+    "@rmjac/api-declare": "workspace:*",
+    "@techstark/opencv-js": "4.12.0-release.1",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/cookie": "^1.0.0",
-    "@types/jsdom": "^21.1.7",
+    "@types/jsdom": "^27.0.0",
     "@types/log4js": "^2.3.5",
-    "@u4/opencv4nodejs": "^7.1.2",
-    "axios": "^1.11.0",
+    "axios": "^1.13.5",
+    "better-sqlite3": "^12.6.2",
+    "sql.js": "^1.12.0",
+    "codeforces-sdk": "^0.0.4",
     "cookie": "^1.1.1",
-    "dotenv": "^17.2.1",
+    "dotenv": "^17.3.1",
     "jimp": "^1.6.0",
-    "jsdom": "^26.1.0",
+    "jsdom": "^28.1.0",
     "log4js": "^6.9.1",
     "mdpdf": "^3.1.0",
-    "openai": "^6.9.1",
-    "openpgp": "^6.2.1",
+    "openai": "^6.22.0",
+    "openpgp": "^6.3.0",
     "progress": "^2.0.3",
     "puppeteer-extra-plugin-click-and-wait": "^2.3.3",
     "puppeteer-real-browser": "^1.4.4",
-    "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "tex-to-typst": "^0.0.19",
-    "tex2typst": "^0.5.1",
+    "tex2typst": "^0.5.6",
     "turndown": "^7.2.2",
-    "zod": "^3.22.4"
-  },
-  "opencv4nodejs": {
-    "disableAutoBuild": "1"
-    }
+    "zod": "^4.3.6"
+  }
 }

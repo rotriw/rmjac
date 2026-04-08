@@ -2,7 +2,9 @@
 //! description: Generate TS File, You must need to enable export_ts_mode.
 //! --path -p <path>, ts_rs::TS file will export at.
 
+use command_tool::run;
 
+#[run]
 pub fn run(path: Option<String>) -> Option<()> {
     println!("In:{:?}", path);
     #[cfg(not(feature = "export_ts_type"))]

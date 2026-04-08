@@ -20,6 +20,7 @@ pub async fn get_connect() -> Result<DatabaseConnection> {
 }
 
 pub fn refresh_redis() -> Result<()> {
+    
     crate::env::REDIS_CLIENT.clear_poison();
     *crate::env::REDIS_CLIENT.lock().unwrap() =
         redis::Client::open(crate::env::REDIS_URL.lock().unwrap().clone())?;

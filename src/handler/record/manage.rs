@@ -6,7 +6,7 @@ use rmjac_core::model::ModelStore;
 use rmjac_core::graph::node::Node;
 use rmjac_core::model::record::Record;
 
-#[generate_handler(route = "/manage", real_path = "/api/record/manage")]
+#[generate_handler(route = "/user", real_path = "/api/record/user")]
 pub mod handler {
     use rmjac_core::graph::node::user::remote_account::VjudgeNode;
     use rmjac_core::model::vjudge::VjudgeService;

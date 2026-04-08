@@ -1,15 +1,12 @@
 use crate::handler::ResultHandler;
 use crate::utils::perm::UserAuthCotext;
 use macro_handler::{export, generate_handler, handler, perm, require_login, route};
-use rmjac_core::graph::node::record::RecordNode;
-use rmjac_core::model::ModelStore;
-use rmjac_core::model::problem::ProblemImport;
-use rmjac_core::model::record::{Record, RecordNewProp};
-use rmjac_core::service::perm::provider::{System, SystemPermService};
 
 #[generate_handler(route = "/create", real_path = "/api/record/create")]
 pub mod handler {
-    use rmjac_core::model::record::RecordFactory;
+    use rmjac_core::{action::remotejudge::update_user_record, model::{judge::JudgeResult, record::Record}, service::{event::get_event_with_id, perm::provider::{System, SystemPermService}, save::Saved}};
+    use sea_orm::DatabaseConnection;
+
     use super::*;
 
     #[perm]
@@ -23,37 +20,23 @@ pub mod handler {
         SystemPermService::verify(user_id, system_id, System::CreateRecord)
     }
 
-    #[handler]
-    #[route("/{problem_iden}")]
-    #[perm(check_create_perm)]
-    #[export("message", "record")]
-    async fn post_create(
-        store: &mut impl ModelStore,
-        user_context: UserAuthCotext,
-        problem_iden: String,
-        platform: String,
-        code: String,
-        code_language: String,
-        url: String,
-        public_status: bool,
-    ) -> ResultHandler<(String, RecordNode)> {
-        let (problem_node_id, statement_node_id) =
-            ProblemImport::resolve(store, &problem_iden).await?;
-
-        let user_id = user_context.user_id;
-
-        let record_props = RecordNewProp {
-            platform,
-            code,
-            code_language,
-            url,
-            statement_node_id,
-            public_status,
-        };
-
-        let record =
-            RecordFactory::create_archived(store.get_db(), record_props, user_id, problem_node_id).await?;
-
-        Ok(("Record created successfully".to_string(), record))
+    #[export(problem_id)]
+    async fn before_resolve_problem_iden(problem_iden: &str) -> ResultHandler<i64> {
+        Ok(get_event_with_id(problem_iden).await?)
     }
+
+    #[handler]
+    #[route("/default")]
+    #[perm(check_create_perm)]
+    #[export("saved")]
+    async fn post_create(
+        db: &DatabaseConnection,
+        user_context: UserAuthCotext,
+        record: Record,
+        problem_id: i64,
+        detail: JudgeResult,
+    ) -> ResultHandler<Saved<Record>> {
+        Ok(update_user_record(record, user_context.user_id, detail, problem_id, db).await?)
+    }
+
 }

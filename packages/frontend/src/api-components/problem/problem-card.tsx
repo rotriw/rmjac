@@ -1,11 +1,15 @@
 "use client"
 
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
-import { ProblemNodePublic } from "@rmjac/api-declare"
 import { Calendar } from "lucide-react"
 
+type ProblemCardData = {
+  name: string
+  creation_time?: string
+}
+
 interface ProblemCardProps {
-  problem: ProblemNodePublic
+  problem: ProblemCardData
   onClick?: () => void
 }
 
@@ -24,7 +28,7 @@ export function ProblemCard({ problem, onClick }: ProblemCardProps) {
           <span>{problem.name}</span>
           <span className="text-sm font-normal text-muted-foreground flex items-center gap-1">
             <Calendar className="h-4 w-4" />
-            {formatDate(problem.creation_time)}
+            {problem.creation_time ? formatDate(problem.creation_time) : "--"}
           </span>
         </CardTitle>
       </CardHeader>

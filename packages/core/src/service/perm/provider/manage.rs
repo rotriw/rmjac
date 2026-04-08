@@ -9,8 +9,8 @@ use strum_macros::{EnumCount, EnumIter};
 pub enum Manage {
     All = -1,
     View = 1,
-    Edit = 2,
-    Delete = 4,
-    Grant = 8,
-    Revoke = 16,
+    Use = 2,
+    Edit = 4,
+    Manage = 8,
+    Own = 16,
 }

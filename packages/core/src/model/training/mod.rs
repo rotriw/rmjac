@@ -1,0 +1,70 @@
+use crate::model::content::Description;
+use crate::service::save::Savable;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct Training {
+    pub iden: String,
+    pub name: String,
+    pub description: Description,
+    pub joined_description: Description,
+    pub creation_time: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub enum TrainingItemContent {
+    Problem(i64), // problem id
+    TrainingList(String), // Training uuid
+                  // Event(String) // 引入训练。
+                  // PresetTraining TODO: PresetTraining
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct TrainingItem {
+    pub uuid: String, // the item only method.
+    pub order: i64,   // order in training.
+    pub description: Description,
+    pub sign: String, // show the item data.
+    pub content: TrainingItemContent,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub enum TrainingItemRecursive {
+    Problem(i64), // problem id
+    TrainingList(String, Vec<TrainingItemRecursive>), // Training uuid and its items.
+                  // PresetTraining TODO: PresetTraining
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct TodoList {
+    pub color: String,       // todo list color.
+    pub description: String, // todo list description.
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct TodoProblemItem {
+    pub edge_id: i64,
+    pub order: i64,
+    pub problem_id: i64,
+    pub problem_iden: String,
+    pub description: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct TodoListItem {
+    pub id: i64,
+    pub color: String,
+    pub description: String,
+    pub problems: Vec<TodoProblemItem>,
+}
+
+impl Savable for Training {}
+impl Savable for TrainingItem {}
+impl Savable for TodoList {}

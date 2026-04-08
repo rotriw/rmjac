@@ -80,7 +80,7 @@ function FormQuery({
   onChange,
   ...props
 }: FormQueryProps) {
-  const handleChange = (name: string, value: string) => {
+  const handleChange = (name: string, value: string | string[]) => {
     const newValues = { ...values, [name]: value }
     onChange?.(newValues)
   }
@@ -108,10 +108,8 @@ function FormQuery({
           <div key={index} className="space-y-1">
             <Label htmlFor={field.name}>{field.title}</Label>
             <Select
-              id={field.name}
-              name={field.name}
               value={values[field.name] as string || ""}
-              onChange={(e) => handleChange(field.name, e.target.value)}
+              onValueChange={(value) => handleChange(field.name, value)}
             >
               <SelectItem value="" disabled>选择...</SelectItem>
               {field.options.map((opt) => (

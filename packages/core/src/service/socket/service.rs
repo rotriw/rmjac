@@ -1,11 +1,6 @@
 use crate::Result;
 use crate::env;
 use crate::env::db::get_connect;
-use crate::model::user::UserAuthService;
-use crate::model::vjudge::VjudgeAccount;
-use crate::service::socket::vjudge_service::problem::handle_problem_create;
-use crate::service::socket::vjudge_service::sync::handle_update_vjudge_submission;
-use crate::service::socket::vjudge_service::user::{handle_submit_done, handle_verified_result};
 use crate::utils::encrypt::change_string_format;
 use axum::routing::get;
 use serde::{Deserialize, Serialize};
@@ -13,7 +8,10 @@ use serde_json::Value;
 use socketioxide::SocketIo;
 use socketioxide::extract::{Data, SocketRef};
 use std::fmt::Debug;
+use std::time::Duration;
+use serde::de::DeserializeOwned;
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use crate::error::CoreError;
 
 fn trust_auth(socket: &SocketRef) {
     log::info!("Socket {} authenticated successfully", socket.id);
@@ -48,6 +46,8 @@ async fn auth(socket: SocketRef, Data(key): Data<String>) {
         let _ = socket.emit("auth_response", "Authentication Error/Failed");
         return;
     }
+
+    // socket.join("verified_room");
     trust_auth(&socket);
     let _ = socket.emit("auth_response", "Authentication successful");
 }
@@ -87,7 +87,7 @@ fn erase_socket(id: &str) {
     log::debug!("Socket {} erased.", id);
 }
 
-pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
+pub async fn add_task<T: ?Sized + Serialize + Debug>(operator: &str, task: &T) -> bool {
     let now_id = *env::EDGE_NUM.lock().unwrap();
     if env::EDGE_SOCKETS.lock().unwrap().is_empty() {
         log::error!("No edge sockets available to add task.");
@@ -107,7 +107,7 @@ pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
         if !socket.connected() {
             log::error!("Socket {} is not connected, erasing", use_id);
             require_erase = true;
-        } else if let Err(err) = socket.emit("task", task) {
+        } else if let Err(err) = socket.emit(operator, task) {
             log::error!("Failed to emit task: {}", err);
             // erase this socket.
             require_erase = true;
@@ -125,13 +125,48 @@ pub async fn add_task<T: ?Sized + Serialize + Debug>(task: &T) -> bool {
     true
 }
 
+pub async fn exec_task<T: ?Sized + Serialize + Debug, O: DeserializeOwned>(operator: &str, task: &T) -> Result<O> {
+    let now_id = *env::EDGE_NUM.lock().unwrap();
+    if env::EDGE_SOCKETS.lock().unwrap().is_empty() {
+        log::error!("No edge sockets available to exec task.");
+        return Err(CoreError::StringError("No edge sockets available to exec task.".to_string()));
+    }
+    let use_id = (now_id + 1) % (env::EDGE_SOCKETS.lock().unwrap().clone().len() as i32);
+    *env::EDGE_NUM.lock().unwrap() = use_id;
+    let use_id = env::EDGE_VEC
+        .lock()
+        .unwrap()
+        .get(use_id as usize)
+        .unwrap()
+        .clone();
+    log::trace!("Executing task on socket: {}", use_id);
+    let socket = env::EDGE_SOCKETS.lock().unwrap().get(&use_id).cloned();
+    if let Some(socket) = socket {
+        if !socket.connected() {
+            log::error!("Socket {} is not connected, erasing", use_id);
+            erase_socket(&use_id);
+            Err(CoreError::StringError("Socket not connected.".to_string()))
+        } else if let Ok(res) = socket.timeout(Duration::from_secs(120)).emit_with_ack(operator, task) {
+            log::debug!("Successfully executed task on socket: {use_id}");
+            log::trace!("Task detail: {task:?}");
+            let res: O = res.await.unwrap();
+            Ok(res)
+        } else {
+            log::error!("Failed to emit task: {}", operator);
+            // erase this socket.
+            erase_socket(&use_id);
+            Err(CoreError::StringError("Failed to emit task.".to_string()))
+        }
+    } else {
+        log::error!("Socket not found for id: {}", use_id);
+        erase_socket(&use_id);
+        Err(CoreError::StringError("Socket not found.".to_string()))
+    }
+}
+
 async fn on_connect(socket: SocketRef, Data(_data): Data<Value>) {
     log::debug!("Socket io connected: {:?} {:?}", socket.ns(), socket.id);
     socket.on("auth", auth);
-    socket.on("fetch_done_success", handle_problem_create);
-    socket.on("sync_done_success", handle_update_vjudge_submission);
-    socket.on("submit_done", handle_submit_done);
-    socket.on("verified_done_success", handle_verified_result);
 
     socket.on_disconnect(async |socket: SocketRef| {
         log::debug!("Socket io disconnected: {:?} {:?}", socket.ns(), socket.id);
@@ -146,91 +181,11 @@ pub struct UserVerifiedProp {
     pub user_id: i64,
 }
 
-pub async fn auth_user(socket: SocketRef, Data(user): Data<UserVerifiedProp>) {
-    log::trace!("User notify {} auth", socket.id);
-    let db = get_connect().await;
-    if let Err(err) = db {
-        log::error!("Failed to connect to database: {}", err);
-        let _ = socket.disconnect();
-        return;
-    }
-    let result = UserAuthService::check_token(user.user_id, &user.token).await;
-    if !result {
-        log::trace!("User {} authentication failed", user.user_id);
-        let _ = socket.disconnect();
-    } else {
-        log::debug!(
-            "User {} with socket {} authenticated successfully",
-            user.user_id,
-            socket.id
-        );
-        env::USER_WEBSOCKET_CONNECTIONS
-            .lock()
-            .unwrap()
-            .insert(socket.id.to_string(), socket.clone());
-        env::USER_WEBSOCKET_CONNECTIONS_ACCOUNT
-            .lock()
-            .unwrap()
-            .insert(socket.id.to_string(), user.user_id);
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone, ts_rs::TS)]
-#[ts(export)]
-pub struct VJudgeVerifiedProp {
-    pub node_id: i64,
-}
-
-pub async fn handle_vjudge_verified(socket: SocketRef, Data(data): Data<VJudgeVerifiedProp>) {
-    log::debug!("Handling vjudge verified for socket {}.", socket.id);
-    let db = get_connect().await;
-    if let Err(err) = db {
-        log::error!("Failed to connect to database: {}", err);
-        return;
-    }
-    let db = db.unwrap();
-    let _user_id = {
-        let data = env::USER_WEBSOCKET_CONNECTIONS_ACCOUNT.lock().unwrap();
-        data.get(&socket.id.to_string()).cloned()
-    };
-    {
-        if VjudgeAccount::new(data.node_id)
-            .verify(&db, &socket.id.to_string())
-            .await
-        {
-            let _ = socket.emit("check_alive_success", &data.node_id);
-        } else {
-            let _ = socket.emit("check_alive_failed", &data.node_id);
-        }
-    }
-}
-
-async fn on_user_connect(socket: SocketRef, Data(_data): Data<Value>) {
-    log::debug!("User notify connected: {:?} {:?}", &socket.ns(), socket.id);
-    socket.on("auth", auth_user);
-    socket.on("refresh_vjudge_account", handle_vjudge_verified);
-    socket.on_disconnect(async |socket: SocketRef| {
-        log::debug!(
-            "User notify disconnected: {:?} {:?}",
-            socket.ns(),
-            socket.id
-        );
-        env::USER_WEBSOCKET_CONNECTIONS
-            .lock()
-            .unwrap()
-            .remove(&socket.ns().to_string());
-        env::USER_WEBSOCKET_CONNECTIONS_ACCOUNT
-            .lock()
-            .unwrap()
-            .remove(&socket.ns().to_string());
-    });
-}
-
 pub async fn service_start(port: u16) -> Result<()> {
     log::info!("VJudge Task server(with user.) will be started at ::{port}");
     let (layer, io) = SocketIo::new_layer();
     io.ns("/vjudge", on_connect);
-    io.ns("/user_notify", on_user_connect);
+    *env::SOCKETIO.lock().unwrap() = Some(io.clone());
     let cors = CorsLayer::new().allow_origin(AllowOrigin::any());
     let app = axum::Router::new()
         .route("/vjudge", get(|| async { "" }))

@@ -1,15 +1,11 @@
-use sea_orm::DeriveIden;
+use sea_orm_migration::prelude::*;
 
 #[derive(DeriveIden)]
-pub enum Misc {
+pub enum Enum {
     #[sea_orm(iden = "edge_misc")]
     Table,
-    #[sea_orm(iden = "edge_id")]
     EdgeId,
-    #[sea_orm(iden = "u_node_id")]
-    UNodeId,
-    #[sea_orm(iden = "v_node_id")]
-    VNodeId,
-    #[sea_orm(iden = "misc_type")]
-    MiscType,
+    From,
+    To,
+    EdgeType,
 }

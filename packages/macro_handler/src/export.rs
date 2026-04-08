@@ -34,38 +34,50 @@ pub struct ExportedHandler {
     pub used_types: Vec<String>,
 }
 
-/// 检查是否为需要导入的自定义类型
+/// 检查是否为需要导入的自定义类型（完整字符串）
 fn is_custom_type(ty_name: &str) -> bool {
     // 排除基本类型和内置类型
     !matches!(
         ty_name,
-        "number" | "string" | "boolean" | "void" | "null" | "undefined" | "unknown" | "never"
+        "number" | "string" | "boolean" | "void" | "null" | "undefined" | "unknown" | "never" | "any"
     ) && !ty_name.starts_with('[')  // 排除数组类型表示
        && !ty_name.contains("[]")   // 排除数组后缀
        && !ty_name.contains(" | ")  // 排除联合类型
        && !ty_name.starts_with("Record<") // 排除 Record 类型
 }
 
-/// 从类型字符串中提取基础类型名
-fn extract_base_type(ty: &str) -> Option<String> {
-    let trimmed = ty.trim();
+/// 检查是否为需要导入的自定义类型（标识符）
+fn is_custom_type_token(token: &str) -> bool {
+    !matches!(
+        token,
+        "number" | "string" | "boolean" | "void" | "null" | "undefined" | "unknown" | "never" | "any"
+    ) && token != "Record"
+}
 
-    // 处理数组类型 "TypeName[]"
-    if let Some(base) = trimmed.strip_suffix("[]") {
-        return extract_base_type(base);
-    }
+/// 从类型字符串中提取所有自定义类型名（含泛型）
+fn extract_custom_types(ty: &str) -> Vec<String> {
+    let mut types = Vec::new();
+    let mut current = String::new();
 
-    // 处理可选类型 "TypeName | null"
-    if let Some(base) = trimmed.strip_suffix(" | null") {
-        return extract_base_type(base);
-    }
+    let mut push_token = |token: &str, acc: &mut Vec<String>| {
+        if !token.is_empty() && is_custom_type_token(token) {
+            if !acc.contains(&token.to_string()) {
+                acc.push(token.to_string());
+            }
+        }
+    };
 
-    // 检查是否是自定义类型
-    if is_custom_type(trimmed) && !trimmed.is_empty() {
-        Some(trimmed.to_string())
-    } else {
-        None
+    for ch in ty.chars() {
+        if ch.is_alphanumeric() || ch == '_' {
+            current.push(ch);
+        } else {
+            push_token(current.as_str(), &mut types);
+            current.clear();
+        }
     }
+    push_token(current.as_str(), &mut types);
+
+    types
 }
 
 thread_local! {
@@ -117,6 +129,8 @@ fn rust_type_to_ts_name(ty: &syn::Type) -> String {
                 .cloned()
                 .unwrap_or_else(|| "unknown".to_string());
 
+            let last_segment = type_path.path.segments.last();
+
             // 处理常见类型
             match type_name.as_str() {
                 "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64" | "f32" | "f64"
@@ -125,7 +139,7 @@ fn rust_type_to_ts_name(ty: &syn::Type) -> String {
                 "bool" => "boolean".to_string(),
                 "Vec" => {
                     // 处理 Vec<T>
-                    if let Some(last_segment) = type_path.path.segments.last() {
+                    if let Some(last_segment) = last_segment {
                         if let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments {
                             if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
                                 return format!("{}[]", rust_type_to_ts_name(inner_ty));
@@ -136,7 +150,7 @@ fn rust_type_to_ts_name(ty: &syn::Type) -> String {
                 }
                 "Option" => {
                     // 处理 Option<T>
-                    if let Some(last_segment) = type_path.path.segments.last() {
+                    if let Some(last_segment) = last_segment {
                         if let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments {
                             if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
                                 return format!("{} | null", rust_type_to_ts_name(inner_ty));
@@ -148,7 +162,7 @@ fn rust_type_to_ts_name(ty: &syn::Type) -> String {
                 "HashMap" | "BTreeMap" => "Record<string, unknown>".to_string(),
                 // ResultHandler<T> -> 提取 T
                 "ResultHandler" => {
-                    if let Some(last_segment) = type_path.path.segments.last() {
+                    if let Some(last_segment) = last_segment {
                         if let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments {
                             if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
                                 return rust_type_to_ts_name(inner_ty);
@@ -159,7 +173,7 @@ fn rust_type_to_ts_name(ty: &syn::Type) -> String {
                 }
                 // Result<T, E> -> 提取 T
                 "Result" => {
-                    if let Some(last_segment) = type_path.path.segments.last() {
+                    if let Some(last_segment) = last_segment {
                         if let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments {
                             if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
                                 return rust_type_to_ts_name(inner_ty);
@@ -168,8 +182,28 @@ fn rust_type_to_ts_name(ty: &syn::Type) -> String {
                     }
                     "unknown".to_string()
                 }
-                // 其他类型直接使用类型名（这些是自定义 struct 名称）
-                _ => type_name,
+                // 其他类型：如果带泛型则保持泛型结构，否则直接类型名
+                _ => {
+                    if type_name == "Record" {
+                        return "ApiRecord".to_string();
+                    }
+                    if let Some(last_segment) = last_segment {
+                        if let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments {
+                            let generic_args: Vec<String> = args
+                                .args
+                                .iter()
+                                .filter_map(|arg| match arg {
+                                    syn::GenericArgument::Type(t) => Some(rust_type_to_ts_name(t)),
+                                    _ => None,
+                                })
+                                .collect();
+                            if !generic_args.is_empty() {
+                                return format!("{}<{}>", type_name, generic_args.join(", "));
+                            }
+                        }
+                    }
+                    type_name
+                }
             }
         }
         syn::Type::Reference(ref_ty) => rust_type_to_ts_name(&ref_ty.elem),
@@ -182,6 +216,13 @@ fn rust_type_to_ts_name(ty: &syn::Type) -> String {
             }
         }
         _ => "unknown".to_string(),
+    }
+}
+
+fn to_import_item(ty: &str) -> String {
+    match ty {
+        "ApiRecord" => "Record as ApiRecord".to_string(),
+        _ => ty.to_string(),
     }
 }
 
@@ -336,17 +377,23 @@ pub fn export_func_generate(
         // 收集使用的自定义类型
         let mut used_types: Vec<String> = Vec::new();
         for (_, ty) in &export_fields {
-            if let Some(base_type) = extract_base_type(ty) {
-                if !used_types.contains(&base_type) {
-                    used_types.push(base_type);
+            for t in extract_custom_types(ty) {
+                if !used_types.contains(&t) {
+                    used_types.push(t);
                 }
             }
         }
         for (_, ty) in &params {
-            if let Some(base_type) = extract_base_type(ty) {
-                if !used_types.contains(&base_type) {
-                    used_types.push(base_type);
+            for t in extract_custom_types(ty) {
+                if !used_types.contains(&t) {
+                    used_types.push(t);
                 }
+            }
+        }
+
+        for t in extract_custom_types(&return_type_name) {
+            if !used_types.contains(&t) {
+                used_types.push(t);
             }
         }
 
@@ -560,7 +607,8 @@ fn update_type_imports(content: &str, used_types: &[String], _header_template: &
     let type_imports_str = if used_types.is_empty() {
         String::new()
     } else {
-        used_types.join(", ")
+        let mapped: Vec<String> = used_types.iter().map(|ty| to_import_item(ty)).collect();
+        mapped.join(", ")
     };
 
     // 查找并替换 {{type_imports}} 模板变量（用于新文件）
@@ -636,23 +684,26 @@ fn update_type_imports(content: &str, used_types: &[String], _header_template: &
         } else if !type_imports_str.is_empty() {
             // 如果没有找到现有的 import 语句，但有类型需要导入
             // 在 http import 之后添加
-            let http_import_pattern = "from '@/lib/http'";
-            if let Some(pos) = result.find(http_import_pattern) {
-                // 找到这一行的末尾
-                let line_end = result[pos..]
-                    .find('\n')
-                    .map(|p| pos + p)
-                    .unwrap_or(result.len());
-                let new_import = format!(
-                    "\n\nimport {{ {} }} from '@rmjac/api-declare'",
-                    type_imports_str
-                );
-                result = format!(
-                    "{}{}{}",
-                    &result[..line_end],
-                    new_import,
-                    &result[line_end..]
-                );
+            let http_import_patterns = ["from '@/lib/http'", "from '@/lib/http_server'"];
+            for http_import_pattern in http_import_patterns {
+                if let Some(pos) = result.find(http_import_pattern) {
+                    // 找到这一行的末尾
+                    let line_end = result[pos..]
+                        .find('\n')
+                        .map(|p| pos + p)
+                        .unwrap_or(result.len());
+                    let new_import = format!(
+                        "\n\nimport {{ {} }} from '@rmjac/api-declare'",
+                        type_imports_str
+                    );
+                    result = format!(
+                        "{}{}{}",
+                        &result[..line_end],
+                        new_import,
+                        &result[line_end..]
+                    );
+                    break;
+                }
             }
         }
     }
@@ -674,7 +725,11 @@ fn extract_imported_types(content: &str) -> Vec<String> {
                     for ty in types_str.split(',') {
                         let ty = ty.trim();
                         if !ty.is_empty() {
-                            types.push(ty.to_string());
+                            if let Some((_, alias)) = ty.split_once(" as ") {
+                                types.push(alias.trim().to_string());
+                            } else {
+                                types.push(ty.to_string());
+                            }
                         }
                     }
                 }

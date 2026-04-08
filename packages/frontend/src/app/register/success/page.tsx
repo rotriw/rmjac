@@ -1,13 +1,6 @@
-import { LogInIcon } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card";
 
-export default function RegisterSuccessPage({
-    searchParams
-}: {
-    searchParams?: { [key: string]: string | string[] | undefined }
-}) {
+export default function RegisterSuccessPage() {
   return (
 
     <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">

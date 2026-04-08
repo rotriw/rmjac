@@ -34,7 +34,12 @@ pub fn generate_handler_impl(
     let export_service = generate_export_service(handler_base_path, &service_registrations);
 
     #[cfg(feature = "export_ts_type")]
-    let value = crate::export::export_func_generate(_handler_real_path, handler_funcs, before_funcs, perm_funcs);
+    let value = crate::export::export_func_generate(
+        _handler_real_path,
+        handler_funcs,
+        before_funcs,
+        perm_funcs,
+    );
 
     Ok(quote! {
         #(#route_handlers)*
@@ -510,7 +515,7 @@ fn generate_route_function(
             use actix_web::HttpMessage;
 
             let __db = __db_actix.get_ref();
-            let mut __redis = rmjac_core::utils::get_redis_connection();
+            // let mut __redis = rmjac_core::utils::get_redis_connection();
 
             #login_check
 
@@ -710,21 +715,21 @@ fn generate_function_args(params: &[Parameter], analysis: &ParameterAnalysis) ->
             if is_ref_type {
                 args.push(quote! { &#param_name });
             } else {
-                args.push(quote! { #param_name });
+                args.push(quote! { #param_name.clone() });
             }
         } else if analysis.before_exports.contains_key(&param_str) {
             // before导出：根据目标类型决定是传引用还是值
             if is_ref_type {
                 args.push(quote! { &#param_name });
             } else {
-                args.push(quote! { #param_name });
+                args.push(quote! { #param_name.clone() });
             }
         } else {
             // Props字段：如果原始类型是引用，传递引用；否则直接传递（消耗 props）
             if is_ref_type {
                 args.push(quote! { &props.#param_name });
             } else {
-                args.push(quote! { props.#param_name });
+                args.push(quote! { props.#param_name.clone() });
             }
         }
     }

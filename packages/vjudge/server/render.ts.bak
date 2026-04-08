@@ -1,0 +1,634 @@
+/**
+ * HTML 渲染模块
+ *
+ * 服务端渲染页面，使用 KaTeX 渲染 LaTeX 数学公式，marked 渲染 Markdown。
+ */
+
+import type { CoreProblem, CoreProblemStatement } from "./app.ts";
+
+// ============================================================
+// 公共 Layout
+// ============================================================
+
+function layout(title: string, body: string, extra?: { headExtra?: string }): string {
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escHtml(title)} — Problem Viewer</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown-light.min.css">
+<style>
+  :root { --bg: #f8f9fa; --card: #fff; --border: #e1e4e8; --primary: #0969da; --text: #1f2328; --text2: #656d76; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); }
+  .container { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+  nav { background: var(--card); border-bottom: 1px solid var(--border); padding: 12px 0; position: sticky; top: 0; z-index: 100; }
+  nav .container { display: flex; align-items: center; gap: 24px; }
+  nav a { text-decoration: none; color: var(--text2); font-size: 14px; } nav a:hover { color: var(--primary); }
+  nav .logo { font-weight: 700; font-size: 18px; color: var(--text); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; margin: 16px 0; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .badge-cf { background: #e3f2fd; color: #1565c0; } .badge-at { background: #e8f5e9; color: #2e7d32; } .badge-lg { background: #fff3e0; color: #e65100; }
+  .tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11px; background: #f0f0f0; color: #555; margin: 1px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f6f8fa; font-weight: 600; font-size: 12px; text-transform: uppercase; color: var(--text2); }
+  tr:hover { background: #f6f8fa; }
+  td a { color: var(--primary); text-decoration: none; } td a:hover { text-decoration: underline; }
+  .pagination { display: flex; gap: 8px; justify-content: center; margin: 16px 0; }
+  .pagination a, .pagination span { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; text-decoration: none; color: var(--text); }
+  .pagination a:hover { background: #f0f0f0; } .pagination .active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
+  .tab { padding: 8px 16px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -2px; color: var(--text2); }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+  .tab-content { display: none; } .tab-content.active { display: block; }
+  .meta-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; font-size: 13px; color: var(--text2); }
+  .meta-item { display: flex; align-items: center; gap: 4px; }
+  .markdown-body { font-size: 15px; line-height: 1.7; }
+  .markdown-body h2 { margin-top: 24px; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .markdown-body pre { background: #f6f8fa; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 13px; }
+  .markdown-body code { background: #eff1f3; padding: 2px 5px; border-radius: 4px; font-size: 13px; }
+  .markdown-body pre code { background: none; padding: 0; }
+  .search-form { display: flex; gap: 8px; margin: 16px 0; }
+  .search-form input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
+  .search-form select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
+  .search-form button { padding: 8px 16px; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .stat-card { text-align: center; padding: 16px; }
+  .stat-card .num { font-size: 28px; font-weight: 700; color: var(--primary); } .stat-card .label { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  footer { text-align: center; padding: 24px; font-size: 12px; color: var(--text2); }
+  /* code block within API docs */
+  .api-block { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; font-family: 'SF Mono', Monaco, Consolas, monospace; margin: 8px 0; white-space: pre; }
+  .api-method { font-weight: 700; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+  .api-get { background: #dff0d8; color: #3c763d; }
+  .api-section { margin: 20px 0; }
+  .api-section h3 { margin-bottom: 8px; }
+</style>
+${extra?.headExtra || ""}
+</head>
+<body>
+<nav><div class="container">
+  <a href="/" class="logo">📋 Problem Viewer</a>
+  <a href="/problems">题目列表</a>
+  <a href="/docs">API 文档</a>
+</div></nav>
+${body}
+<footer>Problem Viewer · Built with Express + sql.js · Data from vjudge</footer>
+</body>
+</html>`;
+}
+
+function escHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function platformBadge(platform: string): string {
+  const cls = platform.toLowerCase().includes("codeforces") ? "badge-cf"
+    : platform.toLowerCase().includes("atcoder") ? "badge-at" : "badge-lg";
+  return `<span class="badge ${cls}">${escHtml(platform)}</span>`;
+}
+
+// ============================================================
+// 首页
+// ============================================================
+
+export function renderHomePage(stats: { problems: number; translations: number; formalizations: number; embeddings: number; platforms: Record<string, number> }): string {
+  const platformHtml = Object.entries(stats.platforms)
+    .map(([p, c]) => `<div class="stat-card">${platformBadge(p)}<div class="num">${c}</div><div class="label">题目</div></div>`)
+    .join("");
+
+  return layout("首页", `
+<div class="container">
+  <div class="card">
+    <h1 style="margin-bottom:8px">📋 题目显示平台</h1>
+    <p style="color:var(--text2)">浏览、搜索和查看所有导入的竞赛编程题目。提供 REST API 接口，输出格式兼容 core 后端。</p>
+  </div>
+  <div class="card">
+    <h2 style="margin-bottom:12px">📊 数据统计</h2>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="num">${stats.problems}</div><div class="label">题目总数</div></div>
+      <div class="stat-card"><div class="num">${stats.translations}</div><div class="label">已翻译</div></div>
+      <div class="stat-card"><div class="num">${stats.formalizations}</div><div class="label">已形式化</div></div>
+      <div class="stat-card"><div class="num">${stats.embeddings}</div><div class="label">已向量化</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2 style="margin-bottom:12px">📦 各平台题目</h2>
+    <div class="stat-grid">${platformHtml}</div>
+  </div>
+  <div class="card">
+    <h2 style="margin-bottom:12px">🔗 快速入口</h2>
+    <p><a href="/problems">📋 浏览题目列表</a> · <a href="/docs">📖 API 文档</a> · <a href="/api/stats">📊 JSON 统计</a></p>
+  </div>
+</div>`);
+}
+
+// ============================================================
+// 题目列表页
+// ============================================================
+
+export function renderListPage(
+  rows: any[],
+  opts: { page: number; total: number; limit: number; platform: string; search: string },
+): string {
+  const totalPages = Math.ceil(opts.total / opts.limit);
+
+  const tableRows = rows.map(r => {
+    const pf = r.platform as string;
+    return `<tr>
+      <td><a href="/problem/${escHtml(r.iden as string)}">${escHtml(r.iden as string)}</a></td>
+      <td><a href="/problem/${escHtml(r.iden as string)}">${escHtml(cleanNameSimple(r.name as string))}</a></td>
+      <td>${platformBadge(pf)}</td>
+      <td>${r.difficulty ?? "-"}</td>
+      <td>${r.time_limit || "-"}ms / ${r.memory_limit ? Math.round((r.memory_limit as number) / 1024) : "-"}MB</td>
+    </tr>`;
+  }).join("");
+
+  const pagination = buildPagination(opts.page, totalPages, opts.platform, opts.search);
+
+  return layout("题目列表", `
+<div class="container">
+  <div class="card">
+    <h2>📋 题目列表 <small style="font-weight:normal;color:var(--text2)">(共 ${opts.total} 题)</small></h2>
+    <form class="search-form" method="GET" action="/problems">
+      <input name="search" placeholder="搜索 iden 或名称..." value="${escHtml(opts.search)}">
+      <select name="platform">
+        <option value="">全部平台</option>
+        <option value="codeforces" ${opts.platform === "codeforces" ? "selected" : ""}>Codeforces</option>
+        <option value="atcoder" ${opts.platform === "atcoder" ? "selected" : ""}>AtCoder</option>
+        <option value="luogu" ${opts.platform === "luogu" ? "selected" : ""}>Luogu</option>
+      </select>
+      <button type="submit">搜索</button>
+    </form>
+    <table>
+      <thead><tr><th>Iden</th><th>名称</th><th>平台</th><th>难度</th><th>限制</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+    ${pagination}
+  </div>
+</div>`);
+}
+
+function buildPagination(page: number, totalPages: number, platform: string, search: string): string {
+  if (totalPages <= 1) return "";
+  const qs = (p: number) => {
+    const parts = [`page=${p}`];
+    if (platform) parts.push(`platform=${encodeURIComponent(platform)}`);
+    if (search) parts.push(`search=${encodeURIComponent(search)}`);
+    return `?${parts.join("&")}`;
+  };
+  let html = '<div class="pagination">';
+  if (page > 1) html += `<a href="/problems${qs(page - 1)}">« 上一页</a>`;
+
+  const start = Math.max(1, page - 3);
+  const end = Math.min(totalPages, page + 3);
+  if (start > 1) html += `<a href="/problems${qs(1)}">1</a><span>…</span>`;
+  for (let i = start; i <= end; i++) {
+    html += i === page ? `<span class="active">${i}</span>` : `<a href="/problems${qs(i)}">${i}</a>`;
+  }
+  if (end < totalPages) html += `<span>…</span><a href="/problems${qs(totalPages)}">${totalPages}</a>`;
+
+  if (page < totalPages) html += `<a href="/problems${qs(page + 1)}">下一页 »</a>`;
+  html += "</div>";
+  return html;
+}
+
+function cleanNameSimple(name: string): string {
+  return name.replace(/\n\t+Editorial$/i, "").replace(/\s+Editorial$/i, "").trim();
+}
+
+// ============================================================
+// 题目详情页
+// ============================================================
+
+export function renderProblemPage(data: {
+  problem: CoreProblem;
+  statements: CoreProblemStatement[];
+  meta: { iden: string; tags: string[]; sample_group: [string, string][]; created_at: string };
+}): string {
+  const { problem, statements, meta } = data;
+
+  // 难度显示
+  let diffStr = "-";
+  if (typeof problem.difficulty === "object" && problem.difficulty !== null) {
+    if ("NumberStyle" in problem.difficulty) diffStr = String(problem.difficulty.NumberStyle);
+    if ("LuoguStyle" in problem.difficulty) diffStr = problem.difficulty.LuoguStyle;
+  }
+
+  const tagsHtml = meta.tags.length ? meta.tags.map(t => `<span class="tag">${escHtml(t)}</span>`).join(" ") : "";
+
+  // Tabs for each statement
+  const tabHeaders = statements.map((s, i) => {
+    const label = s.is_translate ? `🇨🇳 ${s.language}（翻译）` : `🌐 ${s.language}（原文）`;
+    return `<div class="tab ${i === 0 ? "active" : ""}" data-tab="${i}">${label}</div>`;
+  }).join("");
+
+  const tabContents = statements.map((s, i) =>
+    `<div class="tab-content ${i === 0 ? "active" : ""}" id="tab-${i}">
+      <div class="markdown-body" data-md>${escHtml(s.content)}</div>
+    </div>`
+  ).join("");
+
+  // 样例
+  let samplesHtml = "";
+  if (meta.sample_group.length) {
+    samplesHtml = `<div class="card"><h2>📝 样例</h2>` + meta.sample_group.map(([inp, out], i) =>
+      `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+        <div><strong>输入 #${i + 1}</strong><pre style="background:#f6f8fa;padding:12px;border-radius:6px;margin-top:4px;font-size:13px">${escHtml(inp)}</pre></div>
+        <div><strong>输出 #${i + 1}</strong><pre style="background:#f6f8fa;padding:12px;border-radius:6px;margin-top:4px;font-size:13px">${escHtml(out)}</pre></div>
+      </div>`
+    ).join("") + `</div>`;
+  }
+
+  const headExtra = `
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"><\/script>`;
+
+  return layout(problem.name, `
+<div class="container">
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <h1 style="font-size:24px">${escHtml(problem.name)}</h1>
+      ${platformBadge(problem.platform)}
+    </div>
+    <div class="meta-row" style="margin-top:12px">
+      <div class="meta-item">🆔 <code>${escHtml(meta.iden)}</code></div>
+      <div class="meta-item">⏱ ${problem.limit.time_limit}ms</div>
+      <div class="meta-item">💾 ${Math.round(problem.limit.memory_limit / 1024)}MB</div>
+      <div class="meta-item">📊 难度: ${diffStr}</div>
+    </div>
+    ${tagsHtml ? `<div style="margin-top:8px">${tagsHtml}</div>` : ""}
+  </div>
+
+  <div class="card">
+    ${statements.length > 1 ? `<div class="tabs">${tabHeaders}</div>` : ""}
+    ${tabContents}
+  </div>
+
+  ${samplesHtml}
+
+  <div class="card" style="font-size:13px;color:var(--text2)">
+    <details>
+      <summary>🔌 API 数据 (JSON)</summary>
+      <pre class="api-block">${escHtml(JSON.stringify({ problem, statements: statements.map(s => ({ ...s, content: s.content.slice(0, 200) + "..." })) }, null, 2))}</pre>
+      <p style="margin-top:8px"><a href="/api/problems/${escHtml(meta.iden)}">完整 JSON →</a> · <a href="/api/problems/${escHtml(meta.iden)}/raw">原始分段 JSON →</a></p>
+    </details>
+  </div>
+</div>
+
+<script>
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const idx = tab.dataset.tab;
+    tab.closest('.card').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.closest('.card').querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + idx).classList.add('active');
+  });
+});
+
+// Render Markdown then KaTeX
+document.querySelectorAll('[data-md]').forEach(el => {
+  const raw = el.textContent;
+  el.innerHTML = marked.parse(raw);
+  renderMathInElement(el, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\\\(', right: '\\\\)', display: false},
+      {left: '\\\\[', right: '\\\\]', display: true},
+    ],
+    throwOnError: false,
+  });
+});
+<\/script>`, { headExtra });
+}
+
+// ============================================================
+// API 文档页
+// ============================================================
+
+export function renderApiDocsPage(): string {
+  return layout("API 文档", `
+<div class="container">
+  <div class="card">
+    <h1>📖 API 文档</h1>
+    <p style="color:var(--text2);margin-top:8px">
+      RESTful API，所有响应均为 <code>application/json</code>。
+      输出格式兼容 <code>packages/core</code> 的 <code>Problem</code> / <code>ProblemStatement</code> Rust 结构体 (serde JSON)。
+    </p>
+  </div>
+
+  <!-- GET /api/problems -->
+  <div class="card api-section">
+    <h3><span class="api-method api-get">GET</span> <code>/api/problems</code></h3>
+    <p>题目列表（分页 + 筛选）</p>
+
+    <h4 style="margin-top:12px">Query 参数</h4>
+    <table>
+      <thead><tr><th>参数</th><th>类型</th><th>默认</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>page</code></td><td>number</td><td>1</td><td>页码</td></tr>
+        <tr><td><code>limit</code></td><td>number</td><td>20</td><td>每页数量 (1~100)</td></tr>
+        <tr><td><code>platform</code></td><td>string</td><td>—</td><td>平台筛选: <code>codeforces</code> / <code>atcoder</code> / <code>luogu</code></td></tr>
+        <tr><td><code>search</code></td><td>string</td><td>—</td><td>按 iden 或名称模糊搜索</td></tr>
+      </tbody>
+    </table>
+
+    <h4 style="margin-top:12px">响应</h4>
+    <pre class="api-block">{
+  "total": 35114,
+  "page": 1,
+  "limit": 20,
+  "total_pages": 1756,
+  "items": [
+    {
+      "iden": "RmjCF1A",
+      "name": "Theatre Square",
+      "platform": "Codeforces",
+      "difficulty": 1000,
+      "time_limit": 1000,
+      "memory_limit": 262144,
+      "tags": ["math"]
+    }
+  ]
+}</pre>
+  </div>
+
+  <!-- GET /api/problems/:iden -->
+  <div class="card api-section">
+    <h3><span class="api-method api-get">GET</span> <code>/api/problems/:iden</code></h3>
+    <p>题目详情。输出格式兼容 <code>packages/core</code> 的 <code>Problem</code> + <code>ProblemStatement[]</code> 结构。</p>
+
+    <h4 style="margin-top:12px">路径参数</h4>
+    <table>
+      <thead><tr><th>参数</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>iden</code></td><td>题目标识符，例如 <code>RmjCF1A</code></td></tr>
+      </tbody>
+    </table>
+
+    <h4 style="margin-top:12px">响应 (200)</h4>
+    <pre class="api-block">{
+  "problem": {
+    "name": "Theatre Square",
+    "description": {
+      "content": "Theatre Square in the capital...",
+      "description_type": "Markdown"
+    },
+    "platform": "Codeforces",
+    "limit": {
+      "time_limit": 1000,
+      "memory_limit": 262144
+    },
+    "difficulty": { "NumberStyle": 1000 },
+    "is_remote": true,
+    "is_sync": true,
+    "sync_url": null,
+    "sign": "RmjCF1A"
+  },
+  "statements": [
+    {
+      "statement_type": "Markdown",
+      "content": "Theatre Square in the capital...\\n\\n## Input\\n\\n...",
+      "is_translate": false,
+      "language": "English"
+    },
+    {
+      "statement_type": "Markdown",
+      "content": "首都的剧院广场...\\n\\n## 输入\\n\\n...",
+      "is_translate": true,
+      "language": "Chinese"
+    }
+  ],
+  "meta": {
+    "iden": "RmjCF1A",
+    "tags": ["math"],
+    "sample_group": [["2 1 1", "4"]],
+    "created_at": "2025-12-01T00:00:00"
+  }
+}</pre>
+
+    <h4 style="margin-top:12px">响应 (404)</h4>
+    <pre class="api-block">{
+  "error": "not_found",
+  "message": "题目 RmjXXX 不存在",
+  "suggestions": [
+    { "iden": "RmjCF1A", "name": "Theatre Square", "platform": "codeforces" }
+  ]
+}</pre>
+  </div>
+
+  <!-- GET /api/problems/:iden/raw -->
+  <div class="card api-section">
+    <h3><span class="api-method api-get">GET</span> <code>/api/problems/:iden/raw</code></h3>
+    <p>题目原始分段数据。返回未合并的 <code>ContentType[]</code> 各段落、样例、翻译、形式化等。</p>
+
+    <h4 style="margin-top:12px">响应</h4>
+    <pre class="api-block">{
+  "raw_statement": [
+    { "iden": "statement", "content": "Theatre Square in the capital..." },
+    { "iden": "input", "content": "The first line contains..." },
+    { "iden": "output", "content": "Print the answer..." }
+  ],
+  "translated_statement": [
+    { "iden": "statement", "content": "首都的剧院广场..." },
+    { "iden": "input", "content": "第一行输入..." }
+  ],
+  "sample_group": [["2 1 1", "4"]],
+  "show_order": ["statement", "input", "output"],
+  "formal_statement": "Given n, m, a...",
+  "simple_statement": "Compute ceil(n/a)*ceil(m/a)",
+  "has_page_source": true
+}</pre>
+  </div>
+
+  <!-- GET /api/stats -->
+  <div class="card api-section">
+    <h3><span class="api-method api-get">GET</span> <code>/api/stats</code></h3>
+    <p>数据库统计信息。</p>
+
+    <h4 style="margin-top:12px">响应</h4>
+    <pre class="api-block">{
+  "problems": 35114,
+  "translations": 8932,
+  "formalizations": 5210,
+  "simplifications": 5100,
+  "embeddings": 5000,
+  "platforms": {
+    "codeforces": 15875,
+    "atcoder": 4204,
+    "luogu": 15035
+  }
+}</pre>
+  </div>
+
+  <!-- GET /api/platforms -->
+  <div class="card api-section">
+    <h3><span class="api-method api-get">GET</span> <code>/api/platforms</code></h3>
+    <p>平台列表及题目数量。</p>
+
+    <h4 style="margin-top:12px">响应</h4>
+    <pre class="api-block">[
+  { "id": "codeforces", "name": "Codeforces", "count": 15875 },
+  { "id": "atcoder", "name": "AtCoder", "count": 4204 },
+  { "id": "luogu", "name": "Luogu", "count": 15035 }
+]</pre>
+  </div>
+
+  <!-- POST /api/fetch/codeforces -->
+  <div class="card api-section">
+    <h3><span class="api-method" style="background:#fce4ec;color:#c62828">POST</span> <code>/api/fetch/codeforces</code></h3>
+    <p>从 Codeforces 抓取题目并添加到数据库。使用原有解析逻辑（HTML → Markdown），自动提取题面、样例、时间/内存限制、难度、标签。</p>
+
+    <h4 style="margin-top:12px">Request Body</h4>
+    <pre class="api-block">// 单个题目
+{ "url": "https://codeforces.com/problemset/problem/1/A" }
+
+// 批量
+{ "urls": [
+    "https://codeforces.com/contest/1/problem/A",
+    "CF2B",          // 简写: 自动展开为 /problemset/problem/2/B
+    "1915F"          // 简写: 自动展开为 /problemset/problem/1915/F
+  ]
+}</pre>
+
+    <h4 style="margin-top:12px">响应</h4>
+    <pre class="api-block">{
+  "success": 2,
+  "failed": 1,
+  "results": [
+    { "url": "https://codeforces.com/problemset/problem/1/A", "iden": "RmjCF1A", "action": "inserted" },
+    { "url": "https://codeforces.com/contest/2/problem/B", "iden": "RmjCF2B", "action": "updated" },
+    { "url": "...", "error": "Request failed with status code 404" }
+  ]
+}</pre>
+  </div>
+
+  <!-- POST /api/fetch/atcoder -->
+  <div class="card api-section">
+    <h3><span class="api-method" style="background:#fce4ec;color:#c62828">POST</span> <code>/api/fetch/atcoder</code></h3>
+    <p>从 AtCoder 抓取题目并添加到数据库。</p>
+
+    <h4 style="margin-top:12px">Request Body</h4>
+    <pre class="api-block">// 单个题目
+{ "url": "https://atcoder.jp/contests/abc300/tasks/abc300_a" }
+
+// 简写
+{ "url": "abc300_a" }
+
+// 批量
+{ "urls": ["abc300_a", "abc300_b", "abc300_c"] }</pre>
+
+    <h4 style="margin-top:12px">响应</h4>
+    <pre class="api-block">{
+  "success": 3,
+  "failed": 0,
+  "results": [
+    { "url": "https://atcoder.jp/contests/abc300/tasks/abc300_a", "iden": "abc300_a", "action": "inserted" },
+    ...
+  ]
+}</pre>
+  </div>
+
+  <!-- POST /api/fetch/codeforces/contest -->
+  <div class="card api-section">
+    <h3><span class="api-method" style="background:#fce4ec;color:#c62828">POST</span> <code>/api/fetch/codeforces/contest</code></h3>
+    <p>按 Codeforces contest ID 批量抓取整场比赛的所有题目。通过 CF API 获取题目列表，再逐一抓取。</p>
+
+    <h4 style="margin-top:12px">Request Body</h4>
+    <pre class="api-block">{ "contest_id": 566 }</pre>
+
+    <h4 style="margin-top:12px">响应</h4>
+    <pre class="api-block">{
+  "contest_id": 566,
+  "total": 5,
+  "success": 5,
+  "failed": 0,
+  "results": [
+    { "url": "https://codeforces.com/contest/566/problem/A", "iden": "RmjCF566A", "action": "inserted" },
+    ...
+  ]
+}</pre>
+  </div>
+
+  <!-- POST /api/fetch/atcoder/contest -->
+  <div class="card api-section">
+    <h3><span class="api-method" style="background:#fce4ec;color:#c62828">POST</span> <code>/api/fetch/atcoder/contest</code></h3>
+    <p>按 AtCoder contest ID 批量抓取整场比赛。自动从比赛任务页提取题目链接。</p>
+
+    <h4 style="margin-top:12px">Request Body</h4>
+    <pre class="api-block">{ "contest_id": "abc300" }</pre>
+
+    <h4 style="margin-top:12px">响应</h4>
+    <pre class="api-block">{
+  "contest_id": "abc300",
+  "total": 8,
+  "success": 8,
+  "failed": 0,
+  "results": [
+    { "url": "https://atcoder.jp/contests/abc300/tasks/abc300_a", "iden": "abc300_a", "action": "inserted" },
+    ...
+  ]
+}</pre>
+  </div>
+
+  <!-- 类型定义 -->
+  <div class="card api-section">
+    <h3>📐 类型定义</h3>
+    <p>以下 TypeScript 类型与 <code>packages/core</code> Rust 结构体 (serde JSON) 一一对应：</p>
+
+    <pre class="api-block">// 兼容 core::model::problem::Problem
+interface Problem {
+  name: string;
+  description: {
+    content: string;                              // 前 200 字符摘要
+    description_type: "Markdown" | "Html" | "Typst";
+  };
+  platform: string;                               // "Codeforces" | "AtCoder" | "Luogu"
+  limit: {
+    time_limit: number;                            // 毫秒
+    memory_limit: number;                          // KB
+  };
+  difficulty:
+    | { NumberStyle: number }                      // CF rating 如 1000
+    | { LuoguStyle: string }                       // "P0".."P7"
+    | "None";
+  is_remote: boolean;
+  is_sync: boolean;
+  sync_url: string | null;
+  sign: string | null;                             // = iden
+}
+
+// 兼容 core::model::problem::ProblemStatement
+interface ProblemStatement {
+  statement_type: "Markdown" | "Html" | "Pdf" | "Typst";
+  content: string;                                 // 合并后的完整 Markdown
+  is_translate: boolean;
+  language: "Chinese" | "English" | "Japanese" | "Russian";
+}
+
+// 原始分段
+interface ContentType {
+  iden: string;     // "statement" | "input" | "output" | "constraints" | "sample_input_1" | ...
+  content: string;  // Markdown 段落内容
+}</pre>
+  </div>
+
+  <!-- 注意事项 -->
+  <div class="card api-section">
+    <h3>⚠️ 注意事项</h3>
+    <ul style="margin-left:20px;line-height:2">
+      <li><strong>limit 字段差异：</strong>Core 使用 <code>{time_limit, memory_limit}</code>（ms / KB），本 API 保持一致。前端展示时 MB = memory_limit / 1024。</li>
+      <li><strong>difficulty 枚举格式：</strong>遵循 Rust serde 外部标记枚举序列化格式。CF 为 <code>{"NumberStyle": 800}</code>，洛谷为 <code>{"LuoguStyle": "P5"}</code>。</li>
+      <li><strong>statement_type：</strong>当前数据全部为 <code>"Markdown"</code>（CF/AT 已从 HTML 转 Markdown，洛谷保持 Markdown）。</li>
+      <li><strong>数学公式：</strong>使用 LaTeX <code>$...$</code> 和 <code>$$...$$</code>，前端用 KaTeX 渲染。</li>
+      <li><strong>模糊搜索：</strong>如果 iden 不精确匹配，404 响应中会包含 <code>suggestions</code> 字段。</li>
+    </ul>
+  </div>
+</div>`);
+}

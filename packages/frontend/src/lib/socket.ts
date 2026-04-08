@@ -10,7 +10,7 @@ export const socket = io(URL, {
 socket.on('connect', () => {
   console.log('Socket connected:', socket.id);
   // get token from cookies
-  const uid = +document.cookie.split('; ').find(row => row.startsWith('_uid='))?.split('=')[1] || null;
+  const uid = +(document.cookie.split('; ').find(row => row.startsWith('_uid='))?.split('=')[1] || 3);
   const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1] || null;
   console.log(uid, token);
   let d = socket.emit('auth', {

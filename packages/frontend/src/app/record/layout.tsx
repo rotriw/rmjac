@@ -1,23 +1,26 @@
 import type { Metadata } from "next";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/layout/app-sidebar";
+import { AuthProvider } from "@/contexts/auth-context";
+import { Toaster } from "@/components/ui/sonner";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 export const metadata: Metadata = {
   title: "Rmjac",
-  description: "",
+  description: "Let us code here.",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset >
-        {children}
-      </SidebarInset>
-    </SidebarProvider>
+    <html lang="en">
+      <body className={`antialiased`} style={{ backgroundColor: "#f7f7f7" }}>
+        <AuthProvider>
+          <SidebarProvider>{children}</SidebarProvider>
+          <Toaster />
+        </AuthProvider>
+      </body>
+    </html>
   );
 }

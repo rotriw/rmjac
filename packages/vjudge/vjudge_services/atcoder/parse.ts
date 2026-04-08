@@ -1,26 +1,28 @@
 import { JSDOM } from "jsdom";
 import { Problem, ProblemStatement, ContentType } from "../../declare/problem.ts";
-import { convertTex2Typst } from "../../utils/texToTypst.ts";
 import TurndownService from 'turndown';
-import { markdownToTypstCode } from "@mdpdf/mdpdf";
 
 export const convertHTML = async (value: Element): Promise<string> => {
     let res = value.innerHTML;
-    res = await convertEasyHTMLToTypst(res);
-    res = await markdownToTypstCode(res);
-    res = res.split('\n').filter(line => !line.startsWith('#set ') && !line.startsWith('#let ') && !line.startsWith('#show') && line.replaceAll(" ", "").length > 0).join('\n');
+    res = await convertEasyHTMLToMarkdown(res);
+    // 不再调用 markdownToTypstCode，直接保留 Markdown
     res = res.replace(/<br>/g, '\n');
     res = res.replace(/&nbsp;/g, ' ');
-    res = res.replace(/</g, '<');
-    res = res.replace(/>/g, '>');
+    res = res.replace(/&lt;/g, '<');
+    res = res.replace(/&gt;/g, '>');
+    res = res.replace(/&amp;/g, '&');
+    // 图片占位符还原为 Markdown 格式
     res = res.replaceAll(/%imgstart%(.*?)%imgdone%/g, (_match, p1) => {
-            return `#figure(image("${p1.replaceAll('\\/', '/')}", width: 60%))`
+            return `![image](${p1.replaceAll('\\/', '/')})`
     })
-
-    res = res.replaceAll(/%typststart%(.*?)%typstend%/g, (_match, p1) => {
-        return `$${p1.replaceAll('\\\\', '%xgg%').replaceAll('\\', '').replaceAll('%xgg%', '\\')}$`
-    })
-
+    // 保护数学公式，反转义仅在公式外部
+    const mathSegments: string[] = [];
+    res = res.replaceAll(/%mathstart%(.*?)%mathend%/g, (_match, p1) => {
+        const idx = mathSegments.length;
+        mathSegments.push(p1);
+        return `%%MATH_PROTECTED_${idx}%%`;
+    });
+    // 反转义 Turndown 的转义字符（仅在 LaTeX 公式外部）
     res = res.replaceAll("\\_", "_");
     res = res.replaceAll("\\*", "*");
     res = res.replaceAll("\\#", "#");
@@ -29,15 +31,20 @@ export const convertHTML = async (value: Element): Promise<string> => {
     res = res.replaceAll("\\(", "(");
     res = res.replaceAll("\\)", ")");
     res = res.replaceAll("\\|", "|");
+    // 还原数学公式
+    res = res.replaceAll(/%%MATH_PROTECTED_(\d+)%%/g, (_match, idx) => {
+        return `$${mathSegments[parseInt(idx)]}$`;
+    });
     return res;
 }
 
-const convertEasyHTMLToTypst = async (value: string): Promise<string> => {
+const convertEasyHTMLToMarkdown = async (value: string): Promise<string> => {
     const turndownService = new TurndownService({ option: 'value' });
-    turndownService.addRule('typstMathInAtcoder', {
+    turndownService.addRule('latexMathInAtcoder', {
         filter: ['var'],
         replacement: function (_content: string, node: any, _options: any) {
-            return `%typststart%${convertTex2Typst(node.textContent)}%typstend%`
+            // 保留原始 LaTeX，不再经过 convertTex2Typst
+            return `%mathstart%${node.textContent}%mathend%`
         }
     });
     turndownService.addRule('image', {
@@ -63,7 +70,7 @@ const convertEasyHTMLToTypst = async (value: string): Promise<string> => {
     return res;
 }
 
-export const convertAtcoderEnglishDomToTypst = async (content: Element): Promise<ContentType[]> => {
+export const convertAtcoderEnglishDomToMarkdown = async (content: Element): Promise<ContentType[]> => {
     if (content == null) {
         return [];
     }
@@ -152,7 +159,7 @@ export const parse = async (html: string, url: string): Promise<Problem | ""> =>
             problem_source: "AtCoder",
             page_source: statementHtml,
             iden: problem_iden,
-            problem_statements: await convertAtcoderEnglishDomToTypst(sanitizedLangEn),
+            problem_statements: await convertAtcoderEnglishDomToMarkdown(sanitizedLangEn),
             time_limit,
             memory_limit,
             sample_group: [],

@@ -130,12 +130,11 @@ export async function RegisterForm({
       email: data.get("email") as string,
       password: data.get("password") as string,
       avatar: "",
-      verify: {
+      
         challenge_text: data.get("captcha") as string,
         challenge_code: data.get("challenge_verify") as string,
         challenge_time: +(data.get("challenge_time") || 0),
-        challenge_darkmode: "false",
-      }})
+        challenge_darkmode: "false",})
     } catch (error: unknown) {
       console.log(error);
       const message = error instanceof Error ? error.message : ""

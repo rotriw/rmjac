@@ -7,17 +7,22 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { getSidebar } from "@/api/server/api_user_info"
+// import { getSidebar } from "@/api/server/api_user_info"
+import { useSearchParams } from "next/navigation"
+import { postSidebar } from "@/api/server/api_view_default"
+import { headers } from "next/headers"
 
 
-export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const sidebarData = await getSidebar({ _path: null })
+export async function AppSidebar({ path,...props }: React.ComponentProps<typeof Sidebar>  & {path: string}) {
+  //console.log(items);
+  const searchParams = await headers();
+  console.log(searchParams.get("x-current-path"));
+  const sidebarData = await postSidebar({ path })
   console.log(sidebarData);
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>
-        {/* <TeamSwitcher teams={data.teams} /> */}
-        <NavMain items={sidebarData.sidebar} />
+        <NavMain items={sidebarData.data} />
       </SidebarHeader>
       <SidebarContent />
       <UserAvatar />

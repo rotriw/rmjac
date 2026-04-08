@@ -1,25 +1,17 @@
-use sea_orm::DeriveIden;
+use sea_orm_migration::prelude::*;
 
 #[derive(DeriveIden)]
-pub enum Record {
+pub enum Enum {
     #[sea_orm(iden = "edge_record")]
     Table,
-    #[sea_orm(iden = "edge_id")]
     EdgeId,
-    #[sea_orm(iden = "u_node_id")]
-    UNodeId,
-    #[sea_orm(iden = "v_node_id")]
-    VNodeId,
-    #[sea_orm(iden = "record_node_id")]
-    RecordNodeId,
-    #[sea_orm(iden = "record_status")]
-    RecordStatus,
-    #[sea_orm(iden = "code_length")]
-    CodeLength,
-    #[sea_orm(iden = "score")]
+    Time,
+    Memory,
+    UserId,
+    ProblemId,
+    Code,
+    RecordId,
+    Status,
+    Language,
     Score,
-    #[sea_orm(iden = "submit_time")]
-    SubmitTime,
-    #[sea_orm(iden = "platform")]
-    Platform,
 }

@@ -1,16 +1,28 @@
-use crate::graph::action::DefaultNodes;
-use crate::service::iden::ac_automaton::AcMachine;
+// use crate::service::iden::ac_automaton::AcMachine;
 use lazy_static::lazy_static;
 use sea_orm::DatabaseConnection;
+use socketioxide::SocketIo;
 use socketioxide::extract::SocketRef;
 use std::sync::Arc;
 use std::{collections::HashMap, sync::Mutex};
+
+#[derive(Debug, Clone, Copy)]
+pub struct DefaultNodes {
+    pub guest_user_node: i64,
+    pub default_strategy_node: i64,
+    pub default_iden_node: i64,
+    pub default_system_node: i64,
+}
 
 lazy_static! {
     pub static ref REDIS_URL: Mutex<String> = Mutex::new("redis://localhost:6379".to_string());
     pub static ref REDIS_CLIENT: Mutex<redis::Client> = Mutex::new(
         redis::Client::open(REDIS_URL.lock().unwrap().clone())
             .expect("Failed to create Redis client")
+    );
+    pub static ref REDIS_POOL: Mutex<r2d2::Pool<redis::Client>> = Mutex::new(
+        r2d2::Pool::builder().max_size(500).build(redis::Client::open(REDIS_URL.lock().unwrap().clone())
+            .expect("Failed to create Redis client")).unwrap()
     );
     pub static ref PATH_VIS: Mutex<HashMap<i32, HashMap<i64, bool>>> = Mutex::new(HashMap::new());
     pub static ref SAVED_NODE_PATH: Mutex<HashMap<(i64, String), HashMap<i64, i64>>> =
@@ -35,20 +47,25 @@ lazy_static! {
     pub static ref EDGE_SOCKETS: Mutex<HashMap<String, SocketRef>> = Mutex::new(HashMap::new());
     pub static ref EDGE_VEC: Mutex<Vec<String>> = Mutex::new(vec![]);
     pub static ref EDGE_NUM: Mutex<i32> = Mutex::new(0);
+    pub static ref SOCKETIO: Mutex<Option<SocketIo>> = Mutex::new(None);
     pub static ref SLICE_WORD_LIST: Mutex<Vec<String>> = Mutex::new(vec![]);
-    pub static ref SLICE_WORD_ACMAC: Mutex<AcMachine> = Mutex::new(AcMachine::build(
-        SLICE_WORD_LIST
-            .lock()
-            .unwrap()
-            .clone()
-            .iter()
-            .map(AsRef::as_ref)
-            .collect()
-    ));
+    // pub static ref SLICE_WORD_ACMAC: Mutex<AcMachine> = Mutex::new(AcMachine::build(
+    //     SLICE_WORD_LIST
+    //         .lock()
+    //         .unwrap()
+    //         .clone()
+    //         .iter()
+    //         .map(AsRef::as_ref)
+    //         .collect()
+    // ));
     pub static ref USER_WEBSOCKET_CONNECTIONS: Mutex<HashMap<String, SocketRef>> =
         Mutex::new(HashMap::new());
     pub static ref USER_WEBSOCKET_CONNECTIONS_ACCOUNT: Mutex<HashMap<String, i64>> =
         Mutex::new(HashMap::new());
+
+    pub static ref RESEND_KEY: Mutex<String> = Mutex::new("".to_string());
+    pub static ref EMAIL_DOAMIN: Mutex<String> = Mutex::new("notification.rt.st".to_string());
+    pub static ref EMAIL_SEND_NAME: Mutex<String> = Mutex::new("Rmj.ac Verify".to_string());
 }
 
 pub mod db;

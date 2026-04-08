@@ -6,6 +6,7 @@
 //! --vport -V <vjudge_port>, Vjudge server will listen on this port (default: 1825)
 //! --host -H <host>, Server will listen on this host (default: 127.0.0.1)
 
+use command_tool::run;
 use log::LevelFilter;
 
 use crate::{
@@ -13,6 +14,7 @@ use crate::{
     handler, utils,
 };
 
+#[run]
 pub fn run(
     port: Option<String>,
     vjudge_port: Option<String>,
@@ -27,7 +29,6 @@ pub fn run(
         .unwrap();
     let host = host.unwrap_or("127.0.0.1".to_string());
     let config = config.unwrap_or_else(|| "config.json".to_string());
-    rmjac_core::service::iden::create_words(vec!["LG", "CF", "AT", "lg", "cf", "at"]);
     let log_level: LevelFilter = log_level
         .unwrap_or_else(|| "info".to_string())
         .parse()

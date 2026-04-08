@@ -1,6 +1,6 @@
-use sea_orm::{ActiveModelTrait, ColumnTrait};
 pub use crate::utils::perm::{AuthTool, UserAuthCotext};
 use rmjac_core::error::CoreError;
+use sea_orm::{ActiveModelTrait, ColumnTrait};
 
 macro_rules! default_node {
     ($field:ident) => {
@@ -17,8 +17,9 @@ use actix_web::{
 };
 use derive_more::derive::Display;
 use log::LevelFilter;
-use sea_orm::{ConnectOptions, Database, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
-use rmjac_core::db::entity::edge::iden::Entity;
+use sea_orm::{
+    ConnectOptions, Database, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, QuerySelect,
+};
 
 #[derive(Debug, Display)]
 pub enum HandlerError {
@@ -116,9 +117,6 @@ pub async fn main(
         .ok_or_else(|| {
             std::io::Error::new(std::io::ErrorKind::NotFound, "Postgres URL not found")
         })?;
-    let url = rmjac_core::env::REDIS_URL.lock().unwrap().clone();
-    log::info!("Connecting to Redis: {url}");
-    *rmjac_core::env::REDIS_CLIENT.lock().unwrap() = redis::Client::open(url).unwrap();
     log::info!("Connecting to database {}...", &database_url);
     let connection_options = ConnectOptions::new(database_url.clone())
         .sqlx_logging_level(LevelFilter::Trace)
@@ -148,12 +146,16 @@ pub async fn main(
             .supports_credentials();
         let auth = AuthTool {};
         App::new()
+            .service(view::service())
             .service(user::service())
             .service(problem::service())
+            .service(search::service())
+            .service(event::service())
+            .service(manage::service())
             .service(record::service())
             .service(training::service())
-            .service(vjudge::service())
-            .service(submit::service())
+            .service(sync::service())
+            .service(tracker::service())
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {
                 error::InternalError::from_response(
                     "",
@@ -172,10 +174,13 @@ pub async fn main(
     .await
 }
 
+pub mod event;
+pub mod manage;
 pub mod problem;
 pub mod record;
+pub mod search;
+pub mod sync;
+pub mod tracker;
 pub mod training;
 pub mod user;
-
-pub mod submit;
-pub mod vjudge;
+pub mod view;

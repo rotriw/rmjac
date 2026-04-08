@@ -1,8 +1,9 @@
 import { io, Socket } from "socket.io-client";
 import * as openpgp from "openpgp";
 import fs from "node:fs";
-import { task_handler } from "./task_handler.ts";
+import { load_handlers } from "./index.ts";
 
+// deno-lint-ignore no-explicit-any
 async function auth(socket: Socket<any>) {
     const message = await openpgp.createCleartextMessage({
         text: `Rotriw_Edge_Server_${socket.id || ""}`
@@ -18,11 +19,14 @@ async function auth(socket: Socket<any>) {
     socket.emit("auth", msg);
 }
 
+// deno-lint-ignore require-await
 export async function connect() {
+    LOG.info(`Connecting to server at ${SERVER_URL}...`);
     const socket = io(SERVER_URL);
     socket.on("connect", async () => {
         LOG.info("start to auth.");
-        await auth(socket);
+        load_handlers();
+        auth(socket);
     });
 
     socket.on("auth_response", (data: string) => {
@@ -40,18 +44,5 @@ export async function connect() {
             socket.connect();
         }, 1000);
     });
-
-    // deno-lint-ignore no-explicit-any
-    socket.on("task", async (data: any) => { try {
-        console.log(data);
-        if (typeof data === "string") {
-            data = JSON.parse(data);
-        }
-        await task_handler(data, socket as any);
-    } catch(err) {
-        LOG.error(`Task handling error: ${err}`);
-    }
-    });
-
     global.socket = socket;
 }

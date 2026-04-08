@@ -24,8 +24,8 @@ export function LoginForm({
       })
 
       const cookieStore = await cookies()
-      cookieStore.set('_uid', String(res.user_id))
-      cookieStore.set('token', res.token.private.token)
+      cookieStore.set('_uid', String(res.user_id));
+      cookieStore.set('token', res.token.token);
     } catch (_error) {
       redirect(`/login?err=login_failed&reason=${_error}`)
     }

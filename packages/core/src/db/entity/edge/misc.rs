@@ -1,46 +1,19 @@
-use crate::db::entity::edge::{DbEdgeActiveModel, DbEdgeEntityModel, DbEdgeInfo};
-use crate::graph::edge::misc::MiscEdge;
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveEntityModel, DeriveRelation, EnumIter};
+use macro_db_init::{table_create};
+use crate::db::EntityServer;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "edge_misc")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub edge_id: i64,
-    pub u_node_id: i64,
-    pub v_node_id: i64,
-    pub misc_type: String,
+    pub from: i64,
+    pub to: i64,
+    pub edge_type: i64,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
-impl DbEdgeActiveModel<Model, MiscEdge> for ActiveModel {}
-impl DbEdgeInfo for ActiveModel {
-    fn get_edge_type(&self) -> &str {
-        "misc"
-    }
-}
-
-impl From<Model> for MiscEdge {
-    fn from(model: Model) -> Self {
-        MiscEdge {
-            id: model.edge_id,
-            u: model.u_node_id,
-            v: model.v_node_id,
-            misc_type: model.misc_type,
-        }
-    }
-}
-
-impl DbEdgeEntityModel<Model> for Entity {
-    fn get_u_edge_id_column(&self) -> <Self as EntityTrait>::Column {
-        Column::UNodeId
-    }
-
-    fn get_v_edge_id_column(&self) -> <Self as EntityTrait>::Column {
-        Column::VNodeId
-    }
-}

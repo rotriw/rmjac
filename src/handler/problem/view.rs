@@ -1,149 +1,50 @@
 use crate::handler::ResultHandler;
-use crate::handler::problem::RecordEdgeColumn;
-use crate::handler::problem::RecordStatus;
-use enum_const::EnumConst;
-use macro_handler::generate_handler;
-use macro_handler::{export, from_path, handler, perm, route};
-use rmjac_core::model::ModelStore;
-use rmjac_core::model::problem::ProblemModel;
-use rmjac_core::model::problem::ProblemImport;
-use rmjac_core::model::record::RecordImport;
-use rmjac_core::service::perm::provider::{Problem, ProblemPermService};
-use sea_orm::ColumnTrait;
+use crate::utils::perm::UserAuthCotext;
+use macro_handler::{export, generate_handler, handler, perm, require_login, route};
+use rmjac_core::service::perm::provider::{System, SystemPermService};
 
 #[generate_handler(route = "/view", real_path = "/api/problem/view")]
 pub mod handler {
-    use super::*;
-    use crate::utils::perm::UserAuthCotext;
-    use rmjac_core::graph::edge::record::RecordEdge;
+    use rmjac_core::{
+        action::problem::{CreateOption, create_problem},
+        error::CoreError,
+        model::{
+            event::{Event, EventParent, EventType},
+            problem::Problem,
+            user::User,
+        },
+        service::{
+            event::{create_event_iden, get_event_with_id},
+            perm::provider::Manage,
+            save::{ManageService, Saved},
+        },
+    };
+    use sea_orm::DatabaseConnection;
 
-    #[from_path(iden)]
-    #[export(pid, stmtid)]
-    async fn before_resolve(store: &mut impl ModelStore, iden: &str) -> ResultHandler<(i64, i64)> {
-        Ok(ProblemImport::resolve(store, iden).await?)
-    }
+    use super::*;
 
     #[perm]
-    async fn check_view_perm(user_context: Option<UserAuthCotext>, pid: i64) -> bool {
-        // 如果用户已登录，检查是否有查看权限
-        if let Some(uc) = user_context
-            && uc.is_real
-        {
-            if ProblemPermService::verify(uc.user_id, pid, Problem::View) {
-                return true;
-            }
-        }
+    #[require_login]
+    async fn perm(user_context: UserAuthCotext, id: i64) -> bool {
+        let user_id = user_context.user_id;
+        let system_id = rmjac_core::env::DEFAULT_NODES
+            .lock()
+            .unwrap()
+            .default_system_node;
+        Manage::verify(user_id, id, Manage::View)
+            || System::verify(user_id, system_id, System::ViewAllPage)
+    }
 
-        if ProblemPermService::verify(default_node!(guest_user_node), pid, Problem::View) {
-            return true;
-        }
-
-        false
+    #[export(id)]
+    async fn before_expand(iden: &str) -> ResultHandler<i64> {
+        Ok(get_event_with_id(iden).await?)
     }
 
     #[handler]
-    #[perm(check_view_perm)]
-    #[route("/{iden}")]
-    #[export(
-        "model",
-        "statement",
-        "user_recent_records",
-        "user_last_accepted_record"
-    )]
-    async fn get_view(
-        store: &mut impl ModelStore,
-        user_context: Option<UserAuthCotext>,
-        pid: i64,
-        stmtid: i64,
-    ) -> ResultHandler<(
-        ProblemModel,
-        i64,
-        Option<Vec<RecordEdge>>,
-        Option<Vec<RecordEdge>>,
-    )> {
-        let model = ProblemImport::model(store, pid).await?;
-        let get_user_submit_data = if let Some(uc) = &user_context
-            && uc.is_real
-        {
-            let data =
-                RecordImport::by_user_statement(store.get_db(), uc.user_id, stmtid, 100, 1)
-                    .await;
-            data.ok()
-        } else {
-            None
-        };
-        let get_user_accepted_data = if let Some(uc) = &user_context
-            && uc.is_real
-        {
-            Some(
-                RecordImport::by_node(
-                    store.get_db(),
-                    uc.user_id,
-                    1,
-                    1,
-                    vec![
-                        RecordEdgeColumn::RecordStatus
-                            .eq(RecordStatus::Accepted.get_const_isize().unwrap_or(100) as i32),
-                    ],
-                )
-                .await?,
-            )
-        } else {
-            None
-        };
-        Ok((model, stmtid, get_user_submit_data, get_user_accepted_data))
-    }
-
-    #[handler]
-    #[perm(check_view_perm)]
-    #[route("/{iden}")]
-    #[export(
-        "model",
-        "statement",
-        "user_recent_records",
-        "user_last_accepted_record"
-    )]
-    async fn post_view(
-        store: &mut impl ModelStore,
-        user_context: Option<UserAuthCotext>,
-        pid: i64,
-        stmtid: i64,
-    ) -> ResultHandler<(
-        ProblemModel,
-        i64,
-        Option<Vec<RecordEdge>>,
-        Option<Vec<RecordEdge>>,
-    )> {
-        let model = ProblemImport::model(store, pid).await?;
-        let get_user_submit_data = if let Some(uc) = &user_context
-            && uc.is_real
-        {
-            let data =
-                RecordImport::by_user_statement(store.get_db(), uc.user_id, stmtid, 100, 1)
-                    .await;
-            data.ok()
-        } else {
-            None
-        };
-        let get_user_accepted_data = if let Some(uc) = &user_context
-            && uc.is_real
-        {
-            Some(
-                RecordImport::by_node(
-                    store.get_db(),
-                    uc.user_id,
-                    1,
-                    1,
-                    vec![
-                        RecordEdgeColumn::RecordStatus
-                            .eq(RecordStatus::Accepted.get_const_isize().unwrap_or(100) as i32),
-                    ],
-                )
-                .await?,
-            )
-        } else {
-            None
-        };
-        Ok((model, stmtid, get_user_submit_data, get_user_accepted_data))
+    #[route("/get")]
+    #[perm(perm)]
+    #[export("problem")]
+    async fn post_view(db: &DatabaseConnection, id: i64) -> ResultHandler<Saved<Problem>> {
+        Ok(Saved::get(id).await?)
     }
 }

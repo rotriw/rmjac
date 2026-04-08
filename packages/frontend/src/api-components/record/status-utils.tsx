@@ -124,7 +124,7 @@ export const RECORD_STATUS_ICON: Record<RecordStatus, keyof typeof LUCIDE> = {
 }
 
 export function Icond({status, size, animate, className}: {status: RecordStatus, size?: number, animate?: boolean, className?: string}) {
-  const Icons = LUCIDE[RECORD_STATUS_ICON[status]];
+  const Icons = LUCIDE[RECORD_STATUS_ICON[status]] as any;
   console.log(RECORD_STATUS_ICON[status]);
   console.log(status);
   console.log(Icons);

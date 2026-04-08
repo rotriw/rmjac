@@ -1,24 +1,26 @@
-export const CFSubmissionStatus = {
-    "FAILED": "UnknownError",
+import { JudgeStatus } from "@rmjac/api-declare";
+
+export const CFSubmissionStatus: Record<string, JudgeStatus | null> = {
+    "FAILED": "WrongAnswer",
     "OK": "Accepted",
-    "PARTIAL": "Partial Accepted",
-    "COMPILATION_ERROR": "Compile Error",
-    "RUNTIME_ERROR": "Runtime Error",
-    "WRONG_ANSWER": "Wrong Answer",
-    "TIME_LIMIT_EXCEEDED": "Time Limit Exceeded",
-    "MEMORY_LIMIT_EXCEEDED": "Memory Limit Exceeded",
-    "IDLENESS_LIMIT_EXCEEDED": "Idleness Limit Exceeded",
-    "SECURITY_VIOLATED": "Dangerous Code",
-    "CRASHED": "Runtime Error",
-    "INPUT_PREPARATION_CRASHED": "Runtime Error",
-    "CHALLENGED": "Wrong Answer",
+    "PARTIAL": "WrongAnswer",
+    "COMPILATION_ERROR": "CompileError",
+    "RUNTIME_ERROR": "RuntimeError",
+    "WRONG_ANSWER": "WrongAnswer",
+    "TIME_LIMIT_EXCEEDED": "TimeLimitExceeded",
+    "MEMORY_LIMIT_EXCEEDED": "MemoryLimitExceeded",
+    "IDLENESS_LIMIT_EXCEEDED": "Unknown",
+    "SECURITY_VIOLATED": "Reject",
+    "CRASHED": "RuntimeError",
+    "INPUT_PREPARATION_CRASHED": "PresentationError",
+    "CHALLENGED": "Unknown",
     "SKIPPED": "Skipped",
-    "TESTING": "Waiting",
-    "REJECTED": "UnknownError",
-    "SUBMITTED": "Waiting",
+    "TESTING": "Reject",
+    "REJECTED": "Reject",
+    "SUBMITTED": "Unknown",
 }
 
 
-export const convertCFSubmissionStatus = (status: string) =>  {
-    return CFSubmissionStatus[status as keyof typeof CFSubmissionStatus] || "UnknownError";
+export const convertCFSubmissionStatus = (status: string): JudgeStatus =>  {
+    return CFSubmissionStatus[status as keyof typeof CFSubmissionStatus] || "Unknown";
 }
