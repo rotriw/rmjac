@@ -1,18 +1,24 @@
-use crate::service::save::ManageService;
 use crate::Result;
-use std::fmt::format;
-use redis::TypedCommands;
-use resend_rs::{types::CreateDomainOptions, Resend};
-use resend_rs::types::{CreateEmailBaseOptions, CreateEmailResponse};
-use sea_orm::DatabaseConnection;
+use crate::env::db::get_connect;
 use crate::error::CoreError;
 use crate::model::user::User;
+use crate::service::save::ManageService;
 use crate::service::save::Saved;
 use crate::service::user::Verified;
+use crate::service::user::from::{FromUserEmail, FromUserIden};
 use crate::utils::get_redis_connection;
+use redis::TypedCommands;
+use resend_rs::types::{CreateEmailBaseOptions, CreateEmailResponse};
+use resend_rs::{Resend, types::CreateDomainOptions};
+use sea_orm::DatabaseConnection;
+use std::fmt::format;
 
-
-pub async fn verify_email(db: &DatabaseConnection, email: &str, uid: i64, code: &str) -> Result<()> {
+pub async fn verify_email(
+    db: &DatabaseConnection,
+    email: &str,
+    uid: i64,
+    code: &str,
+) -> Result<()> {
     if let Ok(value) = get_redis_connection().get(format!("verified:{}", code))
         && let Some(value) = value
         && !value.is_empty()
@@ -28,12 +34,13 @@ pub async fn verify_email(db: &DatabaseConnection, email: &str, uid: i64, code: 
         user.verified(db).await?;
         Ok(())
     } else {
-        Err(CoreError::Guard("Invalid or expired verification code.".to_string()))?
+        Err(CoreError::Guard(
+            "Invalid or expired verification code.".to_string(),
+        ))?
     }
 }
 
-
-pub async fn send_verify_email_with_user(email: &str, name: &str, ) -> Result<()> {
+pub async fn send_verify_email_with_user(email: &str, name: &str) -> Result<()> {
     let data = include_str!("index.html");
     log::info!("Sending email to {}", email);
     // first check send
@@ -42,7 +49,9 @@ pub async fn send_verify_email_with_user(email: &str, name: &str, ) -> Result<()
         && let Some(value) = value
         && !value.is_empty()
     {
-            return Err(CoreError::Guard("Email have sent, please wait.".to_string()))
+        return Err(CoreError::Guard(
+            "Email have sent, please wait.".to_string(),
+        ));
     }
 
     let uuid = uuid::Uuid::new_v4().to_string();
@@ -57,18 +66,24 @@ pub async fn send_verify_email_with_user(email: &str, name: &str, ) -> Result<()
         return Err(CoreError::Guard("Failed to send email, please try again later.".to_string()));
     }
     let domain = domain.unwrap(); */
+    let db = get_connect().await?;
+    let uid = Saved::from_user_email(&db, email).await?.id;
     let from = format!("{} <verify@{}>", send_user, domain_name);
     let to = vec![email.to_string()];
     let subject = "验证您的邮箱 Rmj.ac".to_string();
-    let basic_url = "https://api.rmj.ac/verify_mail";
+    let basic_url = "https://api.rmj.ac/api/user/verify";
     let mail = data.replace("{{user}}", name);
-    let mail = mail.replace("{{link}}", &format!("{basic_url}?uuid={uuid}"));
-    let email_send = CreateEmailBaseOptions::new(from, to, subject)
-        .with_html(&mail);
+    let mail = mail.replace(
+        "{{link}}",
+        &format!("{basic_url}?uuid={uuid}&email={email}&uid={uid}"),
+    );
+    let email_send = CreateEmailBaseOptions::new(from, to, subject).with_html(&mail);
     let _email = resend.emails.send(email_send).await;
     if let Err(e) = _email {
         log::error!("Failed to send email: {}", e);
-        return Err(CoreError::Guard("Failed to send email, please try again later.".to_string()));
+        return Err(CoreError::Guard(
+            "Failed to send email, please try again later.".to_string(),
+        ));
     }
     log::info!("Send email to {name}({email}) successfully!");
     redis.set_ex(format!("email:{}", email), 1, 60 * 5)?;
