@@ -697,7 +697,7 @@ export function renderHomePage(stats: {
   <div class="hero-inner">
     <div class="hero-eyebrow">Competitive Programming Archive</div>
     <h1>Problem<br>Viewer</h1>
-    <p class="hero-desc">收录主流在线评测平台题目，提供标准化 REST API，<br>兼容 Core 后端类型系统。</p>
+    <p class="hero-desc">Rmjac viwer。</p>
     <div class="hero-actions">
       <a href="/problems" class="btn btn-light">浏览题目</a>
       <a href="/docs" class="btn btn-ghost">API 文档</a>

@@ -10,10 +10,11 @@ import {
   postCreate,
   postDelete,
   postList,
+  postReorder,
   postRemoveProblem,
   postUpdate,
 } from "@/api/client/api_training_todo"
-import type { TodoListItem } from "@rmjac/api-declare"
+import type { TodoListItem, TodoProblemItem } from "@rmjac/api-declare"
 import { toast } from "sonner"
 
 type Props = {
@@ -106,6 +107,35 @@ export default function TodoManager({ initialTodos }: Props) {
     }
   }
 
+  const handleReorder = async (
+    todoId: number,
+    problems: TodoProblemItem[],
+    edgeId: number,
+    direction: "up" | "down"
+  ) => {
+    const index = problems.findIndex((problem) => problem.edge_id === edgeId)
+    if (index < 0) {
+      return
+    }
+
+    const targetIndex = direction === "up" ? index - 1 : index + 1
+    if (targetIndex < 0 || targetIndex >= problems.length) {
+      return
+    }
+
+    const next = [...problems]
+    const [current] = next.splice(index, 1)
+    next.splice(targetIndex, 0, current)
+
+    try {
+      await postReorder({ todo_id: todoId, edge_ids: next.map((problem) => problem.edge_id) })
+      await refresh()
+      toast.success("题目顺序已更新")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "排序失败")
+    }
+  }
+
   return (
     <div className="space-y-4">
       <StandardCard title="概览">
@@ -177,12 +207,30 @@ export default function TodoManager({ initialTodos }: Props) {
               {todo.problems.length === 0 ? (
                 <div className="text-sm text-muted-foreground">暂无题目</div>
               ) : (
-                todo.problems.map((problem) => (
+                todo.problems.map((problem, index) => (
                   <div key={problem.edge_id} className="flex items-center justify-between rounded-sm border px-3 py-2 text-sm">
                     <span>{problem.problem_iden}</span>
-                    <Button variant="ghost" size="sm" onClick={() => handleRemoveProblem(todo.id, problem.problem_iden)}>
-                      移除
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={index === 0}
+                        onClick={() => handleReorder(todo.id, todo.problems, problem.edge_id, "up")}
+                      >
+                        上移
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={index === todo.problems.length - 1}
+                        onClick={() => handleReorder(todo.id, todo.problems, problem.edge_id, "down")}
+                      >
+                        下移
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleRemoveProblem(todo.id, problem.problem_iden)}>
+                        移除
+                      </Button>
+                    </div>
                   </div>
                 ))
               )}

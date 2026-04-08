@@ -36,6 +36,62 @@ interface TranslateModel {
 
 type TranslatePhase = "idle" | "streaming" | "done" | "error"
 
+function getCookieValue(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined
+  const key = `${name}=`
+  const found = document.cookie
+    .split(";")
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(key))
+  if (!found) return undefined
+  return decodeURIComponent(found.slice(key.length))
+}
+
+function getViewerAuth() {
+  const uid =
+    getCookieValue("_uid") ||
+    getCookieValue("uid") ||
+    (typeof localStorage !== "undefined" ? localStorage.getItem("_uid") || localStorage.getItem("uid") || undefined : undefined)
+
+  const token =
+    getCookieValue("token") ||
+    (typeof localStorage !== "undefined" ? localStorage.getItem("token") || undefined : undefined)
+
+  return { uid, token }
+}
+
+function withViewerAuthHeaders(headers?: HeadersInit): HeadersInit {
+  const normalized: Record<string, string> = {}
+
+  if (headers instanceof Headers) {
+    headers.forEach((value, key) => {
+      normalized[key] = value
+    })
+  } else if (Array.isArray(headers)) {
+    for (const [key, value] of headers) {
+      normalized[key] = value
+    }
+  } else if (headers) {
+    Object.assign(normalized, headers)
+  }
+
+  const { uid, token } = getViewerAuth()
+  if (uid && token) {
+    normalized["X-UID"] = uid
+    normalized["X-TOKEN"] = token
+  }
+
+  return normalized
+}
+
+async function viewerAuthFetch(input: string, init?: RequestInit): Promise<Response> {
+  return fetch(input, {
+    ...init,
+    credentials: "include",
+    headers: withViewerAuthHeaders(init?.headers),
+  })
+}
+
 
 
 function TranslateDialog({
@@ -75,7 +131,7 @@ function TranslateDialog({
     setStreamLen(0)
     setPhase("idle")
 
-    fetch(`${baseUrl}/api/translate/models`)
+    viewerAuthFetch(`${baseUrl}/api/translate/models`)
       .then(r => r.json())
       .then((d: { models: TranslateModel[] }) => {
         setModels(d.models)
@@ -85,7 +141,7 @@ function TranslateDialog({
       })
       .catch(() => setModels([]))
 
-    fetch(`${baseUrl}/api/translate/status/${encodeURIComponent(viewerIden)}`)
+    viewerAuthFetch(`${baseUrl}/api/translate/status/${encodeURIComponent(viewerIden)}`)
       .then(r => r.json())
       .then((d: { has_translation: boolean; model: string | null; translated_at: string | null }) => {
         if (d.has_translation && d.model && d.translated_at) {
@@ -104,10 +160,11 @@ function TranslateDialog({
     setStreamLen(0)
 
     try {
-      const res = await fetch(`${baseUrl}/api/translate/stream`, {
+      const { uid, token } = getViewerAuth()
+      const res = await viewerAuthFetch(`${baseUrl}/api/translate/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ iden: viewerIden, model: selectedModel }),
+        body: JSON.stringify({ iden: viewerIden, model: selectedModel, uid, token }),
       })
 
       if (!res.ok) {
@@ -326,7 +383,7 @@ function FormalizeDialog({
     setStreamLen(0)
     setPhase("idle")
 
-    fetch(`${baseUrl}/api/translate/models`)
+    viewerAuthFetch(`${baseUrl}/api/translate/models`)
       .then(r => r.json())
       .then((d: { models: TranslateModel[] }) => {
         setModels(d.models)
@@ -336,7 +393,7 @@ function FormalizeDialog({
       })
       .catch(() => setModels([]))
 
-    fetch(`${baseUrl}/api/formalize/status/${encodeURIComponent(viewerIden)}`)
+    viewerAuthFetch(`${baseUrl}/api/formalize/status/${encodeURIComponent(viewerIden)}`)
       .then(r => r.json())
       .then((d: { has_formalization: boolean; model: string | null; formalized_at: string | null }) => {
         if (d.has_formalization && d.model && d.formalized_at) {
@@ -355,10 +412,11 @@ function FormalizeDialog({
     setStreamLen(0)
 
     try {
-      const res = await fetch(`${baseUrl}/api/formalize/stream`, {
+      const { uid, token } = getViewerAuth()
+      const res = await viewerAuthFetch(`${baseUrl}/api/formalize/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ iden: viewerIden, model: selectedModel }),
+        body: JSON.stringify({ iden: viewerIden, model: selectedModel, uid, token }),
       })
 
       if (!res.ok) {

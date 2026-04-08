@@ -30,6 +30,17 @@ interface FlatNode {
   isGroup: boolean;
 }
 
+const testcaseNameCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: "base",
+});
+
+function sortFlatNodesByNameNatural(nodes: FlatNode[]): FlatNode[] {
+  return [...nodes].sort((left, right) =>
+    testcaseNameCollator.compare(left.name || "", right.name || ""),
+  );
+}
+
 /** Flatten the tagged-union tree into a simple recursive structure */
 function flattenDetailSubtask(subtask: DetailSubtask): FlatNode {
   const children: FlatNode[] = [];
@@ -42,14 +53,16 @@ function flattenDetailSubtask(subtask: DetailSubtask): FlatNode {
     }
   }
 
+  const sortedChildren = sortFlatNodesByNameNatural(children);
+
   return {
     status: subtask.status,
     name: subtask.name,
     score: subtask.score,
     time: subtask.time,
     memory: subtask.memory,
-    children,
-    isGroup: children.length > 0,
+    children: sortedChildren,
+    isGroup: sortedChildren.length > 0,
   };
 }
 
@@ -61,14 +74,16 @@ function flattenDetailTestcase(tc: DetailTestcase): FlatNode {
     children.push(flattenDetailSubtask(sub));
   }
 
+  const sortedChildren = sortFlatNodesByNameNatural(children);
+
   return {
     status: tc.status,
     name: tc.name,
     score: tc.score,
     time: tc.time,
     memory: tc.memory,
-    children,
-    isGroup: children.length > 0,
+    children: sortedChildren,
+    isGroup: sortedChildren.length > 0,
   };
 }
 

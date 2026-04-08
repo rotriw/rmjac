@@ -65,7 +65,7 @@ export function TrackerUserSelector({ users, onChange }: TrackerUserSelectorProp
                   {u.type === "remote" && <Globe className="h-3 w-3" />}
                   {u.type === "local" && <User className="h-3 w-3" />}
                   {userDisplayName(u)}
-                  <button onClick={() => removeUser(key)} className="ml-1 hover:bg-muted rounded-full p-0.5">
+                  <button title="x" onClick={() => removeUser(key)} className="ml-1 hover:bg-muted rounded-full p-0.5">
                     <X className="h-3 w-3" />
                   </button>
                 </Badge>

@@ -42,6 +42,108 @@ function parseArgs() {
   return { port, dbPath };
 }
 
+const MAIN_SITE_BASE_URL = process.env.MAIN_SITE_BASE_URL || "http://localhost:1824";
+
+type SidebarItem = {
+  name: string;
+  path: string;
+  icon: string;
+  active: boolean;
+};
+
+async function verifyMainSiteLogin(cookieHeader?: string): Promise<boolean> {
+  if (!cookieHeader || !cookieHeader.trim()) {
+    return false;
+  }
+
+  try {
+    const resp = await fetch(`${MAIN_SITE_BASE_URL}/api/view/default/sidebar`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        cookie: cookieHeader,
+      },
+      body: JSON.stringify({ path: "problem" }),
+    });
+
+    if (!resp.ok) {
+      return false;
+    }
+
+    const payload = await resp.json();
+    const list = payload?.data as SidebarItem[] | undefined;
+    if (!Array.isArray(list)) {
+      return false;
+    }
+
+    const hasRecord = list.some((item) => item.path === "record");
+    const hasLoginEntry = list.some((item) => item.path === "login");
+
+    return hasRecord && !hasLoginEntry;
+  } catch {
+    return false;
+  }
+}
+
+function toText(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    const v = value.trim();
+    return v.length > 0 ? v : undefined;
+  }
+  if (typeof value === "number") {
+    return String(value);
+  }
+  return undefined;
+}
+
+function extractUidToken(req: Request): { uid?: string; token?: string } {
+  const body = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
+  const query = req.query as Record<string, unknown>;
+
+  const uid =
+    toText(req.headers["x-uid"]) ||
+    toText(req.headers["uid"]) ||
+    toText(query.uid) ||
+    toText(query.user_id) ||
+    toText(body.uid) ||
+    toText(body.user_id);
+
+  const token =
+    toText(req.headers["x-token"]) ||
+    toText(req.headers["token"]) ||
+    toText(query.token) ||
+    toText(body.token);
+
+  return { uid, token };
+}
+
+function buildAuthCookieHeader(req: Request): string | undefined {
+  const { uid, token } = extractUidToken(req);
+  if (uid && token) {
+    return `_uid=${encodeURIComponent(uid)}; token=${encodeURIComponent(token)}`;
+  }
+  const rawCookie = req.headers.cookie;
+  if (rawCookie && rawCookie.trim()) {
+    return rawCookie;
+  }
+  return undefined;
+}
+
+async function requireMainLogin(req: Request, res: Response, next: NextFunction) {
+  const cookieHeader = buildAuthCookieHeader(req);
+  const ok = await verifyMainSiteLogin(cookieHeader);
+
+  if (!ok) {
+    res.status(401).json({
+      error: "unauthorized",
+      message: "请先登录主站后再使用翻译/形式化功能",
+    });
+    return;
+  }
+
+  next();
+}
+
 // ============================================================
 // 通用格式转换 (兼容 packages/core)
 // ============================================================
@@ -310,12 +412,22 @@ app.use(express.json());
 
 // --- CORS (允许前端跨域访问 API) ---
 app.use((_req: Request, res: Response, next: NextFunction) => {
-  res.header("Access-Control-Allow-Origin", "*");
+  const origin = _req.headers.origin;
+  if (origin) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Vary", "Origin");
+    res.header("Access-Control-Allow-Credentials", "true");
+  } else {
+    res.header("Access-Control-Allow-Origin", "*");
+  }
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
+  res.header("Access-Control-Allow-Headers", "Content-Type, X-UID, X-TOKEN, UID, TOKEN, Authorization");
   if (_req.method === "OPTIONS") { res.sendStatus(204); return; }
   next();
 });
+
+app.use("/api/translate", requireMainLogin);
+app.use("/api/formalize", requireMainLogin);
 
 // --- Static assets (KaTeX, etc.) ---
 app.use("/static", express.static(path.resolve(import.meta.dirname || ".", "static")));
@@ -750,12 +862,15 @@ app.post("/api/translate/stream", async (req: Request, res: Response) => {
     const selectedModel = model || models[0]?.id || "qwen/qwen3-next-80b-a3b-instruct";
     console.log(`[Translate/Stream] 流式翻译 ${realIden}，模型: ${selectedModel}`);
 
-    // 设置 SSE 头
+    // 设置 SSE 头（注意：凭证请求不能使用 *）
+    const origin = req.headers.origin;
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "Connection": "keep-alive",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": origin || "*",
+      "Access-Control-Allow-Credentials": "true",
+      "Vary": "Origin",
     });
 
     // 发送初始事件
@@ -867,12 +982,15 @@ app.post("/api/formalize/stream", async (req: Request, res: Response) => {
     const selectedModel = model || models[0]?.id || "qwen/qwen3-next-80b-a3b-instruct";
     console.log(`[Formalize/Stream] 流式形式化 ${realIden}，模型: ${selectedModel}`);
 
-    // 设置 SSE 头
+    // 设置 SSE 头（注意：凭证请求不能使用 *）
+    const origin = req.headers.origin;
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "Connection": "keep-alive",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": origin || "*",
+      "Access-Control-Allow-Credentials": "true",
+      "Vary": "Origin",
     });
 
     // 发送初始事件

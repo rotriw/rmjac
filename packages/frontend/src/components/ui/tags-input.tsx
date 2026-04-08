@@ -85,7 +85,7 @@ export function TagsInput({
               className="inline-flex items-center gap-1 rounded border bg-muted px-2 py-0.5 text-xs"
             >
               {tag}
-              <button type="button" onClick={() => removeTag(tag)}>
+              <button type="button" title="x" onClick={() => removeTag(tag)}>
                 <X className="h-3 w-3" />
               </button>
             </span>

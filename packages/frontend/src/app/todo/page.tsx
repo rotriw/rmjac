@@ -14,7 +14,6 @@ export default async function TodoPage() {
 
   return (
     <>
-      <AppSidebar path="problem" />
       <div className="p-5 bg-white w-full">
         <TitleCard title="TODO List" description="题单管理" />
         <TodoManager initialTodos={initialTodos} />

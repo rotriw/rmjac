@@ -41,17 +41,9 @@ export default async function UserProfilePage({
 
         <div className="mb-4 rounded-md border bg-white p-4">
           <div className="flex items-start gap-4">
-            {user.avatar ? (
-              <img
-                src={user.avatar}
-                alt={`${user.name}的头像`}
-                className="flex h-16 w-16 items-center justify-center rounded-full border bg-neutral-100 object-cover"
-              />
-            ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border bg-neutral-100 text-xl font-semibold text-neutral-700">
-                {(user.name || user.iden).slice(0, 1).toUpperCase()}
-              </div>
-            )}
+            <div className="flex h-16 w-16 items-center justify-center rounded-full border bg-neutral-100 text-xl font-semibold text-neutral-700">
+              {(user.name || user.iden).slice(0, 1).toUpperCase()}
+            </div>
             <div className="flex-1">
               <div className="text-xl font-semibold text-neutral-900">{user.name}</div>
               <div className="text-sm text-neutral-600">@{user.iden}</div>
@@ -83,23 +75,6 @@ export default async function UserProfilePage({
             <div className="mt-1 text-2xl font-semibold">{profile.todo_problem_count}</div>
           </div>
         </div>
-
-        {profile.accepted_problems && profile.accepted_problems.length > 0 && (
-          <div className="mt-4 rounded-md border bg-white p-4">
-            <div className="mb-3 text-lg font-semibold text-neutral-900">已通过的题目</div>
-            <div className="flex flex-wrap gap-2">
-              {profile.accepted_problems.map((probIden) => (
-                <a
-                  key={probIden}
-                  href={`/problem/${probIden}`}
-                  className="rounded-md bg-green-50 px-2 py-1 text-sm text-green-700 transition-colors hover:bg-green-100 hover:text-green-800"
-                >
-                  {probIden}
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </>
   );
